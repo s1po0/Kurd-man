@@ -1,0 +1,63 @@
+# Manhwa text -> Kurdish Sorani, 100% free. Runs on a GitHub runner
+# (sandbox cannot reach Google/Telegram directly; the runner can).
+# Translates manhwa/sample/chapter1_en.txt with --provider google-free
+# (NO API key), stores the translation as a build artifact, and sends it
+# to the admin on Telegram using the same repo Secrets as telegram-bot.yml.
+# The translation cache is kept between runs (actions/cache), so repeated
+# lines never cost a second request -> the free endpoint does not "burn".
+name: Manhwa to Sorani (Free)
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: ["arena/121d982b-kurd-man"]
+    paths:
+      - "manhwa/sample/chapter1_en.txt"
+      - ".github/workflows/manhwa-translate.yml"
+
+jobs:
+  translate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore translation cache (sentences translate only ONCE)
+        uses: actions/cache@v4
+        with:
+          path: manhwa/cache.sqlite
+          key: manhwa-cache-v1
+
+      - name: Translate EN -> Kurdish Sorani (google-free, no key)
+        working-directory: manhwa
+        run: |
+          python3 translate_manhwa.py --file sample/chapter1_en.txt \
+            --provider google-free --outdir out | tee result.log
+          echo "::notice::MANHWA TRANSLATED OK"
+          cat out/chapter1_en.ckb.txt
+
+      - name: Save translated chapter as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chapter1-sorani
+          path: manhwa/out/
+
+      - name: Send result to Telegram admin
+        env:
+          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          ADMIN: ${{ secrets.TELEGRAM_ADMIN_ID }}
+        run: |
+          if [ -z "$TOKEN" ] || [ -z "$ADMIN" ]; then
+            echo "::warning::Telegram secrets not set - skipping send (translation artifact still saved)."
+            exit 0
+          fi
+          TEXT="📚 مانهوا -> کوردی سۆرانی (بەخۆڕایی، بێ API)
+
+          $(head -c 3200 manhwa/out/chapter1_en.ckb.txt)"
+          RESP=$(curl -s -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${ADMIN}" --data-urlencode "text=${TEXT}")
+          echo "$RESP" | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)
+          print('::notice::TELEGRAM SENT OK message_id='+str(d['result']['message_id']) if d.get('ok') else '::error::TELEGRAM FAILED: '+str(d.get('description')))
+          sys.exit(0 if d.get('ok') else 1)
+          "

@@ -1,0 +1,6 @@
+# OPTIONAL fully-offline translator (Meta NLLB-200, eng_Latn -> ckb_Arab).
+# One-time model download ~2.5 GB, then free forever with zero internet.
+# Install only if you pick --provider nllb :  pip install -r requirements-nllb.txt
+transformers>=4.40
+torch>=2.0
+sentencepiece>=0.2

@@ -1,0 +1,4 @@
+# Only needed for --render (translated image). Text mode needs NOTHING (stdlib only).
+Pillow>=10
+arabic-reshaper>=3
+python-bidi>=0.4

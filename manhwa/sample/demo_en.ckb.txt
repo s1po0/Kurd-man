@@ -1,0 +1,15 @@
+[1]
+EN : I finally returned after ten years.
+CKB: دواجار دوای دە ساڵ گەڕامەوە.
+
+[2]
+EN : Who are you?!
+CKB: تۆ کێیت؟!
+
+[3]
+EN : Run! The monsters are coming!
+CKB: ڕابە! دێوەکان دێن!
+
+[4]
+EN : I will protect you!
+CKB: من تۆ دەپارێزم!

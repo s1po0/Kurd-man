@@ -1,0 +1,41 @@
+{
+  "image": "demo_en.png",
+  "segments": [
+    {
+      "text": "I finally returned after ten years.",
+      "box": [
+        40,
+        40,
+        430,
+        95
+      ]
+    },
+    {
+      "text": "Who are you?!",
+      "box": [
+        330,
+        250,
+        300,
+        80
+      ]
+    },
+    {
+      "text": "Run! The monsters are coming!",
+      "box": [
+        50,
+        430,
+        430,
+        95
+      ]
+    },
+    {
+      "text": "I will protect you!",
+      "box": [
+        300,
+        620,
+        340,
+        80
+      ]
+    }
+  ]
+}
