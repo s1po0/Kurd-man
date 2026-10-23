@@ -401,7 +401,14 @@ def sort_reading_order(segs: list[Segment]) -> list[Segment]:
 
 def segment_quality_score(seg: Segment) -> float:
     conf_factor = 0.55 + ((seg.confidence or 55) / 100.0)
-    return min(len(seg.text), 160) * conf_factor + 8
+    score = min(len(seg.text), 160) * conf_factor + 8
+    # A bubble-crop reading tied to a physical bubble must win dedupe over a
+    # longer tile segment that merged the same words with artwork junk.
+    if seg.bubble_detected:
+        score += 30
+    if seg.placement_confirmed:
+        score += 10
+    return score
 
 def segments_score(segs: list[Segment]) -> float:
     return sum(segment_quality_score(s) for s in segs)
@@ -673,6 +680,25 @@ def _detect_bubble_candidates(gray, width, height, cv2, np) -> list[dict]:
     candidates.sort(key=lambda item: item["bbox_area"])
     return candidates
 
+def _bubble_inner_box(cand: dict, seg_box=None, size=None):
+    """Inscribed typesetting rectangle for a detected bubble body."""
+    box = cand["box"]
+    bx0, by0, _bx1, _by1 = _xyxy(box)
+    ovalish = cand["extent"] < 0.87
+    inner_w = max(8, int(box[2] * (0.72 if ovalish else 0.86)))
+    inner_h = max(8, int(box[3] * (0.72 if ovalish else 0.84)))
+    inner = (bx0 + (box[2] - inner_w) // 2,
+             by0 + (box[3] - inner_h) // 2, inner_w, inner_h)
+    if seg_box:
+        return expand_box(_union_box([inner, seg_box]), 0, 0, size) if size else _union_box([inner, seg_box])
+    return inner
+
+def _point_in_contour(cv2, cand: dict, x: float, y: float) -> bool:
+    try:
+        return cv2.pointPolygonTest(cand["contour"], (float(x), float(y)), False) >= 0
+    except Exception:
+        return False
+
 def assign_render_boxes(path: Path, segs: list[Segment], size: tuple[int, int] | None = None) -> list[Segment]:
     """Estimate a typesetting interior for each OCR segment.
 
@@ -731,12 +757,7 @@ def assign_render_boxes(path: Path, segs: list[Segment], size: tuple[int, int] |
                 # Oval bubbles need an inscribed rectangle; squarer bubbles
                 # can use more of their interior. This also stops the white
                 # cleanup fill from painting square corners over artwork.
-                ovalish = cand["extent"] < 0.87
-                inner_w = max(8, int(box[2] * (0.72 if ovalish else 0.86)))
-                inner_h = max(8, int(box[3] * (0.72 if ovalish else 0.84)))
-                inner = (bx0 + (box[2] - inner_w) // 2,
-                         by0 + (box[3] - inner_h) // 2, inner_w, inner_h)
-                seg.render_box = expand_box(_union_box([inner, seg.box]), 0, 0, (width, height))
+                seg.render_box = _bubble_inner_box(cand, seg.box, (width, height))
                 seg.bubble_detected = True
                 seg.bubble_id = int(cand["id"])
                 seg.placement_confirmed = True
@@ -807,10 +828,12 @@ def _ocr_uncovered_bubbles(img, existing: list[Segment], src: str, tempdir: Path
             contained = (_overlap(sx0, sx1, fx0, fx1) * _overlap(sy0, sy1, fy0, fy1)) / max(1, (sx1 - sx0) * (sy1 - sy0))
             # A segment that spills from the bubble into hands/clothes (the
             # rejected page's "POISON EVASION ORB?" box) is not coverage: it
-            # will fail placement. Only a cleanly contained box covers.
-            if contained >= 0.90:
+            # will fail placement. Only a cleanly contained box whose centre
+            # is really inside the bubble *shape* covers this bubble; the
+            # tail-inclusive bounding box also covers nearby artwork.
+            if contained >= 0.90 and _point_in_contour(cv2, cand, cx, cy):
                 covered = True; break
-            if seg in existing and contained >= 0.35:
+            if seg in existing and _point_in_contour(cv2, cand, cx, cy):
                 suspect.append(seg)
         if covered:
             continue
@@ -824,6 +847,22 @@ def _ocr_uncovered_bubbles(img, existing: list[Segment], src: str, tempdir: Path
         if cx1 - cx0 < 30 or cy1 - cy0 < 16:
             continue
         crop = img.crop((cx0, cy0, cx1, cy1))
+        # Whiten everything outside the bubble contour before OCR. The
+        # rectangular body crop still contains the speaker's hand/clothes in
+        # its corners (this bubble overlaps a body), and Tesseract grouped
+        # those strokes with the dialogue, producing a box too dirty to
+        # place. Inside the printed contour is bubble interior by definition.
+        try:
+            arr = cv2.cvtColor(np.array(crop), cv2.COLOR_RGB2BGR)
+            mask = np.zeros(arr.shape[:2], dtype=np.uint8)
+            local_contour = cand["contour"] - np.array([[[cx0, cy0]]], dtype=cand["contour"].dtype)
+            cv2.drawContours(mask, [local_contour], -1, 255, -1)
+            mask = cv2.erode(mask, np.ones((3, 3), np.uint8), iterations=1)
+            if np.any(mask):
+                arr[mask == 0] = (255, 255, 255)
+                crop = Image.fromarray(cv2.cvtColor(arr, cv2.COLOR_BGR2RGB))
+        except Exception:
+            pass
         scale = 3.0 if crop.width < 320 else 2.0 if crop.width < 720 else 1.0
         if scale != 1.0:
             crop = crop.resize((int(crop.width * scale), int(crop.height * scale)), Image.LANCZOS)
@@ -838,8 +877,20 @@ def _ocr_uncovered_bubbles(img, existing: list[Segment], src: str, tempdir: Path
         for seg in bubble_segs:
             full = _transform_segment(seg, cx0, cy0, scale)
             cx, cy = _center(full.box)
-            if fx0 - 4 <= cx <= fx1 + 4 and fy0 - 4 <= cy <= fy1 + 4:
-                found_here.append(full)
+            if not (fx0 - 4 <= cx <= fx1 + 4 and fy0 - 4 <= cy <= fy1 + 4):
+                continue
+            if not _point_in_contour(cv2, cand, cx, cy):
+                continue
+            # This text was read from inside this physical contour, so tie it
+            # to the bubble now. The generic assignment later rejects boxes
+            # that fill most of a bubble (area ratio) — exactly what a tight
+            # two-line reading of a small bubble looks like — and that left
+            # this bubble in English even after the crop pass ran.
+            full.bubble_detected = True
+            full.bubble_id = int(cand["id"])
+            full.placement_confirmed = True
+            full.render_box = _bubble_inner_box(cand, None, (width, height))
+            found_here.append(full)
         if found_here:
             # The bubble-crop reading is authoritative for this bubble;
             # drop the tile segment that spilled into the artwork so the

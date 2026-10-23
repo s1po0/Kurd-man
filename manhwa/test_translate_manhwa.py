@@ -163,8 +163,13 @@ class TestCore(unittest.TestCase):
         # the rejected page's lower-left bubble.
         dirty = Segment("POISON junk", (130, 105, 280, 40), confidence=90)
         existing = [dirty]
+        seen = {}
+        def fake_ocr(path, src):
+            with Image.open(path) as crop:
+                seen["corner"] = crop.convert("L").getpixel((2, 2))
+            return [Segment("Clean text", (300, 150, 240, 60), confidence=98)]
         original = tm._ocr_tile_segments
-        tm._ocr_tile_segments = lambda path, src: [Segment("Clean text", (300, 150, 240, 60), confidence=98)]
+        tm._ocr_tile_segments = fake_ocr
         try:
             with tempfile.TemporaryDirectory() as d:
                 extra = tm._ocr_uncovered_bubbles(img, existing, "en", Path(d))
@@ -172,6 +177,22 @@ class TestCore(unittest.TestCase):
             tm._ocr_tile_segments = original
         self.assertEqual([s.text for s in extra], ["Clean text"])
         self.assertEqual(existing, [])  # dirty spilling segment was replaced
+        # Outside-contour artwork is whitened before OCR, and the reading is
+        # tied directly to the physical bubble so later strict assignment
+        # cannot drop it and leave the bubble in English.
+        self.assertGreater(seen["corner"], 240)
+        self.assertTrue(extra[0].bubble_detected)
+        self.assertTrue(extra[0].placement_confirmed)
+        self.assertIsNotNone(extra[0].bubble_id)
+        self.assertEqual(renderable_segments(extra), extra)
+
+    def test_dedupe_prefers_bubble_backed_reading_over_longer_junk(self):
+        dirty = Segment("POISON EVASION ORB? junkjunk", (80, 100, 240, 80), confidence=99)
+        clean = Segment("POISON EVASION ORB?", (85, 105, 230, 70), confidence=95,
+                        render_box=(90, 95, 220, 90), bubble_detected=True,
+                        bubble_id=3, placement_confirmed=True)
+        self.assertEqual([s.text for s in dedupe_segments([dirty, clean])],
+                         ["POISON EVASION ORB?"])
 
     def test_glossary_and_mock(self):
         g = load_glossary(Path(__file__).parent / "glossary.json")
