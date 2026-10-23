@@ -42,9 +42,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: bot/state/processed.json
-          key: bot-state-${{ github.run_id }}
+          # v2: v1 state marked one photo processed after a loader crash;
+          # starting fresh re-fetches it (Telegram still queues it until
+          # an offset past it is sent, which the new state never does).
+          key: bot-state-v2-${{ github.run_id }}
           restore-keys: |
-            bot-state-
+            bot-state-v2-
 
       - name: Peek inbox (fast, no installs)
         id: peek

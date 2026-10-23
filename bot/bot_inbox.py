@@ -101,12 +101,14 @@ def help_text() -> str:
 class State:
     next_offset: int = 0
     processed: list[int] = field(default_factory=list)
+    attempts: dict[str, int] = field(default_factory=dict)  # failed update_id -> tries
 
     @classmethod
     def load(cls, path: Path) -> "State":
         try:
             d = json.loads(path.read_text(encoding="utf-8"))
-            return cls(int(d.get("next_offset", 0)), [int(x) for x in d.get("processed", [])])
+            return cls(int(d.get("next_offset", 0)), [int(x) for x in d.get("processed", [])],
+                       {str(k): int(v) for k, v in (d.get("attempts") or {}).items()})
         except Exception:
             return cls()
 
@@ -114,13 +116,24 @@ class State:
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(".tmp")
         tmp.write_text(json.dumps({"next_offset": self.next_offset,
-                                   "processed": self.processed[-500:]}), encoding="utf-8")
+                                   "processed": self.processed[-500:],
+                                   "attempts": self.attempts}), encoding="utf-8")
         tmp.replace(path)
 
     def mark(self, update_id: int) -> None:
         if update_id not in self.processed:
             self.processed.append(update_id)
+        self.attempts.pop(str(update_id), None)
         self.next_offset = max(self.next_offset, update_id + 1)
+
+    def fail(self, update_id: int, max_attempts: int = 3) -> bool:
+        """Record a failure. Returns True when attempts are exhausted (give up)."""
+        n = self.attempts.get(str(update_id), 0) + 1
+        self.attempts[str(update_id)] = n
+        if n >= max_attempts:
+            self.mark(update_id)
+            return True
+        return False
 
 # ---------------------------------------------------------------- Telegram API
 class TelegramError(RuntimeError):
@@ -196,6 +209,10 @@ class TelegramClient:
 def load_manhwa_module():
     spec = importlib.util.spec_from_file_location("translate_manhwa", ROOT / "manhwa" / "translate_manhwa.py")
     mod = importlib.util.module_from_spec(spec)
+    # dataclasses + `from __future__ import annotations` resolve the defining
+    # module via sys.modules; without this line exec_module dies with
+    # AttributeError: 'NoneType' object has no attribute '__dict__'.
+    sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)
     return mod
 
@@ -310,22 +327,32 @@ class InboxProcessor:
         if not updates:
             state.save(state_path)
             return self.stats
+        failed: list[int] = []
         for update in updates:
             uid = update["update_id"]
             if uid in state.processed:
                 state.mark(uid); state.save(state_path); continue
             try:
                 self.process(update)
+                state.mark(uid)
             except Exception as e:
                 self.stats["errors"] += 1
                 print(f"::error::update {uid} failed: {type(e).__name__}: {e}")
+                exhausted = state.fail(uid)
+                if not exhausted:
+                    failed.append(uid)  # keep it queued on Telegram for a later retry
                 chat_id = ((update.get("message") or {}).get("chat") or {}).get("id")
-                if chat_id:
+                if chat_id and exhausted:
                     try:
-                        self.client.send_message(chat_id, "⚠️ ببورە، هەڵەیەک ڕوویدا لە کارپێکردنی نامەکەت. دووبارە هەوڵ بدە.")
+                        self.client.send_message(chat_id, "⚠️ ببورە، هەرچۆنێک بێت نەمتوانی ئەوە کار پێبکەم. دووبارە بینێرە.")
                     except Exception:
                         pass
-            state.mark(uid); state.save(state_path)
+            state.save(state_path)
+        if failed:
+            # Do not acknowledge failed updates to Telegram: rewind the offset
+            # to the oldest failure (successful ones stay deduped in processed[]).
+            state.next_offset = min(state.next_offset, min(failed))
+            state.save(state_path)
         return self.stats
 
 # ---------------------------------------------------------------- CLI

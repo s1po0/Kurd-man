@@ -4,7 +4,7 @@
 import tempfile, unittest
 from pathlib import Path
 from bot_inbox import (InboxProcessor, State, chunk_message, classify_message,
-                       image_file_id, lang_hint, pick_largest_photo)
+                       image_file_id, lang_hint, load_manhwa_module, pick_largest_photo)
 
 PHOTO_MSG = {"message_id": 7, "chat": {"id": 42}, "from": {"id": 999},
              "photo": [{"file_id": "small", "width": 90, "height": 90, "file_size": 1000},
@@ -50,6 +50,31 @@ class TestHelpers(unittest.TestCase):
             InboxProcessor(client, "999", Path(d)).run_once(State.load(path), path)
             pongs = [t for _, t in client.sent if "pong" in t]
             self.assertEqual(len(pongs), 1)
+
+    def test_manhwa_module_loads(self):
+        """Regression: dataclass module must be registered in sys.modules."""
+        tm = load_manhwa_module()
+        seg = tm.Segment("Hello", (0, 0, 10, 10))
+        self.assertEqual(seg.text, "Hello")
+        self.assertTrue(hasattr(tm, "Translator"))
+
+    def test_failed_update_stays_queued_then_gives_up(self):
+        upd = [{"update_id": 20, "message": {"message_id": 1, "chat": {"id": 42},
+                                             "from": {"id": 999}, "text": "/ping"}}]
+        with tempfile.TemporaryDirectory() as d:
+            path, client = Path(d) / "s.json", FakeClient(upd)
+            proc = InboxProcessor(client, "999", Path(d))
+            proc.process = lambda u: (_ for _ in ()).throw(RuntimeError("boom"))
+            proc.run_once(State.load(path), path)
+            st = State.load(path)
+            self.assertEqual(st.next_offset, 0)          # not acknowledged -> retry later
+            self.assertNotIn(20, st.processed)
+            self.assertEqual(st.attempts.get("20"), 1)
+            for _ in range(2):                            # attempts 2 and 3
+                proc.run_once(State.load(path), path)
+            st = State.load(path)
+            self.assertIn(20, st.processed)               # gave up after 3 tries
+            self.assertEqual(st.next_offset, 21)
 
     def test_admin_guard(self):
         upd = [{"update_id": 5, "message": {"message_id": 1, "chat": {"id": 7},
