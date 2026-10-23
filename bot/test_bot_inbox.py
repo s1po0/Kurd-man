@@ -68,6 +68,7 @@ class TestHelpers(unittest.TestCase):
         self.assertTrue(hasattr(tm, "assess_render_plan"))
         self.assertTrue(hasattr(tm, "renderable_segments"))
         self.assertTrue(hasattr(tm, "render_debug_image"))
+        self.assertTrue(hasattr(tm, "shaping_backend"))
 
     def test_failed_update_stays_queued_then_gives_up(self):
         upd = [{"update_id": 20, "message": {"message_id": 1, "chat": {"id": 42},

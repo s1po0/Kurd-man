@@ -394,11 +394,15 @@ class InboxProcessor:
 
         rendered = self.outdir / f"page_{mid}.ckb.jpg"
         try:
-            tm.render_image(raw, render_segs, rendered)
-            self.stats["rendered_segments"] += len(render_segs)
+            report: dict = {}
+            print(f"::notice::RENDER FONT {tm.find_sorani_font()} SHAPING {tm.shaping_backend()}")
+            tm.render_image(raw, render_segs, rendered, report)
+            rendered_count = int(report.get("rendered", 0))
+            self.stats["rendered_segments"] += rendered_count
+            print(f"::notice::RENDER REPORT {json.dumps(report, ensure_ascii=False)}")
             method = choose_send_method(width, height, rendered.stat().st_size)
             caption = (f"✅ وەرگێڕدرا بە کوردی سۆرانی — "
-                       f"{len(render_segs)} هەڵۆک بە سەرکەوتوویی دانران")
+                       f"{rendered_count}/{len(render_segs)} هەڵۆک دانران")
             if method == "document":
                 sent = self.client.send_document(chat_id, rendered, caption=caption, reply_to=mid)
                 self.stats["document_replies"] += 1
@@ -406,7 +410,7 @@ class InboxProcessor:
                 sent = self.client.send_photo(chat_id, rendered, caption=caption, reply_to=mid)
                 self.stats["photo_replies"] += 1
             print(f"::notice::IMAGE TRANSLATED method={method} segments={len(segs)} "
-                  f"rendered_segments={len(render_segs)} sent_message_id={sent.get('message_id')}")
+                  f"rendered_segments={rendered_count} sent_message_id={sent.get('message_id')}")
         except Exception as e:  # rendering is bonus; text reply below still goes out
             print(f"::warning::render/send failed ({type(e).__name__}: {e}); sending text only")
             try:

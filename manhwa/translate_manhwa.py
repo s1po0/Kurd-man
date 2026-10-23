@@ -590,6 +590,89 @@ def _fallback_render_box(box, size):
     _x, _y, w, h = box
     return expand_box(box, max(10, int(w * 0.14)), max(8, int(h * 0.20)), size)
 
+def _detect_bubble_candidates(gray, width, height, cv2, np) -> list[dict]:
+    """Light-region contours that look like printed speech bubbles."""
+    light = cv2.inRange(gray, 232, 255)
+    kernel = np.ones((9, 9), np.uint8)
+    light = cv2.morphologyEx(light, cv2.MORPH_CLOSE, kernel, iterations=1)
+    contours, _ = cv2.findContours(light, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    candidates = []
+    page_area = max(1, width * height)
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)
+        bbox_area = max(1, w * h)
+        contour_area = float(cv2.contourArea(contour))
+        if w < 45 or h < 24 or contour_area < 1500 or bbox_area > page_area * 0.22:
+            continue
+        # A full-width white panel gap is page background, not dialogue.
+        if x <= 2 and x + w >= width - 2:
+            continue
+        extent = contour_area / bbox_area
+        # A long speech tail makes even a real oval's bbox mostly empty;
+        # the live sample's true bubbles measure ~0.42-0.43 here.
+        if extent < 0.38:
+            continue
+        hull_area = float(cv2.contourArea(cv2.convexHull(contour)))
+        solidity = contour_area / max(1.0, hull_area)
+        if solidity < 0.62:
+            continue
+        if not (0.22 <= w / max(1, h) <= 5.5):
+            continue
+        # Real printed bubbles have a mostly dark printed outline. White
+        # clothes / blank panel space generally do not have a complete
+        # dark ring immediately outside the light region. Test only a
+        # crop around this contour so a 6000px strip stays fast.
+        pad = 9
+        rx0, ry0 = max(0, x - pad), max(0, y - pad)
+        rx1, ry1 = min(width, x + w + pad), min(height, y + h + pad)
+        local_mask = np.zeros((ry1 - ry0, rx1 - rx0), dtype=np.uint8)
+        local_contour = contour - np.array([[[rx0, ry0]]], dtype=contour.dtype)
+        cv2.drawContours(local_mask, [local_contour], -1, 255, -1)
+        dilated = cv2.dilate(local_mask, np.ones((7, 7), np.uint8), iterations=1)
+        ring = cv2.bitwise_and(dilated, cv2.bitwise_not(local_mask))
+        ring_values = gray[ry0:ry1, rx0:rx1][ring > 0]
+        if ring_values.size == 0:
+            continue
+        dark_ring_fraction = float(np.mean(ring_values < 115))
+        if dark_ring_fraction < 0.30:
+            continue
+        # Isolate the bubble body from its narrow speech tail: body rows
+        # are wide, tail rows are not. Typesetting into the whole
+        # contour bbox (body + tail) put live text far too low.
+        filled = np.zeros((h, w), dtype=np.uint8)
+        cv2.drawContours(filled, [contour - np.array([[[x, y]]], dtype=contour.dtype)], -1, 255, -1)
+        row_widths = (filled > 0).sum(axis=1)
+        wide_rows = np.where(row_widths >= 0.42 * max(1, int(row_widths.max())))[0]
+        if len(wide_rows) == 0:
+            continue
+        runs = []
+        run_start = prev_row = int(wide_rows[0])
+        for row in wide_rows[1:]:
+            row = int(row)
+            if row - prev_row > 3:
+                runs.append((run_start, prev_row)); run_start = row
+            prev_row = row
+        runs.append((run_start, prev_row))
+        body_y0, body_y1 = max(runs, key=lambda run: run[1] - run[0])
+        body_xs = np.where(filled[body_y0:body_y1 + 1] > 0)[1]
+        if len(body_xs) == 0:
+            continue
+        body_box = (x + int(body_xs.min()), y + int(body_y0),
+                    int(body_xs.max() - body_xs.min() + 1), int(body_y1 - body_y0 + 1))
+        if body_box[2] < 45 or body_box[3] < 24:
+            continue
+        candidates.append({
+            "id": len(candidates) + 1,
+            "box": body_box,
+            "full_box": (x, y, w, h),
+            "bbox_area": max(1, body_box[2] * body_box[3]),
+            "contour_area": contour_area,
+            "contour": contour,
+            "extent": extent,
+        })
+    candidates.sort(key=lambda item: item["bbox_area"])
+    return candidates
+
 def assign_render_boxes(path: Path, segs: list[Segment], size: tuple[int, int] | None = None) -> list[Segment]:
     """Estimate a typesetting interior for each OCR segment.
 
@@ -618,85 +701,7 @@ def assign_render_boxes(path: Path, segs: list[Segment], size: tuple[int, int] |
             return segs
         height, width = img.shape[:2]
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        light = cv2.inRange(gray, 232, 255)
-        kernel = np.ones((9, 9), np.uint8)
-        light = cv2.morphologyEx(light, cv2.MORPH_CLOSE, kernel, iterations=1)
-        contours, _ = cv2.findContours(light, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        candidates = []
-        page_area = max(1, width * height)
-        for contour in contours:
-            x, y, w, h = cv2.boundingRect(contour)
-            bbox_area = max(1, w * h)
-            contour_area = float(cv2.contourArea(contour))
-            if w < 45 or h < 24 or contour_area < 1500 or bbox_area > page_area * 0.22:
-                continue
-            # A full-width white panel gap is page background, not dialogue.
-            if x <= 2 and x + w >= width - 2:
-                continue
-            extent = contour_area / bbox_area
-            # A long speech tail makes even a real oval's bbox mostly empty;
-            # the live sample's true bubbles measure ~0.42-0.43 here.
-            if extent < 0.38:
-                continue
-            hull_area = float(cv2.contourArea(cv2.convexHull(contour)))
-            solidity = contour_area / max(1.0, hull_area)
-            if solidity < 0.62:
-                continue
-            if not (0.22 <= w / max(1, h) <= 5.5):
-                continue
-            # Real printed bubbles have a mostly dark printed outline. White
-            # clothes / blank panel space generally do not have a complete
-            # dark ring immediately outside the light region. Test only a
-            # crop around this contour so a 6000px strip stays fast.
-            pad = 9
-            rx0, ry0 = max(0, x - pad), max(0, y - pad)
-            rx1, ry1 = min(width, x + w + pad), min(height, y + h + pad)
-            local_mask = np.zeros((ry1 - ry0, rx1 - rx0), dtype=np.uint8)
-            local_contour = contour - np.array([[[rx0, ry0]]], dtype=contour.dtype)
-            cv2.drawContours(local_mask, [local_contour], -1, 255, -1)
-            dilated = cv2.dilate(local_mask, np.ones((7, 7), np.uint8), iterations=1)
-            ring = cv2.bitwise_and(dilated, cv2.bitwise_not(local_mask))
-            ring_values = gray[ry0:ry1, rx0:rx1][ring > 0]
-            if ring_values.size == 0:
-                continue
-            dark_ring_fraction = float(np.mean(ring_values < 115))
-            if dark_ring_fraction < 0.30:
-                continue
-            # Isolate the bubble body from its narrow speech tail: body rows
-            # are wide, tail rows are not. Typesetting into the whole
-            # contour bbox (body + tail) put live text far too low.
-            filled = np.zeros((h, w), dtype=np.uint8)
-            cv2.drawContours(filled, [contour - np.array([[[x, y]]], dtype=contour.dtype)], -1, 255, -1)
-            row_widths = (filled > 0).sum(axis=1)
-            wide_rows = np.where(row_widths >= 0.42 * max(1, int(row_widths.max())))[0]
-            if len(wide_rows) == 0:
-                continue
-            runs = []
-            run_start = prev_row = int(wide_rows[0])
-            for row in wide_rows[1:]:
-                row = int(row)
-                if row - prev_row > 3:
-                    runs.append((run_start, prev_row)); run_start = row
-                prev_row = row
-            runs.append((run_start, prev_row))
-            body_y0, body_y1 = max(runs, key=lambda run: run[1] - run[0])
-            body_xs = np.where(filled[body_y0:body_y1 + 1] > 0)[1]
-            if len(body_xs) == 0:
-                continue
-            body_box = (x + int(body_xs.min()), y + int(body_y0),
-                        int(body_xs.max() - body_xs.min() + 1), int(body_y1 - body_y0 + 1))
-            if body_box[2] < 45 or body_box[3] < 24:
-                continue
-            candidates.append({
-                "id": len(candidates) + 1,
-                "box": body_box,
-                "full_box": (x, y, w, h),
-                "bbox_area": max(1, body_box[2] * body_box[3]),
-                "contour_area": contour_area,
-                "contour": contour,
-                "extent": extent,
-            })
-        candidates.sort(key=lambda item: item["bbox_area"])
+        candidates = _detect_bubble_candidates(gray, width, height, cv2, np)
         for seg in segs:
             sx0, sy0, sx1, sy1 = _xyxy(seg.box)
             cx, cy = _center(seg.box)
@@ -770,6 +775,81 @@ def assign_render_boxes(path: Path, segs: list[Segment], size: tuple[int, int] |
         pass
     return segs
 
+def _ocr_uncovered_bubbles(img, existing: list[Segment], src: str, tempdir: Path) -> list[Segment]:
+    """OCR each detected bubble interior that whole-tile OCR missed.
+
+    The live page's clear top bubble ("WHAT'S THAT?") produced no tile
+    segment at all, while its white oval is easy to detect. Cropping to the
+    bubble and upscaling gives Tesseract the one job it is good at.
+    """
+    try:
+        import cv2
+        import numpy as np
+        from PIL import Image, ImageOps
+    except Exception:
+        return []
+    try:
+        width, height = img.size
+        gray = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2GRAY)
+        candidates = _detect_bubble_candidates(gray, width, height, cv2, np)
+    except Exception:
+        return []
+    extra: list[Segment] = []
+    for idx, cand in enumerate(candidates):
+        fx0, fy0, fx1, fy1 = _xyxy(cand["full_box"])
+        covered = False
+        suspect: list[Segment] = []
+        for seg in existing + extra:
+            cx, cy = _center(seg.box)
+            if not (fx0 - 4 <= cx <= fx1 + 4 and fy0 - 4 <= cy <= fy1 + 4):
+                continue
+            sx0, sy0, sx1, sy1 = _xyxy(seg.box)
+            contained = (_overlap(sx0, sx1, fx0, fx1) * _overlap(sy0, sy1, fy0, fy1)) / max(1, (sx1 - sx0) * (sy1 - sy0))
+            # A segment that spills from the bubble into hands/clothes (the
+            # rejected page's "POISON EVASION ORB?" box) is not coverage: it
+            # will fail placement. Only a cleanly contained box covers.
+            if contained >= 0.90:
+                covered = True; break
+            if seg in existing and contained >= 0.35:
+                suspect.append(seg)
+        if covered:
+            continue
+        # Crop the bubble *body*, not the tail-inclusive contour bbox: the
+        # tail column drags speakers' clothes/hands into the OCR crop and
+        # re-creates the dirty grouping this pass exists to replace.
+        bx0, by0, bx1, by1 = _xyxy(cand["box"])
+        inset_x = max(2, int((bx1 - bx0) * 0.03)); inset_y = max(2, int((by1 - by0) * 0.03))
+        cx0, cy0 = max(0, bx0 + inset_x), max(0, by0 + inset_y)
+        cx1, cy1 = min(width, bx1 - inset_x), min(height, by1 - inset_y)
+        if cx1 - cx0 < 30 or cy1 - cy0 < 16:
+            continue
+        crop = img.crop((cx0, cy0, cx1, cy1))
+        scale = 3.0 if crop.width < 320 else 2.0 if crop.width < 720 else 1.0
+        if scale != 1.0:
+            crop = crop.resize((int(crop.width * scale), int(crop.height * scale)), Image.LANCZOS)
+        prepared = ImageOps.autocontrast(crop.convert("L"))
+        crop_path = Path(tempdir) / f"bubble_{idx:03d}.png"
+        prepared.save(crop_path)
+        try:
+            bubble_segs = _ocr_tile_segments(crop_path, src)
+        except OCRError:
+            continue
+        found_here: list[Segment] = []
+        for seg in bubble_segs:
+            full = _transform_segment(seg, cx0, cy0, scale)
+            cx, cy = _center(full.box)
+            if fx0 - 4 <= cx <= fx1 + 4 and fy0 - 4 <= cy <= fy1 + 4:
+                found_here.append(full)
+        if found_here:
+            # The bubble-crop reading is authoritative for this bubble;
+            # drop the tile segment that spilled into the artwork so the
+            # deduplicator cannot resurrect the dirty box.
+            for bad in suspect:
+                if bad in existing:
+                    existing.remove(bad)
+            extra.extend(found_here)
+    return extra
+
 def ocr_image(path: Path, src: str, tile_height: int | None = None,
               overlap: int | None = None) -> list[Segment]:
     """OCR an image in overlapping tiles and return full-page coordinates."""
@@ -801,6 +881,8 @@ def ocr_image(path: Path, src: str, tile_height: int | None = None,
                 full = _transform_segment(seg, 0, tile.y0, scale)
                 if len(tiles) == 1 or _segment_in_tile_core(full, tile, idx == len(tiles) - 1):
                     found.append(full)
+        # Second chance for clear bubbles the tile pass missed entirely.
+        found.extend(_ocr_uncovered_bubbles(img, found, src, Path(td)))
     segs = dedupe_segments(found)
     segs = assign_render_boxes(path, segs, (width, height))
     return filter_segments(segs)
@@ -888,7 +970,24 @@ def find_sorani_font(candidates: list[str] | None = None) -> str | None:
             return str(candidate)
     return None
 
+_RAQM_AVAILABLE: bool | None = None
+
+def _raqm_available() -> bool:
+    global _RAQM_AVAILABLE
+    if _RAQM_AVAILABLE is None:
+        try:
+            from PIL import features
+            _RAQM_AVAILABLE = bool(features.check("raqm"))
+        except Exception:
+            _RAQM_AVAILABLE = False
+    return _RAQM_AVAILABLE
+
+def shaping_backend() -> str:
+    return "raqm" if _raqm_available() else "reshaper"
+
 def require_text_shaping() -> None:
+    if _raqm_available():
+        return
     try:
         import arabic_reshaper  # noqa: F401
         from bidi.algorithm import get_display  # noqa: F401
@@ -898,13 +997,30 @@ def require_text_shaping() -> None:
             "بۆ ئەوەی پیتەکان جیا و هەڵە دەرنەکەون. "
             "Run: pip install -r manhwa/requirements.txt") from e
 
-def shape(text: str) -> str:
+def _shape_with_native(text: str, native: bool) -> str:
+    # Raqm/HarfBuzz consumes logical-order Unicode and does joining + bidi
+    # itself. Feeding it reshaper output a second time was the live bug:
+    # presentation-form glyphs got reordered and drawn letter-by-letter.
+    if native:
+        return text
     try:
         import arabic_reshaper
         from bidi.algorithm import get_display
         return get_display(arabic_reshaper.reshape(text))
     except ImportError:
         return text
+
+def shape(text: str) -> str:
+    return _shape_with_native(text, _raqm_available())
+
+def _text_kwargs(text: str, native: bool | None = None) -> dict:
+    native = _raqm_available() if native is None else native
+    if native and _contains_arabic(text):
+        return {"direction": "rtl", "language": "ckb"}
+    return {}
+
+def _measure_text(draw, text, font) -> float:
+    return draw.textlength(shape(text), font=font, **_text_kwargs(text))
 
 def _load_font(font_path, size, cache: dict):
     from PIL import ImageFont
@@ -919,7 +1035,7 @@ def _split_long_word(draw, word, font, width):
     chunks, current = [], ""
     for ch in word:
         trial = current + ch
-        if current and draw.textlength(shape(trial), font=font) > width:
+        if current and _measure_text(draw, trial, font) > width:
             chunks.append(current); current = ch
         else:
             current = trial
@@ -935,13 +1051,13 @@ def _wrap(draw, text, font, width):
             # Never split a Kurdish/Arabic word by characters: doing so breaks
             # letter joining at the split. _fit_font must shrink instead, and
             # if even the minimum size does not fit the segment is skipped.
-            if draw.textlength(shape(word), font=font) <= width or _contains_arabic(word):
+            if _measure_text(draw, word, font) <= width or _contains_arabic(word):
                 pieces = [word]
             else:
                 pieces = _split_long_word(draw, word, font, width)
             for piece in pieces:
                 trial = f"{current} {piece}".strip()
-                if not current or draw.textlength(shape(trial), font=font) <= width:
+                if not current or _measure_text(draw, trial, font) <= width:
                     current = trial
                 else:
                     lines.append(current); current = piece
@@ -961,7 +1077,7 @@ def _layout_metrics(draw, lines, font, size):
     line_h = _font_line_height(font, size)
     gap = max(2, int(size * 0.12))
     total_h = len(lines) * line_h + max(0, len(lines) - 1) * gap
-    max_w = max((draw.textlength(shape(line), font=font) for line in lines), default=0)
+    max_w = max((_measure_text(draw, line, font) for line in lines), default=0)
     return total_h, line_h, gap, max_w
 
 def _fit_font(draw, text, font_path, width, height, cache):
@@ -1007,8 +1123,12 @@ def _sample_background(img, box):
     for count, idx in counts:
         if idx * 3 + 2 < len(palette):
             colours.append((count, tuple(palette[idx * 3:idx * 3 + 3])))
-    for _count, colour in colours:
-        if _luminance(colour) >= 170:
+    total = sum(count for count, _colour in colours) or 1
+    for count, colour in colours:
+        # Prefer bubble white only when it is a substantial part of the box.
+        # The old "first light colour at any share" painted a fake white
+        # rectangle over dark sky behind tiny white-outlined lettering.
+        if _luminance(colour) >= 170 and count / total >= 0.25:
             return colour
     return colours[0][1] if colours else (255, 255, 255)
 
@@ -1041,7 +1161,13 @@ def _erase_original_text(img, segs):
             gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
             local = np.zeros(gray.shape, dtype=np.uint8)
             lx0, ly0, lx1, ly1 = x0 - mx0, y0 - my0, x1 - mx0, y1 - my0
-            local[ly0:ly1, lx0:lx1] = np.where(gray[ly0:ly1, lx0:lx1] < 185, 255, 0).astype(np.uint8)
+            # Mask strokes by difference from the surrounding background,
+            # not "dark pixels" only: white-outlined lettering on a dark
+            # sky has light strokes that the old mask left behind.
+            outer = np.ones(gray.shape, dtype=bool); outer[ly0:ly1, lx0:lx1] = False
+            bg_median = float(np.median(gray[outer])) if np.any(outer) else float(np.median(gray))
+            local[ly0:ly1, lx0:lx1] = np.where(
+                np.abs(gray[ly0:ly1, lx0:lx1].astype(np.float32) - bg_median) > 42, 255, 0).astype(np.uint8)
             local = cv2.dilate(local, np.ones((3, 3), np.uint8), iterations=2)
             if np.any(local):
                 arr[my0:my1, mx0:mx1] = cv2.inpaint(crop, local, 4, cv2.INPAINT_TELEA)
@@ -1065,7 +1191,7 @@ def _erase_original_text(img, segs):
             draw.rectangle([x0, y0, x1, y1], fill=bg)
         return img
 
-def render_image(inp: Path, segs: list[Segment], out: Path):
+def render_image(inp: Path, segs: list[Segment], out: Path, render_report: dict | None = None):
     from PIL import Image, ImageDraw   # lazy: text mode works without Pillow
     inp, out = Path(inp), Path(out)
     require_text_shaping()
@@ -1108,13 +1234,16 @@ def render_image(inp: Path, segs: list[Segment], out: Path):
         for line in lines:
             # "ma" = horizontally centred at the font ascender. Combined
             # with ascent+descent line metrics, lines cannot pile together.
-            draw.text((x + w / 2, ty), shape(line), fill=ink, font=font, anchor="ma")
+            draw.text((x + w / 2, ty), shape(line), fill=ink, font=font, anchor="ma", **_text_kwargs(line))
             ty += line_h + gap
     out.parent.mkdir(parents=True, exist_ok=True)
     if out.suffix.lower() in {".jpg", ".jpeg"}:
         img.save(out, quality=92, subsampling=1)
     else:
         img.save(out)
+    if render_report is not None:
+        render_report.update({"requested": len(segs), "rendered": len(layouts),
+                              "shaping": shaping_backend(), "font": font_path})
     return out
 
 def render_debug_image(inp: Path, segs: list[Segment], out: Path):

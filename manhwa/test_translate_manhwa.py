@@ -3,11 +3,12 @@ Run:  python -m unittest test_translate_manhwa -v   (from manhwa/)
 """
 import tempfile, unittest
 from pathlib import Path
-from translate_manhwa import (Segment, TranslationCache, Translator, _wrap,
-                              assess_render_plan, assess_segments, assign_render_boxes,
-                              dedupe_segments, dedupe_words, filter_segments,
-                              find_sorani_font, is_probable_ocr_junk, load_glossary,
-                              make_tiles, merge_same_bubble_segments,
+import translate_manhwa as tm
+from translate_manhwa import (Segment, TranslationCache, Translator, _shape_with_native,
+                              _text_kwargs, _wrap, assess_render_plan, assess_segments,
+                              assign_render_boxes, dedupe_segments, dedupe_words,
+                              filter_segments, find_sorani_font, is_probable_ocr_junk,
+                              load_glossary, make_tiles, merge_same_bubble_segments,
                               parse_google_payload, parse_tesseract_tsv,
                               renderable_segments, split_long_text, normalize)
 
@@ -108,12 +109,21 @@ class TestCore(unittest.TestCase):
 
     def test_arabic_words_are_never_split_by_character(self):
         class FakeDraw:
-            def textlength(self, text, font=None):
+            def textlength(self, text, font=None, **_kwargs):
                 return len(text) * 10
         word = "دەقێکیکوردی"
         self.assertEqual(_wrap(FakeDraw(), word, object(), 50), [word])
         latin = _wrap(FakeDraw(), "abcdefghij", object(), 50)
         self.assertTrue(all(len(part) <= 5 for part in latin))
+
+    def test_native_raqm_shaping_never_double_shapes(self):
+        # GitHub's Pillow has Raqm/HarfBuzz: it must receive logical-order
+        # Unicode. Reshaper output fed through Raqm was the live
+        # "letter-by-letter" bug, so native mode is a strict pass-through.
+        self.assertEqual(_shape_with_native("سلاو دونیا", True), "سلاو دونیا")
+        self.assertEqual(_text_kwargs("سلاو", True), {"direction": "rtl", "language": "ckb"})
+        self.assertEqual(_text_kwargs("hello", True), {})
+        self.assertEqual(_text_kwargs("سلاو", False), {})
 
     def test_sorani_font_selection_is_explicit(self):
         with tempfile.TemporaryDirectory() as d:
@@ -139,6 +149,29 @@ class TestCore(unittest.TestCase):
             ])
         self.assertTrue(segs[0].bubble_detected)
         self.assertFalse(segs[1].bubble_detected)
+
+    def test_bubble_crop_ocr_replaces_segment_spilling_into_artwork(self):
+        try:
+            import cv2  # noqa: F401
+            from PIL import Image, ImageDraw
+        except Exception:
+            self.skipTest("OpenCV/Pillow not installed")
+        img = Image.new("RGB", (500, 500), (25, 35, 65)); draw = ImageDraw.Draw(img)
+        draw.ellipse([50, 50, 350, 190], fill="white", outline="black", width=4)
+        # Tile OCR grouped bubble words with artwork to the right: its box
+        # spills outside the bubble and would fail placement, exactly like
+        # the rejected page's lower-left bubble.
+        dirty = Segment("POISON junk", (130, 105, 280, 40), confidence=90)
+        existing = [dirty]
+        original = tm._ocr_tile_segments
+        tm._ocr_tile_segments = lambda path, src: [Segment("Clean text", (300, 150, 240, 60), confidence=98)]
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                extra = tm._ocr_uncovered_bubbles(img, existing, "en", Path(d))
+        finally:
+            tm._ocr_tile_segments = original
+        self.assertEqual([s.text for s in extra], ["Clean text"])
+        self.assertEqual(existing, [])  # dirty spilling segment was replaced
 
     def test_glossary_and_mock(self):
         g = load_glossary(Path(__file__).parent / "glossary.json")
