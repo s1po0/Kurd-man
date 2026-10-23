@@ -65,6 +65,8 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(seg.text, "Hello")
         self.assertTrue(hasattr(tm, "Translator"))
         self.assertTrue(hasattr(tm, "assess_segments"))
+        self.assertTrue(hasattr(tm, "assess_render_plan"))
+        self.assertTrue(hasattr(tm, "renderable_segments"))
         self.assertTrue(hasattr(tm, "render_debug_image"))
 
     def test_failed_update_stays_queued_then_gives_up(self):

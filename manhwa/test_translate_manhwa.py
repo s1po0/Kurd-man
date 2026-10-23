@@ -3,10 +3,13 @@ Run:  python -m unittest test_translate_manhwa -v   (from manhwa/)
 """
 import tempfile, unittest
 from pathlib import Path
-from translate_manhwa import (Segment, TranslationCache, Translator, assess_segments,
-                              dedupe_segments, dedupe_words, load_glossary, make_tiles,
+from translate_manhwa import (Segment, TranslationCache, Translator, _wrap,
+                              assess_render_plan, assess_segments, assign_render_boxes,
+                              dedupe_segments, dedupe_words, filter_segments,
+                              find_sorani_font, is_probable_ocr_junk, load_glossary,
+                              make_tiles, merge_same_bubble_segments,
                               parse_google_payload, parse_tesseract_tsv,
-                              split_long_text, normalize)
+                              renderable_segments, split_long_text, normalize)
 
 TSV = ("level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext\n"
        "5\t1\t1\t1\t1\t1\t10\t20\t40\t15\t95\tI\n"
@@ -72,6 +75,70 @@ class TestCore(unittest.TestCase):
             {"text": "Run", "x": 90, "y": 10, "w": 40, "h": 16, "conf": 90},
         ])
         self.assertEqual([(w["x"], w["conf"]) for w in words], [(11, 96), (90, 90)])
+
+    def test_artwork_junk_and_same_bubble_merging(self):
+        bubble = {"confidence": 95, "render_box": (40, 40, 240, 90),
+                  "bubble_detected": True, "bubble_id": 7}
+        segs = [
+            Segment("PY", (300, 300, 30, 16), confidence=80),  # live-sample junk
+            Segment("Hello", (60, 60, 70, 18), **bubble),
+            Segment("there", (70, 86, 70, 18), **bubble),
+            Segment("No!", (60, 220, 45, 18), confidence=96,
+                    render_box=(40, 205, 130, 55), bubble_detected=True, bubble_id=8),
+        ]
+        self.assertTrue(is_probable_ocr_junk(segs[0]))
+        self.assertEqual([s.text for s in filter_segments(segs)], ["Hello", "there", "No!"])
+        merged = merge_same_bubble_segments(filter_segments(segs))
+        self.assertEqual([s.text for s in merged], ["Hello there", "No!"])
+        self.assertEqual(len(renderable_segments(merged)), 2)
+        self.assertTrue(assess_render_plan(500, 600, merged)["ok"])
+
+    def test_render_plan_rejects_unbacked_and_overlapping_boxes(self):
+        unbacked = [Segment("Hello there", (50, 50, 160, 30), confidence=95)]
+        bad = assess_render_plan(500, 600, unbacked)
+        self.assertFalse(bad["ok"]); self.assertIn("no_bubble_backed_segments", bad["reasons"])
+        overlapping = [
+            Segment("One", (60, 60, 60, 20), confidence=95, render_box=(40, 40, 220, 90),
+                    bubble_detected=True, bubble_id=1),
+            Segment("Two", (70, 70, 60, 20), confidence=95, render_box=(45, 45, 220, 90),
+                    bubble_detected=True, bubble_id=2),
+        ]
+        plan = assess_render_plan(500, 600, overlapping)
+        self.assertFalse(plan["ok"]); self.assertIn("overlapping_render_boxes", plan["reasons"])
+
+    def test_arabic_words_are_never_split_by_character(self):
+        class FakeDraw:
+            def textlength(self, text, font=None):
+                return len(text) * 10
+        word = "دەقێکیکوردی"
+        self.assertEqual(_wrap(FakeDraw(), word, object(), 50), [word])
+        latin = _wrap(FakeDraw(), "abcdefghij", object(), 50)
+        self.assertTrue(all(len(part) <= 5 for part in latin))
+
+    def test_sorani_font_selection_is_explicit(self):
+        with tempfile.TemporaryDirectory() as d:
+            font = Path(d) / "NotoNaskhArabic-Regular.ttf"; font.write_bytes(b"font")
+            self.assertEqual(find_sorani_font([str(Path(d) / "missing.ttf"), str(font)]), str(font))
+            self.assertIsNone(find_sorani_font([str(Path(d) / "DejaVuSans.ttf")]))
+
+    def test_bubble_detector_accepts_outlined_oval_not_blank_panel(self):
+        try:
+            import cv2  # noqa: F401
+            from PIL import Image, ImageDraw
+        except Exception:
+            self.skipTest("OpenCV/Pillow not installed")
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "sample.png"
+            img = Image.new("RGB", (500, 500), (25, 35, 65)); draw = ImageDraw.Draw(img)
+            draw.ellipse([50, 50, 350, 190], fill="white", outline="black", width=4)
+            draw.rectangle([0, 300, 500, 430], fill="white")
+            img.save(path)
+            segs = assign_render_boxes(path, [
+                Segment("Hello there", (130, 105, 120, 20), confidence=96),
+                Segment("Panel junk", (210, 350, 100, 20), confidence=96),
+            ])
+        self.assertTrue(segs[0].bubble_detected)
+        self.assertFalse(segs[1].bubble_detected)
 
     def test_glossary_and_mock(self):
         g = load_glossary(Path(__file__).parent / "glossary.json")

@@ -22,7 +22,7 @@ on:
   schedule:
     - cron: "*/10 * * * *"
   push:
-    branches: ["arena/121d982b-kurd-man", "arena/bd7043fa-kurd-man", "main"]
+    branches: ["arena/121d982b-kurd-man", "arena/bd7043fa-kurd-man", "arena/54ac1e0d-kurd-man", "main"]
     paths:
       - "bot/bot_inbox.py"
       - "bot/test_bot_inbox.py"
@@ -81,10 +81,10 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-kor
-          # Font for rendering Sorani into the page; package is fonts-noto-core
-          # (contains Noto Naskh Arabic). Non-fatal: DejaVu fallback still works.
-          sudo apt-get install -y -qq fonts-noto-core || echo "::warning::fonts-noto-core install failed; using fallback font"
-          find /usr/share/fonts -name 'NotoNaskhArabic*.ttf' -print
+          # A real Arabic-script font is mandatory: the renderer now refuses
+          # DejaVu-style fallbacks that made Sorani letters look separated.
+          sudo apt-get install -y -qq fonts-noto-core || echo "::warning::fonts-noto-core install failed; Sorani rendering will be refused"
+          find /usr/share/fonts \( -name 'NotoNaskhArabic*.ttf' -o -name 'NotoSansArabic*.ttf' -o -name 'NotoKufiArabic*.ttf' \) -print
           tesseract --list-langs
           pip install -q -r manhwa/requirements.txt
 

@@ -252,8 +252,9 @@ class InboxProcessor:
         self.client, self.admin_id, self.outdir = client, str(admin_id or ""), outdir
         self._factory: TranslatorFactory | None = None
         self.stats = {"updates": 0, "photos": 0, "texts": 0, "commands": 0,
-                      "segments": 0, "photo_replies": 0, "document_replies": 0,
-                      "quality_rejected": 0, "errors": 0}
+                      "segments": 0, "rendered_segments": 0, "photo_replies": 0,
+                      "document_replies": 0, "quality_rejected": 0,
+                      "render_rejected": 0, "errors": 0}
 
     @property
     def factory(self) -> TranslatorFactory:
@@ -305,7 +306,7 @@ class InboxProcessor:
         # Do not stop at the first non-empty OCR result: on a Korean page,
         # English OCR can produce a few junk words. Keep the stronger result;
         # stop early only when the first language passes the quality gate.
-        segs, used_src, best_score, qa = [], src_hint, -1.0, None
+        segs, used_src, best_score, qa, render_qa = [], src_hint, -1.0, None, None
         for src in dict.fromkeys([src_hint, "ko" if src_hint == "en" else "en"]):
             try:
                 found = tm.ocr_image(raw, src)
@@ -315,10 +316,12 @@ class InboxProcessor:
             if not found:
                 continue
             found_qa = tm.assess_segments(width, height, found)
-            score = tm.segments_score(found) * (1.25 if found_qa["ok"] else 0.65)
+            found_render_qa = tm.assess_render_plan(width, height, found)
+            fully_ok = bool(found_qa["ok"] and found_render_qa["ok"])
+            score = tm.segments_score(tm.renderable_segments(found)) * (1.35 if fully_ok else 0.55)
             if score > best_score:
-                segs, used_src, best_score, qa = found, src, score, found_qa
-            if found_qa["ok"]:
+                segs, used_src, best_score, qa, render_qa = found, src, score, found_qa, found_render_qa
+            if fully_ok:
                 break
 
         if not segs:
@@ -331,7 +334,15 @@ class InboxProcessor:
 
         self.stats["segments"] += len(segs)
         qa = qa or tm.assess_segments(width, height, segs)
+        render_qa = render_qa or tm.assess_render_plan(width, height, segs)
         print(f"::notice::OCR QA src={used_src} {json.dumps(qa, ensure_ascii=False)}")
+        print(f"::notice::RENDER QA {json.dumps(render_qa, ensure_ascii=False)}")
+        # Geometry only (never page text) so a rejected live page can be tuned
+        # from run annotations without uploading the user's image anywhere.
+        for i, seg in enumerate(segs, 1):
+            print(f"::notice::SEGMENT {i} chars={len(seg.text)} box={seg.box} "
+                  f"conf={seg.confidence} bubble={seg.bubble_detected}/{seg.bubble_id} "
+                  f"placed={seg.placement_confirmed} render_box={seg.render_box}")
         if not qa["ok"]:
             # The old bot confidently sent this kind of result. Now it must not:
             # a suspicious OCR pass is reported instead of 'translated' wrongly.
@@ -358,11 +369,36 @@ class InboxProcessor:
             s.ckb = ck
 
         pairs = "\n\n".join(f"[{i}]\n{s.text}\n→ {s.ckb}" for i, s in enumerate(segs, 1))
+        render_segs = tm.renderable_segments(segs)
+        if not render_qa["ok"] or not render_segs:
+            # OCR text may be usable, but its coordinates are not trustworthy.
+            # Never repeat the bad sample: no final image, only debug + text.
+            self.stats["render_rejected"] += 1
+            debug = self.outdir / f"page_{mid}.debug.jpg"
+            try:
+                tm.render_debug_image(raw, segs, debug)
+                self.client.send_document(
+                    chat_id, debug,
+                    caption="🔎 سوور=دەقی OCR، سەوز=هەڵۆکی پشتڕاستکراوە، پرتەقاڵی=پاشبنەمای تەخت، ڕەساسی=نادڵنیا",
+                    reply_to=mid)
+            except Exception as e:
+                print(f"::warning::debug image failed ({type(e).__name__}: {e})")
+            self.client.send_message(
+                chat_id,
+                "⚠️ دەقەکان خوێندراونەتەوە، بەڵام شوێنی هەڵۆکەکان دڵنیا نین؛ "
+                "بۆیە وێنەی کۆتاییە هەڵەکە نانێرم. دەقەکان لە خوارەوە دەنێرم. "
+                "بۆ ئەنجامێکی باشتر ڕەسەنەکە وەک File/Document بنێرە.",
+                mid)
+            self.client.send_message(chat_id, f"📝 دەقەکان:\n\n{pairs}", mid)
+            return
+
         rendered = self.outdir / f"page_{mid}.ckb.jpg"
         try:
-            tm.render_image(raw, segs, rendered)
+            tm.render_image(raw, render_segs, rendered)
+            self.stats["rendered_segments"] += len(render_segs)
             method = choose_send_method(width, height, rendered.stat().st_size)
-            caption = f"✅ وەرگێڕدرا بە کوردی سۆرانی — {len(segs)} دەق لەم لاپەڕەیەدا"
+            caption = (f"✅ وەرگێڕدرا بە کوردی سۆرانی — "
+                       f"{len(render_segs)} هەڵۆک بە سەرکەوتوویی دانران")
             if method == "document":
                 sent = self.client.send_document(chat_id, rendered, caption=caption, reply_to=mid)
                 self.stats["document_replies"] += 1
@@ -370,9 +406,17 @@ class InboxProcessor:
                 sent = self.client.send_photo(chat_id, rendered, caption=caption, reply_to=mid)
                 self.stats["photo_replies"] += 1
             print(f"::notice::IMAGE TRANSLATED method={method} segments={len(segs)} "
-                  f"sent_message_id={sent.get('message_id')}")
+                  f"rendered_segments={len(render_segs)} sent_message_id={sent.get('message_id')}")
         except Exception as e:  # rendering is bonus; text reply below still goes out
             print(f"::warning::render/send failed ({type(e).__name__}: {e}); sending text only")
+            try:
+                self.client.send_message(
+                    chat_id,
+                    "⚠️ نەمتوانی وێنە کۆتاییەکە بە دروستی دروست بکەم (فۆنت/ڕێندەر)، "
+                    "بۆیە تەنها دەقەکان دەنێرم لە جیاتی وێنەیەکی خراپ.",
+                    mid)
+            except Exception:
+                pass
         self.client.send_message(chat_id, f"📝 دەقەکان:\n\n{pairs}", mid)
 
     def run_once(self, state: State, state_path: Path) -> dict:
