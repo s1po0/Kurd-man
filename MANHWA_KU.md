@@ -8,8 +8,10 @@
    → OCR بەخۆڕایی (Tesseract) بۆ هەر پارچەیەک جیا
    → دەقەکان بەپێی شوێن دابەش دەبن بۆ هێڵ و هەڵۆکی جیاواز
    → هەر دەقێک دەبێت بەڕاستی لەناو هەڵۆکێکی خاوەن سنووری ڕەشدا بێت
+   → هەڵۆکێک کە خوێندنەوە گشتییەکە لەدەستی داوە، ناوەکەی جیا دەبڕدرێت و لەنۆ دەخوێندرێتەوە
    → پارچە وشەی سەر هونەر (وەک PY) و شوێنی لەسەر-یەک-کەوتوو ڕەتدەکرێنەوە
-   → تەنها فۆنتی ڕاستەقینەی عەرەبی/کوردی؛ وشەی کوردی بەپیت ناشکێندرێت
+   → تەنها فۆنتی ڕاستەقینەی عەرەبی/کوردی؛ شێوەدانی پیت تەنها بە یەک ڕێگە
+     (Raqm/HarfBuzz یان reshaper — هەرگیز هەردووکیان پێکەوە، کە پیتەکان جیا دەکاتەوە)
    → وەرگێڕان بۆ سۆرانی (ckb) + وێنەی کوردی 🎉
 ```
 
@@ -32,7 +34,7 @@
 
 ```bash
 # ئامرازە بەخۆڕایییەکان (یەک جار):
-# Ubuntu: sudo apt install tesseract-ocr tesseract-ocr-kor fonts-noto-core
+# Ubuntu: sudo apt install tesseract-ocr tesseract-ocr-kor fonts-noto-core libraqm0
 # Windows Tesseract: https://github.com/UB-Mannheim/tesseract/wiki
 pip install -r manhwa/requirements.txt        # بۆ وێنە: tiling + render + inpainting
 
@@ -43,8 +45,8 @@ python manhwa/translate_manhwa.py --image long.jpg --debug           # پشکن�
 python manhwa/translate_manhwa.py --image page1.png --src ko         # مانهوای کۆری (OCRی kor)
 ```
 
-تاقیکردنەوەکان (ئۆفلاین): `cd manhwa && python -m unittest -v` → 15/15
-(لە سیستەمێکدا کە OpenCV نییە یەک تاقیکردنەوەی detector دەپەڕێندرێت)؛
+تاقیکردنەوەکان (ئۆفلاین): `cd manhwa && python -m unittest -v` → 17/17
+(لە سیستەمێکدا کە OpenCV نییە دوو تاقیکردنەوەی detector دەپەڕێندرێت)؛
 و بۆ بۆتەکە: `cd bot && python -m unittest -v` → 8/8.
 
 ## بەکارهێنان — بێ کۆمپیوتەر، لەڕێگەی GitHub + تلگرام

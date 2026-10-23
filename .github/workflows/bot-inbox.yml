@@ -22,7 +22,7 @@ on:
   schedule:
     - cron: "*/10 * * * *"
   push:
-    branches: ["arena/121d982b-kurd-man", "arena/bd7043fa-kurd-man", "arena/54ac1e0d-kurd-man", "main"]
+    branches: ["arena/121d982b-kurd-man", "arena/bd7043fa-kurd-man", "arena/54ac1e0d-kurd-man", "arena/d06c3970-kurd-man", "main"]
     paths:
       - "bot/bot_inbox.py"
       - "bot/test_bot_inbox.py"
@@ -84,9 +84,15 @@ jobs:
           # A real Arabic-script font is mandatory: the renderer now refuses
           # DejaVu-style fallbacks that made Sorani letters look separated.
           sudo apt-get install -y -qq fonts-noto-core || echo "::warning::fonts-noto-core install failed; Sorani rendering will be refused"
+          # Native complex-text shaping (HarfBuzz via Raqm) joins Sorani
+          # letters properly; without it the code uses arabic_reshaper.
+          # Both must never be applied to the same string (double shaping
+          # was the "letter by letter" live bug).
+          sudo apt-get install -y -qq libraqm0 || echo "::warning::libraqm0 install failed; falling back to reshaper shaping"
           find /usr/share/fonts \( -name 'NotoNaskhArabic*.ttf' -o -name 'NotoSansArabic*.ttf' -o -name 'NotoKufiArabic*.ttf' \) -print
           tesseract --list-langs
           pip install -q -r manhwa/requirements.txt
+          python3 -c "from PIL import features; print('::notice::RAQM available=' + str(bool(features.check('raqm'))))"
 
       - name: Answer queued messages / translate photos
         if: steps.peek.outputs.has_updates == 'true'
