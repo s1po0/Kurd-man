@@ -8,7 +8,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "bot": "node bot/telegram-bot.mjs",
+    "bot:check": "node bot/telegram-bot.mjs --check",
+    "bot:test": "node bot/telegram-bot.mjs --selftest"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
