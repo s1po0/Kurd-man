@@ -81,9 +81,10 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-kor
-          # Font for rendering Sorani into the page; package is fonts-Noto-core
+          # Font for rendering Sorani into the page; package is fonts-noto-core
           # (contains Noto Naskh Arabic). Non-fatal: DejaVu fallback still works.
-          sudo apt-get install -y -qq fonts-Noto-core || echo "::warning::fonts-Noto-core install failed; using fallback font"
+          sudo apt-get install -y -qq fonts-noto-core || echo "::warning::fonts-noto-core install failed; using fallback font"
+          find /usr/share/fonts -name 'NotoNaskhArabic*.ttf' -print
           tesseract --list-langs
           pip install -q -r manhwa/requirements.txt
 

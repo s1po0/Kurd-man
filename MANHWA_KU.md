@@ -30,7 +30,7 @@
 
 ```bash
 # ئامرازە بەخۆڕایییەکان (یەک جار):
-# Ubuntu: sudo apt install tesseract-ocr tesseract-ocr-kor fonts-Noto-core
+# Ubuntu: sudo apt install tesseract-ocr tesseract-ocr-kor fonts-noto-core
 # Windows Tesseract: https://github.com/UB-Mannheim/tesseract/wiki
 pip install -r manhwa/requirements.txt        # بۆ وێنە: tiling + render + inpainting
 
