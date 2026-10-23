@@ -13,8 +13,8 @@ What it handles (admin only):
   /start, /help   -> instructions
   /ping           -> pong
   any text        -> translated to Kurdish Sorani (google-free, cached)
-  photo / image   -> OCR (Tesseract, EN then KO fallback) -> translated
-                     bubbles -> rendered image + side-by-side text back
+  photo / image   -> tiled OCR (EN/KO) -> quality gate -> translated bubbles
+                     -> rendered photo/document + side-by-side text back
 
 Env (GitHub Secrets locally exported): TELEGRAM_BOT_TOKEN, TELEGRAM_ADMIN_ID
 State: BOT_STATE_FILE JSON {"next_offset": int, "processed": [update_ids]}
@@ -81,6 +81,12 @@ def image_file_id(msg: dict) -> str | None:
     doc = msg.get("document") or {}
     return doc.get("file_id")
 
+def choose_send_method(width: int = 0, height: int = 0, file_size: int = 0) -> str:
+    """Telegram photo upload squeezes/scale-limits tall strips; use files."""
+    if height > 2500 or (width + height) > 9500 or file_size > 9_500_000:
+        return "document"
+    return "photo"
+
 def lang_hint(msg: dict) -> str:
     caption = f"{msg.get('caption', '')} {msg.get('text', '')}".lower()
     if any(w in caption for w in ("ko", "korean", "کۆری", "한국")):
@@ -91,7 +97,8 @@ def help_text() -> str:
     return (
         "📚 سڵاو! من بۆتی وەرگێڕانی مانهوام بۆ کوردی سۆرانی.\n\n"
         "📷 وێنەی یەک لاپەڕەی مانهوا بنێرە (ئینگلیزی یان کۆری) — "
-        "وێنەکەت وەردەگێڕم و بۆت دەنێرمەوە.\n"
+        "بۆ وێنەی درێژ، لە تلگرام وەک File/Document بینێرە نەک وەک وێنەی پەستێنراو؛ "
+        "وێنەکەت پارچەپارچە دەخوێنمەوە و وەردەگێڕم.\n"
         "✍️ یان هەر دەقێکی ئینگلیزی بنووسە، دەیکەم بە سۆرانی.\n\n"
         "⏳ تێبینی: بۆتەکە ئۆتۆماتیکی هەر ١٠ خولەک جارێک دەپشکنێت؛ وەڵام بەزۆری لە ٥ تا ٢٠ خولەکدا دەگات. پێویست ناکات لە شوێنێکی تر قسە بکەیت.\n"
         "/ping بۆ تاقیکردنەوە."
@@ -182,7 +189,8 @@ class TelegramClient:
             dest.write_bytes(r.read())
         return dest
 
-    def send_photo(self, chat_id, photo: Path, caption: str = "", reply_to: int | None = None) -> dict:
+    def _send_file(self, method: str, field: str, chat_id, path: Path,
+                   caption: str = "", reply_to: int | None = None) -> dict:
         boundary = f"----manhwa{uuid.uuid4().hex}"
         fields = {"chat_id": str(chat_id), "caption": caption[:1024]}
         if reply_to:
@@ -190,20 +198,27 @@ class TelegramClient:
         body = b""
         for k, v in fields.items():
             body += (f"--{boundary}\r\nContent-Disposition: form-data; name=\"{k}\"\r\n\r\n{v}\r\n").encode()
-        mime = "image/png" if photo.suffix.lower() == ".png" else "image/jpeg"
-        body += (f"--{boundary}\r\nContent-Disposition: form-data; name=\"photo\"; "
-                 f"filename=\"{photo.name}\"\r\nContent-Type: {mime}\r\n\r\n").encode()
-        body += photo.read_bytes() + f"\r\n--{boundary}--\r\n".encode()
-        req = urllib.request.Request(f"{self.base}/sendPhoto", data=body, headers={
+        suffix = path.suffix.lower()
+        mime = {"png": "image/png", "webp": "image/webp"}.get(suffix.lstrip("."), "image/jpeg")
+        body += (f"--{boundary}\r\nContent-Disposition: form-data; name=\"{field}\"; "
+                 f"filename=\"{path.name}\"\r\nContent-Type: {mime}\r\n\r\n").encode()
+        body += path.read_bytes() + f"\r\n--{boundary}--\r\n".encode()
+        req = urllib.request.Request(f"{self.base}/{method}", data=body, headers={
             "content-type": f"multipart/form-data; boundary={boundary}"})
         try:
-            with urllib.request.urlopen(req, timeout=120) as r:
+            with urllib.request.urlopen(req, timeout=180) as r:
                 out = json.loads(r.read().decode())
         except urllib.error.HTTPError as e:
-            raise TelegramError(f"sendPhoto HTTP {e.code}: {e.read().decode(errors='ignore')[:300]}") from e
+            raise TelegramError(f"{method} HTTP {e.code}: {e.read().decode(errors='ignore')[:300]}") from e
         if not out.get("ok"):
-            raise TelegramError(f"sendPhoto: {out.get('description')}")
+            raise TelegramError(f"{method}: {out.get('description')}")
         return out["result"]
+
+    def send_photo(self, chat_id, photo: Path, caption: str = "", reply_to: int | None = None) -> dict:
+        return self._send_file("sendPhoto", "photo", chat_id, photo, caption, reply_to)
+
+    def send_document(self, chat_id, document: Path, caption: str = "", reply_to: int | None = None) -> dict:
+        return self._send_file("sendDocument", "document", chat_id, document, caption, reply_to)
 
 # ---------------------------------------------------------------- translation reuse
 def load_manhwa_module():
@@ -237,7 +252,8 @@ class InboxProcessor:
         self.client, self.admin_id, self.outdir = client, str(admin_id or ""), outdir
         self._factory: TranslatorFactory | None = None
         self.stats = {"updates": 0, "photos": 0, "texts": 0, "commands": 0,
-                      "segments": 0, "photo_replies": 0, "errors": 0}
+                      "segments": 0, "photo_replies": 0, "document_replies": 0,
+                      "quality_rejected": 0, "errors": 0}
 
     @property
     def factory(self) -> TranslatorFactory:
@@ -273,7 +289,7 @@ class InboxProcessor:
     def _process_photo(self, msg: dict, chat_id) -> None:
         self.stats["photos"] += 1
         mid = msg.get("message_id")
-        self.client.send_message(chat_id, "✅ وێنەکە گەیشت! خەریکم وەریگێڕم، کەمێک چاوەڕوان بکە… ⏳", mid)
+        self.client.send_message(chat_id, "✅ وێنەکە گەیشت! خەریکم بە پارچەپارچە بیخوێنمەوە و وەریگێڕم… ⏳", mid)
         fid = image_file_id(msg)
         if not fid:
             raise TelegramError("photo without file_id")
@@ -281,25 +297,62 @@ class InboxProcessor:
         raw = self.client.download(fid, self.outdir / f"in_{mid}.jpg")
 
         tm = self.factory.tm
-        segs, used_src = [], src_hint
+        try:
+            width, height = tm.image_size(raw)
+        except Exception:
+            width = height = 0
+
+        # Do not stop at the first non-empty OCR result: on a Korean page,
+        # English OCR can produce a few junk words. Keep the stronger result;
+        # stop early only when the first language passes the quality gate.
+        segs, used_src, best_score, qa = [], src_hint, -1.0, None
         for src in dict.fromkeys([src_hint, "ko" if src_hint == "en" else "en"]):
             try:
                 found = tm.ocr_image(raw, src)
-            except (Exception, SystemExit) as e:
+            except Exception as e:
                 print(f"OCR {src} failed: {e}", file=sys.stderr); found = []
-            found = [s for s in found if len(s.text.strip()) >= 2][:80]
-            if found:
-                segs, used_src = found, src; break
+            found = [s for s in found if len(s.text.strip()) >= 2][:240]
+            if not found:
+                continue
+            found_qa = tm.assess_segments(width, height, found)
+            score = tm.segments_score(found) * (1.25 if found_qa["ok"] else 0.65)
+            if score > best_score:
+                segs, used_src, best_score, qa = found, src, score, found_qa
+            if found_qa["ok"]:
+                break
 
         if not segs:
             self.client.send_message(
                 chat_id,
                 "⚠️ لەم وێنەیەدا هیچ دەقێک نەخوێندرایەوە (OCR).\n"
-                "هەوڵ بدەوە: وێنەی ڕووناکتر/گەورەتر بنێرە، یان تەنها یەک بەش لە لاپەڕەکە ببڕە و بینێرە.",
+                "تکایە بۆ وێنەی درێژ ڕەسەنەکە وەک File/Document بنێرە؛ وێنەی پەستێنراوی تلگرام دەقەکە زۆر بچووک دەکاتەوە.",
                 mid)
             return
 
         self.stats["segments"] += len(segs)
+        qa = qa or tm.assess_segments(width, height, segs)
+        print(f"::notice::OCR QA src={used_src} {json.dumps(qa, ensure_ascii=False)}")
+        if not qa["ok"]:
+            # The old bot confidently sent this kind of result. Now it must not:
+            # a suspicious OCR pass is reported instead of 'translated' wrongly.
+            self.stats["quality_rejected"] += 1
+            debug = self.outdir / f"page_{mid}.debug.jpg"
+            try:
+                tm.render_debug_image(raw, segs, debug)
+                self.client.send_document(
+                    chat_id, debug,
+                    caption="🔎 چوارچێوە سوورەکان ئەوە دەردەخەن چی خوێندرایەوە",
+                    reply_to=mid)
+            except Exception as e:
+                print(f"::warning::debug image failed ({type(e).__name__}: {e})")
+            self.client.send_message(
+                chat_id,
+                "⚠️ خوێندنەوەی ئەم وێنەیە دڵنیا نییە، بۆیە وەرگێڕانێکی هەڵە نانێرم.\n"
+                f"OCR تەنها {len(segs)} بەشی دەقی دۆزیەوە. تکایە ڕەسەنەکە وەک File/Document بنێرە "
+                "(لە کاتی ناردندا File هەڵبژێرە، نەک Photo)، یان بەشێکی ڕووناکتری لاپەڕەکە ببڕە.",
+                mid)
+            return
+
         translator = self.factory.get(used_src)
         for s, ck in zip(segs, translator.translate_many([s.text for s in segs])):
             s.ckb = ck
@@ -308,14 +361,18 @@ class InboxProcessor:
         rendered = self.outdir / f"page_{mid}.ckb.jpg"
         try:
             tm.render_image(raw, segs, rendered)
-            sent = self.client.send_photo(
-                chat_id, rendered,
-                caption=f"✅ وەرگێڕدرا بە کوردی سۆرانی — {len(segs)} دەق لەم لاپەڕەیەدا",
-                reply_to=mid)
-            self.stats["photo_replies"] += 1
-            print(f"::notice::PHOTO TRANSLATED segments={len(segs)} sent_message_id={sent.get('message_id')}")
+            method = choose_send_method(width, height, rendered.stat().st_size)
+            caption = f"✅ وەرگێڕدرا بە کوردی سۆرانی — {len(segs)} دەق لەم لاپەڕەیەدا"
+            if method == "document":
+                sent = self.client.send_document(chat_id, rendered, caption=caption, reply_to=mid)
+                self.stats["document_replies"] += 1
+            else:
+                sent = self.client.send_photo(chat_id, rendered, caption=caption, reply_to=mid)
+                self.stats["photo_replies"] += 1
+            print(f"::notice::IMAGE TRANSLATED method={method} segments={len(segs)} "
+                  f"sent_message_id={sent.get('message_id')}")
         except Exception as e:  # rendering is bonus; text reply below still goes out
-            print(f"::warning::render/sendPhoto failed ({type(e).__name__}: {e}); sending text only")
+            print(f"::warning::render/send failed ({type(e).__name__}: {e}); sending text only")
         self.client.send_message(chat_id, f"📝 دەقەکان:\n\n{pairs}", mid)
 
     def run_once(self, state: State, state_path: Path) -> dict:

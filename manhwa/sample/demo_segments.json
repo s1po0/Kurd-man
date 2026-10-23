@@ -4,38 +4,66 @@
     {
       "text": "I finally returned after ten years.",
       "box": [
+        65,
+        77,
+        379,
+        20
+      ],
+      "render_box": [
         40,
         40,
         430,
         95
-      ]
+      ],
+      "bubble_detected": true
     },
     {
       "text": "Who are you?!",
       "box": [
+        383,
+        278,
+        193,
+        24
+      ],
+      "render_box": [
         330,
         250,
         300,
         80
-      ]
+      ],
+      "bubble_detected": true
     },
     {
       "text": "Run! The monsters are coming!",
       "box": [
+        67,
+        466,
+        396,
+        22
+      ],
+      "render_box": [
         50,
         430,
         430,
         95
-      ]
+      ],
+      "bubble_detected": true
     },
     {
       "text": "I will protect you!",
       "box": [
+        352,
+        648,
+        236,
+        24
+      ],
+      "render_box": [
         300,
         620,
         340,
         80
-      ]
+      ],
+      "bubble_detected": true
     }
   ]
 }

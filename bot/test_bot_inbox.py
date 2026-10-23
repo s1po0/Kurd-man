@@ -3,8 +3,9 @@
 """
 import tempfile, unittest
 from pathlib import Path
-from bot_inbox import (InboxProcessor, State, chunk_message, classify_message,
-                       image_file_id, lang_hint, load_manhwa_module, pick_largest_photo)
+from bot_inbox import (InboxProcessor, State, choose_send_method, chunk_message,
+                       classify_message, image_file_id, lang_hint,
+                       load_manhwa_module, pick_largest_photo)
 
 PHOTO_MSG = {"message_id": 7, "chat": {"id": 42}, "from": {"id": 999},
              "photo": [{"file_id": "small", "width": 90, "height": 90, "file_size": 1000},
@@ -35,6 +36,12 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(classify_message({"document": {"mime_type": "image/png", "file_id": "d"}}), "photo")
         self.assertEqual(classify_message({"sticker": {}}), "other")
 
+    def test_tall_results_are_documents_not_squeezed_photos(self):
+        self.assertEqual(choose_send_method(800, 1200, 100_000), "photo")
+        self.assertEqual(choose_send_method(800, 6000, 100_000), "document")
+        self.assertEqual(choose_send_method(1200, 9000, 100_000), "document")
+        self.assertEqual(choose_send_method(800, 1200, 11_000_000), "document")
+
     def test_lang_hint(self):
         self.assertEqual(lang_hint({"caption": "ko"}), "ko")
         self.assertEqual(lang_hint({"photo": []}), "en")
@@ -57,6 +64,8 @@ class TestHelpers(unittest.TestCase):
         seg = tm.Segment("Hello", (0, 0, 10, 10))
         self.assertEqual(seg.text, "Hello")
         self.assertTrue(hasattr(tm, "Translator"))
+        self.assertTrue(hasattr(tm, "assess_segments"))
+        self.assertTrue(hasattr(tm, "render_debug_image"))
 
     def test_failed_update_stays_queued_then_gives_up(self):
         upd = [{"update_id": 20, "message": {"message_id": 1, "chat": {"id": 42},

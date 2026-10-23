@@ -33,8 +33,11 @@ for text, (x, y, w, h) in BUBBLES:
         if d.textlength(text, font=f) <= w - 24: break
         size -= 2
     tw = d.textlength(text, font=f)
-    d.text((x + (w - tw) / 2, y + (h - size) / 2), text, fill="black", font=f)
-    segs.append({"text": text, "box": [x, y, w, h]})
+    tx, ty = x + (w - tw) / 2, y + (h - size) / 2
+    d.text((tx, ty), text, fill="black", font=f)
+    # box = tight English lettering; render_box = the whole speech bubble.
+    segs.append({"text": text, "box": [int(tx), int(ty), int(tw), int(size)],
+                 "render_box": [x, y, w, h], "bubble_detected": True})
 
 img.save(HERE / "demo_en.png")
 (HERE / "demo_segments.json").write_text(json.dumps(
