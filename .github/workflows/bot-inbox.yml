@@ -8,24 +8,24 @@
 # on the ephemeral runner and are NEVER uploaded as artifacts.
 #
 # TRIGGERS:
-#   - push touching this feature on the arena branch (agent-triggered)
-#   - workflow_dispatch (Actions tab, once visible on the default branch)
-#   - schedule is prepared below but commented: GitHub only runs cron
-#     from the DEFAULT branch, so uncomment it after merging to main.
-#     Even then GitHub cron is "every ~10-15 min", not instant — a real
-#     24/7 host running bot/telegram-bot.mjs (or this script in a loop)
-#     remains the proper long-term answer.
+#   - schedule (main/default branch only — GitHub rule): auto-check
+#     every 10 minutes. NOTE: GitHub may delay cron runs, so real-world
+#     replies typically arrive within ~5-20 minutes, not instantly.
+#   - push touching this feature (agent-triggered immediate check)
+#   - workflow_dispatch (Actions tab, manual immediate check)
+# A real always-on host remains the only way to get *instant* replies;
+# scheduling is the free no-server compromise.
 name: Bot Inbox (answer queued messages)
 
 on:
   workflow_dispatch: {}
+  schedule:
+    - cron: "*/10 * * * *"
   push:
-    branches: ["arena/121d982b-kurd-man"]
+    branches: ["arena/121d982b-kurd-man", "main"]
     paths:
       - "bot/bot_inbox.py"
       - ".github/workflows/bot-inbox.yml"
-  # schedule:
-  #   - cron: "*/10 * * * *"   # enable AFTER merge to main
 
 concurrency:
   group: bot-inbox
