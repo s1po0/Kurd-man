@@ -43,7 +43,7 @@ jobs:
           fi
           echo "Checking bot identity (getMe)..."
           ME=$(curl -s "https://api.telegram.org/bot${TOKEN}/getMe")
-          echo "$ME" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('ok'), d; print('Bot OK: @'+d['result']['username'])"
+          echo "$ME" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('ok'), d; print('Bot OK: @'+d['result']['username']); print('::notice::BOT OK @'+d['result']['username'])"
           TEXT="${CUSTOM:-✅ سڵاو! ئەمە نامەی تاقیکردنەوەیە — Arena Agent کۆنترۆڵی ئەم بۆتەی هەیە 🤖
 
           Hello! Test message — your Arena agent controls this bot.}"
@@ -56,8 +56,10 @@ jobs:
           d=json.load(sys.stdin)
           if d.get('ok'):
               r=d['result']; print(f\"SENT OK: message_id={r['message_id']} chat={r['chat']['id']}\")
+              print(f\"::notice::TELEGRAM SENT OK message_id={r['message_id']} chat={r['chat']['id']}\")
           else:
-              print('FAILED:', d.get('description')); 
+              print('FAILED:', d.get('description'))
+              print(f\"::error::TELEGRAM FAILED: {d.get('description')}\")
               if 'initiate' in str(d.get('description','')) or d.get('error_code')==403:
                   print('HINT: Open the bot in Telegram and press START (/start) first, then re-run.')
               sys.exit(1)
