@@ -337,6 +337,12 @@ class InboxProcessor:
         render_qa = render_qa or tm.assess_render_plan(width, height, segs)
         print(f"::notice::OCR QA src={used_src} {json.dumps(qa, ensure_ascii=False)}")
         print(f"::notice::RENDER QA {json.dumps(render_qa, ensure_ascii=False)}")
+        # Geometry only (never page text) so a rejected live page can be tuned
+        # from run annotations without uploading the user's image anywhere.
+        for i, seg in enumerate(segs, 1):
+            print(f"::notice::SEGMENT {i} chars={len(seg.text)} box={seg.box} "
+                  f"conf={seg.confidence} bubble={seg.bubble_detected}/{seg.bubble_id} "
+                  f"placed={seg.placement_confirmed} render_box={seg.render_box}")
         if not qa["ok"]:
             # The old bot confidently sent this kind of result. Now it must not:
             # a suspicious OCR pass is reported instead of 'translated' wrongly.
@@ -373,7 +379,7 @@ class InboxProcessor:
                 tm.render_debug_image(raw, segs, debug)
                 self.client.send_document(
                     chat_id, debug,
-                    caption="🔎 شوێنە دۆزراوەکان: سوور=دەقی OCR، سەوز=شوێنی نووسین",
+                    caption="🔎 سوور=دەقی OCR، سەوز=هەڵۆکی پشتڕاستکراوە، پرتەقاڵی=پاشبنەمای تەخت، ڕەساسی=نادڵنیا",
                     reply_to=mid)
             except Exception as e:
                 print(f"::warning::debug image failed ({type(e).__name__}: {e})")

@@ -200,6 +200,7 @@ class Segment:
     render_box: tuple[int, int, int, int] | None = None  # bubble/interior box for typesetting
     bubble_detected: bool = False
     bubble_id: int | None = None  # one physical bubble -> one typeset segment
+    placement_confirmed: bool = False  # flat narration area even without a bubble outline
 
 @dataclass(frozen=True)
 class Tile:
@@ -497,12 +498,13 @@ def merge_same_bubble_segments(segs: list[Segment]) -> list[Segment]:
             render_box=_union_box(render_boxes) if render_boxes else None,
             bubble_detected=True,
             bubble_id=group[0].bubble_id,
+            placement_confirmed=True,
         ))
     return sort_reading_order(merged)
 
 def is_renderable_segment(seg: Segment) -> bool:
-    """Safe to erase + typeset: proven bubble interior, credible OCR text."""
-    if not seg.bubble_detected or not seg.render_box or is_probable_ocr_junk(seg):
+    """Safe to erase + typeset: proven bubble/flat placement, credible text."""
+    if not (seg.bubble_detected or seg.placement_confirmed) or not seg.render_box or is_probable_ocr_junk(seg):
         return False
     if seg.confidence is not None and float(seg.confidence) < 45:
         return False
@@ -543,7 +545,8 @@ def _transform_segment(seg: Segment, dx: int, dy: int, scale: float) -> Segment:
     x, y, w, h = seg.box
     box = (int(round(x / scale + dx)), int(round(y / scale + dy)),
            max(1, int(round(w / scale))), max(1, int(round(h / scale))))
-    return replace(seg, box=box, render_box=None, bubble_detected=False, bubble_id=None)
+    return replace(seg, box=box, render_box=None, bubble_detected=False, bubble_id=None,
+                   placement_confirmed=False)
 
 def run_tesseract_tsv(image_path: Path, src: str, psm: int = 6, timeout: int = 180) -> str:
     lang = TESS_LANG.get(src, "eng")
@@ -687,6 +690,7 @@ def assign_render_boxes(path: Path, segs: list[Segment], size: tuple[int, int] |
             candidates.append({
                 "id": len(candidates) + 1,
                 "box": body_box,
+                "full_box": (x, y, w, h),
                 "bbox_area": max(1, body_box[2] * body_box[3]),
                 "contour_area": contour_area,
                 "contour": contour,
@@ -697,21 +701,27 @@ def assign_render_boxes(path: Path, segs: list[Segment], size: tuple[int, int] |
             sx0, sy0, sx1, sy1 = _xyxy(seg.box)
             cx, cy = _center(seg.box)
             seg_area = max(1, (sx1 - sx0) * (sy1 - sy0))
-            sample_points = [(sx0, sy0), (sx1, sy0), (sx0, sy1), (sx1, sy1),
-                             (cx, sy0), (cx, sy1), (sx0, cy), (sx1, cy), (cx, cy)]
+            # Sample the inner 3x3 grid, not rectangle corners: in an oval
+            # bubble the corners of a wide text line are legitimately near
+            # or just outside the curved edge.
+            sample_points = [(sx0 + (sx1 - sx0) * fx, sy0 + (sy1 - sy0) * fy)
+                             for fy in (0.25, 0.50, 0.75) for fx in (0.25, 0.50, 0.75)]
             for cand in candidates:
                 box = cand["box"]
                 if cand["bbox_area"] < seg_area * 1.03 or seg_area / max(1.0, cand["contour_area"]) > 0.82:
                     continue
                 bx0, by0, bx1, by1 = _xyxy(box)
-                contained = (_overlap(sx0, sx1, bx0, bx1) * _overlap(sy0, sy1, by0, by1)) / seg_area
-                if contained < 0.80:
+                fx0, fy0, fx1, fy1 = _xyxy(cand["full_box"])
+                contained = (_overlap(sx0, sx1, fx0, fx1) * _overlap(sy0, sy1, fy0, fy1)) / seg_area
+                if contained < 0.65:
                     continue
                 # Bounding-box overlap let white clothes "contain" text. The
                 # words themselves must lie inside the actual bubble shape.
                 inside = [cv2.pointPolygonTest(cand["contour"], (float(px), float(py)), False) >= 0
                           for px, py in sample_points]
-                if not inside[-1] or sum(inside) / len(inside) < 0.70:
+                if cv2.pointPolygonTest(cand["contour"], (float(cx), float(cy)), False) < 0:
+                    continue
+                if sum(inside) / len(inside) < 0.62:
                     continue
                 # Oval bubbles need an inscribed rectangle; squarer bubbles
                 # can use more of their interior. This also stops the white
@@ -724,7 +734,37 @@ def assign_render_boxes(path: Path, segs: list[Segment], size: tuple[int, int] |
                 seg.render_box = expand_box(_union_box([inner, seg.box]), 0, 0, (width, height))
                 seg.bubble_detected = True
                 seg.bubble_id = int(cand["id"])
+                seg.placement_confirmed = True
                 break
+
+        # Narration is often printed directly on a flat sky/colour wash with
+        # no bubble outline. Such a segment may be typeset at its own tight
+        # OCR location only when the ring around the letters is genuinely
+        # flat; a face/hair/clothing texture fails this uniformity test.
+        for seg in segs:
+            if seg.bubble_detected or not seg.render_box:
+                continue
+            if seg.confidence is None or float(seg.confidence) < 70:
+                continue
+            if sum(ch.isalnum() for ch in seg.text) < 4:
+                continue
+            rx0, ry0, rx1, ry1 = _xyxy(seg.render_box)
+            tx0, ty0, tx1, ty1 = _xyxy(expand_box(seg.box, 3, 3, (width, height)))
+            crop = gray[max(0, ry0):min(height, ry1), max(0, rx0):min(width, rx1)].astype(np.float32)
+            if crop.size < 200:
+                continue
+            mask = np.ones(crop.shape, dtype=bool)
+            ly0, ly1 = max(0, ty0 - ry0), min(crop.shape[0], ty1 - ry0)
+            lx0, lx1 = max(0, tx0 - rx0), min(crop.shape[1], tx1 - rx0)
+            if ly1 > ly0 and lx1 > lx0:
+                mask[ly0:ly1, lx0:lx1] = False
+            background = crop[mask]
+            if background.size < 80:
+                continue
+            median = float(np.median(background))
+            uniform = float(np.mean(np.abs(background - median) <= 24))
+            if uniform >= 0.72 and float(np.std(background)) <= 42:
+                seg.placement_confirmed = True
         return merge_same_bubble_segments(segs)
     except Exception:
         pass
@@ -1086,7 +1126,11 @@ def render_debug_image(inp: Path, segs: list[Segment], out: Path):
     draw = ImageDraw.Draw(img)
     font = ImageFont.load_default()
     for i, seg in enumerate(segs, 1):
-        for box, colour in ((seg.box, (255, 0, 0)), (seg.render_box, (0, 180, 0))):
+        # Red = tight OCR. Green = proven bubble. Orange = flat narration
+        # placement. Grey = not safe to typeset.
+        render_colour = ((0, 180, 0) if seg.bubble_detected else
+                         (255, 140, 0) if seg.placement_confirmed else (130, 130, 130))
+        for box, colour in ((seg.box, (255, 0, 0)), (seg.render_box, render_colour)):
             if box:
                 x0, y0, x1, y1 = _xyxy(box)
                 draw.rectangle([x0, y0, x1, y1], outline=colour, width=max(2, img.width // 400))
@@ -1157,7 +1201,8 @@ def main(argv=None) -> int:
                             confidence=s.get("confidence"),
                             render_box=tuple(s["render_box"]) if s.get("render_box") else tuple(s["box"]),
                             bubble_detected=bool(s.get("bubble_detected", False)),
-                            bubble_id=s.get("bubble_id"))
+                            bubble_id=s.get("bubble_id"),
+                            placement_confirmed=bool(s.get("placement_confirmed", s.get("bubble_detected", False))))
                     for s in data["segments"]]
             img_path = Path(data["image"])
             if not img_path.exists():  # allow paths relative to the JSON file
@@ -1173,6 +1218,7 @@ def main(argv=None) -> int:
         payload = {"segments": [{"en": s.text, "ckb": s.ckb, "box": s.box,
                                   "render_box": s.render_box, "confidence": s.confidence,
                                   "bubble_detected": s.bubble_detected, "bubble_id": s.bubble_id,
+                                  "placement_confirmed": s.placement_confirmed,
                                   "renderable": is_renderable_segment(s)} for s in segs],
                    "qa": qa, "render_qa": render_qa}
         (outdir / f"{stem}.ckb.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")

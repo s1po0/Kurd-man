@@ -18,6 +18,7 @@
       "confidence": null,
       "bubble_detected": true,
       "bubble_id": 4,
+      "placement_confirmed": true,
       "renderable": true
     },
     {
@@ -38,6 +39,7 @@
       "confidence": null,
       "bubble_detected": true,
       "bubble_id": 3,
+      "placement_confirmed": true,
       "renderable": true
     },
     {
@@ -58,6 +60,7 @@
       "confidence": null,
       "bubble_detected": true,
       "bubble_id": 2,
+      "placement_confirmed": true,
       "renderable": true
     },
     {
@@ -78,6 +81,7 @@
       "confidence": null,
       "bubble_detected": true,
       "bubble_id": 1,
+      "placement_confirmed": true,
       "renderable": true
     }
   ],
