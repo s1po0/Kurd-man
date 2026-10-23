@@ -20,7 +20,7 @@ Examples:
   python translate_manhwa.py --image page1.png --src ko   # Korean raw (needs kor OCR data)
 
 OCR needs the free Tesseract binary:
-  Ubuntu/Debian: sudo apt install tesseract-ocr fonts-Noto-Naskh-arabic
+  Ubuntu/Debian: sudo apt install tesseract-ocr tesseract-ocr-kor fonts-Noto-core
   Windows:       https://github.com/UB-Mannheim/tesseract/wiki
 Only translate material you have the rights to / for personal use.
 """

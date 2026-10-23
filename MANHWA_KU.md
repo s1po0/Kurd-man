@@ -28,7 +28,7 @@
 
 ```bash
 # ئامرازە بەخۆڕایییەکان (یەک جار):
-# Ubuntu: sudo apt install tesseract-ocr fonts-Noto-Naskh-arabic
+# Ubuntu: sudo apt install tesseract-ocr tesseract-ocr-kor fonts-Noto-core
 # Windows Tesseract: https://github.com/UB-Mannheim/tesseract/wiki
 pip install -r manhwa/requirements.txt        # تەنها بۆ وێنە (--render) پێویستە
 

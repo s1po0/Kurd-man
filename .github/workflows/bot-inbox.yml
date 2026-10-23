@@ -66,7 +66,7 @@ jobs:
         if: steps.peek.outputs.needs_ocr == 'true'
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-Kor
+          sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-kor
           # Font for rendering Sorani into the page; package is fonts-Noto-core
           # (contains Noto Naskh Arabic). Non-fatal: DejaVu fallback still works.
           sudo apt-get install -y -qq fonts-Noto-core || echo "::warning::fonts-Noto-core install failed; using fallback font"
