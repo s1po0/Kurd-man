@@ -25,7 +25,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: manhwa/cache.sqlite
-          key: manhwa-cache-v1
+          key: manhwa-cache-${{ github.run_id }}
+          restore-keys: |
+            manhwa-cache-
 
       - name: Translate EN -> Kurdish Sorani (google-free, no key)
         working-directory: manhwa

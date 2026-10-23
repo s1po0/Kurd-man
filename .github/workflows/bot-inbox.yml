@@ -1,0 +1,77 @@
+# Bot inbox checker: answers messages/photos queued on Telegram.
+#
+# A bot only replies while something polls Telegram. This workflow is a
+# one-pass poller (bot/bot_inbox.py): peek (stdlib only, seconds) ->
+# install OCR only if a photo is waiting -> OCR + translate + reply.
+# Processed update IDs persist between runs in a rolling actions/cache,
+# so nobody gets the same answer twice. User photos are processed only
+# on the ephemeral runner and are NEVER uploaded as artifacts.
+#
+# TRIGGERS:
+#   - push touching this feature on the arena branch (agent-triggered)
+#   - workflow_dispatch (Actions tab, once visible on the default branch)
+#   - schedule is prepared below but commented: GitHub only runs cron
+#     from the DEFAULT branch, so uncomment it after merging to main.
+#     Even then GitHub cron is "every ~10-15 min", not instant — a real
+#     24/7 host running bot/telegram-bot.mjs (or this script in a loop)
+#     remains the proper long-term answer.
+name: Bot Inbox (answer queued messages)
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: ["arena/121d982b-kurd-man"]
+    paths:
+      - "bot/bot_inbox.py"
+      - ".github/workflows/bot-inbox.yml"
+  # schedule:
+  #   - cron: "*/10 * * * *"   # enable AFTER merge to main
+
+concurrency:
+  group: bot-inbox
+  cancel-in-progress: false
+
+jobs:
+  inbox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore bot state (processed updates)
+        uses: actions/cache@v4
+        with:
+          path: bot/state/processed.json
+          key: bot-state-${{ github.run_id }}
+          restore-keys: |
+            bot-state-
+
+      - name: Peek inbox (fast, no installs)
+        id: peek
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_ID: ${{ secrets.TELEGRAM_ADMIN_ID }}
+        run: python3 bot/bot_inbox.py --peek
+
+      - name: Restore translation cache
+        if: steps.peek.outputs.has_updates == 'true'
+        uses: actions/cache@v4
+        with:
+          path: manhwa/cache.sqlite
+          key: manhwa-cache-${{ github.run_id }}
+          restore-keys: |
+            manhwa-cache-
+
+      - name: Install OCR (Tesseract EN+KO) and Sorani font — only for photos
+        if: steps.peek.outputs.needs_ocr == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-Kor fonts-Noto-Naskh-arabic
+          pip install -q -r manhwa/requirements.txt
+
+      - name: Answer queued messages / translate photos
+        if: steps.peek.outputs.has_updates == 'true'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_ID: ${{ secrets.TELEGRAM_ADMIN_ID }}
+        run: python3 bot/bot_inbox.py
