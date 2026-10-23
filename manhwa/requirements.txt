@@ -1,4 +1,7 @@
-# Only needed for --render (translated image). Text mode needs NOTHING (stdlib only).
+# Image mode: tiling, bubble cleanup/inpainting and rendered Sorani pages.
+# Plain --text/--file translation remains standard-library only.
 Pillow>=10
 arabic-reshaper>=3
 python-bidi>=0.4
+numpy>=1.26
+opencv-python-headless>=4.9

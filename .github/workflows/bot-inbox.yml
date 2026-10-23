@@ -2,7 +2,7 @@
 #
 # A bot only replies while something polls Telegram. This workflow is a
 # one-pass poller (bot/bot_inbox.py): peek (stdlib only, seconds) ->
-# install OCR only if a photo is waiting -> OCR + translate + reply.
+# install OCR only if a photo is waiting -> tiled OCR + QA + translate.
 # Processed update IDs persist between runs in a rolling actions/cache,
 # so nobody gets the same answer twice. User photos are processed only
 # on the ephemeral runner and are NEVER uploaded as artifacts.
@@ -22,9 +22,14 @@ on:
   schedule:
     - cron: "*/10 * * * *"
   push:
-    branches: ["arena/121d982b-kurd-man", "main"]
+    branches: ["arena/121d982b-kurd-man", "arena/bd7043fa-kurd-man", "main"]
     paths:
       - "bot/bot_inbox.py"
+      - "bot/test_bot_inbox.py"
+      - "manhwa/translate_manhwa.py"
+      - "manhwa/test_translate_manhwa.py"
+      - "manhwa/requirements.txt"
+      - "manhwa/glossary.json"
       - ".github/workflows/bot-inbox.yml"
 
 concurrency:
@@ -34,7 +39,7 @@ concurrency:
 jobs:
   inbox:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
 
@@ -56,6 +61,12 @@ jobs:
           TELEGRAM_ADMIN_ID: ${{ secrets.TELEGRAM_ADMIN_ID }}
         run: python3 bot/bot_inbox.py --peek
 
+      - name: Run offline tests before answering anyone
+        if: steps.peek.outputs.has_updates == 'true'
+        run: |
+          (cd manhwa && python3 -m unittest -v)
+          (cd bot && python3 -m unittest -v)
+
       - name: Restore translation cache
         if: steps.peek.outputs.has_updates == 'true'
         uses: actions/cache@v4
@@ -65,7 +76,7 @@ jobs:
           restore-keys: |
             manhwa-cache-
 
-      - name: Install OCR (Tesseract EN+KO) and Sorani font — only for photos
+      - name: Install tiled OCR engine and Sorani font — only for photos
         if: steps.peek.outputs.needs_ocr == 'true'
         run: |
           sudo apt-get update -qq

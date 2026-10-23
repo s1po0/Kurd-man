@@ -1,42 +1,77 @@
-[
-  {
-    "en": "I finally returned after ten years.",
-    "ckb": "دواجار دوای دە ساڵ گەڕامەوە.",
-    "box": [
-      40,
-      40,
-      430,
-      95
-    ]
-  },
-  {
-    "en": "Who are you?!",
-    "ckb": "تۆ کێیت؟!",
-    "box": [
-      330,
-      250,
-      300,
-      80
-    ]
-  },
-  {
-    "en": "Run! The monsters are coming!",
-    "ckb": "ڕابە! دێوەکان دێن!",
-    "box": [
-      50,
-      430,
-      430,
-      95
-    ]
-  },
-  {
-    "en": "I will protect you!",
-    "ckb": "من تۆ دەپارێزم!",
-    "box": [
-      300,
-      620,
-      340,
-      80
-    ]
-  }
-]
+{
+  "segments": [
+    {
+      "en": "I finally returned after ten years.",
+      "ckb": "دواجار دوای دە ساڵ گەڕامەوە.",
+      "box": [
+        65,
+        77,
+        379,
+        20
+      ],
+      "render_box": [
+        65,
+        51,
+        379,
+        74
+      ],
+      "confidence": null,
+      "bubble_detected": true
+    },
+    {
+      "en": "Who are you?!",
+      "ckb": "تۆ کێیت؟!",
+      "box": [
+        383,
+        278,
+        193,
+        24
+      ],
+      "render_box": [
+        353,
+        259,
+        255,
+        63
+      ],
+      "confidence": null,
+      "bubble_detected": true
+    },
+    {
+      "en": "Run! The monsters are coming!",
+      "ckb": "ڕابە! دێوەکان دێن!",
+      "box": [
+        67,
+        466,
+        396,
+        22
+      ],
+      "render_box": [
+        67,
+        441,
+        396,
+        74
+      ],
+      "confidence": null,
+      "bubble_detected": true
+    },
+    {
+      "en": "I will protect you!",
+      "ckb": "من تۆ دەپارێزم!",
+      "box": [
+        352,
+        648,
+        236,
+        24
+      ],
+      "render_box": [
+        326,
+        629,
+        289,
+        63
+      ],
+      "confidence": null,
+      "bubble_detected": true
+    }
+  ],
+  "qa": null
+}
