@@ -6,3 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+__pycache__/
+manhwa/cache.sqlite
+manhwa/out/
+bot/state/
+bot/out/
