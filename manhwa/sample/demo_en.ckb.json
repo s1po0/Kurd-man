@@ -11,12 +11,14 @@
       ],
       "render_box": [
         65,
-        51,
+        50,
         379,
-        74
+        75
       ],
       "confidence": null,
-      "bubble_detected": true
+      "bubble_detected": true,
+      "bubble_id": 4,
+      "renderable": true
     },
     {
       "en": "Who are you?!",
@@ -28,13 +30,15 @@
         24
       ],
       "render_box": [
-        353,
+        354,
         259,
-        255,
+        253,
         63
       ],
       "confidence": null,
-      "bubble_detected": true
+      "bubble_detected": true,
+      "bubble_id": 3,
+      "renderable": true
     },
     {
       "en": "Run! The monsters are coming!",
@@ -47,12 +51,14 @@
       ],
       "render_box": [
         67,
-        441,
+        440,
         396,
-        74
+        75
       ],
       "confidence": null,
-      "bubble_detected": true
+      "bubble_detected": true,
+      "bubble_id": 2,
+      "renderable": true
     },
     {
       "en": "I will protect you!",
@@ -66,12 +72,22 @@
       "render_box": [
         326,
         629,
-        289,
+        288,
         63
       ],
       "confidence": null,
-      "bubble_detected": true
+      "bubble_detected": true,
+      "bubble_id": 1,
+      "renderable": true
     }
   ],
-  "qa": null
+  "qa": null,
+  "render_qa": {
+    "ok": true,
+    "reasons": [],
+    "segments": 4,
+    "renderable_segments": 4,
+    "renderable_ratio": 1.0,
+    "unique_bubbles": 4
+  }
 }

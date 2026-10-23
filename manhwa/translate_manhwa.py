@@ -199,6 +199,7 @@ class Segment:
     confidence: float | None = None
     render_box: tuple[int, int, int, int] | None = None  # bubble/interior box for typesetting
     bubble_detected: bool = False
+    bubble_id: int | None = None  # one physical bubble -> one typeset segment
 
 @dataclass(frozen=True)
 class Tile:
@@ -423,6 +424,93 @@ def dedupe_segments(segs: list[Segment]) -> list[Segment]:
             kept[duplicate_at] = seg
     return sort_reading_order(kept)
 
+def _contains_arabic(text: str) -> bool:
+    return any("\u0600" <= ch <= "\u06ff" or "\u0750" <= ch <= "\u077f" or
+               "\ufb50" <= ch <= "\ufdff" or "\ufe70" <= ch <= "\ufeff" for ch in str(text or ""))
+
+def is_probable_ocr_junk(seg: Segment) -> bool:
+    """Heuristic for letter-like artwork/SFX fragments (PY, ORBS, a, ps...).
+
+    This is deliberately conservative for text already proven to sit inside a
+    speech bubble: short real dialogue such as "No!" survives there, while a
+    two-letter fragment floating on artwork does not get typeset onto a face.
+    """
+    text = normalize(seg.text)
+    letters = [ch for ch in text if ch.isalpha()]
+    if not letters:
+        return True
+    non_space = [ch for ch in text if not ch.isspace()]
+    if len(letters) / max(1, len(non_space)) < 0.50:
+        return True
+    conf = 55.0 if seg.confidence is None else float(seg.confidence)
+    if not seg.bubble_detected:
+        if len(letters) <= 2:
+            return True
+        if len(letters) <= 3 and conf < 68:
+            return True
+        latin = all(ch.isascii() for ch in letters)
+        joined = "".join(letters)
+        if latin and joined.isupper() and len(joined) <= 4 and conf < 92:
+            return True
+        if latin and len(joined) >= 4 and not any(ch in "aeiouAEIOU" for ch in joined) and conf < 88:
+            return True
+    if len(set(letters)) == 1 and len(letters) >= 4 and conf < 90:
+        return True
+    return False
+
+def filter_segments(segs: list[Segment]) -> list[Segment]:
+    return [seg for seg in segs if not is_probable_ocr_junk(seg)]
+
+def merge_same_bubble_segments(segs: list[Segment]) -> list[Segment]:
+    """Force one typeset text per detected physical bubble.
+
+    The bad live render stacked several OCR fragments into one green box;
+    their Sorani lines then printed on top of each other. Segments that were
+    assigned the same bubble contour are one dialogue, so merge them before
+    translation instead of drawing them independently.
+    """
+    grouped: dict[object, list[Segment]] = {}
+    order: list[object] = []
+    for idx, seg in enumerate(sort_reading_order(segs)):
+        key = ("bubble", seg.bubble_id) if seg.bubble_detected and seg.bubble_id is not None else ("single", idx)
+        if key not in grouped:
+            grouped[key] = []; order.append(key)
+        grouped[key].append(seg)
+    merged: list[Segment] = []
+    for key in order:
+        group = grouped[key]
+        if len(group) == 1:
+            merged.append(group[0]); continue
+        group = sort_reading_order(group)
+        chars = sum(max(1, len(seg.text)) for seg in group)
+        weighted = [seg.confidence for seg in group if seg.confidence is not None]
+        conf = (round(sum(seg.confidence * max(1, len(seg.text)) for seg in group
+                          if seg.confidence is not None) /
+                      max(1, sum(max(1, len(seg.text)) for seg in group
+                                 if seg.confidence is not None)), 1)
+                if weighted else None)
+        render_boxes = [seg.render_box for seg in group if seg.render_box]
+        merged.append(Segment(
+            normalize(" ".join(seg.text for seg in group)),
+            _union_box([seg.box for seg in group]),
+            confidence=conf,
+            render_box=_union_box(render_boxes) if render_boxes else None,
+            bubble_detected=True,
+            bubble_id=group[0].bubble_id,
+        ))
+    return sort_reading_order(merged)
+
+def is_renderable_segment(seg: Segment) -> bool:
+    """Safe to erase + typeset: proven bubble interior, credible OCR text."""
+    if not seg.bubble_detected or not seg.render_box or is_probable_ocr_junk(seg):
+        return False
+    if seg.confidence is not None and float(seg.confidence) < 45:
+        return False
+    return True
+
+def renderable_segments(segs: list[Segment]) -> list[Segment]:
+    return [seg for seg in segs if is_renderable_segment(seg)]
+
 def make_tiles(width: int, height: int, tile_height: int | None = None,
                overlap: int | None = None) -> list[Tile]:
     """Overlapping horizontal slices. Each output owns only its central core."""
@@ -455,7 +543,7 @@ def _transform_segment(seg: Segment, dx: int, dy: int, scale: float) -> Segment:
     x, y, w, h = seg.box
     box = (int(round(x / scale + dx)), int(round(y / scale + dy)),
            max(1, int(round(w / scale))), max(1, int(round(h / scale))))
-    return replace(seg, box=box, render_box=None, bubble_detected=False)
+    return replace(seg, box=box, render_box=None, bubble_detected=False, bubble_id=None)
 
 def run_tesseract_tsv(image_path: Path, src: str, psm: int = 6, timeout: int = 180) -> str:
     lang = TESS_LANG.get(src, "eng")
@@ -535,30 +623,109 @@ def assign_render_boxes(path: Path, segs: list[Segment], size: tuple[int, int] |
         page_area = max(1, width * height)
         for contour in contours:
             x, y, w, h = cv2.boundingRect(contour)
-            area = w * h
-            if w < 45 or h < 24 or area < 1800 or area > page_area * 0.30:
+            bbox_area = max(1, w * h)
+            contour_area = float(cv2.contourArea(contour))
+            if w < 45 or h < 24 or contour_area < 1500 or bbox_area > page_area * 0.22:
                 continue
-            if cv2.contourArea(contour) / max(1, area) < 0.45:
+            # A full-width white panel gap is page background, not dialogue.
+            if x <= 2 and x + w >= width - 2:
                 continue
-            candidates.append((area, (x, y, w, h)))
-        candidates.sort(key=lambda item: item[0])
+            extent = contour_area / bbox_area
+            # A long speech tail makes even a real oval's bbox mostly empty;
+            # the live sample's true bubbles measure ~0.42-0.43 here.
+            if extent < 0.38:
+                continue
+            hull_area = float(cv2.contourArea(cv2.convexHull(contour)))
+            solidity = contour_area / max(1.0, hull_area)
+            if solidity < 0.62:
+                continue
+            if not (0.22 <= w / max(1, h) <= 5.5):
+                continue
+            # Real printed bubbles have a mostly dark printed outline. White
+            # clothes / blank panel space generally do not have a complete
+            # dark ring immediately outside the light region. Test only a
+            # crop around this contour so a 6000px strip stays fast.
+            pad = 9
+            rx0, ry0 = max(0, x - pad), max(0, y - pad)
+            rx1, ry1 = min(width, x + w + pad), min(height, y + h + pad)
+            local_mask = np.zeros((ry1 - ry0, rx1 - rx0), dtype=np.uint8)
+            local_contour = contour - np.array([[[rx0, ry0]]], dtype=contour.dtype)
+            cv2.drawContours(local_mask, [local_contour], -1, 255, -1)
+            dilated = cv2.dilate(local_mask, np.ones((7, 7), np.uint8), iterations=1)
+            ring = cv2.bitwise_and(dilated, cv2.bitwise_not(local_mask))
+            ring_values = gray[ry0:ry1, rx0:rx1][ring > 0]
+            if ring_values.size == 0:
+                continue
+            dark_ring_fraction = float(np.mean(ring_values < 115))
+            if dark_ring_fraction < 0.30:
+                continue
+            # Isolate the bubble body from its narrow speech tail: body rows
+            # are wide, tail rows are not. Typesetting into the whole
+            # contour bbox (body + tail) put live text far too low.
+            filled = np.zeros((h, w), dtype=np.uint8)
+            cv2.drawContours(filled, [contour - np.array([[[x, y]]], dtype=contour.dtype)], -1, 255, -1)
+            row_widths = (filled > 0).sum(axis=1)
+            wide_rows = np.where(row_widths >= 0.42 * max(1, int(row_widths.max())))[0]
+            if len(wide_rows) == 0:
+                continue
+            runs = []
+            run_start = prev_row = int(wide_rows[0])
+            for row in wide_rows[1:]:
+                row = int(row)
+                if row - prev_row > 3:
+                    runs.append((run_start, prev_row)); run_start = row
+                prev_row = row
+            runs.append((run_start, prev_row))
+            body_y0, body_y1 = max(runs, key=lambda run: run[1] - run[0])
+            body_xs = np.where(filled[body_y0:body_y1 + 1] > 0)[1]
+            if len(body_xs) == 0:
+                continue
+            body_box = (x + int(body_xs.min()), y + int(body_y0),
+                        int(body_xs.max() - body_xs.min() + 1), int(body_y1 - body_y0 + 1))
+            if body_box[2] < 45 or body_box[3] < 24:
+                continue
+            candidates.append({
+                "id": len(candidates) + 1,
+                "box": body_box,
+                "bbox_area": max(1, body_box[2] * body_box[3]),
+                "contour_area": contour_area,
+                "contour": contour,
+                "extent": extent,
+            })
+        candidates.sort(key=lambda item: item["bbox_area"])
         for seg in segs:
             sx0, sy0, sx1, sy1 = _xyxy(seg.box)
             cx, cy = _center(seg.box)
             seg_area = max(1, (sx1 - sx0) * (sy1 - sy0))
-            for area, box in candidates:
-                if area < seg_area * 1.08:
+            sample_points = [(sx0, sy0), (sx1, sy0), (sx0, sy1), (sx1, sy1),
+                             (cx, sy0), (cx, sy1), (sx0, cy), (sx1, cy), (cx, cy)]
+            for cand in candidates:
+                box = cand["box"]
+                if cand["bbox_area"] < seg_area * 1.03 or seg_area / max(1.0, cand["contour_area"]) > 0.82:
                     continue
                 bx0, by0, bx1, by1 = _xyxy(box)
-                if bx0 - 4 <= cx <= bx1 + 4 and by0 - 4 <= cy <= by1 + 4:
-                    contained = (_overlap(sx0, sx1, bx0, bx1) * _overlap(sy0, sy1, by0, by1)) / seg_area
-                    if contained >= 0.75:
-                        inset_x, inset_y = max(4, int(box[2] * 0.07)), max(4, int(box[3] * 0.09))
-                        inner = _box_from_xyxy(bx0 + inset_x, by0 + inset_y, bx1 - inset_x, by1 - inset_y)
-                        seg.render_box = _union_box([inner, seg.box])
-                        seg.render_box = expand_box(seg.render_box, 0, 0, (width, height))
-                        seg.bubble_detected = True
-                        break
+                contained = (_overlap(sx0, sx1, bx0, bx1) * _overlap(sy0, sy1, by0, by1)) / seg_area
+                if contained < 0.80:
+                    continue
+                # Bounding-box overlap let white clothes "contain" text. The
+                # words themselves must lie inside the actual bubble shape.
+                inside = [cv2.pointPolygonTest(cand["contour"], (float(px), float(py)), False) >= 0
+                          for px, py in sample_points]
+                if not inside[-1] or sum(inside) / len(inside) < 0.70:
+                    continue
+                # Oval bubbles need an inscribed rectangle; squarer bubbles
+                # can use more of their interior. This also stops the white
+                # cleanup fill from painting square corners over artwork.
+                ovalish = cand["extent"] < 0.87
+                inner_w = max(8, int(box[2] * (0.72 if ovalish else 0.86)))
+                inner_h = max(8, int(box[3] * (0.72 if ovalish else 0.84)))
+                inner = (bx0 + (box[2] - inner_w) // 2,
+                         by0 + (box[3] - inner_h) // 2, inner_w, inner_h)
+                seg.render_box = expand_box(_union_box([inner, seg.box]), 0, 0, (width, height))
+                seg.bubble_detected = True
+                seg.bubble_id = int(cand["id"])
+                break
+        return merge_same_bubble_segments(segs)
     except Exception:
         pass
     return segs
@@ -595,7 +762,8 @@ def ocr_image(path: Path, src: str, tile_height: int | None = None,
                 if len(tiles) == 1 or _segment_in_tile_core(full, tile, idx == len(tiles) - 1):
                     found.append(full)
     segs = dedupe_segments(found)
-    return assign_render_boxes(path, segs, (width, height))
+    segs = assign_render_boxes(path, segs, (width, height))
+    return filter_segments(segs)
 
 def assess_segments(width: int, height: int, segs: list[Segment]) -> dict:
     """Quality gate: catch the old 'one giant segment for a tall strip' failure."""
@@ -621,12 +789,74 @@ def assess_segments(width: int, height: int, segs: list[Segment]) -> dict:
     return {"ok": not reasons, "reasons": reasons, "long_image": long_image,
             "segments": len(segs), "chars": chars, "avg_confidence": avg_conf}
 
+def assess_render_plan(width: int, height: int, segs: list[Segment]) -> dict:
+    """Placement gate, separate from OCR quantity/confidence.
+
+    The rejected live sample had 19 OCR fragments, so the old count-based
+    gate passed while text landed on faces, clothes and one shared box.
+    A rendered page is allowed only when enough segments are tied to a
+    physical bubble and their typesetting boxes do not collide.
+    """
+    reasons: list[str] = []
+    placed = renderable_segments(segs)
+    ratio = len(placed) / len(segs) if segs else 0.0
+    if not segs:
+        reasons.append("no_segments")
+    if segs and not placed:
+        reasons.append("no_bubble_backed_segments")
+    if segs and ratio < 0.50:
+        reasons.append("too_few_bubble_backed_segments")
+    page_area = max(1, width * height) if width and height else 1
+    for seg in placed:
+        if seg.render_box and seg.render_box[2] * seg.render_box[3] / page_area > 0.22:
+            reasons.append("render_box_too_large"); break
+    overlap_found = False
+    for i, a in enumerate(placed):
+        for b in placed[i + 1:]:
+            if a.render_box and b.render_box and box_iou(a.render_box, b.render_box) > 0.30:
+                overlap_found = True; break
+        if overlap_found:
+            break
+    if overlap_found:
+        reasons.append("overlapping_render_boxes")
+    return {"ok": not reasons, "reasons": reasons,
+            "segments": len(segs), "renderable_segments": len(placed),
+            "renderable_ratio": round(ratio, 3),
+            "unique_bubbles": len({s.bubble_id for s in placed if s.bubble_id is not None})}
+
 # ---------------------------------------------------------------- rendering (optional Pillow)
 FONT_CANDIDATES = [os.environ.get("MANHWA_FONT", ""),
     "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf",
-    "/usr/share/fonts/truetype/Noto/NotoNaskhArabic-Regular.ttf",
+    "/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf",
+    "/usr/share/fonts/truetype/noto/NotoKufiArabic-Regular.ttf",
+    "/usr/share/fonts/truetype/noto/NotoNaskhArabicUI-Regular.ttf",
+    "/usr/share/fonts/truetype/noto/NotoSansArabicUI-Regular.ttf",
     "C:/Windows/Fonts/NotoNaskhArabic-Regular.ttf",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "C:/Windows/Fonts/arial.ttf"]
+    "C:/Windows/Fonts/NotoSansArabic-Regular.ttf",
+    "C:/Windows/Fonts/NotoKufiArabic-Regular.ttf"]
+
+def find_sorani_font(candidates: list[str] | None = None) -> str | None:
+    """Return an Arabic-script font only.
+
+    The previous DejaVu/Arial fallback produced the separated, wrong-looking
+    Sorani glyphs in the live sample. Refusing to render is better than
+    silently typesetting Kurdish in a font that cannot shape it. A user may
+    still explicitly choose another font with MANHWA_FONT.
+    """
+    for candidate in (FONT_CANDIDATES if candidates is None else candidates):
+        if candidate and Path(candidate).exists():
+            return str(candidate)
+    return None
+
+def require_text_shaping() -> None:
+    try:
+        import arabic_reshaper  # noqa: F401
+        from bidi.algorithm import get_display  # noqa: F401
+    except ImportError as e:
+        raise RuntimeError(
+            "arabic_reshaper/python-bidi نییە؛ ڕێندەری کوردی ڕادەگیرێت "
+            "بۆ ئەوەی پیتەکان جیا و هەڵە دەرنەکەون. "
+            "Run: pip install -r manhwa/requirements.txt") from e
 
 def shape(text: str) -> str:
     try:
@@ -638,9 +868,11 @@ def shape(text: str) -> str:
 
 def _load_font(font_path, size, cache: dict):
     from PIL import ImageFont
+    if not font_path:
+        raise RuntimeError("Sorani font path is required for rendering")
     key = (font_path, size)
     if key not in cache:
-        cache[key] = ImageFont.truetype(font_path, size) if font_path else ImageFont.load_default()
+        cache[key] = ImageFont.truetype(font_path, size)
     return cache[key]
 
 def _split_long_word(draw, word, font, width):
@@ -660,7 +892,13 @@ def _wrap(draw, text, font, width):
     for paragraph in str(text or "").splitlines() or [""]:
         current = ""
         for word in paragraph.split():
-            pieces = [word] if draw.textlength(shape(word), font=font) <= width else _split_long_word(draw, word, font, width)
+            # Never split a Kurdish/Arabic word by characters: doing so breaks
+            # letter joining at the split. _fit_font must shrink instead, and
+            # if even the minimum size does not fit the segment is skipped.
+            if draw.textlength(shape(word), font=font) <= width or _contains_arabic(word):
+                pieces = [word]
+            else:
+                pieces = _split_long_word(draw, word, font, width)
             for piece in pieces:
                 trial = f"{current} {piece}".strip()
                 if not current or draw.textlength(shape(trial), font=font) <= width:
@@ -671,38 +909,43 @@ def _wrap(draw, text, font, width):
             lines.append(current)
     return lines
 
-def _lines_height(draw, lines, font, line_gap):
-    heights = []
-    for line in lines:
-        box = draw.textbbox((0, 0), shape(line), font=font)
-        heights.append(max(1, box[3] - box[1]))
-    return sum(heights) + max(0, len(lines) - 1) * line_gap, heights
+def _font_line_height(font, size) -> int:
+    try:
+        ascent, descent = font.getmetrics()
+        return max(1, int(ascent + descent))
+    except Exception:
+        return max(1, int(size * 1.35))
+
+def _layout_metrics(draw, lines, font, size):
+    """Use full ascender+descender metrics; per-line ink boxes overlapped."""
+    line_h = _font_line_height(font, size)
+    gap = max(2, int(size * 0.12))
+    total_h = len(lines) * line_h + max(0, len(lines) - 1) * gap
+    max_w = max((draw.textlength(shape(line), font=font) for line in lines), default=0)
+    return total_h, line_h, gap, max_w
 
 def _fit_font(draw, text, font_path, width, height, cache):
-    """Binary-search the largest Sorani font that truly fits the bubble."""
+    """Largest fitting Sorani layout, or fits=False (never force overflow)."""
     width, height = max(12, int(width)), max(12, int(height))
-    max_size = int(max(12, min(88, height * 0.80, width * 0.55)))
-    min_size = 9
+    max_size = int(max(12, min(92, height * 0.78, width * 0.52)))
+    min_size = 10
     best = None
     lo, hi = min_size, max_size
     while lo <= hi:
         size = (lo + hi) // 2
         font = _load_font(font_path, size, cache)
         lines = _wrap(draw, text, font, width)
-        gap = max(2, int(size * 0.22))
-        total_h, heights = _lines_height(draw, lines, font, gap)
-        max_w = max((draw.textlength(shape(line), font=font) for line in lines), default=0)
+        total_h, line_h, gap, max_w = _layout_metrics(draw, lines, font, size)
         if total_h <= height and max_w <= width:
-            best = (font, size, lines, total_h, heights, gap); lo = size + 1
+            best = (font, size, lines, total_h, line_h, gap, True); lo = size + 1
         else:
             hi = size - 1
     if best:
         return best
     font = _load_font(font_path, min_size, cache)
     lines = _wrap(draw, text, font, width)
-    gap = 2
-    total_h, heights = _lines_height(draw, lines, font, gap)
-    return font, min_size, lines, total_h, heights, gap
+    total_h, line_h, gap, _max_w = _layout_metrics(draw, lines, font, min_size)
+    return font, min_size, lines, total_h, line_h, gap, False
 
 def _luminance(color):
     r, g, b = color[:3]
@@ -785,15 +1028,25 @@ def _erase_original_text(img, segs):
 def render_image(inp: Path, segs: list[Segment], out: Path):
     from PIL import Image, ImageDraw   # lazy: text mode works without Pillow
     inp, out = Path(inp), Path(out)
-    font_path = next((p for p in FONT_CANDIDATES if p and Path(p).exists()), None)
+    require_text_shaping()
+    font_path = find_sorani_font()
+    if not font_path:
+        raise RuntimeError(
+            "فۆنتی گونجاوی سۆرانی نەدۆزرایەوە؛ ڕێندەر ڕاگیرا بۆ ئەوەی پیتەکان "
+            "جیا دەرنەکەون. Ubuntu: sudo apt install fonts-noto-core، "
+            "یان MANHWA_FONT بۆ فۆنتێکی عەرەبی/کوردی دیاری بکە.")
     with Image.open(inp) as opened:
         img = opened.convert("RGB")
     for seg in segs:
         if not seg.render_box:
             seg.render_box = _fallback_render_box(seg.box, img.size)
-    img = _erase_original_text(img, [s for s in segs if (s.ckb or "").strip()])
-    draw = ImageDraw.Draw(img)
+
+    # Decide every layout BEFORE erasing anything. If Sorani cannot fit a
+    # bubble at the minimum legible size, leave that bubble untouched rather
+    # than erasing the source and printing an overlapping overflow.
+    measure = ImageDraw.Draw(img)
     font_cache: dict = {}
+    layouts = []
     for seg in segs:
         text = (seg.ckb or "").strip()
         if not text:
@@ -801,16 +1054,21 @@ def render_image(inp: Path, segs: list[Segment], out: Path):
         x, y, w, h = seg.render_box or seg.box
         pad = max(5, int(min(w, h) * 0.09))
         inner_w, inner_h = max(12, w - 2 * pad), max(12, h - 2 * pad)
-        font, _size, lines, total_h, heights, gap = _fit_font(draw, text, font_path, inner_w, inner_h, font_cache)
+        font, _size, lines, total_h, line_h, gap, fits = _fit_font(
+            measure, text, font_path, inner_w, inner_h, font_cache)
+        if fits:
+            layouts.append((seg, font, lines, total_h, line_h, gap, (x, y, w, h)))
+
+    img = _erase_original_text(img, [layout[0] for layout in layouts])
+    draw = ImageDraw.Draw(img)
+    for seg, font, lines, total_h, line_h, gap, (x, y, w, h) in layouts:
         bg = _sample_background(img, seg.render_box or seg.box)
         ink = (255, 255, 255) if _luminance(bg) < 95 else (0, 0, 0)
-        ty = y + max(pad, (h - total_h) // 2)
-        for line, line_h in zip(lines, heights):
-            shaped = shape(line)
-            bbox = draw.textbbox((0, 0), shaped, font=font)
-            tw = bbox[2] - bbox[0]
-            tx = x + (w - tw) / 2 - bbox[0]
-            draw.text((tx, ty - bbox[1]), shaped, fill=ink, font=font)
+        ty = y + max(0, (h - total_h) // 2)
+        for line in lines:
+            # "ma" = horizontally centred at the font ascender. Combined
+            # with ascent+descent line metrics, lines cannot pile together.
+            draw.text((x + w / 2, ty), shape(line), fill=ink, font=font, anchor="ma")
             ty += line_h + gap
     out.parent.mkdir(parents=True, exist_ok=True)
     if out.suffix.lower() in {".jpg", ".jpeg"}:
@@ -873,7 +1131,7 @@ def main(argv=None) -> int:
         write_side_by_side(pairs, out_txt)
         print("\n".join(f"{en}\n→ {ck}\n" for en, ck in pairs)); print(f"✅ {out_txt}")
     else:
-        qa = None
+        qa = None; render_qa = None
         if a.image:
             img_path = Path(a.image); stem = img_path.stem
             try:
@@ -882,34 +1140,57 @@ def main(argv=None) -> int:
                 sys.exit(f"❌ {e}")
             if not segs: sys.exit("❌ OCR هیچ دەقێکی نەدۆزیەوە — وێنەکە ڕووناک نییە یان فونتەکە تایبەتە.")
             try:
-                qa = assess_segments(*image_size(img_path), segs)
+                dims = image_size(img_path)
+                qa = assess_segments(*dims, segs)
+                render_qa = assess_render_plan(*dims, segs)
             except Exception:
-                qa = None
+                qa = None; render_qa = None
             if qa and not qa["ok"]:
                 print(f"⚠️ OCR quality gate: {qa} — inspect the JSON/debug image before trusting it.",
+                      file=sys.stderr)
+            if render_qa and not render_qa["ok"]:
+                print(f"⚠️ Placement gate: {render_qa} — unsafe segments will not be typeset.",
                       file=sys.stderr)
         else:  # manual/known boxes: [{"text": "...", "box": [x,y,w,h], "image": "page.png"}]
             data = json.loads(Path(a.segments_json).read_text(encoding="utf-8"))
             segs = [Segment(s["text"], tuple(s["box"]), ckb=s.get("ckb", ""),
                             confidence=s.get("confidence"),
                             render_box=tuple(s["render_box"]) if s.get("render_box") else tuple(s["box"]),
-                            bubble_detected=bool(s.get("bubble_detected", False)))
+                            bubble_detected=bool(s.get("bubble_detected", False)),
+                            bubble_id=s.get("bubble_id"))
                     for s in data["segments"]]
             img_path = Path(data["image"])
             if not img_path.exists():  # allow paths relative to the JSON file
                 img_path = Path(a.segments_json).parent / img_path
             stem = img_path.stem
             segs = assign_render_boxes(img_path, segs)
+            try:
+                render_qa = assess_render_plan(*image_size(img_path), segs)
+            except Exception:
+                render_qa = None
         for s, ck in zip(segs, tr.translate_many([s.text for s in segs])): s.ckb = ck
         write_side_by_side([(s.text, s.ckb) for s in segs], outdir / f"{stem}.ckb.txt")
         payload = {"segments": [{"en": s.text, "ckb": s.ckb, "box": s.box,
                                   "render_box": s.render_box, "confidence": s.confidence,
-                                  "bubble_detected": s.bubble_detected} for s in segs],
-                   "qa": qa}
+                                  "bubble_detected": s.bubble_detected, "bubble_id": s.bubble_id,
+                                  "renderable": is_renderable_segment(s)} for s in segs],
+                   "qa": qa, "render_qa": render_qa}
         (outdir / f"{stem}.ckb.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"✅ {len(segs)} bubbles -> {outdir}/{stem}.ckb.txt + .json")
         if a.debug: print(f"🔎 {render_debug_image(img_path, segs, outdir / f'{stem}.debug.png')}")
-        if a.render: print(f"✅ {render_image(img_path, segs, outdir / f'{stem}.ckb.png')}")
+        if a.render:
+            # OCR mode is strict: artwork fragments are listed in JSON/text
+            # but never typeset. Explicit manual boxes remain renderable.
+            to_render = renderable_segments(segs) if a.image else segs
+            if to_render:
+                try:
+                    rendered_path = render_image(img_path, to_render, outdir / f'{stem}.ckb.png')
+                except RuntimeError as e:
+                    sys.exit(f"❌ {e}")
+                print(f"✅ {rendered_path} ({len(to_render)}/{len(segs)} segments placed)")
+            else:
+                print("⚠️ No bubble-backed segment was safe to typeset; rendered image skipped.",
+                      file=sys.stderr)
     print(f"💾 cache: {cache.stats()} (reused = free, no API burn)", file=sys.stderr)
     return 0
 
