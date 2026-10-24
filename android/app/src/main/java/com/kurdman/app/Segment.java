@@ -10,6 +10,8 @@ public class Segment {
     public String ckb = "";
     public Rect box;
     public int lines;
+    /** Set by the renderer when this segment was actually drawn on the page. */
+    public boolean rendered;
 
     public Segment(String text, Rect box, int lines) {
         this.text = text == null ? "" : text.trim();

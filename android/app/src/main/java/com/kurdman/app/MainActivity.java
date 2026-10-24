@@ -490,6 +490,10 @@ public class MainActivity extends AppCompatActivity {
                 if (renderResult.rendered == 0) {
                     setStatus("⚠ دەقەکان وەرگێڕدران، بەڵام هیچ شوێنێکی سادە و پارێزراو "
                             + "نەبوو بۆ نووسینیان لەسەر وێنەکە؛ وەرگێڕانەکان لە خوارەوەن." + savedNote);
+                } else if (renderResult.skipped() > 0) {
+                    setStatus("⚠ " + renderResult.rendered + "/" + segments.size()
+                            + " دەق لەسەر وێنەکە داندرا؛ " + renderResult.skipped()
+                            + " دەق تەنیا لە لیستی دەقەکاندا هەیە." + savedNote);
                 } else {
                     setStatus("✅ " + renderResult.rendered + "/" + segments.size()
                             + " دەق لەسەر وێنەکە داندرا." + savedNote);
@@ -524,6 +528,8 @@ public class MainActivity extends AppCompatActivity {
             Bitmap firstRendered = null;
             int totalSegments = 0;
             int totalRendered = 0;
+            int totalSkipped = 0;
+            int partialPages = 0;
 
             for (int i = 0; i < pages.size(); i++) {
                 final int pageNumber = i + 1;
@@ -584,6 +590,11 @@ public class MainActivity extends AppCompatActivity {
 
                 totalSegments += segments.size();
                 totalRendered += renderResult.rendered;
+                int pageSkipped = renderResult.skipped();
+                totalSkipped += pageSkipped;
+                if (!segments.isEmpty() && pageSkipped > 0) {
+                    partialPages++;
+                }
                 if (allPairs.length() > 0) {
                     allPairs.append("\n\n");
                 }
@@ -592,6 +603,11 @@ public class MainActivity extends AppCompatActivity {
                 allPairs.append(segments.isEmpty()
                         ? "(هیچ دەقێکی ڕوون نەدۆزرایەوە)"
                         : buildPairs(segments));
+                if (!segments.isEmpty() && pageSkipped > 0) {
+                    allPairs.append("\n[⚠ ").append(pageSkipped)
+                            .append(" دەق لەسەر ئەم لاپەڕەیە دانەندرا و بە زمانی ڕەسەن مایەوە؛ ")
+                            .append("وەرگێڕانەکەی لە سەرەوە بە «لەسەر وێنەکە دانەندرا» دیاری کراوە.]");
+                }
             }
 
             String base = sanitizeFileName(baseNameWithoutExtension(displayName));
@@ -631,6 +647,12 @@ public class MainActivity extends AppCompatActivity {
                     : " CBZەکە لە بەشی «داگرتنەکان» پاشەکەوت کرا.";
             if (totalSegments == 0) {
                 setStatus("⚠ CBZەکە دروست کرا، بەڵام هیچ دەقێکی ڕوون نەدۆزرایەوە." + savedNote);
+            } else if (totalSkipped > 0) {
+                setStatus("⚠ CBZ ئامادەیە: " + pages.size() + " لاپەڕە، "
+                        + totalRendered + "/" + totalSegments
+                        + " دەق لەسەر وێنەکان داندرا؛ " + totalSkipped
+                        + " دەق لە " + partialPages
+                        + " لاپەڕەدا تەنیا لە TXTەکەدایە." + savedNote);
             } else {
                 setStatus("✅ CBZ ئامادەیە: " + pages.size() + " لاپەڕە، "
                         + totalRendered + "/" + totalSegments
@@ -1464,7 +1486,11 @@ public class MainActivity extends AppCompatActivity {
             Segment segment = segments.get(i);
             builder.append('[').append(i + 1).append("]\n");
             builder.append(segment.text.replace('\n', ' ')).append('\n');
-            builder.append("→ ").append(segment.ckb).append("\n\n");
+            builder.append("→ ").append(segment.ckb);
+            if (!segment.rendered) {
+                builder.append("\n[⚠ لەسەر وێنەکە دانەندرا]");
+            }
+            builder.append("\n\n");
         }
         return builder.toString().trim();
     }

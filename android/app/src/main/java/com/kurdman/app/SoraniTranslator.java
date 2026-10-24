@@ -88,25 +88,83 @@ public class SoraniTranslator {
 
     private String translateChunk(String text, String sourceLanguage) throws Exception {
         Exception lastError = null;
+        String untranslatedCandidate = null;
         for (int offset = 0; offset < ROUTE_COUNT; offset++) {
             int route = (preferredRoute + offset) % ROUTE_COUNT;
             try {
                 String translated = translateViaRoute(route, text, sourceLanguage);
-                if (!normalize(translated).isEmpty()) {
+                if (normalize(translated).isEmpty()) {
+                    throw new IOException("Empty translation response from " + routeName(route));
+                }
+                if (looksUntranslated(text, translated)) {
+                    // Some free routes occasionally echo the source back. Keep
+                    // it only as a last resort (for names/terms) and try the
+                    // remaining routes for an actual Sorani translation first.
+                    if (untranslatedCandidate == null) {
+                        untranslatedCandidate = translated;
+                    }
+                    lastError = new IOException(
+                            "Untranslated response from " + routeName(route));
+                } else {
                     preferredRoute = route;
                     return translated;
                 }
-                throw new IOException("Empty translation response from " + routeName(route));
             } catch (Exception e) {
                 lastError = e;
-                if (offset + 1 < ROUTE_COUNT) {
-                    pauseBriefly();
-                }
             }
+            if (offset + 1 < ROUTE_COUNT) {
+                pauseBriefly();
+            }
+        }
+        if (untranslatedCandidate != null) {
+            return untranslatedCandidate;
         }
         throw lastError == null
                 ? new IOException("All translation routes failed")
                 : lastError;
+    }
+
+    private boolean looksUntranslated(String source, String result) {
+        String src = normalize(source);
+        String out = normalize(result);
+        if (src.equalsIgnoreCase(out) && letterCount(src) >= 4) {
+            return true;
+        }
+        // A normal Sorani sentence contains Arabic-script letters. If the
+        // result has none, it is probably an echoed English/Korean source.
+        return letterCount(src) >= 5
+                && letterCount(out) >= 4
+                && arabicScriptLetterCount(out) == 0
+                && (src.contains(" ") || src.length() >= 8);
+    }
+
+    private int letterCount(String value) {
+        int count = 0;
+        for (int offset = 0; offset < value.length();) {
+            int codePoint = value.codePointAt(offset);
+            if (Character.isLetter(codePoint)) {
+                count++;
+            }
+            offset += Character.charCount(codePoint);
+        }
+        return count;
+    }
+
+    private int arabicScriptLetterCount(String value) {
+        int count = 0;
+        for (int offset = 0; offset < value.length();) {
+            int codePoint = value.codePointAt(offset);
+            if (Character.isLetter(codePoint)
+                    && ((codePoint >= 0x0600 && codePoint <= 0x06FF)
+                    || (codePoint >= 0x0750 && codePoint <= 0x077F)
+                    || (codePoint >= 0x08A0 && codePoint <= 0x08FF)
+                    || (codePoint >= 0xFB50 && codePoint <= 0xFDFF)
+                    || (codePoint >= 0xFE70 && codePoint <= 0xFEFF))) {
+                count++;
+            }
+            offset += Character.charCount(codePoint);
+        }
+        return count;
     }
 
     private String translateViaRoute(int route, String text, String sourceLanguage)
