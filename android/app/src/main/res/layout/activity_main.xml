@@ -131,7 +131,7 @@
                         android:paddingTop="6dp"
                         android:paddingEnd="11dp"
                         android:paddingBottom="6dp"
-                        android:text="v1.6.2  •  ستۆدیۆی گەورە و ئاسان + ئۆفلاین AI"
+                        android:text="v1.7.0  •  OCR وردتر + PP-OCR + ستۆدیۆی سادەتر"
                         android:textColor="@color/white"
                         android:textSize="12sp"
                         android:textStyle="bold" />
@@ -377,6 +377,29 @@
                         android:textSize="19sp" />
                 </FrameLayout>
 
+                <CheckBox
+                    android:id="@+id/accurateOcrCheck"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:buttonTint="@color/primary"
+                    android:checked="true"
+                    android:text="خوێندنەوەی زۆر ورد — OCR چەند جار و PP-OCR (کەمێک خاوترە)"
+                    android:textColor="@color/text_primary"
+                    android:textDirection="firstStrongRtl"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:lineSpacingMultiplier="1.2"
+                    android:text="بۆ وشە قورسەکان و فۆنتە سەرنجڕاکێشەکان باشترە. ئەگەر خێرایی لە وردبینی گرنگترە، ئەم هەڵبژاردنە بکوژێنەوە."
+                    android:textColor="@color/text_muted"
+                    android:textDirection="firstStrongRtl"
+                    android:textSize="12sp" />
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -412,7 +435,7 @@
                         android:paddingTop="10dp"
                         android:paddingEnd="8dp"
                         android:paddingBottom="10dp"
-                        android:text="OCR\nلەسەر مۆبایلەکە 🔎"
+                        android:text="OCRی ورد\nML Kit + PP-OCRv6 🔎"
                         android:textColor="#BFDBFE"
                         android:textDirection="firstStrongRtl"
                         android:textSize="12sp"
@@ -1109,7 +1132,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
-                    android:text="لە Android 10+ فایلەکان لە فۆڵدەری Download/KurdManـیشدا دەردەکەون."
+                    android:text="لە Android 10+ فایلەکان لە فۆڵدەری Download/KurdManـیشدا دەردەکەون. بە «سڕینەوە» کۆپییە هاوشێوەکە لەوێش دەسڕدرێتەوە ئەگەر بدۆزرێتەوە."
                     android:textColor="@color/text_muted"
                     android:textDirection="firstStrongRtl"
                     android:textSize="12sp" />
@@ -1140,11 +1163,104 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:lineSpacingMultiplier="1.25"
-                android:text="مۆدێلی ئۆفلاین، پارێزگاری تا STOP و پەیوەندیی Telegram لێرە کۆکراونەتەوە."
+                android:text="مۆدێلی ئۆفلاین، پاکێجی OCRی بەهێز، پارێزگاری تا STOP و پەیوەندیی Telegram لێرە کۆکراونەتەوە."
                 android:textColor="@color/text_secondary"
                 android:textDirection="firstStrongRtl"
                 android:textSize="13sp" />
 
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="11dp"
+                    android:background="@drawable/bg_feature_tile"
+                    android:orientation="vertical"
+                    android:paddingStart="14dp"
+                    android:paddingTop="14dp"
+                    android:paddingEnd="14dp"
+                    android:paddingBottom="14dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-black"
+                        android:text="🔎  OCRی بەهێز — PP-OCRv6 + ML Kit"
+                        android:textColor="#BFDBFE"
+                        android:textDirection="firstStrongRtl"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/paddleOcrStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="7dp"
+                        android:lineSpacingMultiplier="1.2"
+                        android:text="هێشتا دانەبەزیوە • 34.8 MB"
+                        android:textColor="@color/text_primary"
+                        android:textDirection="firstStrongRtl"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:lineSpacingMultiplier="1.25"
+                        android:text="یەکجار دایبەزێنە؛ دواتر PP-OCR لەناو مۆبایلەکەدا و بێ ئینتەرنێت وشە قورسەکان دووبارە دەخوێنێتەوە و تەنها کاتێک ئەنجامی ML Kit دەگۆڕێت کە دڵنیاترە."
+                        android:textColor="@color/text_secondary"
+                        android:textDirection="firstStrongRtl"
+                        android:textSize="12sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/downloadPaddleOcrButton"
+                            android:layout_width="0dp"
+                            android:layout_height="50dp"
+                            android:layout_marginEnd="7dp"
+                            android:layout_weight="1.35"
+                            android:background="@drawable/bg_button_primary"
+                            android:fontFamily="sans-serif-black"
+                            android:minHeight="50dp"
+                            android:minWidth="0dp"
+                            android:stateListAnimator="@null"
+                            android:text="⬇  دابەزاندنی PP-OCR"
+                            android:textAllCaps="false"
+                            android:textColor="@color/white"
+                            android:textDirection="firstStrongRtl"
+                            android:textSize="13sp" />
+
+                        <Button
+                            android:id="@+id/deletePaddleOcrButton"
+                            android:layout_width="0dp"
+                            android:layout_height="50dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_button_secondary"
+                            android:minHeight="50dp"
+                            android:minWidth="0dp"
+                            android:stateListAnimator="@null"
+                            android:text="🗑  سڕینەوەی OCR"
+                            android:textAllCaps="false"
+                            android:textColor="#FCA5A5"
+                            android:textDirection="firstStrongRtl"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="9dp"
+                        android:gravity="center"
+                        android:lineSpacingMultiplier="1.2"
+                        android:text="PaddlePaddle PP-OCR • Apache-2.0 • ئینگلیزی، کۆری، ژاپۆنی و چینی"
+                        android:textColor="@color/text_muted"
+                        android:textDirection="firstStrongRtl"
+                        android:textSize="11sp" />
+                </LinearLayout>
 
                 <LinearLayout
                     android:layout_width="match_parent"

@@ -59,6 +59,7 @@ public class PageEditorView extends View {
     private Listener listener;
     private boolean peekOriginal = false;
     private boolean snapEnabled = true;
+    private boolean showAllOverlays = true;
 
     private final Matrix imageMatrix = new Matrix();
     private final Matrix inverseMatrix = new Matrix();
@@ -191,6 +192,14 @@ public class PageEditorView extends View {
         snapEnabled = enabled;
     }
 
+    /** In the simple studio, edits focus on one block at a time. */
+    public void setShowAllOverlays(boolean showAll) {
+        if (showAllOverlays != showAll) {
+            showAllOverlays = showAll;
+            invalidate();
+        }
+    }
+
     public void setTool(Tool newTool) {
         Tool next = newTool == null ? Tool.MOVE : newTool;
         if (tool != next) {
@@ -204,6 +213,10 @@ public class PageEditorView extends View {
 
     public Tool getTool() {
         return tool;
+    }
+
+    public float getScale() {
+        return currentScale();
     }
 
     public void refreshStyles() {
@@ -405,10 +418,14 @@ public class PageEditorView extends View {
     }
 
     private void drawOverlays(Canvas canvas) {
-        // Draw in list order, then redraw the selected block on top.
-        for (int i = 0; i < segments.size(); i++) {
-            if (i != selectedIndex) {
-                drawOverlay(canvas, i, false);
+        // Draw in list order, then redraw the selected block on top. The
+        // simple Position/Style sections hide every non-selected badge and
+        // box so one text can be edited without visual clutter.
+        if (showAllOverlays) {
+            for (int i = 0; i < segments.size(); i++) {
+                if (i != selectedIndex) {
+                    drawOverlay(canvas, i, false);
+                }
             }
         }
         if (selectedIndex >= 0) {

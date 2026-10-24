@@ -48,10 +48,29 @@ their own TTF/OTF files; imported files stay in the app's private files.
 - IBM Plex Sans Arabic — `assets/licenses/IBMPlexSansArabic-OFL.txt`
 - Amiri — `assets/licenses/Amiri-OFL.txt`
 
+## Optional PaddleOCR recognizers
+
+Kurd-man v1.7 can optionally download official PaddlePaddle PP-OCR ONNX
+line recognizers as a second, fully on-device OCR opinion. The weights are
+not included in this repository or in the APK; they are downloaded only at
+the user's request into the Android app's private files directory and can
+be deleted from Settings.
+
+- `PP-OCRv6_small_rec_onnx`, revision
+  `b8f84f0b80c529de40b4fbb3544b84fa7233a513`:
+  https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx
+- `korean_PP-OCRv5_mobile_rec_onnx`, revision
+  `5c6f574b8e2230adf4287b33e736d71b9fabd28e`:
+  https://huggingface.co/PaddlePaddle/korean_PP-OCRv5_mobile_rec_onnx
+- License: Apache License 2.0,
+  https://www.apache.org/licenses/LICENSE-2.0
+- Attribution in the APK:
+  `android/app/src/main/assets/licenses/PaddleOCR-ATTRIBUTION.txt`
+
 ## ONNX Runtime
 
 The Android app uses Microsoft ONNX Runtime (`onnxruntime-android`) to run
-the downloaded model on the phone.
+the downloaded models on the phone.
 
 - Project: https://github.com/microsoft/onnxruntime
 - License: MIT

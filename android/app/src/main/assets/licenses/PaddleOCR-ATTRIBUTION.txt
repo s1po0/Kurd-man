@@ -1,0 +1,20 @@
+Optional PP-OCR model attribution
+
+KurdMan's optional high-accuracy OCR pack downloads these official
+PaddlePaddle ONNX recognizers only when the user requests them:
+
+- PP-OCRv6_small_rec_onnx, revision
+  b8f84f0b80c529de40b4fbb3544b84fa7233a513
+  https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx
+
+- korean_PP-OCRv5_mobile_rec_onnx, revision
+  5c6f574b8e2230adf4287b33e736d71b9fabd28e
+  https://huggingface.co/PaddlePaddle/korean_PP-OCRv5_mobile_rec_onnx
+
+PaddleOCR and these model exports are licensed under the Apache License,
+Version 2.0:
+https://www.apache.org/licenses/LICENSE-2.0
+
+The model files are not bundled inside the KurdMan APK. After the one-time
+download they are stored in the app's private storage and inference runs
+entirely on the phone.

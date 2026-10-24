@@ -69,6 +69,13 @@
             android:exported="false"
             android:process=":offline_ai" />
 
+        <!-- PP-OCR's ONNX inference is isolated for the same reason: a
+             native abort or low-memory kill must not close the whole app. -->
+        <service
+            android:name=".PaddleOcrService"
+            android:exported="false"
+            android:process=":ocr_ai" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

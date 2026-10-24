@@ -18,6 +18,8 @@ public class Segment {
     /** Detected source rectangle that can be cleaned before replacement. */
     public Rect eraseBox;
     public int lines;
+    /** OCR confidence in [0,1], or -1 when the engine did not report it. */
+    public float ocrConfidence = -1f;
     public int detectedBackgroundColor = Color.WHITE;
     public int detectedInkColor = Color.BLACK;
     public boolean autoBackgroundReliable = false;
@@ -73,6 +75,7 @@ public class Segment {
         copy.originalCkb = originalCkb;
         copy.renderBox = new Rect(getRenderBox());
         copy.eraseBox = new Rect(getEraseBox());
+        copy.ocrConfidence = ocrConfidence;
         copy.detectedBackgroundColor = detectedBackgroundColor;
         copy.detectedInkColor = detectedInkColor;
         copy.autoBackgroundReliable = autoBackgroundReliable;

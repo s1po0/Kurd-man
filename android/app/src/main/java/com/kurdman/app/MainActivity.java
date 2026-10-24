@@ -6,6 +6,7 @@ import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ContentResolver;
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -14,7 +15,12 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
+import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
@@ -102,6 +108,7 @@ public class MainActivity extends AppCompatActivity {
             "بێ پاشبنەما"
     };
     private static final String PREF_GLOBAL_STYLE = "global_text_style_json";
+    private static final String PREF_ACCURATE_OCR = "accurate_ocr_v170";
     private static final String PREF_KEEP_SCREEN = "keep_screen_on_during_jobs";
     private static final String PREF_MAIN_PAGE = "main_page_index_v161";
     private static final int PAGE_TRANSLATE = 0;
@@ -114,6 +121,7 @@ public class MainActivity extends AppCompatActivity {
     private static final ExecutorService executor =
             Executors.newSingleThreadExecutor();
     private static volatile SoraniTranslator activeTranslator;
+    private static volatile PaddleOcrClient activePaddleOcrClient;
 
     private SharedPreferences prefs;
     private EditText tokenInput;
@@ -125,6 +133,11 @@ public class MainActivity extends AppCompatActivity {
     private Button downloadOfflineButton;
     private Button deleteOfflineButton;
     private OfflineModelManager offlineModelManager;
+    private CheckBox accurateOcrCheck;
+    private TextView paddleOcrStatus;
+    private Button downloadPaddleOcrButton;
+    private Button deletePaddleOcrButton;
+    private PaddleOcrModelManager paddleOcrModelManager;
     private Button pasteTokenButton;
     private Button pasteChatButton;
     private CheckBox showTokenCheck;
@@ -221,6 +234,11 @@ public class MainActivity extends AppCompatActivity {
         downloadOfflineButton = findViewById(R.id.downloadOfflineButton);
         deleteOfflineButton = findViewById(R.id.deleteOfflineButton);
         offlineModelManager = new OfflineModelManager(this);
+        accurateOcrCheck = findViewById(R.id.accurateOcrCheck);
+        paddleOcrStatus = findViewById(R.id.paddleOcrStatus);
+        downloadPaddleOcrButton = findViewById(R.id.downloadPaddleOcrButton);
+        deletePaddleOcrButton = findViewById(R.id.deletePaddleOcrButton);
+        paddleOcrModelManager = new PaddleOcrModelManager(this);
         saveButton = findViewById(R.id.saveButton);
         verifyButton = findViewById(R.id.verifyButton);
         sendTextButton = findViewById(R.id.sendTextButton);
@@ -370,6 +388,10 @@ public class MainActivity extends AppCompatActivity {
             if (translator != null) {
                 translator.cancelOffline();
             }
+            PaddleOcrClient paddleClient = activePaddleOcrClient;
+            if (paddleClient != null) {
+                paddleClient.requestCancel();
+            }
         });
         keepScreenCheck.setChecked(prefs.getBoolean(PREF_KEEP_SCREEN, true));
         keepScreenCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -388,6 +410,10 @@ public class MainActivity extends AppCompatActivity {
         pasteChatButton.setOnClickListener(v -> pasteChatIdFromClipboard());
         showTokenCheck.setOnCheckedChangeListener(
                 (buttonView, isChecked) -> setTokenVisible(isChecked));
+        accurateOcrCheck.setChecked(prefs.getBoolean(PREF_ACCURATE_OCR, true));
+        accurateOcrCheck.setOnCheckedChangeListener(
+                (buttonView, isChecked) -> prefs.edit()
+                        .putBoolean(PREF_ACCURATE_OCR, isChecked).apply());
         saveButton.setOnClickListener(v -> {
             saveSettings();
             setStatus("✅ تۆکن و Chat ID لەسەر ئەم مۆبایلە پاشەکەوت کرا.");
@@ -405,12 +431,15 @@ public class MainActivity extends AppCompatActivity {
         }));
         downloadOfflineButton.setOnClickListener(v -> downloadOfflineModel());
         deleteOfflineButton.setOnClickListener(v -> confirmDeleteOfflineModel());
+        downloadPaddleOcrButton.setOnClickListener(v -> downloadPaddleOcrPack());
+        deletePaddleOcrButton.setOnClickListener(v -> confirmDeletePaddleOcrPack());
         translateButton.setOnClickListener(v -> translateSelected());
         sendResultButton.setOnClickListener(v -> sendResultToTelegram());
         refreshDownloadsButton.setOnClickListener(v -> refreshDownloadsList());
         openDownloadsButton.setOnClickListener(v -> openSystemDownloads());
 
         refreshOfflineModelUi();
+        refreshPaddleOcrUi();
         refreshKeepAliveUi();
         if (JobRuntime.isRunning()) {
             currentBusy = true;
@@ -495,6 +524,7 @@ public class MainActivity extends AppCompatActivity {
             refreshDownloadsList();
         } else if (page == PAGE_SETTINGS) {
             refreshOfflineModelUi();
+            refreshPaddleOcrUi();
             refreshKeepAliveUi();
         }
     }
@@ -952,6 +982,176 @@ public class MainActivity extends AppCompatActivity {
                 && translationModeSpinner.getSelectedItemPosition() == 1;
     }
 
+    private PaddleOcrClient startPaddleOcrIfAvailable(
+            String sourceLanguage, boolean accurateOcr) {
+        if (!accurateOcr) {
+            return null;
+        }
+        if (!paddleOcrModelManager.isReadyFor(sourceLanguage)) {
+            setStatus("خوێندنەوەی وردی ML Kit کار دەکات؛ بۆ PP-OCRی بەهێزتر "
+                    + "لە «ڕێکخستنەکان» پاکێجی PP-OCR دابەزێنە.");
+            return null;
+        }
+        PaddleOcrClient client = new PaddleOcrClient(this, sourceLanguage);
+        activePaddleOcrClient = client;
+        try {
+            setStatus("بارکردنی PP-OCR بۆ پشکنینی دووەمی وشە قورسەکان…");
+            client.initialize();
+            return client;
+        } catch (Throwable e) {
+            closePaddleOcrClient(client);
+            if (!JobRuntime.wasStopped(e)) {
+                setStatus("⚠ PP-OCR دەستی پێنەکرد؛ OCRی وردی ML Kit بەتەنیا بەکاردەهێنرێت.");
+            }
+            return null;
+        }
+    }
+
+    private void closePaddleOcrClient(PaddleOcrClient client) {
+        if (client == null) {
+            return;
+        }
+        if (activePaddleOcrClient == client) {
+            activePaddleOcrClient = null;
+        }
+        try {
+            client.close();
+        } catch (Throwable ignored) {
+            // The isolated OCR process is disposable.
+        }
+    }
+
+    private ManhwaRenderer.SecondaryOcr createPaddleSecondaryOcr(
+            PaddleOcrClient client) {
+        if (client == null) {
+            return null;
+        }
+        return (page, boxes) -> {
+            List<ManhwaRenderer.LineText> output = new ArrayList<>();
+            for (int i = 0; i < boxes.size(); i++) {
+                output.add(new ManhwaRenderer.LineText("", 0f));
+            }
+            File dir = new File(getCacheDir(),
+                    "ppocr-lines-" + timestamp() + "-" + System.nanoTime());
+            if (!dir.exists() && !dir.mkdirs()) {
+                throw new IOException("Could not create PP-OCR crop directory");
+            }
+            List<File> files = new ArrayList<>();
+            List<Integer> boxIndexes = new ArrayList<>();
+            try {
+                for (int i = 0; i < boxes.size(); i++) {
+                    throwIfJobStopped();
+                    Rect rect = expandedLineRect(boxes.get(i), page);
+                    if (rect == null) {
+                        continue;
+                    }
+                    Bitmap crop = Bitmap.createBitmap(page,
+                            rect.left, rect.top, rect.width(), rect.height());
+                    File originalFile = new File(dir, String.format(
+                            Locale.ROOT, "line-%04d-a.png", i));
+                    writeBitmapPng(originalFile, crop);
+                    files.add(originalFile);
+                    boxIndexes.add(i);
+
+                    if (isDarkBitmap(crop)) {
+                        Bitmap inverted = invertBitmap(crop);
+                        try {
+                            File invertedFile = new File(dir, String.format(
+                                    Locale.ROOT, "line-%04d-b.png", i));
+                            writeBitmapPng(invertedFile, inverted);
+                            files.add(invertedFile);
+                            boxIndexes.add(i);
+                        } finally {
+                            inverted.recycle();
+                        }
+                    }
+                }
+                if (files.isEmpty()) {
+                    return output;
+                }
+                List<PaddleOcrClient.LineResult> results =
+                        client.recognizeFiles(files);
+                for (int i = 0; i < Math.min(results.size(), files.size()); i++) {
+                    int boxIndex = boxIndexes.get(i);
+                    PaddleOcrClient.LineResult result = results.get(i);
+                    ManhwaRenderer.LineText current = output.get(boxIndex);
+                    if (result.confidence > current.confidence) {
+                        output.set(boxIndex, new ManhwaRenderer.LineText(
+                                result.text, result.confidence));
+                    }
+                }
+                return output;
+            } finally {
+                deleteRecursive(dir);
+            }
+        };
+    }
+
+    private Rect expandedLineRect(Rect box, Bitmap page) {
+        if (box == null || page == null) {
+            return null;
+        }
+        int padX = Math.max(5, Math.round(box.width() * 0.08f));
+        int padY = Math.max(4, Math.round(box.height() * 0.28f));
+        Rect out = new Rect(
+                Math.max(0, box.left - padX),
+                Math.max(0, box.top - padY),
+                Math.min(page.getWidth(), box.right + padX),
+                Math.min(page.getHeight(), box.bottom + padY));
+        return out.width() >= 8 && out.height() >= 6 ? out : null;
+    }
+
+    private void writeBitmapPng(File file, Bitmap bitmap) throws IOException {
+        OutputStream out = new BufferedOutputStream(new FileOutputStream(file));
+        try {
+            if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)) {
+                throw new IOException("Could not write PP-OCR line crop");
+            }
+        } finally {
+            out.close();
+        }
+    }
+
+    private boolean isDarkBitmap(Bitmap bitmap) {
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+        int stepX = Math.max(1, width / 12);
+        int stepY = Math.max(1, height / 8);
+        long sum = 0;
+        int count = 0;
+        for (int x = 0; x < width; x += stepX) {
+            sum += luminance(bitmap.getPixel(x, 0));
+            sum += luminance(bitmap.getPixel(x, height - 1));
+            count += 2;
+        }
+        for (int y = 0; y < height; y += stepY) {
+            sum += luminance(bitmap.getPixel(0, y));
+            sum += luminance(bitmap.getPixel(width - 1, y));
+            count += 2;
+        }
+        return count > 0 && (sum / (double) count) < 118.0;
+    }
+
+    private Bitmap invertBitmap(Bitmap source) {
+        Bitmap output = Bitmap.createBitmap(
+                source.getWidth(), source.getHeight(), Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(output);
+        Paint paint = new Paint(Paint.FILTER_BITMAP_FLAG);
+        paint.setColorFilter(new ColorMatrixColorFilter(new ColorMatrix(new float[]{
+                -1f, 0f, 0f, 0f, 255f,
+                0f, -1f, 0f, 0f, 255f,
+                0f, 0f, -1f, 0f, 255f,
+                0f, 0f, 0f, 1f, 0f})));
+        canvas.drawBitmap(source, 0f, 0f, paint);
+        return output;
+    }
+
+    private int luminance(int color) {
+        return Math.round(0.299f * Color.red(color)
+                + 0.587f * Color.green(color)
+                + 0.114f * Color.blue(color));
+    }
+
     private SoraniTranslator createTranslator(boolean offlineMode) throws Exception {
         if (!offlineMode) {
             SoraniTranslator translator = new SoraniTranslator();
@@ -1024,6 +1224,109 @@ public class MainActivity extends AppCompatActivity {
                     + formatStorage(total));
             downloadOfflineButton.setText("⬇  دابەزاندنی مۆدێلی AI");
         }
+    }
+
+    private void refreshPaddleOcrUi() {
+        if (paddleOcrModelManager == null || paddleOcrStatus == null
+                || downloadPaddleOcrButton == null) {
+            return;
+        }
+        boolean ready = paddleOcrModelManager.isPackReady();
+        long downloaded = paddleOcrModelManager.downloadedBytes();
+        long total = PaddleOcrModelManager.totalBytes();
+        if (ready) {
+            paddleOcrStatus.setText("✅ PP-OCR ئامادەیە و لەناو مۆبایلەکەدا کار دەکات • "
+                    + formatStorage(total));
+            downloadPaddleOcrButton.setText("✓ PP-OCR ئامادەیە");
+        } else if (downloaded > 0) {
+            paddleOcrStatus.setText("⬇ بەشێک دابەزیوە: "
+                    + formatStorage(downloaded) + " / " + formatStorage(total)
+                    + " — دەتوانیت درێژە بدەیت");
+            downloadPaddleOcrButton.setText("↻ درێژەدان بە PP-OCR");
+        } else {
+            paddleOcrStatus.setText("هێشتا دانەبەزیوە • " + formatStorage(total));
+            downloadPaddleOcrButton.setText("⬇  دابەزاندنی PP-OCR");
+        }
+    }
+
+    private void downloadPaddleOcrPack() {
+        if (paddleOcrModelManager.isPackReady()) {
+            refreshPaddleOcrUi();
+            setStatus("✅ PP-OCR لەم مۆبایلەدا ئامادەیە و بێ ئینتەرنێت کار دەکات.");
+            return;
+        }
+        setBusy(true);
+        setStatus("⬇ دابەزاندنی پاکێجی PP-OCR ("
+                + formatStorage(PaddleOcrModelManager.totalBytes()) + ")…");
+        executor.execute(() -> {
+            JobRuntime.markThreadStarted();
+            final int[] lastPercent = {-1};
+            try {
+                paddleOcrModelManager.downloadPack(
+                        (downloadedBytes, totalBytes, currentFile, verifying) -> {
+                            int percent = totalBytes == 0 ? 0
+                                    : (int) ((downloadedBytes * 100L) / totalBytes);
+                            if (percent == lastPercent[0] && percent < 100) {
+                                return;
+                            }
+                            lastPercent[0] = percent;
+                            String status = (verifying
+                                    ? "🔎 پشکنینی PP-OCR: "
+                                    : "⬇ دابەزاندنی PP-OCR: ")
+                                    + percent + "% ("
+                                    + formatStorage(downloadedBytes) + " / "
+                                    + formatStorage(totalBytes) + ")";
+                            setStatus(status);
+                            runOnUiThread(() -> {
+                                if (paddleOcrStatus != null) {
+                                    paddleOcrStatus.setText(status);
+                                }
+                            });
+                        });
+                runOnUiThread(this::refreshPaddleOcrUi);
+                setStatus("✅ PP-OCR ئامادەیە. لە بەشی وەرگێڕان «خوێندنەوەی زۆر ورد» "
+                        + "چالاک بکە و وێنەکە وەربگێڕە.");
+            } catch (Throwable e) {
+                runOnUiThread(this::refreshPaddleOcrUi);
+                setStatus(JobRuntime.wasStopped(e)
+                        ? "🛑 دابەزاندنی PP-OCR وەستێنرا."
+                        : "❌ دابەزاندنی PP-OCR سەرکەوتوو نەبوو: "
+                                + friendlyError(e));
+            } finally {
+                setBusy(false);
+            }
+        });
+    }
+
+    private void confirmDeletePaddleOcrPack() {
+        long downloaded = paddleOcrModelManager.downloadedBytes();
+        if (downloaded <= 0 && !paddleOcrModelManager.isPackReady()) {
+            refreshPaddleOcrUi();
+            setStatus("⚠ هیچ پاکێجێکی PP-OCR نییە بۆ سڕینەوە.");
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("سڕینەوەی PP-OCR؟")
+                .setMessage("نزیکەی " + formatStorage(downloaded)
+                        + " دەسڕدرێتەوە. OCRی ML Kit هەر دەمێنێتەوە، بەڵام بۆ "
+                        + "بەکارهێنانەوەی PP-OCR دەبێت پاکێجەکە دووبارە دابەزێنیت.")
+                .setNegativeButton("پاشگەزبوونەوە", null)
+                .setPositiveButton("بیسرەوە", (dialog, which) -> {
+                    setBusy(true);
+                    executor.execute(() -> {
+                        JobRuntime.markThreadStarted();
+                        try {
+                            boolean deleted = paddleOcrModelManager.deletePack();
+                            runOnUiThread(this::refreshPaddleOcrUi);
+                            setStatus(deleted
+                                    ? "✅ PP-OCR سڕایەوە و شوێنەکە ئازاد کرا."
+                                    : "⚠ هەندێک فایلی PP-OCR نەسڕایەوە؛ دووبارە هەوڵبدە.");
+                        } finally {
+                            setBusy(false);
+                        }
+                    });
+                })
+                .show();
     }
 
     private void downloadOfflineModel() {
@@ -1459,6 +1762,8 @@ public class MainActivity extends AppCompatActivity {
         }
         final String sourceLanguage = selectedSourceLanguage();
         final boolean offlineMode = selectedOfflineMode();
+        final boolean accurateOcr = accurateOcrCheck == null
+                || accurateOcrCheck.isChecked();
         if (offlineMode && !offlineModelManager.isModelReady()) {
             refreshOfflineModelUi();
             setStatus("⚠ بۆ وەرگێڕانی ئۆفلاین سەرەتا «دابەزاندنی مۆدێلی AI» "
@@ -1476,11 +1781,12 @@ public class MainActivity extends AppCompatActivity {
         executor.execute(() -> {
             JobRuntime.markThreadStarted();
             SoraniTranslator translator = null;
+            PaddleOcrClient paddleOcrClient = null;
             try {
                 throwIfJobStopped();
                 if (cbzFile != null) {
                     translateCbzJob(cbzFile, cbzName, sourceLanguage,
-                            offlineMode, chosenStyle);
+                            offlineMode, accurateOcr, chosenStyle);
                     return;
                 }
 
@@ -1510,15 +1816,25 @@ public class MainActivity extends AppCompatActivity {
                 project.pages.add(projectPage);
                 project.save();
 
-                List<Segment> segments = ManhwaRenderer.recognize(
-                        sourceBitmap,
-                        sourceLanguage,
-                        new ManhwaRenderer.Progress() {
-                            @Override
-                            public void onProgress(String message) {
-                                setStatus(message);
-                            }
-                        });
+                paddleOcrClient = startPaddleOcrIfAvailable(
+                        sourceLanguage, accurateOcr);
+                List<Segment> segments;
+                try {
+                    segments = ManhwaRenderer.recognize(
+                            sourceBitmap,
+                            sourceLanguage,
+                            new ManhwaRenderer.Progress() {
+                                @Override
+                                public void onProgress(String message) {
+                                    setStatus(message);
+                                }
+                            },
+                            accurateOcr,
+                            createPaddleSecondaryOcr(paddleOcrClient));
+                } finally {
+                    closePaddleOcrClient(paddleOcrClient);
+                    paddleOcrClient = null;
+                }
                 if (segments.isEmpty()) {
                     throw new IllegalStateException("هیچ دەقێکی ڕوون نەدۆزرایەوە. وێنەیەکی ڕوونتر تاقیبکەرەوە.");
                 }
@@ -1602,6 +1918,7 @@ public class MainActivity extends AppCompatActivity {
                     setStatus("❌ " + friendlyTranslationError(e));
                 }
             } finally {
+                closePaddleOcrClient(paddleOcrClient);
                 closeTranslator(translator);
                 setBusy(false);
             }
@@ -1611,6 +1928,7 @@ public class MainActivity extends AppCompatActivity {
     private void translateCbzJob(File cbz, String displayName,
                                    String sourceLanguage,
                                    boolean offlineMode,
+                                   boolean accurateOcr,
                                    TextStyleSettings chosenStyle) throws Exception {
         String projectBase = sanitizeFileName(baseNameWithoutExtension(displayName));
         if (projectBase.isEmpty()) {
@@ -1627,6 +1945,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         SoraniTranslator translator = null;
+        PaddleOcrClient paddleOcrClient = null;
         try {
             throwIfJobStopped();
             setStatus("دەرهێنانی وێنەکانی ناو CBZ…");
@@ -1657,6 +1976,10 @@ public class MainActivity extends AppCompatActivity {
             //
             // Phase 1: OCR every page; a null entry marks a page whose
             // bitmap could not be decoded (copied through in phase 3).
+            paddleOcrClient = startPaddleOcrIfAvailable(
+                    sourceLanguage, accurateOcr);
+            ManhwaRenderer.SecondaryOcr paddleSecondaryOcr =
+                    createPaddleSecondaryOcr(paddleOcrClient);
             List<List<Segment>> pageSegments = new ArrayList<>(pageTotal);
             for (int i = 0; i < pageTotal; i++) {
                 throwIfJobStopped();
@@ -1683,7 +2006,9 @@ public class MainActivity extends AppCompatActivity {
                                     setStatus("لاپەڕە " + pageNumber + "/"
                                             + pageTotal + ": " + message);
                                 }
-                            });
+                            },
+                            accurateOcr,
+                            paddleSecondaryOcr);
                     projectPage.segments.addAll(recognized);
                     pageSegments.add(recognized);
                 } finally {
@@ -1691,6 +2016,8 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             project.save();
+            closePaddleOcrClient(paddleOcrClient);
+            paddleOcrClient = null;
 
             // Phase 2: translate everything with no page bitmaps in memory,
             // then free the model before any rendering happens.
@@ -1855,6 +2182,7 @@ public class MainActivity extends AppCompatActivity {
                         + " دەق لەسەر وێنەکان داندرا." + savedNote);
             }
         } finally {
+            closePaddleOcrClient(paddleOcrClient);
             closeTranslator(translator);
             // Keep inputDir: it is the editable project's permanent page
             // store under files/projects/current/pages. Only rendered output
@@ -2726,6 +3054,16 @@ public class MainActivity extends AppCompatActivity {
         share.setOnClickListener(v -> shareDownloadedFile(file));
         actions.addView(share);
 
+        Button delete = createSmallButton("🗑 سڕینەوە", false);
+        delete.setBackgroundResource(R.drawable.bg_button_danger);
+        delete.setTextColor(getColor(R.color.white));
+        LinearLayout.LayoutParams deleteParams = new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        deleteParams.setMarginStart(dp(8));
+        delete.setLayoutParams(deleteParams);
+        delete.setOnClickListener(v -> confirmDeleteDownloadedFile(file));
+        actions.addView(delete);
+
         row.addView(actions);
         return row;
     }
@@ -2778,6 +3116,134 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             setStatus("❌ " + friendlyError(e));
         }
+    }
+
+    private void confirmDeleteDownloadedFile(File file) {
+        if (file == null || !file.exists()) {
+            refreshDownloadsList();
+            setStatus("⚠ ئەم فایلە پێشتر نەماوە.");
+            return;
+        }
+        if (currentBusy || JobRuntime.isRunning()) {
+            setStatus("⚠ چاوەڕوان بکە تا کارەکەی ئێستا تەواو بێت، ئینجا فایلەکە بسرەوە.");
+            return;
+        }
+        try {
+            File libraryDir = downloadsLibraryDir().getCanonicalFile();
+            File canonicalFile = file.getCanonicalFile();
+            if (canonicalFile.getParentFile() == null
+                    || !libraryDir.equals(canonicalFile.getParentFile())) {
+                setStatus("⚠ ئەم فایلە لە دەرەوەی کتێبخانەی داگرتنەکانی KurdManە و ناسڕدرێتەوە.");
+                return;
+            }
+        } catch (IOException e) {
+            setStatus("❌ " + friendlyError(e));
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("ئەم ئەنجامە بسرمەوە؟")
+                .setMessage(file.getName() + "\n" + formatStorage(file.length())
+                        + "\n\nکۆپییە هاوشێوەکە لە Download/KurdMan یان "
+                        + "Pictures/KurdManـیش دەسڕدرێتەوە ئەگەر بدۆزرێتەوە. "
+                        + "ئەم کارە ناگەڕێندرێتەوە.")
+                .setNegativeButton("پاشگەزبوونەوە", null)
+                .setPositiveButton("بیسرەوە",
+                        (dialog, which) -> deleteDownloadedFile(file))
+                .show();
+    }
+
+    private void deleteDownloadedFile(File file) {
+        String name = file.getName();
+        long size = file.length();
+        int publicDeleted = 0;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            publicDeleted += deleteMatchingMediaStoreCopies(
+                    MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                    name, size, "Download/KurdMan");
+            String mime = mimeForFile(file);
+            if (mime.startsWith("image/")) {
+                publicDeleted += deleteMatchingMediaStoreCopies(
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        name, size, "Pictures/KurdMan");
+            }
+        }
+        boolean deleted = file.delete();
+        if (deleted) {
+            if (resultFile != null
+                    && file.getAbsolutePath().equals(resultFile.getAbsolutePath())) {
+                resultFile = null;
+            }
+            if (resultTextFile != null
+                    && file.getAbsolutePath().equals(resultTextFile.getAbsolutePath())) {
+                resultTextFile = null;
+            }
+            refreshDownloadsList();
+            updateButtons(currentBusy);
+            setStatus("✅ " + name + " سڕایەوە."
+                    + (publicDeleted > 0
+                            ? " کۆپییە گشتییەکەش سڕایەوە." : ""));
+        } else {
+            refreshDownloadsList();
+            setStatus("⚠ نەتوانرا " + name + " بسرێتەوە؛ دووبارە هەوڵبدە.");
+        }
+    }
+
+    private int deleteMatchingMediaStoreCopies(Uri collection, String displayName,
+                                               long size,
+                                               String expectedRelativePart) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            return 0;
+        }
+        List<Uri> targets = new ArrayList<>();
+        Cursor cursor = null;
+        try {
+            String[] projection = {
+                    MediaStore.MediaColumns._ID,
+                    MediaStore.MediaColumns.RELATIVE_PATH
+            };
+            String selection = MediaStore.MediaColumns.DISPLAY_NAME + "=?"
+                    + " AND " + MediaStore.MediaColumns.SIZE + "=?";
+            cursor = getContentResolver().query(
+                    collection,
+                    projection,
+                    selection,
+                    new String[]{displayName, Long.toString(size)},
+                    null);
+            if (cursor != null) {
+                int idIndex = cursor.getColumnIndexOrThrow(
+                        MediaStore.MediaColumns._ID);
+                int pathIndex = cursor.getColumnIndexOrThrow(
+                        MediaStore.MediaColumns.RELATIVE_PATH);
+                while (cursor.moveToNext()) {
+                    String relative = cursor.getString(pathIndex);
+                    if (relative != null && relative.replace('\\', '/')
+                            .contains(expectedRelativePart)) {
+                        targets.add(ContentUris.withAppendedId(
+                                collection, cursor.getLong(idIndex)));
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // The app-private Downloads copy below can still be deleted.
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+
+        int deleted = 0;
+        for (Uri target : targets) {
+            try {
+                deleted += getContentResolver().delete(target, null, null);
+            } catch (SecurityException ignored) {
+                // A same-name file owned by another app must not be touched
+                // without a separate system permission prompt.
+            } catch (RuntimeException ignored) {
+                // Best effort for the public copy.
+            }
+        }
+        return deleted;
     }
 
     private void openSystemDownloads() {
@@ -2833,6 +3299,9 @@ public class MainActivity extends AppCompatActivity {
             builder.append("→ ").append(segment.ckb);
             if (!segment.rendered) {
                 builder.append("\n[⚠ لەسەر وێنەکە دانەندرا]");
+            }
+            if (segment.ocrConfidence >= 0f && segment.ocrConfidence < 0.78f) {
+                builder.append("\n[⚠ خوێندنەوەی OCR گوماناوییە — لە ستۆدیۆ وشەکانی بپشکنە]");
             }
             builder.append("\n\n");
         }
@@ -3043,6 +3512,9 @@ public class MainActivity extends AppCompatActivity {
         if (translationModeSpinner != null) {
             translationModeSpinner.setEnabled(enabled);
         }
+        if (accurateOcrCheck != null) {
+            accurateOcrCheck.setEnabled(enabled);
+        }
         if (fontSpinner != null) {
             fontSpinner.setEnabled(enabled);
         }
@@ -3097,6 +3569,16 @@ public class MainActivity extends AppCompatActivity {
         }
         if (deleteOfflineButton != null) {
             deleteOfflineButton.setEnabled(enabled && hasModelData);
+        }
+        boolean paddleReady = paddleOcrModelManager != null
+                && paddleOcrModelManager.isPackReady();
+        boolean hasPaddleData = paddleOcrModelManager != null
+                && paddleOcrModelManager.downloadedBytes() > 0;
+        if (downloadPaddleOcrButton != null) {
+            downloadPaddleOcrButton.setEnabled(enabled && !paddleReady);
+        }
+        if (deletePaddleOcrButton != null) {
+            deletePaddleOcrButton.setEnabled(enabled && hasPaddleData);
         }
         sendResultButton.setEnabled(enabled && resultFile != null && resultFile.exists());
         boolean hasProject = TranslationProjectStore.hasCompletedProject(this);

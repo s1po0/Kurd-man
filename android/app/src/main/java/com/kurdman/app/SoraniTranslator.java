@@ -71,6 +71,72 @@ public class SoraniTranslator implements AutoCloseable {
         GLOSSARY.put("what's that?", "ئەوە چییە؟");
         GLOSSARY.put("poison evasion orb?", "گۆی خۆلادان لە ژەهر؟");
         GLOSSARY.put("why are points being used?", "بۆچی خاڵەکان بەکاردەهێنرێن؟");
+
+        // Ordinary words that must never be disguised as personal names
+        // merely because a route echoed them in Latin letters. The initial
+        // list above covers dialogue basics; this extension covers common
+        // grammar and the vocabulary that appears constantly in manhwa.
+        COMMON_STANDALONE_WORDS.addAll(Arrays.asList(
+                "about", "above", "after", "again", "against", "all", "also",
+                "another", "any", "anyone", "anything", "around", "as", "at",
+                "back", "because", "before", "below", "between", "but", "by",
+                "can", "cannot", "could", "did", "do", "does", "doing", "done",
+                "down", "each", "either", "else", "even", "every", "everyone",
+                "everything", "for", "from", "had", "has", "have", "having",
+                "here", "however", "if", "in", "into", "its", "itself", "just",
+                "let", "like", "more", "most", "must", "myself", "never", "nobody",
+                "none", "nor", "not", "nothing", "now", "of", "off", "on", "once",
+                "one", "only", "or", "other", "ours", "out", "over", "own", "same",
+                "should", "so", "some", "someone", "something", "still", "such",
+                "than", "that", "then", "there", "these", "this", "those",
+                "through", "to", "too", "under", "until", "up", "upon", "very",
+                "which", "while", "whom", "will", "with", "would", "yours",
+                "accept", "act", "add", "admit", "agree", "allow", "appear",
+                "ask", "avoid", "become", "begin", "believe", "break", "bring",
+                "build", "buy", "call", "carry", "catch", "change", "check",
+                "choose", "continue", "control", "create", "cry", "cut",
+                "disappear", "draw", "drink", "eat", "end", "enter", "escape",
+                "explain", "fall", "feel", "find", "finish", "follow", "forget",
+                "forgive", "got", "happen", "hate", "hear", "hide", "hit", "hold",
+                "hope", "hunt", "hurt", "join", "jump", "keep", "know", "laugh",
+                "lead", "learn", "leave", "lie", "listen", "live", "lose", "love",
+                "make", "mean", "meet", "need", "pay", "play", "protect", "pull",
+                "push", "put", "reach", "read", "remember", "return", "save",
+                "say", "see", "seem", "sell", "send", "show", "shut", "sit",
+                "sleep", "smile", "speak", "stand", "start", "stay", "talk",
+                "tell", "think", "touch", "train", "try", "turn", "understand",
+                "use", "wake", "walk", "want", "warn", "watch", "win", "wish",
+                "work", "worry",
+                "ability", "academy", "answer", "area", "army", "attribute",
+                "awakened", "battle", "beast", "blood", "body", "boss",
+                "building", "captain", "castle", "chapter", "city", "class",
+                "commander", "company", "core", "country", "danger", "day",
+                "death", "demon", "door", "dragon", "dungeon", "effect",
+                "emperor", "energy", "equipment", "family", "fire", "floor",
+                "forest", "god", "gold", "group", "guild", "hand", "head",
+                "heart", "hero", "home", "house", "human", "ice", "island",
+                "item", "job", "kingdom", "knight", "leader", "level", "life",
+                "light", "magic", "mana", "mission", "money", "mountain",
+                "name", "night", "people", "person", "place", "player", "point",
+                "power", "prince", "princess", "quest", "rank", "reward", "room",
+                "school", "skill", "soldier", "soul", "spirit", "status", "stone",
+                "system", "teacher", "team", "thing", "time", "tower", "town",
+                "village", "voice", "wall", "war", "warrior", "water", "weapon",
+                "window", "world", "year",
+                "able", "alive", "alone", "angry", "bad", "beautiful", "big",
+                "black", "blue", "brave", "careful", "clear", "cold", "crazy",
+                "dark", "dead", "different", "difficult", "dirty", "early",
+                "easy", "empty", "enough", "evil", "false", "famous", "fast",
+                "final", "first", "free", "full", "good", "great", "happy",
+                "hard", "high", "hot", "huge", "important", "impossible", "last",
+                "late", "little", "long", "low", "lucky", "mad", "many", "much",
+                "new", "next", "normal", "old", "perfect", "poor", "possible",
+                "powerful", "pretty", "quick", "quiet", "ready", "real", "red",
+                "rich", "right", "safe", "scared", "second", "secret", "serious",
+                "short", "silent", "simple", "slow", "small", "special", "strange",
+                "strong", "stupid", "sure", "surprised", "terrible", "tired",
+                "true", "ugly", "weak", "white", "wrong", "young",
+                "bang", "boom", "crash", "slash", "thud", "whoosh"));
     }
 
     private final Map<String, String> cache = new HashMap<>();
@@ -120,9 +186,7 @@ public class SoraniTranslator implements AutoCloseable {
         }
 
         boolean offline = offlineEngine != null;
-        String preparedSource = offline
-                ? prepareOfflineSourceText(normalized, sourceLanguage)
-                : prepareSourceText(normalized, sourceLanguage);
+        String preparedSource = prepareSourceText(normalized, sourceLanguage);
         String key = (offline ? "offline" : "online")
                 + "\n" + sourceLanguage + "\n" + preparedSource;
         String cached = cache.get(key);
@@ -162,31 +226,14 @@ public class SoraniTranslator implements AutoCloseable {
     }
 
     /**
-     * Manhwa OCR text is very often ALL CAPS. Google frequently leaves an
-     * unfamiliar ALL-CAPS personal name in Latin letters, while the same
-     * name in ordinary title case is transliterated into Sorani script.
-     * Normalize only mostly-uppercase English blocks before translation.
+     * Manhwa OCR text is very often ALL CAPS. Sentence case is safer than
+     * title-casing every word: title case makes ordinary nouns look like
+     * personal names, which could cause a route to preserve or transliterate
+     * a word instead of translating it. Normalize only mostly-uppercase
+     * English blocks before translation.
      */
     private String prepareSourceText(String text, String sourceLanguage) {
-        if (!isMostlyUppercaseEnglish(text, sourceLanguage)) {
-            return text;
-        }
-
-        StringBuilder out = new StringBuilder(text.length());
-        boolean inWord = false;
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            if (Character.isLetter(c)) {
-                out.append(inWord ? Character.toLowerCase(c) : Character.toUpperCase(c));
-                inWord = true;
-            } else {
-                out.append(c);
-                if (c != '\'' && c != '’') {
-                    inWord = false;
-                }
-            }
-        }
-        return out.toString();
+        return prepareOfflineSourceText(text, sourceLanguage);
     }
 
     private boolean isMostlyUppercaseEnglish(String text, String sourceLanguage) {
@@ -209,9 +256,8 @@ public class SoraniTranslator implements AutoCloseable {
     }
 
     /**
-     * NLLB was trained mostly on ordinary sentence-case text. For an
-     * ALL-CAPS manhwa block, sentence case is safer than Google-oriented
-     * title case, which can make every noun look like a proper name.
+     * Converts a mostly-uppercase English block to ordinary sentence case.
+     * Both online routes and NLLB were trained predominantly on such text.
      */
     private String prepareOfflineSourceText(String text, String sourceLanguage) {
         if (!isMostlyUppercaseEnglish(text, sourceLanguage)) {
@@ -320,8 +366,17 @@ public class SoraniTranslator implements AutoCloseable {
         if (!hasArabic || COMMON_STANDALONE_WORDS.contains(lettersOnly)) {
             return false;
         }
-        return looksNameForm(token)
-                || (sourceToken != null && looksNameForm(sourceToken));
+        if (looksNameForm(token)
+                || (sourceToken != null && looksNameForm(sourceToken))) {
+            return true;
+        }
+        // In an ALL-CAPS manhwa sentence, capitalization cannot distinguish
+        // names from ordinary words. Treat an unknown, non-common token as a
+        // likely name/foreign term, but leave common English words visible
+        // rather than disguising a missed translation as a name.
+        return sourceToken != null
+                && lettersOnly.length() >= 3
+                && isAllCapsToken(sourceToken);
     }
 
     private boolean isLikelyStandaloneName(String source) {
@@ -338,7 +393,7 @@ public class SoraniTranslator implements AutoCloseable {
             if (lettersOnly.length() < 2
                     || COMMON_STANDALONE_WORDS.contains(lettersOnly)
                     || LATIN_WORDS_TO_KEEP.contains(lettersOnly)
-                    || !looksNameForm(token)) {
+                    || !looksStandaloneNameForm(token)) {
                 return false;
             }
             tokenCount++;
@@ -351,6 +406,8 @@ public class SoraniTranslator implements AutoCloseable {
         boolean firstLetterUpper = false;
         boolean seenLetter = false;
         boolean seenLower = false;
+        int upperCount = 0;
+        int lowerCount = 0;
         for (int offset = 0; offset < token.length();) {
             int codePoint = token.codePointAt(offset);
             if (Character.isLetter(codePoint)) {
@@ -360,14 +417,41 @@ public class SoraniTranslator implements AutoCloseable {
                 if (seenLower && Character.isUpperCase(codePoint)) {
                     return true;
                 }
-                if (Character.isLowerCase(codePoint)) {
+                if (Character.isUpperCase(codePoint)) {
+                    upperCount++;
+                } else if (Character.isLowerCase(codePoint)) {
+                    lowerCount++;
                     seenLower = true;
                 }
                 seenLetter = true;
             }
             offset += Character.charCount(codePoint);
         }
-        return firstLetterUpper;
+        // A genuinely title-cased token has lowercase letters too. An
+        // ALL-CAPS token by itself proves nothing in a manhwa bubble.
+        return firstLetterUpper && lowerCount > 0 && upperCount <= 3;
+    }
+
+    private boolean looksStandaloneNameForm(String token) {
+        return looksNameForm(token) || isAllCapsToken(token);
+    }
+
+    private boolean isAllCapsToken(String token) {
+        int letters = 0;
+        int upper = 0;
+        for (int offset = 0; offset < token.length();) {
+            int codePoint = token.codePointAt(offset);
+            if (Character.isLetter(codePoint)) {
+                letters++;
+                if (Character.isUpperCase(codePoint)) {
+                    upper++;
+                } else if (Character.isLowerCase(codePoint)) {
+                    return false;
+                }
+            }
+            offset += Character.charCount(codePoint);
+        }
+        return letters >= 2 && upper == letters;
     }
 
     private String transliterateLatinToken(String token) {
