@@ -25,6 +25,16 @@ android {
         }
     }
 
+    packagingOptions {
+        jniLibs {
+            // Compress the large ML Kit/ONNX Runtime libraries in the APK.
+            // Android extracts them at install time, so on-device behavior is
+            // unchanged while the downloadable APK stays under Telegram's
+            // 50 MB bot-upload limit.
+            useLegacyPackaging true
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
