@@ -275,7 +275,7 @@ public class ManhwaRenderer {
                 }
             }
             sortReadingOrder(result);
-            return result;
+            return groupSegments(original, result);
         } finally {
             try {
                 recognizer.close();
@@ -283,6 +283,140 @@ public class ManhwaRenderer {
                 // The recognizer is process-scoped; failing to close is not fatal here.
             }
         }
+    }
+
+    /**
+     * ML Kit often returns one speech bubble as several blocks — most
+     * often the first line on its own. Typeset separately, the
+     * fragments get unrelated font sizes (a one-line fragment's "line
+     * height" is just its cap height) and each is confined to its own
+     * strip of the bubble, which reads as tiny, incomplete, mixed-up
+     * writing. Fragments stacked like lines of one block are merged
+     * here, before translation, so the whole bubble is translated as
+     * one sentence and drawn at one size in one place.
+     */
+    private static List<Segment> groupSegments(Bitmap original,
+                                               List<Segment> segments) {
+        List<Segment> list = new ArrayList<>(segments);
+        boolean merged = true;
+        while (merged) {
+            merged = false;
+            outer:
+            for (int i = 0; i < list.size(); i++) {
+                for (int j = i + 1; j < list.size(); j++) {
+                    Segment a = list.get(i);
+                    Segment b = list.get(j);
+                    Segment upper = a.box.top <= b.box.top ? a : b;
+                    Segment lower = upper == a ? b : a;
+                    if (shouldGroup(original, upper, lower)) {
+                        list.remove(upper);
+                        list.remove(lower);
+                        list.add(combineSegments(upper, lower));
+                        merged = true;
+                        break outer;
+                    }
+                }
+            }
+        }
+        sortReadingOrder(list);
+        return list;
+    }
+
+    private static boolean shouldGroup(Bitmap original, Segment upper,
+                                       Segment lower) {
+        float lhUpper = upper.box.height() / (float) Math.max(1, upper.lines);
+        float lhLower = lower.box.height() / (float) Math.max(1, lower.lines);
+        if (lhUpper <= 0f || lhLower <= 0f) {
+            return false;
+        }
+        float minLh = Math.min(lhUpper, lhLower);
+        float maxLh = Math.max(lhUpper, lhLower);
+        if (maxLh > minLh * 1.9f) {
+            return false; // very different font sizes: not one block
+        }
+        int gap = lower.box.top - upper.box.bottom;
+        if (gap < -Math.round(minLh * 0.35f)) {
+            return false; // overlapping rows: side-by-side blocks
+        }
+        if (gap > Math.round(minLh * 2.2f)) {
+            return false;
+        }
+        int minW = Math.min(upper.box.width(), lower.box.width());
+        int maxW = Math.max(upper.box.width(), lower.box.width());
+        int overlapW = Math.min(upper.box.right, lower.box.right)
+                - Math.max(upper.box.left, lower.box.left);
+        float centreDx = Math.abs(
+                upper.box.exactCenterX() - lower.box.exactCenterX());
+        boolean aligned = overlapW >= minW * 0.45f
+                || centreDx <= maxW * 0.22f
+                || Math.abs(upper.box.left - lower.box.left) <= maxW * 0.18f
+                || Math.abs(upper.box.right - lower.box.right) <= maxW * 0.18f;
+        if (!aligned) {
+            return false;
+        }
+        int unionW = Math.max(upper.box.right, lower.box.right)
+                - Math.min(upper.box.left, lower.box.left);
+        if (unionW > maxW * 1.75f) {
+            return false;
+        }
+        if (gap <= Math.round(minLh * 1.05f)) {
+            return true;
+        }
+        // Wider gaps (a heading separated from its body, a blank line)
+        // merge only when one continuous background — the same bubble
+        // interior or narration box — fills the space between the
+        // fragments. A bubble border in between means two bubbles.
+        return gapBackgroundContinuous(original, upper, lower);
+    }
+
+    private static boolean gapBackgroundContinuous(Bitmap original,
+                                                   Segment upper,
+                                                   Segment lower) {
+        try {
+            DominantColor bg = estimateDominantColor(original, upper.box);
+            if (bg == null || bg.fraction < 0.30) {
+                return false;
+            }
+            int left = Math.max(upper.box.left, lower.box.left);
+            int right = Math.min(upper.box.right, lower.box.right);
+            if (right - left < 16) {
+                int cx = Math.round((upper.box.exactCenterX()
+                        + lower.box.exactCenterX()) / 2f);
+                left = cx - 20;
+                right = cx + 20;
+            }
+            Rect strip = new Rect(left, upper.box.bottom,
+                    right, lower.box.top);
+            if (!strip.intersect(0, 0,
+                    original.getWidth(), original.getHeight())
+                    || strip.width() < 8 || strip.height() < 2) {
+                return false;
+            }
+            return fractionSimilar(original, strip, bg.color) >= 0.80;
+        } catch (RuntimeException unreadable) {
+            return false;
+        }
+    }
+
+    private static Segment combineSegments(Segment upper, Segment lower) {
+        Rect union = new Rect(upper.box);
+        union.union(lower.box);
+        Segment combined = new Segment(
+                upper.text + "\n" + lower.text, union,
+                upper.lines + lower.lines);
+        float ca = upper.ocrConfidence;
+        float cb = lower.ocrConfidence;
+        int lettersA = letterOrDigitCount(upper.text);
+        int lettersB = letterOrDigitCount(lower.text);
+        if (ca >= 0f && cb >= 0f && lettersA + lettersB > 0) {
+            combined.ocrConfidence =
+                    (ca * lettersA + cb * lettersB) / (lettersA + lettersB);
+        } else if (ca >= 0f) {
+            combined.ocrConfidence = ca;
+        } else {
+            combined.ocrConfidence = cb;
+        }
+        return combined;
     }
 
     public static RenderResult render(Bitmap original, List<Segment> segments) {
