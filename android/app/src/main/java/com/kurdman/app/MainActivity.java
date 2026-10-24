@@ -495,7 +495,7 @@ public class MainActivity extends AppCompatActivity {
                             + " دەق لەسەر وێنەکە داندرا." + savedNote);
                 }
             } catch (Exception e) {
-                setStatus("❌ " + friendlyError(e));
+                setStatus("❌ " + friendlyTranslationError(e));
             } finally {
                 setBusy(false);
             }
@@ -1545,6 +1545,45 @@ public class MainActivity extends AppCompatActivity {
             message = message.substring(0, 220) + "…";
         }
         return message;
+    }
+
+    /** Maps translation/network failures to actionable Kurdish guidance. */
+    private String friendlyTranslationError(Exception error) {
+        String raw = friendlyError(error);
+        StringBuilder chain = new StringBuilder();
+        Throwable current = error;
+        int depth = 0;
+        while (current != null && depth < 4) {
+            chain.append(current.getClass().getName()).append(':')
+                    .append(current.getMessage()).append('\n');
+            current = current.getCause();
+            depth++;
+        }
+        String lower = chain.toString().toLowerCase(Locale.ROOT);
+        if (lower.contains("unable to resolve host")
+                || lower.contains("no address associated with hostname")
+                || lower.contains("unknownhostexception")) {
+            return "پەیوەندی بە سێرفەرەکانی وەرگێڕانەوە نەبەسترا (کێشەی DNS). "
+                    + "هێڵەکە بگۆڕە (Wi-Fi ↔ داتای مۆبایل)؛ ئەگەر VPN یان Private DNS "
+                    + "بەکاردەهێنیت، جارێک بیکوژێنەوە یان Private DNS بکە بە Automatic، "
+                    + "پاشان دووبارە هەوڵبدە. (" + raw + ")";
+        }
+        if (lower.contains("timed out") || lower.contains("timeout")
+                || lower.contains("failed to connect")
+                || lower.contains("connection reset")
+                || lower.contains("connection refused")
+                || lower.contains("network is unreachable")
+                || lower.contains("software caused connection abort")) {
+            return "پەیوەندییەکە بە سێرفەری وەرگێڕانەوە پچڕا یان کاتەکەی بەسەرچوو؛ "
+                    + "ئینتەرنێتەکە بپشکنە و دووبارە هەوڵبدە. (" + raw + ")";
+        }
+        if (lower.contains("translation http 403")
+                || lower.contains("translation http 429")
+                || lower.contains("quota")) {
+            return "سێرفەرەکانی وەرگێڕانی خۆڕایی بۆ ماوەیەک داواکارییەکەیان ڕەتکردەوە؛ "
+                    + "چەند خولەکێک بوەستە و دووبارە هەوڵبدە. (" + raw + ")";
+        }
+        return raw;
     }
 
     /** Maps common Telegram failures to a clear Kurdish explanation. */
