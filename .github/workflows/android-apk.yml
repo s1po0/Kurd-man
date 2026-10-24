@@ -161,3 +161,51 @@ jobs:
             echo "APK_FILE_SHA256=$APK_SHA256"
             echo "APK_BYTES=$APK_BYTES"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # Permanent public download link:
+  # https://github.com/<repo>/releases/download/v<version>/KurdMan-v<version>.apk
+  github-release:
+    name: Publish APK to GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout (to read versionName)
+        uses: actions/checkout@v4
+
+      - name: Download built APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: kurd-man-debug-apk
+          path: apk
+
+      - name: Create or update GitHub Release with APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(grep -oP "versionName '\K[^']+" android/app/build.gradle | head -n 1)
+          TAG="v$VERSION"
+          APK=$(find apk -name '*.apk' | head -n 1)
+          if [ -z "$VERSION" ] || [ -z "$APK" ]; then
+            echo "::error::versionName or APK not found"
+            exit 1
+          fi
+          cp "$APK" "KurdMan-$TAG.apk"
+          NOTES="KurdMan Android APK $TAG (debug build, arm64). Install it over the previous version — your token, settings and downloaded models are kept. See ANDROID_KU.md in the repository for the full Kurdish (Sorani) guide."
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release upload "$TAG" "KurdMan-$TAG.apk" --clobber \
+              --repo "${{ github.repository }}"
+            echo "::notice::updated existing release $TAG"
+          else
+            gh release create "$TAG" "KurdMan-$TAG.apk" \
+              --repo "${{ github.repository }}" \
+              --target "${{ github.sha }}" \
+              --title "KurdMan $TAG" \
+              --notes "$NOTES"
+            echo "::notice::created release $TAG"
+          fi
+          URL="https://github.com/${{ github.repository }}/releases/download/$TAG/KurdMan-$TAG.apk"
+          echo "::notice::APK_DOWNLOAD_URL=$URL"
+          echo "APK_DOWNLOAD_URL=$URL" >> "$GITHUB_STEP_SUMMARY"
