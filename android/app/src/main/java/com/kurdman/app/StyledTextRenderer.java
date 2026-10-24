@@ -316,7 +316,7 @@ public final class StyledTextRenderer {
         }
         Bitmap patch = segment.outsideText
                 ? CleanEraser.createOutsidePatch(
-                        source, erase, segment.outsideBrightInk)
+                        source, erase, segment.box, segment.outsideBrightInk)
                 : CleanEraser.createPatch(
                         source, erase, segment.detectedBackgroundColor);
         if (patch != null) {

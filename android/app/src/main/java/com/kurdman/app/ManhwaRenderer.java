@@ -482,7 +482,14 @@ public class ManhwaRenderer {
                         (int) (blueSum / inkSamples));
             }
 
-            if (!CleanEraser.outsideErasable(original, rect, brightInk)) {
+            // The eraser decides the true extent of the lettering (OCR
+            // boxes clip handwritten strokes) and refuses blocks whose
+            // letters cannot be removed completely.
+            Rect extent = CleanEraser.outsideExtent(original, box, brightInk);
+            if (extent == null) {
+                return false;
+            }
+            if (!sanitizeOutsideTranslation(segment)) {
                 return false;
             }
 
@@ -493,8 +500,8 @@ public class ManhwaRenderer {
             segment.interiorLeft = null;
             segment.interiorRight = null;
             segment.detectedInkColor = inkColor;
-            segment.renderBox = new Rect(rect);
-            segment.eraseBox = new Rect(rect);
+            segment.renderBox = new Rect(extent);
+            segment.eraseBox = new Rect(extent);
 
             TextStyleSettings style = segment.ensureStyle();
             style.visible = true;
@@ -511,6 +518,32 @@ public class ManhwaRenderer {
         } catch (RuntimeException failed) {
             return false;
         }
+    }
+
+    /**
+     * Outside lettering is usually handwriting, which OCR reads badly;
+     * translators then echo the misread Latin words back unchanged.
+     * Strip Latin tokens from the translation and require real Kurdish
+     * (Arabic script) to remain — otherwise accepting the block would
+     * typeset garbage like "tsfustto" over the artwork.
+     */
+    private static boolean sanitizeOutsideTranslation(Segment segment) {
+        String ckb = segment.ckb == null ? "" : segment.ckb;
+        String cleaned = ckb.replaceAll("[A-Za-z][A-Za-z'’\\-]*", " ")
+                .replaceAll("\\s+", " ").trim();
+        int arabic = 0;
+        for (int i = 0; i < cleaned.length(); i++) {
+            char ch = cleaned.charAt(i);
+            if (ch >= 0x0600 && ch <= 0x06FF) {
+                arabic++;
+            }
+        }
+        if (arabic < 3) {
+            return false;
+        }
+        segment.ckb = cleaned;
+        segment.originalCkb = cleaned;
+        return true;
     }
 
     private static Rect expandBox(Rect box, int imageWidth, int imageHeight) {
@@ -2008,9 +2041,17 @@ public class ManhwaRenderer {
             }
 
             List<OcrCandidate> cropCandidates = new ArrayList<>();
-            for (int variant = 0; variant < 2; variant++) {
-                Bitmap input = createScaledVariant(
-                        crop, scale, variant == 1);
+            // Weak blocks on dark artwork (light-on-dark SFX) also get an
+            // inverted re-read of the crop; the normal variants cannot
+            // see that lettering at all.
+            boolean darkCrop = tileDarkFraction(crop) >= 0.12f;
+            for (int variant = 0; variant < 3; variant++) {
+                if (variant == 2 && !darkCrop) {
+                    break;
+                }
+                Bitmap input = variant == 2
+                        ? createInvertedVariant(crop, scale)
+                        : createScaledVariant(crop, scale, variant == 1);
                 if (input == null) {
                     continue;
                 }

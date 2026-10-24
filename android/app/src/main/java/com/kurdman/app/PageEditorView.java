@@ -450,7 +450,7 @@ public class PageEditorView extends View {
         next.rect = new Rect(erase);
         next.patch = segment.outsideText
                 ? CleanEraser.createOutsidePatch(
-                        bitmap, erase, segment.outsideBrightInk)
+                        bitmap, erase, segment.box, segment.outsideBrightInk)
                 : CleanEraser.createPatch(
                         bitmap, erase, segment.detectedBackgroundColor);
         cleanPatchCache.put(segment, next);

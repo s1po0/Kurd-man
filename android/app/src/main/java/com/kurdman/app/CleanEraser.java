@@ -179,13 +179,84 @@ final class CleanEraser {
     // ---- Lettering that sits on artwork instead of in a bubble (SFX) ----
 
     /**
-     * Whether the letters inside {@code rect} can be removed safely when
-     * the text is lettering drawn over artwork (outside any bubble).
-     * Runs the full mask analysis without producing a bitmap, so callers
-     * can validate a block before accepting it for typesetting.
+     * Computes the true extent of outside-bubble lettering around an OCR
+     * box, or {@code null} when the letters cannot be separated from the
+     * artwork safely. OCR boxes for handwritten SFX often clip strokes
+     * or a whole line, so the analysis rectangle first grows while ink
+     * is cut at its edges; the returned extent is the bounding box of
+     * the actual letter components plus a small margin. It also refuses
+     * (returns {@code null}) when ink that cannot be erased would remain
+     * inside the extent — the half-erased look must never happen.
      */
-    static boolean outsideErasable(Bitmap source, Rect rect, boolean brightInk) {
-        return buildOutside(source, rect, brightInk) != null;
+    static Rect outsideExtent(Bitmap source, Rect ocrBox, boolean brightInk) {
+        if (source == null || source.isRecycled() || ocrBox == null) {
+            return null;
+        }
+        Rect box = new Rect(ocrBox);
+        if (!box.intersect(0, 0, source.getWidth(), source.getHeight())
+                || box.width() <= 0 || box.height() <= 0) {
+            return null;
+        }
+        int padX = Math.max(8, Math.round(box.width() * 0.14f));
+        int padY = Math.max(10, Math.round(box.height() * 0.38f));
+        Rect rect = expanded(box, padX, padY, source);
+        OutsideAnalysis analysis = null;
+        for (int iteration = 0; iteration < 4; iteration++) {
+            int[] pixels = readPixels(source, rect);
+            if (pixels == null) {
+                return null;
+            }
+            analysis = analyzeOutside(pixels, rect.width(), rect.height(),
+                    brightInk, anchorIn(rect, box));
+            if (analysis.kept == 0) {
+                return null;
+            }
+            Rect grown = grownRect(rect, analysis.touchSides, box, source);
+            if (grown.equals(rect)) {
+                break;
+            }
+            rect = grown;
+            analysis = null;
+        }
+        if (analysis == null) {
+            int[] pixels = readPixels(source, rect);
+            if (pixels == null) {
+                return null;
+            }
+            analysis = analyzeOutside(pixels, rect.width(), rect.height(),
+                    brightInk, anchorIn(rect, box));
+            if (analysis.kept == 0) {
+                return null;
+            }
+        }
+        int n = rect.width() * rect.height();
+        if (analysis.kept < n * 0.004 || analysis.kept > n * 0.42) {
+            return null;
+        }
+        int margin = Math.max(8, Math.round(box.height() * 0.18f));
+        Rect extent = new Rect(analysis.keepBounds);
+        extent.offset(rect.left, rect.top);
+        extent.inset(-margin, -margin);
+        if (!extent.intersect(rect)) {
+            return null;
+        }
+        int ghost = 0;
+        int localLeft = extent.left - rect.left;
+        int localTop = extent.top - rect.top;
+        int localRight = extent.right - rect.left;
+        int localBottom = extent.bottom - rect.top;
+        for (int y = localTop; y < localBottom; y++) {
+            int base = y * rect.width();
+            for (int x = localLeft; x < localRight; x++) {
+                if (analysis.otherCore[base + x]) {
+                    ghost++;
+                }
+            }
+        }
+        if (ghost > analysis.kept * 0.30) {
+            return null;
+        }
+        return extent;
     }
 
     /**
@@ -198,72 +269,127 @@ final class CleanEraser {
      * white handwritten SFX with a black outline over a night sky): the
      * extreme-luminance cores of the ink are labelled, solid slabs that
      * enter the patch broadly from its edges (a neighbouring balloon,
-     * hair) are rejected by their density and edge contact, the erase
-     * mask then grows a few pixels through the letters' own neutral
-     * anti-aliasing and outline only, and the hole is filled by
-     * diffusion so gradients like sky continue seamlessly.</p>
+     * hair) are rejected by density and edge contact, as is ink that
+     * does not belong to the OCR block. The erase mask grows a few
+     * pixels through the strokes, their neutral outline and the glow
+     * right around them. Rejected ink (balloon white, artwork) is
+     * blocked: it can neither be erased nor donate its colour into the
+     * fill, which is then diffused so gradients like sky continue
+     * seamlessly.</p>
      */
-    static Bitmap createOutsidePatch(Bitmap source, Rect rect, boolean brightInk) {
-        OutsideData data = buildOutside(source, rect, brightInk);
-        if (data == null) {
-            return null;
-        }
-        int n = data.pixels.length;
-        boolean[] seed = new boolean[n];
-        for (int i = 0; i < n; i++) {
-            seed[i] = !data.mask[i];
-        }
-        int[] queue = new int[n];
-        fillFromSeeds(data.pixels, data.mask, seed,
-                data.width, data.height, queue, Color.BLACK);
-        diffuse(data.pixels, data.mask, data.width, data.height,
-                n > 600_000 ? 25 : 50);
-        return Bitmap.createBitmap(data.pixels, data.width, data.height,
-                Bitmap.Config.ARGB_8888);
-    }
-
-    private static final class OutsideData {
-        int[] pixels;
-        boolean[] mask;
-        int width;
-        int height;
-    }
-
-    private static OutsideData buildOutside(Bitmap source, Rect rect,
-                                            boolean brightInk) {
+    static Bitmap createOutsidePatch(Bitmap source, Rect rect, Rect ocrBox,
+                                     boolean brightInk) {
         if (source == null || source.isRecycled() || rect == null
                 || rect.width() <= 0 || rect.height() <= 0) {
             return null;
         }
-        int width = rect.width();
-        int height = rect.height();
-        long count = (long) width * (long) height;
-        if (count > MAX_PIXELS) {
+        int[] pixels = readPixels(source, rect);
+        if (pixels == null) {
             return null;
         }
-        int n = (int) count;
-        int[] pixels = new int[n];
-        try {
-            source.getPixels(pixels, 0, width,
-                    rect.left, rect.top, width, height);
-        } catch (RuntimeException unreadable) {
+        int width = rect.width();
+        int height = rect.height();
+        int n = pixels.length;
+        Rect anchor = ocrBox != null ? anchorIn(rect, ocrBox) : null;
+        OutsideAnalysis analysis = analyzeOutside(
+                pixels, width, height, brightInk, anchor);
+        if (analysis.kept == 0
+                || analysis.kept < n * 0.004 || analysis.kept > n * 0.50) {
+            return null;
+        }
+        int other = 0;
+        for (boolean core : analysis.otherCore) {
+            if (core) {
+                other++;
+            }
+        }
+        if (other > analysis.kept * 0.30) {
             return null;
         }
 
+        int[] dist = new int[n];
+        chebyshevDistance(analysis.keep, dist, width, height);
+        int bgLuminance = backgroundLuminance(pixels, analysis, dist);
+        boolean[] fill = new boolean[n];
+        int fillCount = 0;
+        for (int i = 0; i < n; i++) {
+            boolean mask = analysis.keep[i] || dist[i] <= 3
+                    || (dist[i] <= 6 && channelSpread(pixels[i]) <= 30);
+            if (!mask && !analysis.otherCore[i] && dist[i] <= 8
+                    && Math.abs(luminanceOf(pixels[i]) - bgLuminance) > 55) {
+                mask = true; // letter glow/haze right around the strokes
+            }
+            fill[i] = mask;
+            if (mask) {
+                fillCount++;
+            }
+        }
+        if (fillCount > n * 0.62) {
+            return null;
+        }
+
+        boolean[] seed = new boolean[n];
+        boolean[] blocked = new boolean[n];
+        long redSum = 0;
+        long greenSum = 0;
+        long blueSum = 0;
+        int seedSamples = 0;
+        for (int i = 0; i < n; i++) {
+            blocked[i] = analysis.otherCore[i] && !fill[i];
+            seed[i] = !fill[i] && !analysis.otherCore[i];
+            if (seed[i] && (i & 7) == 0) {
+                redSum += Color.red(pixels[i]);
+                greenSum += Color.green(pixels[i]);
+                blueSum += Color.blue(pixels[i]);
+                seedSamples++;
+            }
+        }
+        int refColor = seedSamples > 0
+                ? Color.rgb((int) (redSum / seedSamples),
+                        (int) (greenSum / seedSamples),
+                        (int) (blueSum / seedSamples))
+                : Color.rgb(bgLuminance, bgLuminance, bgLuminance);
+        int[] queue = new int[n];
+        fillFromSeeds(pixels, fill, seed, width, height, queue, refColor);
+        diffuse(pixels, fill, blocked, width, height,
+                n > 600_000 ? 25 : 50);
+        return Bitmap.createBitmap(pixels, width, height,
+                Bitmap.Config.ARGB_8888);
+    }
+
+    private static final class OutsideAnalysis {
+        /** Ink cores accepted as the block's letters. */
+        boolean[] keep;
+        /** Ink cores rejected (artwork, balloon, other blocks' text). */
+        boolean[] otherCore;
+        int kept;
+        Rect keepBounds;
+        /** Bit flags: 1 top, 2 bottom, 4 left, 8 right (ink within 5px). */
+        int touchSides;
+    }
+
+    private static OutsideAnalysis analyzeOutside(int[] pixels, int width,
+                                                  int height, boolean brightInk,
+                                                  Rect anchorLocal) {
+        int n = pixels.length;
         boolean[] core = new boolean[n];
         for (int i = 0; i < n; i++) {
             int lum = luminanceOf(pixels[i]);
             core[i] = brightInk ? lum >= 180 : lum <= 75;
         }
-
         int[] labels = new int[n];
         int[] queue = new int[n];
         List<int[]> stats = new ArrayList<>();
         stats.add(null);
         labelComponents(core, width, height, labels, queue, stats);
         int components = stats.size() - 1;
+
+        OutsideAnalysis result = new OutsideAnalysis();
+        result.keep = new boolean[n];
+        result.otherCore = new boolean[n];
+        result.keepBounds = new Rect();
         if (components <= 0) {
-            return null;
+            return result;
         }
 
         // How much of each patch side every component occupies. A balloon
@@ -297,54 +423,133 @@ final class CleanEraser {
             boolean reject = area > n * 0.45
                     || edgeRun > width * 0.35
                     || (edgeRun > 14 && density > 0.55 && area > n * 0.03);
-            accepted[id] = !reject;
+            boolean anchored = anchorLocal == null || Rect.intersects(
+                    anchorLocal, new Rect(st[1], st[2], st[3] + 1, st[4] + 1));
+            accepted[id] = !reject && anchored;
         }
 
-        boolean[] keep = new boolean[n];
-        int kept = 0;
+        int minX = Integer.MAX_VALUE;
+        int minY = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE;
+        int maxY = Integer.MIN_VALUE;
         for (int i = 0; i < n; i++) {
-            if (labels[i] >= 1 && labels[i] <= components
-                    && accepted[labels[i]]) {
-                keep[i] = true;
-                kept++;
+            int id = labels[i];
+            if (id < 1 || id > components || stats.get(id)[5] == 0) {
+                continue;
+            }
+            if (accepted[id]) {
+                result.keep[i] = true;
+                result.kept++;
+                int x = i % width;
+                int y = i / width;
+                if (x < minX) minX = x;
+                if (y < minY) minY = y;
+                if (x > maxX) maxX = x;
+                if (y > maxY) maxY = y;
+                if (y < 5) result.touchSides |= 1;
+                if (y >= height - 5) result.touchSides |= 2;
+                if (x < 5) result.touchSides |= 4;
+                if (x >= width - 5) result.touchSides |= 8;
+            } else {
+                result.otherCore[i] = true;
             }
         }
-        if (kept == 0 || kept < n * 0.004 || kept > n * 0.42) {
+        if (result.kept > 0) {
+            result.keepBounds = new Rect(minX, minY, maxX + 1, maxY + 1);
+        }
+        return result;
+    }
+
+    /** OCR box in rect-local coordinates, dilated so the block's own
+     * letter components still count as anchored to it. */
+    private static Rect anchorIn(Rect rect, Rect box) {
+        Rect anchor = new Rect(box);
+        anchor.offset(-rect.left, -rect.top);
+        int dilateX = Math.max(4, Math.round(box.width() * 0.12f));
+        int dilateY = Math.max(6, Math.round(box.height() * 0.50f));
+        anchor.inset(-dilateX, -dilateY);
+        return anchor;
+    }
+
+    private static Rect expanded(Rect box, int padX, int padY, Bitmap source) {
+        Rect rect = new Rect(box);
+        rect.inset(-padX, -padY);
+        rect.intersect(0, 0, source.getWidth(), source.getHeight());
+        return rect;
+    }
+
+    private static Rect grownRect(Rect rect, int touchSides, Rect box,
+                                  Bitmap source) {
+        int growX = Math.max(10, Math.round(box.width() * 0.20f));
+        int growY = Math.max(12, Math.round(box.height() * 0.45f));
+        Rect grown = new Rect(rect);
+        if ((touchSides & 1) != 0) {
+            grown.top -= growY;
+        }
+        if ((touchSides & 2) != 0) {
+            grown.bottom += growY;
+        }
+        if ((touchSides & 4) != 0) {
+            grown.left -= growX;
+        }
+        if ((touchSides & 8) != 0) {
+            grown.right += growX;
+        }
+        grown.intersect(0, 0, source.getWidth(), source.getHeight());
+        return grown;
+    }
+
+    private static int[] readPixels(Bitmap source, Rect rect) {
+        int width = rect.width();
+        int height = rect.height();
+        long count = (long) width * (long) height;
+        if (width <= 0 || height <= 0 || count > MAX_PIXELS) {
             return null;
         }
+        int[] pixels = new int[(int) count];
+        try {
+            source.getPixels(pixels, 0, width,
+                    rect.left, rect.top, width, height);
+        } catch (RuntimeException unreadable) {
+            return null;
+        }
+        return pixels;
+    }
 
-        // labels buffer is free now; reuse it for the distance transform.
-        int[] dist = labels;
-        chebyshevDistance(keep, dist, width, height);
-        boolean[] mask = new boolean[n];
-        int maskCount = 0;
-        for (int i = 0; i < n; i++) {
-            boolean neutral = channelSpread(pixels[i]) <= 30;
-            if (keep[i] || dist[i] <= 1 || (dist[i] <= 6 && neutral)) {
-                mask[i] = true;
-                maskCount++;
+    /** Median luminance of pixels far from any ink (the true background). */
+    private static int backgroundLuminance(int[] pixels, OutsideAnalysis analysis,
+                                           int[] dist) {
+        int[] histogram = new int[256];
+        int total = 0;
+        for (int i = 0; i < pixels.length; i++) {
+            if (dist[i] > 10 && !analysis.otherCore[i]) {
+                histogram[luminanceOf(pixels[i])]++;
+                total++;
             }
         }
-        if (maskCount > n * 0.55) {
-            return null;
+        if (total == 0) {
+            return 128;
         }
-
-        OutsideData data = new OutsideData();
-        data.pixels = pixels;
-        data.mask = mask;
-        data.width = width;
-        data.height = height;
-        return data;
+        int target = total / 2;
+        int seen = 0;
+        for (int value = 0; value < 256; value++) {
+            seen += histogram[value];
+            if (seen >= target) {
+                return value;
+            }
+        }
+        return 128;
     }
 
     /**
-     * Laplace diffusion restricted to the mask: repeatedly replaces each
-     * masked pixel by the average of its neighbours (scanning in
-     * alternating directions). This continues smooth gradients (sky,
-     * walls) through the erased strokes without visible seams, where a
-     * plain nearest-colour fill leaves blocky cells.
+     * Laplace diffusion restricted to the fill set: repeatedly replaces
+     * each filled pixel by the average of its (non-blocked) neighbours,
+     * scanning in alternating directions. This continues smooth
+     * gradients (sky, walls) through the erased strokes without
+     * visible seams, where a plain nearest-colour fill leaves cells.
+     * Blocked pixels (rejected ink/artwork) never donate colour.
      */
-    private static void diffuse(int[] pixels, boolean[] mask,
+    private static void diffuse(int[] pixels, boolean[] fill, boolean[] blocked,
                                 int width, int height, int iterations) {
         for (int it = 0; it < iterations; it++) {
             boolean forward = (it % 2 == 0);
@@ -353,32 +558,32 @@ final class CleanEraser {
                 for (int xx = 0; xx < width; xx++) {
                     int x = forward ? xx : width - 1 - xx;
                     int index = y * width + x;
-                    if (!mask[index]) {
+                    if (!fill[index]) {
                         continue;
                     }
                     int red = 0;
                     int green = 0;
                     int blue = 0;
                     int neighbours = 0;
-                    if (x > 0) {
+                    if (x > 0 && !blocked[index - 1]) {
                         red += Color.red(pixels[index - 1]);
                         green += Color.green(pixels[index - 1]);
                         blue += Color.blue(pixels[index - 1]);
                         neighbours++;
                     }
-                    if (x + 1 < width) {
+                    if (x + 1 < width && !blocked[index + 1]) {
                         red += Color.red(pixels[index + 1]);
                         green += Color.green(pixels[index + 1]);
                         blue += Color.blue(pixels[index + 1]);
                         neighbours++;
                     }
-                    if (y > 0) {
+                    if (y > 0 && !blocked[index - width]) {
                         red += Color.red(pixels[index - width]);
                         green += Color.green(pixels[index - width]);
                         blue += Color.blue(pixels[index - width]);
                         neighbours++;
                     }
-                    if (y + 1 < height) {
+                    if (y + 1 < height && !blocked[index + width]) {
                         red += Color.red(pixels[index + width]);
                         green += Color.green(pixels[index + width]);
                         blue += Color.blue(pixels[index + width]);
