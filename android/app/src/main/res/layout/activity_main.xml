@@ -2,111 +2,81 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/page"
+    android:background="@drawable/bg_page_gradient"
     android:layoutDirection="rtl"
     android:orientation="vertical">
 
-    <!-- Fixed professional header -->
+    <!-- Always-visible live status -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/bg_header"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="18dp"
-        android:paddingTop="16dp"
-        android:paddingEnd="18dp"
-        android:paddingBottom="16dp">
+        android:background="#E6070D18"
+        android:orientation="vertical"
+        android:paddingStart="14dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="8dp">
 
-        <TextView
-            android:layout_width="52dp"
-            android:layout_height="52dp"
-            android:background="@drawable/bg_status"
-            android:gravity="center"
-            android:text="📚"
-            android:textSize="26sp" />
-
-        <LinearLayout
-            android:layout_width="0dp"
+        <FrameLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:background="@drawable/bg_status"
+            android:minHeight="58dp">
 
             <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Kurd-man مانهوا"
-                android:textColor="@color/text_on_primary"
-                android:textSize="23sp"
-                android:textStyle="bold" />
-
-            <TextView
+                android:id="@+id/statusText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:text="وەرگێڕانی مانهوا بۆ کوردی سۆرانی — لەناو مۆبایلەکەت"
-                android:textColor="@color/text_on_primary_muted"
+                android:layout_gravity="center_vertical"
+                android:lineSpacingMultiplier="1.15"
+                android:paddingStart="16dp"
+                android:paddingTop="11dp"
+                android:paddingEnd="54dp"
+                android:paddingBottom="11dp"
+                android:text="✨ ئامادەیە — وێنە یان CBZ هەڵبژێرە و دەستپێبکە"
+                android:textColor="@color/text_primary"
+                android:textDirection="firstStrongRtl"
                 android:textSize="13sp" />
-        </LinearLayout>
-    </LinearLayout>
 
-    <!-- Always-visible status strip -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="12dp"
-        android:layout_marginEnd="16dp"
-        android:background="@drawable/bg_status"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="12dp"
-        android:paddingTop="10dp"
-        android:paddingEnd="12dp"
-        android:paddingBottom="10dp">
-
-        <ProgressBar
-            android:id="@+id/progress"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:indeterminateTint="@color/primary"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/statusText"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_weight="1"
-            android:text="ئامادەیە."
-            android:textColor="@color/text_primary"
-            android:textSize="13sp" />
+            <ProgressBar
+                android:id="@+id/progress"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:layout_gravity="center_vertical|end"
+                android:layout_marginEnd="12dp"
+                android:indeterminateTint="@color/primary"
+                android:visibility="gone" />
+        </FrameLayout>
     </LinearLayout>
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:clipToPadding="false"
         android:fillViewport="true"
-        android:overScrollMode="never">
+        android:scrollbars="none">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingStart="16dp"
-            android:paddingTop="16dp"
+            android:paddingTop="6dp"
             android:paddingEnd="16dp"
-            android:paddingBottom="22dp">
+            android:paddingBottom="30dp">
 
-            <!-- Step 1: Telegram connection -->
+            <!-- Hero -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
+                android:background="@drawable/bg_hero"
+                android:elevation="8dp"
                 android:orientation="vertical"
-                android:padding="18dp">
+                android:paddingStart="20dp"
+                android:paddingTop="19dp"
+                android:paddingEnd="20dp"
+                android:paddingBottom="20dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -115,38 +85,637 @@
                     android:orientation="horizontal">
 
                     <TextView
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:background="@drawable/bg_step_badge"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:background="@drawable/bg_logo_badge"
+                        android:fontFamily="sans-serif-black"
                         android:gravity="center"
-                        android:text="١"
-                        android:textColor="@color/text_on_primary"
+                        android:text="K"
+                        android:textColor="@color/white"
+                        android:textSize="28sp"
                         android:textStyle="bold" />
+
+                    <Space
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:text="پەیوەستی تلگرام"
-                        android:textColor="@color/text_primary"
-                        android:textSize="18sp"
+                        android:background="@drawable/bg_glass_chip"
+                        android:fontFamily="sans-serif-medium"
+                        android:paddingStart="11dp"
+                        android:paddingTop="6dp"
+                        android:paddingEnd="11dp"
+                        android:paddingBottom="6dp"
+                        android:text="v1.4  •  نوێ"
+                        android:textColor="@color/white"
+                        android:textSize="12sp"
                         android:textStyle="bold" />
                 </LinearLayout>
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="تۆکنەکە لە @BotFather کۆپی بکە و لێرە بیلکێنە. تۆکن و Chat ID تەنها لەسەر ئەم مۆبایلە دەپارێزرێن."
-                    android:textColor="@color/text_secondary"
-                    android:textSize="13sp" />
+                    android:layout_marginTop="15dp"
+                    android:fontFamily="sans-serif-black"
+                    android:text="کورد مان"
+                    android:textColor="@color/white"
+                    android:textSize="31sp"
+                    android:textStyle="bold" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
-                    android:text="Bot Token — لە @BotFather"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="وەرگێڕی مانھوا بۆ کوردی سۆرانی"
+                    android:textColor="#E0F2FE"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:lineSpacingMultiplier="1.25"
+                    android:text="وێنە یان تەواوی بەشێکی CBZ بکە بە سۆرانی — ناوەکانیش بە پیتی کوردی دەنووسرێن."
+                    android:textColor="@color/text_on_primary_muted"
+                    android:textDirection="firstStrongRtl"
+                    android:textSize="14sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="7dp"
+                        android:layout_weight="1.2"
+                        android:background="@drawable/bg_glass_chip"
+                        android:gravity="center"
+                        android:paddingStart="7dp"
+                        android:paddingTop="7dp"
+                        android:paddingEnd="7dp"
+                        android:paddingBottom="7dp"
+                        android:text="EN • KO • JA • ZH"
+                        android:textColor="@color/white"
+                        android:textDirection="ltr"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="7dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_glass_chip"
+                        android:gravity="center"
+                        android:paddingStart="7dp"
+                        android:paddingTop="7dp"
+                        android:paddingEnd="7dp"
+                        android:paddingBottom="7dp"
+                        android:text="وێنە + CBZ"
+                        android:textColor="@color/white"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_glass_chip"
+                        android:gravity="center"
+                        android:paddingStart="7dp"
+                        android:paddingTop="7dp"
+                        android:paddingEnd="7dp"
+                        android:paddingBottom="7dp"
+                        android:text="✈ Telegram"
+                        android:textColor="@color/white"
+                        android:textDirection="ltr"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Step 1: translate -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_card_accent"
+                android:elevation="6dp"
+                android:orientation="vertical"
+                android:paddingStart="18dp"
+                android:paddingTop="19dp"
+                android:paddingEnd="18dp"
+                android:paddingBottom="19dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="39dp"
+                        android:layout_height="39dp"
+                        android:background="@drawable/bg_step_badge"
+                        android:gravity="center"
+                        android:text="١"
+                        android:textColor="@color/white"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-black"
+                            android:text="وەرگێڕانی مانھوا"
+                            android:textColor="@color/text_primary"
+                            android:textSize="19sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="زمان هەڵبژێرە، ئینجا فایلەکە باربکە"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:background="@drawable/bg_section_icon"
+                        android:gravity="center"
+                        android:text="譯"
+                        android:textColor="#5EEAD4"
+                        android:textSize="19sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="19dp"
+                    android:text="زمانی سەرچاوە"
                     android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_input">
+
+                    <Spinner
+                        android:id="@+id/sourceSpinner"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@null"
+                        android:popupBackground="@color/card_elevated"
+                        android:spinnerMode="dropdown" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical|end"
+                        android:layout_marginEnd="15dp"
+                        android:clickable="false"
+                        android:focusable="false"
+                        android:importantForAccessibility="no"
+                        android:text="▾"
+                        android:textColor="@color/primary"
+                        android:textSize="19sp" />
+                </FrameLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:lineSpacingMultiplier="1.2"
+                    android:text="چینی سادەکراو و تەقلیدی هەردووکیان پشتگیری دەکرێن. دەقی ژاپۆنیی ستوونی لە هەندێک لاپەڕەدا ڕەنگە کەمتر ورد بێت."
+                    android:textColor="@color/text_muted"
+                    android:textDirection="firstStrongRtl"
+                    android:textSize="12sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="7dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_feature_tile"
+                        android:gravity="center"
+                        android:lineSpacingMultiplier="1.2"
+                        android:paddingStart="8dp"
+                        android:paddingTop="10dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="10dp"
+                        android:text="ناوەکان\nبە پیتی کوردی ✍"
+                        android:textColor="#99F6E4"
+                        android:textDirection="firstStrongRtl"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_feature_tile"
+                        android:gravity="center"
+                        android:lineSpacingMultiplier="1.2"
+                        android:paddingStart="8dp"
+                        android:paddingTop="10dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="10dp"
+                        android:text="OCR\nلەسەر مۆبایلەکە 🔎"
+                        android:textColor="#BFDBFE"
+                        android:textDirection="firstStrongRtl"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/pickButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="76dp"
+                    android:layout_marginTop="15dp"
+                    android:background="@drawable/bg_pick_zone"
+                    android:fontFamily="sans-serif-medium"
+                    android:lineSpacingMultiplier="1.2"
+                    android:minHeight="76dp"
+                    android:stateListAnimator="@null"
+                    android:text="+  هەڵبژاردنی وێنە یان CBZ&#10;JPG • PNG • WEBP • CBZ"
+                    android:textAllCaps="false"
+                    android:textColor="#5EEAD4"
+                    android:textDirection="firstStrongRtl"
+                    android:textSize="15sp" />
+
+                <Button
+                    android:id="@+id/translateButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="58dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_button_primary"
+                    android:elevation="3dp"
+                    android:fontFamily="sans-serif-black"
+                    android:minHeight="58dp"
+                    android:stateListAnimator="@null"
+                    android:text="✦  وەرگێڕان بۆ سۆرانی"
+                    android:textAllCaps="false"
+                    android:textColor="@color/white"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center"
+                    android:text="CBZ بە خۆکاری دەکرێتەوە، هەموو لاپەڕەکان وەردەگێڕدرێن و دووبارە کۆدەکرێنەوە."
+                    android:textColor="@color/text_muted"
+                    android:textDirection="firstStrongRtl"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Step 2: result -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_card"
+                android:elevation="5dp"
+                android:orientation="vertical"
+                android:paddingStart="18dp"
+                android:paddingTop="19dp"
+                android:paddingEnd="18dp"
+                android:paddingBottom="19dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="39dp"
+                        android:layout_height="39dp"
+                        android:background="@drawable/bg_step_badge"
+                        android:gravity="center"
+                        android:text="٢"
+                        android:textColor="@color/white"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-black"
+                            android:text="پێشبینین و ئەنجام"
+                            android:textColor="@color/text_primary"
+                            android:textSize="19sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="وێنە وەرگێڕدراوەکە و دەقەکان لێرە دەردەکەون"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:background="@drawable/bg_section_icon"
+                        android:gravity="center"
+                        android:text="◉"
+                        android:textColor="#C4B5FD"
+                        android:textSize="20sp" />
+                </LinearLayout>
+
+                <ImageView
+                    android:id="@+id/previewImage"
+                    android:layout_width="match_parent"
+                    android:layout_height="360dp"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_preview"
+                    android:contentDescription="پێشبینینی وێنە"
+                    android:scaleType="fitCenter" />
+
+                <Button
+                    android:id="@+id/sendResultButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="54dp"
+                    android:layout_marginTop="13dp"
+                    android:background="@drawable/bg_button_telegram"
+                    android:fontFamily="sans-serif-black"
+                    android:minHeight="54dp"
+                    android:stateListAnimator="@null"
+                    android:text="✈  ناردنی ئەنجام بۆ تێلێگرام"
+                    android:textAllCaps="false"
+                    android:textColor="@color/white"
+                    android:textSize="15sp" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="18dp"
+                    android:background="@drawable/bg_divider_fade" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="دەقی وەرگێڕدراو"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/resultText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="9dp"
+                    android:background="@drawable/bg_preview"
+                    android:gravity="top|start"
+                    android:lineSpacingMultiplier="1.25"
+                    android:minHeight="116dp"
+                    android:paddingStart="15dp"
+                    android:paddingTop="14dp"
+                    android:paddingEnd="15dp"
+                    android:paddingBottom="14dp"
+                    android:text="دەقی وەرگێڕدراو لێرە دەردەکەوێت…"
+                    android:textColor="@color/text_primary"
+                    android:textDirection="firstStrongRtl"
+                    android:textIsSelectable="true"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="9dp"
+                    android:lineSpacingMultiplier="1.2"
+                    android:text="ئەگەر بەشێک بە [نەخراوەتە سەر وێنەکە] دیاریکرابێت، دەقەکەی لێرە و لە TXTەکەدا هەیە بەڵام بە سەلامەتی نەخراوەتە سەر وێنەکە."
+                    android:textColor="@color/text_muted"
+                    android:textDirection="firstStrongRtl"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Step 3: downloads -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_card"
+                android:elevation="5dp"
+                android:orientation="vertical"
+                android:paddingStart="18dp"
+                android:paddingTop="19dp"
+                android:paddingEnd="18dp"
+                android:paddingBottom="19dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="39dp"
+                        android:layout_height="39dp"
+                        android:background="@drawable/bg_step_badge"
+                        android:gravity="center"
+                        android:text="٣"
+                        android:textColor="@color/white"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-black"
+                            android:text="داگرتنەکان"
+                            android:textColor="@color/text_primary"
+                            android:textSize="19sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="CBZ و TXTی وەرگێڕدراو لەسەر مۆبایلەکە"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:background="@drawable/bg_section_icon"
+                        android:gravity="center"
+                        android:text="⬇"
+                        android:textColor="#93C5FD"
+                        android:textSize="20sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/refreshDownloadsButton"
+                        android:layout_width="0dp"
+                        android:layout_height="50dp"
+                        android:layout_marginEnd="7dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_button_secondary"
+                        android:minHeight="50dp"
+                        android:minWidth="0dp"
+                        android:stateListAnimator="@null"
+                        android:text="↻  نوێکردنەوە"
+                        android:textAllCaps="false"
+                        android:textColor="#5EEAD4"
+                        android:textSize="13sp" />
+
+                    <Button
+                        android:id="@+id/openDownloadsButton"
+                        android:layout_width="0dp"
+                        android:layout_height="50dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_button_secondary"
+                        android:minHeight="50dp"
+                        android:minWidth="0dp"
+                        android:stateListAnimator="@null"
+                        android:text="📁  کردنەوەی فۆڵدەر"
+                        android:textAllCaps="false"
+                        android:textColor="#5EEAD4"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/downloadsContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="لە Android 10+ فایلەکان لە فۆڵدەری Download/KurdManـیشدا دەردەکەون."
+                    android:textColor="@color/text_muted"
+                    android:textDirection="firstStrongRtl"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Step 4: Telegram connection and message -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_card"
+                android:elevation="5dp"
+                android:orientation="vertical"
+                android:paddingStart="18dp"
+                android:paddingTop="19dp"
+                android:paddingEnd="18dp"
+                android:paddingBottom="19dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="39dp"
+                        android:layout_height="39dp"
+                        android:background="@drawable/bg_step_badge"
+                        android:gravity="center"
+                        android:text="٤"
+                        android:textColor="@color/white"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-black"
+                            android:text="پەیوەندی تێلێگرام"
+                            android:textColor="@color/text_primary"
+                            android:textSize="19sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="تۆکنەکە تەنها لەسەر ئەم مۆبایلە دەپارێزرێت"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:background="@drawable/bg_section_icon"
+                        android:gravity="center"
+                        android:text="✈"
+                        android:textColor="#7DD3FC"
+                        android:textSize="20sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="19dp"
+                    android:text="Bot Token — تۆکنی بۆتەکە"
+                    android:textColor="@color/text_primary"
+                    android:textDirection="firstStrongRtl"
                     android:textSize="14sp"
                     android:textStyle="bold" />
 
@@ -170,7 +739,7 @@
                         android:importantForAutofill="no"
                         android:inputType="textMultiLine|textNoSuggestions"
                         android:maxLines="3"
-                        android:minHeight="64dp"
+                        android:minHeight="68dp"
                         android:minLines="2"
                         android:paddingStart="14dp"
                         android:paddingTop="12dp"
@@ -178,21 +747,23 @@
                         android:paddingBottom="12dp"
                         android:scrollHorizontally="false"
                         android:textColor="@color/text_primary"
-                        android:textColorHint="@color/text_secondary"
+                        android:textColorHint="@color/text_muted"
                         android:textDirection="ltr"
                         android:textSize="14sp" />
 
                     <Button
                         android:id="@+id/pasteTokenButton"
-                        android:layout_width="96dp"
-                        android:layout_height="64dp"
+                        android:layout_width="92dp"
+                        android:layout_height="68dp"
                         android:layout_marginStart="8dp"
                         android:background="@drawable/bg_button_secondary"
-                        android:minHeight="64dp"
+                        android:minHeight="68dp"
+                        android:minWidth="0dp"
                         android:padding="0dp"
+                        android:stateListAnimator="@null"
                         android:text="📋 لکاندن"
                         android:textAllCaps="false"
-                        android:textColor="@color/primary"
+                        android:textColor="#5EEAD4"
                         android:textSize="13sp" />
                 </LinearLayout>
 
@@ -200,7 +771,7 @@
                     android:id="@+id/showTokenCheck"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
+                    android:layout_marginTop="7dp"
                     android:buttonTint="@color/primary"
                     android:text="تۆکنەکە پیشان بدە"
                     android:textColor="@color/text_secondary"
@@ -209,9 +780,10 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:text="Chat ID — IDـی تلگرامی خۆت"
+                    android:layout_marginTop="17dp"
+                    android:text="Chat ID — ژمارەی تێلێگرامەکەت"
                     android:textColor="@color/text_primary"
+                    android:textDirection="firstStrongRtl"
                     android:textSize="14sp"
                     android:textStyle="bold" />
 
@@ -240,399 +812,131 @@
                         android:paddingEnd="14dp"
                         android:paddingBottom="10dp"
                         android:textColor="@color/text_primary"
-                        android:textColorHint="@color/text_secondary"
+                        android:textColorHint="@color/text_muted"
                         android:textDirection="ltr"
                         android:textSize="15sp" />
 
                     <Button
                         android:id="@+id/pasteChatButton"
-                        android:layout_width="96dp"
+                        android:layout_width="92dp"
                         android:layout_height="56dp"
                         android:layout_marginStart="8dp"
                         android:background="@drawable/bg_button_secondary"
                         android:minHeight="56dp"
+                        android:minWidth="0dp"
                         android:padding="0dp"
+                        android:stateListAnimator="@null"
                         android:text="📋 لکاندن"
                         android:textAllCaps="false"
-                        android:textColor="@color/primary"
+                        android:textColor="#5EEAD4"
                         android:textSize="13sp" />
                 </LinearLayout>
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="7dp"
-                    android:text="IDـی خۆت لە @userinfobot وەربگرە. ژمارەکەی پێش «:» لەناو تۆکندا IDـی بۆتەکەیە، نەک هی خۆت."
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="14dp"
                     android:orientation="horizontal">
 
                     <Button
                         android:id="@+id/saveButton"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
+                        android:layout_height="52dp"
+                        android:layout_marginEnd="7dp"
                         android:layout_weight="1"
                         android:background="@drawable/bg_button_secondary"
                         android:minHeight="52dp"
-                        android:text="💾 پاشەکەوتکردن"
+                        android:minWidth="0dp"
+                        android:stateListAnimator="@null"
+                        android:text="💾  پاشەکەوتکردن"
                         android:textAllCaps="false"
-                        android:textColor="@color/primary"
-                        android:textSize="14sp" />
+                        android:textColor="#5EEAD4"
+                        android:textSize="13sp" />
 
                     <Button
                         android:id="@+id/verifyButton"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
+                        android:layout_height="52dp"
                         android:layout_weight="1"
-                        android:background="@drawable/bg_button_primary"
+                        android:background="@drawable/bg_button_telegram"
                         android:minHeight="52dp"
-                        android:text="✅ پشکنینی بۆت"
+                        android:minWidth="0dp"
+                        android:stateListAnimator="@null"
+                        android:text="✓  پشکنینی بۆت"
                         android:textAllCaps="false"
-                        android:textColor="@color/text_on_primary"
-                        android:textSize="14sp" />
+                        android:textColor="@color/white"
+                        android:textSize="13sp" />
                 </LinearLayout>
-            </LinearLayout>
 
-            <!-- Step 2: translate -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="18dp">
-
-                <LinearLayout
+                <View
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:background="@drawable/bg_step_badge"
-                        android:gravity="center"
-                        android:text="٢"
-                        android:textColor="@color/text_on_primary"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:text="وەرگێڕانی مانهوا"
-                        android:textColor="@color/text_primary"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
+                    android:layout_height="1dp"
+                    android:layout_marginTop="19dp"
+                    android:background="@drawable/bg_divider_fade" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="وێنەیەکی ڕوون یان فایلێکی CBZ هەڵبژێرە؛ وێنەکانی ناو CBZـەکە دەردەهێنرێن، OCR دەکرێن و دەکرێنە کوردی سۆرانی."
-                    android:textColor="@color/text_secondary"
-                    android:textSize="13sp" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:text="زمانی سەرچاوەی وێنە / CBZ"
+                    android:layout_marginTop="17dp"
+                    android:text="نامە بۆ بۆتەکە"
                     android:textColor="@color/text_primary"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_input"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <Spinner
-                        android:id="@+id/sourceSpinner"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:background="@null"
-                        android:paddingStart="14dp"
-                        android:paddingEnd="4dp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:paddingEnd="14dp"
-                        android:text="▾"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="17sp" />
-                </LinearLayout>
-
-                <Button
-                    android:id="@+id/pickButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:background="@drawable/bg_button_secondary"
-                    android:minHeight="54dp"
-                    android:text="🖼 / 📚 هەڵبژاردنی وێنە یان CBZ"
-                    android:textAllCaps="false"
-                    android:textColor="@color/primary"
-                    android:textSize="15sp" />
-
-                <Button
-                    android:id="@+id/translateButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:background="@drawable/bg_button_primary"
-                    android:minHeight="54dp"
-                    android:text="🌐 وەرگێڕان لەناو مۆبایل"
-                    android:textAllCaps="false"
-                    android:textColor="@color/text_on_primary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
-            </LinearLayout>
-
-            <!-- Step 3: result -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="18dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:background="@drawable/bg_step_badge"
-                        android:gravity="center"
-                        android:text="٣"
-                        android:textColor="@color/text_on_primary"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:text="ئەنجام"
-                        android:textColor="@color/text_primary"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <ImageView
-                    android:id="@+id/previewImage"
-                    android:layout_width="match_parent"
-                    android:layout_height="420dp"
-                    android:layout_marginTop="14dp"
-                    android:background="@drawable/bg_preview"
-                    android:contentDescription="پێشبینی وێنە"
-                    android:scaleType="fitCenter" />
-
-                <Button
-                    android:id="@+id/sendResultButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:background="@drawable/bg_button_primary"
-                    android:minHeight="52dp"
-                    android:text="📤 ئەنجامەکە بنێرە بۆ تلگرام"
-                    android:textAllCaps="false"
-                    android:textColor="@color/text_on_primary"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
-                    android:text="دەقەکان"
-                    android:textColor="@color/text_primary"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/resultText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_input"
-                    android:minHeight="88dp"
-                    android:padding="12dp"
-                    android:textColor="@color/text_primary"
-                    android:textDirection="anyRtl"
-                    android:textIsSelectable="true"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
-            <!-- Step 4: downloads on this phone -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="18dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:background="@drawable/bg_step_badge"
-                        android:gravity="center"
-                        android:text="٤"
-                        android:textColor="@color/text_on_primary"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:text="داگرتنەکان لەم مۆبایلەدا"
-                        android:textColor="@color/text_primary"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="ئەنجامە وەرگێڕدراوەکان (CBZ، وێنە و دەق) لە Download/KurdMan پاشەکەوت دەکرێن و لێرە دەردەکەون؛ دەتوانیت بیانکەیتەوە یان هاوبەشیان بکەیت."
-                    android:textColor="@color/text_secondary"
-                    android:textSize="13sp" />
-
-                <LinearLayout
-                    android:id="@+id/downloadsContainer"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:orientation="vertical" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:orientation="horizontal">
-
-                    <Button
-                        android:id="@+id/refreshDownloadsButton"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:background="@drawable/bg_button_secondary"
-                        android:minHeight="50dp"
-                        android:text="↻ نوێکردنەوەی لیست"
-                        android:textAllCaps="false"
-                        android:textColor="@color/primary"
-                        android:textSize="13sp" />
-
-                    <Button
-                        android:id="@+id/openDownloadsButton"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/bg_button_primary"
-                        android:minHeight="50dp"
-                        android:text="⬇ کردنەوەی داگرتنەکانی مۆبایل"
-                        android:textAllCaps="false"
-                        android:textColor="@color/text_on_primary"
-                        android:textSize="13sp" />
-                </LinearLayout>
-            </LinearLayout>
-
-            <!-- Optional bot message -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="18dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:background="@drawable/bg_step_badge"
-                        android:gravity="center"
-                        android:text="٥"
-                        android:textColor="@color/text_on_primary"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:text="نامە بە بۆتەکە"
-                        android:textColor="@color/text_primary"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
 
                 <EditText
                     android:id="@+id/messageInput"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
+                    android:layout_marginTop="9dp"
                     android:background="@drawable/bg_input"
                     android:gravity="top|start"
-                    android:hint="نامەیەک بنووسە..."
+                    android:hint="نامەیەک بنووسە…"
                     android:inputType="textMultiLine"
-                    android:minHeight="78dp"
+                    android:minHeight="82dp"
                     android:minLines="2"
-                    android:padding="14dp"
+                    android:paddingStart="14dp"
+                    android:paddingTop="13dp"
+                    android:paddingEnd="14dp"
+                    android:paddingBottom="13dp"
                     android:textColor="@color/text_primary"
-                    android:textColorHint="@color/text_secondary"
+                    android:textColorHint="@color/text_muted"
                     android:textSize="14sp" />
 
                 <Button
                     android:id="@+id/sendTextButton"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="11dp"
                     android:background="@drawable/bg_button_secondary"
-                    android:minHeight="50dp"
-                    android:text="✉️ نامە بنێرە"
+                    android:minHeight="52dp"
+                    android:stateListAnimator="@null"
+                    android:text="✉  نامە بنێرە"
                     android:textAllCaps="false"
-                    android:textColor="@color/primary"
+                    android:textColor="#5EEAD4"
                     android:textSize="14sp" />
             </LinearLayout>
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="17dp"
                 android:gravity="center"
+                android:lineSpacingMultiplier="1.25"
                 android:text="🔒 تۆکنەکەت تەنها لەسەر ئەم مۆبایلە دەپارێزرێت؛ هەرگیز لە چات یان ئیمەیڵدا مەینێرە."
-                android:textColor="@color/text_secondary"
+                android:textColor="@color/text_muted"
+                android:textDirection="firstStrongRtl"
                 android:textSize="12sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:gravity="center"
+                android:text="KURD MAN  •  SORANI MANGA STUDIO"
+                android:textColor="#405A7E"
+                android:textDirection="ltr"
+                android:textSize="10sp"
+                android:textStyle="bold" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

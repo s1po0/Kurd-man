@@ -10,11 +10,17 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Free, no-API-key translation to Kurdish Sorani (ckb).
@@ -32,6 +38,21 @@ public class SoraniTranslator {
     private static final int ROUTE_GOOGLE_CLIENTS5 = 2;
     private static final int ROUTE_MYMEMORY = 3;
     private static final int ROUTE_COUNT = 4;
+
+    private static final Pattern LATIN_TOKEN_PATTERN = Pattern.compile(
+            "[A-Za-z\\u00C0-\\u024F]+(?:['’.-][A-Za-z\\u00C0-\\u024F]+)*");
+    private static final Set<String> LATIN_WORDS_TO_KEEP = new HashSet<>(Arrays.asList(
+            "http", "https", "www", "com", "org", "net", "io", "app",
+            "kg", "km", "cm", "mm", "hp", "mp", "xp", "dna", "usb", "wifi"));
+    private static final Set<String> COMMON_STANDALONE_WORDS = new HashSet<>(Arrays.asList(
+            "a", "an", "the", "i", "you", "he", "she", "it", "we", "they",
+            "me", "him", "her", "us", "them", "my", "your", "his", "our", "their",
+            "is", "are", "was", "were", "be", "been", "being", "am",
+            "run", "stop", "wait", "look", "come", "go", "die", "kill", "attack",
+            "fight", "help", "move", "open", "close", "get", "take", "give",
+            "yes", "no", "what", "why", "how", "when", "where", "who",
+            "hunter", "king", "queen", "master", "lord", "brother", "sister",
+            "father", "mother", "friend", "enemy", "monster", "gate", "sword"));
 
     private static final Map<String, String> GLOSSARY = new HashMap<>();
 
@@ -57,18 +78,19 @@ public class SoraniTranslator {
             return glossaryHit;
         }
 
-        String key = sourceLanguage + "\n" + normalized;
+        String preparedSource = prepareSourceText(normalized, sourceLanguage);
+        String key = sourceLanguage + "\n" + preparedSource;
         String cached = cache.get(key);
         if (cached != null) {
             return cached;
         }
 
         String translated;
-        if (normalized.length() <= 1200) {
-            translated = translateChunk(normalized, sourceLanguage);
+        if (preparedSource.length() <= 1200) {
+            translated = translateChunk(preparedSource, sourceLanguage);
         } else {
             StringBuilder joined = new StringBuilder();
-            for (String part : splitLongText(normalized, 1200)) {
+            for (String part : splitLongText(preparedSource, 1200)) {
                 if (joined.length() > 0) {
                     joined.append(' ');
                 }
@@ -78,12 +100,561 @@ public class SoraniTranslator {
             translated = joined.toString();
         }
 
+        translated = transliteratePreservedNames(normalized, translated);
         translated = normalize(translated);
         if (translated.isEmpty()) {
             throw new IOException("Empty translation response");
         }
         cache.put(key, translated);
         return translated;
+    }
+
+    /**
+     * Manhwa OCR text is very often ALL CAPS. Google frequently leaves an
+     * unfamiliar ALL-CAPS personal name in Latin letters, while the same
+     * name in ordinary title case is transliterated into Sorani script.
+     * Normalize only mostly-uppercase English blocks before translation.
+     */
+    private String prepareSourceText(String text, String sourceLanguage) {
+        if (!"en".equals(sourceLanguage) || text == null) {
+            return text;
+        }
+        int upper = 0;
+        int lower = 0;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (Character.isUpperCase(c)) {
+                upper++;
+            } else if (Character.isLowerCase(c)) {
+                lower++;
+            }
+        }
+        int cased = upper + lower;
+        if (cased < 4 || (upper / (double) cased) < 0.68) {
+            return text;
+        }
+
+        StringBuilder out = new StringBuilder(text.length());
+        boolean inWord = false;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (Character.isLetter(c)) {
+                out.append(inWord ? Character.toLowerCase(c) : Character.toUpperCase(c));
+                inWord = true;
+            } else {
+                out.append(c);
+                if (c != '\'' && c != '’') {
+                    inWord = false;
+                }
+            }
+        }
+        return out.toString();
+    }
+
+    /**
+     * Converts personal names that a translation route preserved in Latin
+     * letters into Kurdish Sorani letters. This is deliberately limited to
+     * name-looking tokens (or very short name-only segments), so ordinary
+     * untranslated English words are not disguised as translations.
+     */
+    private String transliteratePreservedNames(String source, String translated) {
+        if (translated == null || translated.isEmpty()) {
+            return translated == null ? "" : translated;
+        }
+        Matcher matcher = LATIN_TOKEN_PATTERN.matcher(translated);
+        if (!matcher.find()) {
+            return translated;
+        }
+        matcher.reset();
+
+        Map<String, String> sourceTokens = latinTokensByLowercase(source);
+        boolean hasArabic = arabicScriptLetterCount(translated) > 0;
+        boolean standaloneName = !hasArabic && isLikelyStandaloneName(source);
+        StringBuffer out = new StringBuffer();
+        while (matcher.find()) {
+            String token = matcher.group();
+            String sourceToken = sourceTokens.get(token.toLowerCase(Locale.ROOT));
+            String replacement = shouldTransliterateToken(
+                    token, sourceToken, hasArabic, standaloneName)
+                    ? transliterateLatinToken(token)
+                    : token;
+            matcher.appendReplacement(out, Matcher.quoteReplacement(replacement));
+        }
+        matcher.appendTail(out);
+        return out.toString();
+    }
+
+    private Map<String, String> latinTokensByLowercase(String text) {
+        Map<String, String> tokens = new HashMap<>();
+        if (text == null) {
+            return tokens;
+        }
+        Matcher matcher = LATIN_TOKEN_PATTERN.matcher(text);
+        while (matcher.find()) {
+            String token = matcher.group();
+            tokens.putIfAbsent(token.toLowerCase(Locale.ROOT), token);
+        }
+        return tokens;
+    }
+
+    private boolean shouldTransliterateToken(String token, String sourceToken,
+                                             boolean hasArabic, boolean standaloneName) {
+        String lettersOnly = token.toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z\\u00C0-\\u024F]", "");
+        if (lettersOnly.length() < 2 || LATIN_WORDS_TO_KEEP.contains(lettersOnly)) {
+            return false;
+        }
+        if (standaloneName) {
+            return true;
+        }
+        if (!hasArabic || COMMON_STANDALONE_WORDS.contains(lettersOnly)) {
+            return false;
+        }
+        return looksNameForm(token)
+                || (sourceToken != null && looksNameForm(sourceToken));
+    }
+
+    private boolean isLikelyStandaloneName(String source) {
+        if (source == null) {
+            return false;
+        }
+        Matcher matcher = LATIN_TOKEN_PATTERN.matcher(source);
+        int tokenCount = 0;
+        int letterCount = 0;
+        while (matcher.find()) {
+            String token = matcher.group();
+            String lettersOnly = token.toLowerCase(Locale.ROOT)
+                    .replaceAll("[^a-z\\u00C0-\\u024F]", "");
+            if (lettersOnly.length() < 2
+                    || COMMON_STANDALONE_WORDS.contains(lettersOnly)
+                    || LATIN_WORDS_TO_KEEP.contains(lettersOnly)
+                    || !looksNameForm(token)) {
+                return false;
+            }
+            tokenCount++;
+            letterCount += lettersOnly.length();
+        }
+        return tokenCount >= 1 && tokenCount <= 4 && letterCount <= 36;
+    }
+
+    private boolean looksNameForm(String token) {
+        boolean firstLetterUpper = false;
+        boolean seenLetter = false;
+        boolean seenLower = false;
+        for (int offset = 0; offset < token.length();) {
+            int codePoint = token.codePointAt(offset);
+            if (Character.isLetter(codePoint)) {
+                if (!seenLetter && Character.isUpperCase(codePoint)) {
+                    firstLetterUpper = true;
+                }
+                if (seenLower && Character.isUpperCase(codePoint)) {
+                    return true;
+                }
+                if (Character.isLowerCase(codePoint)) {
+                    seenLower = true;
+                }
+                seenLetter = true;
+            }
+            offset += Character.charCount(codePoint);
+        }
+        return firstLetterUpper;
+    }
+
+    private String transliterateLatinToken(String token) {
+        String[] parts = token.split("-", -1);
+        StringBuilder out = new StringBuilder();
+        for (String part : parts) {
+            if (out.length() > 0) {
+                out.append('-');
+            }
+            out.append(transliterateLatinWord(part));
+        }
+        return out.length() == 0 ? token : out.toString();
+    }
+
+    private String transliterateLatinWord(String rawWord) {
+        String originalLetters = rawWord.replaceAll("[^A-Za-z]", "");
+        if (originalLetters.length() >= 2 && originalLetters.length() <= 5
+                && originalLetters.equals(originalLetters.toUpperCase(Locale.ROOT))
+                && !originalLetters.matches(".*[AEIOU].*")) {
+            StringBuilder initials = new StringBuilder();
+            for (int i = 0; i < originalLetters.length(); i++) {
+                initials.append(latinLetterName(originalLetters.charAt(i)));
+            }
+            return initials.toString();
+        }
+
+        String word = stripLatinAccents(rawWord)
+                .replace("’", "'")
+                .replace("'", "")
+                .replace(".", "")
+                .toLowerCase(Locale.ROOT);
+        StringBuilder out = new StringBuilder();
+        int i = 0;
+        while (i < word.length()) {
+            char c = word.charAt(i);
+            if (!Character.isLetter(c)) {
+                i++;
+                continue;
+            }
+            if (i > 0 && c == word.charAt(i - 1) && !isLatinVowel(c)) {
+                i++;
+                continue;
+            }
+
+            if (startsAt(word, i, "iao")) {
+                appendVowel(out, "یاو");
+                i += 3;
+                continue;
+            }
+            if (startsAt(word, i, "tch") || startsAt(word, i, "sch")) {
+                out.append(startsAt(word, i, "tch") ? "چ" : "ش");
+                i += 3;
+                continue;
+            }
+            if (startsAt(word, i, "ngh")) {
+                out.append("نگ");
+                i += 3;
+                continue;
+            }
+            if (startsAt(word, i, "eau")) {
+                appendVowel(out, "ۆ");
+                i += 3;
+                continue;
+            }
+            if (startsAt(word, i, "yeo")) {
+                out.append("یۆ");
+                i += 3;
+                continue;
+            }
+
+            if (startsAt(word, i, "ya")) {
+                out.append("یا");
+                i += 2;
+                continue;
+            }
+            if (startsAt(word, i, "ye")) {
+                out.append("یێ");
+                i += 2;
+                continue;
+            }
+            if (startsAt(word, i, "yo")) {
+                out.append("یۆ");
+                i += 2;
+                continue;
+            }
+            if (startsAt(word, i, "yu")) {
+                out.append("یو");
+                i += 2;
+                continue;
+            }
+
+            if (startsAt(word, i, "sh")) {
+                out.append("ش");
+                i += 2;
+                continue;
+            }
+            if (startsAt(word, i, "ch")) {
+                out.append("چ");
+                i += 2;
+                continue;
+            }
+            if (startsAt(word, i, "kh")) {
+                out.append("خ");
+                i += 2;
+                continue;
+            }
+            if (startsAt(word, i, "zh")) {
+                out.append("ژ");
+                i += 2;
+                continue;
+            }
+            if (startsAt(word, i, "ph")) {
+                out.append("ف");
+                i += 2;
+                continue;
+            }
+            if (startsAt(word, i, "th")) {
+                out.append("س");
+                i += 2;
+                continue;
+            }
+            if (startsAt(word, i, "ck")) {
+                out.append("ک");
+                i += 2;
+                continue;
+            }
+            if (startsAt(word, i, "qu")) {
+                out.append("کو");
+                i += 2;
+                continue;
+            }
+            if (startsAt(word, i, "ng")) {
+                char after = i + 2 < word.length() ? word.charAt(i + 2) : '\0';
+                if (after == 'e' || after == 'i' || after == 'y') {
+                    out.append("ن");
+                    i++;
+                } else {
+                    out.append("نگ");
+                    i += 2;
+                }
+                continue;
+            }
+            if (startsAt(word, i, "gh")) {
+                char after = i + 2 < word.length() ? word.charAt(i + 2) : '\0';
+                if (i == 0) {
+                    out.append("غ");
+                } else if (isLatinVowel(after)) {
+                    out.append("گ");
+                }
+                i += 2;
+                continue;
+            }
+            if (i == 0 && (startsAt(word, i, "kn") || startsAt(word, i, "gn")
+                    || startsAt(word, i, "wr"))) {
+                if (c == 'w') {
+                    out.append("ڕ");
+                    i += 2;
+                } else {
+                    i++;
+                }
+                continue;
+            }
+
+            String vowelPair = vowelPairMapping(word, i);
+            if (vowelPair != null) {
+                appendVowel(out, vowelPair);
+                i += 2;
+                continue;
+            }
+
+            switch (c) {
+                case 'a':
+                    appendVowel(out, "ا");
+                    break;
+                case 'b':
+                    out.append("ب");
+                    break;
+                case 'c': {
+                    char next = i + 1 < word.length() ? word.charAt(i + 1) : '\0';
+                    out.append(next == 'e' || next == 'i' || next == 'y' ? "س" : "ک");
+                    break;
+                }
+                case 'd':
+                    out.append("د");
+                    break;
+                case 'e':
+                    if (i != word.length() - 1 || out.length() == 0) {
+                        appendVowel(out, "ێ");
+                    }
+                    break;
+                case 'f':
+                    out.append("ف");
+                    break;
+                case 'g': {
+                    char next = i + 1 < word.length() ? word.charAt(i + 1) : '\0';
+                    out.append(next == 'e' || next == 'i' || next == 'y' ? "ج" : "گ");
+                    break;
+                }
+                case 'h':
+                    if (!(i == word.length() - 1 && i > 0
+                            && isLatinVowel(word.charAt(i - 1)))) {
+                        out.append("ه");
+                    }
+                    break;
+                case 'i':
+                    appendVowel(out, "ی");
+                    break;
+                case 'j':
+                    out.append("ج");
+                    break;
+                case 'k':
+                    out.append("ک");
+                    break;
+                case 'l':
+                    out.append("ل");
+                    break;
+                case 'm':
+                    out.append("م");
+                    break;
+                case 'n':
+                    out.append("ن");
+                    break;
+                case 'o':
+                    appendVowel(out, "ۆ");
+                    break;
+                case 'p':
+                    out.append("پ");
+                    break;
+                case 'q':
+                    out.append("ق");
+                    break;
+                case 'r':
+                    out.append(out.length() == 0 ? "ڕ" : "ر");
+                    break;
+                case 's':
+                    out.append("س");
+                    break;
+                case 't':
+                    out.append("ت");
+                    break;
+                case 'u':
+                    appendVowel(out, "و");
+                    break;
+                case 'v':
+                    out.append("ڤ");
+                    break;
+                case 'w':
+                    out.append("و");
+                    break;
+                case 'x': {
+                    char next = i + 1 < word.length() ? word.charAt(i + 1) : '\0';
+                    if (out.length() == 0) {
+                        out.append(next == 'i' || next == 'y' || next == 'u' ? "ش" : "ز");
+                    } else {
+                        out.append("کس");
+                    }
+                    break;
+                }
+                case 'y':
+                    if (out.length() == 0) {
+                        out.append("ی");
+                    } else {
+                        appendVowel(out, "ی");
+                    }
+                    break;
+                case 'z':
+                    out.append("ز");
+                    break;
+                default:
+                    break;
+            }
+            i++;
+        }
+        return out.length() == 0 ? rawWord : out.toString();
+    }
+
+    private String vowelPairMapping(String word, int i) {
+        if (i + 1 >= word.length()) {
+            return null;
+        }
+        String pair = word.substring(i, i + 2);
+        switch (pair) {
+            case "ae":
+                return "ە";
+            case "ai":
+            case "ay":
+                return "ای";
+            case "au":
+            case "aw":
+                return "او";
+            case "ea":
+            case "ee":
+            case "ie":
+                return "ی";
+            case "ei":
+            case "ey":
+                return "ەی";
+            case "eo":
+            case "oe":
+                return "ۆ";
+            case "eu": {
+                char after = i + 2 < word.length() ? word.charAt(i + 2) : '\0';
+                return after == 'n' || after == 'm' ? "ێ" : "ێو";
+            }
+            case "ia":
+                return "یا";
+            case "io":
+                return "یۆ";
+            case "iu":
+                return "یو";
+            case "oa":
+                return "ۆا";
+            case "oi":
+            case "oy":
+                return "ۆی";
+            case "oo":
+            case "ou":
+                return "و";
+            case "ua":
+                return "وا";
+            case "ue":
+                return i + 2 == word.length() ? "و" : "وێ";
+            case "ui":
+                return "وی";
+            case "uo":
+                return "وۆ";
+            default:
+                return null;
+        }
+    }
+
+    private void appendVowel(StringBuilder out, String mapping) {
+        if (out.length() == 0) {
+            out.append("ئ");
+        }
+        out.append(mapping);
+    }
+
+    private boolean startsAt(String value, int offset, String prefix) {
+        return value.regionMatches(offset, prefix, 0, prefix.length());
+    }
+
+    private boolean isLatinVowel(char c) {
+        return "aeiouy".indexOf(c) >= 0;
+    }
+
+    private String stripLatinAccents(String value) {
+        String replaced = value
+                .replace("ß", "ss")
+                .replace("Æ", "Ae")
+                .replace("æ", "ae")
+                .replace("Œ", "Oe")
+                .replace("œ", "oe")
+                .replace("Ø", "O")
+                .replace("ø", "o")
+                .replace("Đ", "D")
+                .replace("đ", "d")
+                .replace("Ð", "D")
+                .replace("ð", "d")
+                .replace("Þ", "Th")
+                .replace("þ", "th")
+                .replace("Ł", "L")
+                .replace("ł", "l");
+        return Normalizer.normalize(replaced, Normalizer.Form.NFD)
+                .replaceAll("\\p{Mn}+", "");
+    }
+
+    private String latinLetterName(char upper) {
+        switch (upper) {
+            case 'A': return "ئەی";
+            case 'B': return "بی";
+            case 'C': return "سی";
+            case 'D': return "دی";
+            case 'E': return "ئی";
+            case 'F': return "ئێف";
+            case 'G': return "جی";
+            case 'H': return "ئێچ";
+            case 'I': return "ئای";
+            case 'J': return "جەی";
+            case 'K': return "کەی";
+            case 'L': return "ئێڵ";
+            case 'M': return "ئێم";
+            case 'N': return "ئێن";
+            case 'O': return "ئۆ";
+            case 'P': return "پی";
+            case 'Q': return "کیو";
+            case 'R': return "ئاڕ";
+            case 'S': return "ئێس";
+            case 'T': return "تی";
+            case 'U': return "یوو";
+            case 'V': return "ڤی";
+            case 'W': return "دەبڵیوو";
+            case 'X': return "ئێکس";
+            case 'Y': return "وای";
+            case 'Z': return "زێد";
+            default: return String.valueOf(upper);
+        }
     }
 
     private String translateChunk(String text, String sourceLanguage) throws Exception {
@@ -185,6 +756,26 @@ public class SoraniTranslator {
         return requestRoute(route, text, sourceLanguage);
     }
 
+    private String myMemorySourceCode(String sourceLanguage) {
+        if ("ko".equals(sourceLanguage)) {
+            return "ko-KR";
+        }
+        if ("ja".equals(sourceLanguage)) {
+            return "ja-JP";
+        }
+        if ("zh-TW".equals(sourceLanguage) || "zh-Hant".equals(sourceLanguage)) {
+            return "zh-TW";
+        }
+        if ("zh-CN".equals(sourceLanguage) || "zh-Hans".equals(sourceLanguage)
+                || "zh".equals(sourceLanguage)) {
+            return "zh-CN";
+        }
+        if ("en".equals(sourceLanguage)) {
+            return "en-US";
+        }
+        return sourceLanguage == null ? "en-US" : sourceLanguage;
+    }
+
     private String requestRoute(int route, String text, String sourceLanguage)
             throws Exception {
         String encodedSource = URLEncoder.encode(
@@ -201,7 +792,7 @@ public class SoraniTranslator {
             url = "https://clients5.google.com/translate_a/t?client=dict-chrome-ex"
                     + "&sl=" + encodedSource + "&tl=ckb&q=" + encodedText;
         } else {
-            String pair = ("ko".equals(sourceLanguage) ? "ko-KR" : "en-US") + "|ckb-IQ";
+            String pair = myMemorySourceCode(sourceLanguage) + "|ckb-IQ";
             url = "https://api.mymemory.translated.net/get?q=" + encodedText
                     + "&langpair=" + URLEncoder.encode(pair, StandardCharsets.UTF_8.name())
                     + "&mt=1";
@@ -221,7 +812,7 @@ public class SoraniTranslator {
             conn.setReadTimeout(25000);
             conn.setInstanceFollowRedirects(true);
             conn.setRequestProperty("User-Agent",
-                    "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 KurdMan/1.2");
+                    "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 KurdMan/1.4");
             conn.setRequestProperty("Accept", "application/json, text/plain, */*");
 
             int code = conn.getResponseCode();

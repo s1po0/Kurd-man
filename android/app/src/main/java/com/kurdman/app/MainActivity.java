@@ -22,6 +22,7 @@ import android.text.method.HideReturnsTransformationMethod;
 import android.text.method.PasswordTransformationMethod;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -68,6 +69,16 @@ import java.util.zip.ZipOutputStream;
 
 public class MainActivity extends AppCompatActivity {
     private static final String PREFS_NAME = "kurdman_settings";
+    private static final String[] SOURCE_LABELS = {
+            "English — ئینگلیزی (EN)",
+            "한국어 — کۆری (KO)",
+            "日本語 — ژاپۆنی (JA)",
+            "中文（简体）— چینی سادەکراو (ZH-CN)",
+            "中文（繁體）— چینی تەقلیدی (ZH-TW)"
+    };
+    private static final String[] SOURCE_CODES = {
+            "en", "ko", "ja", "zh-CN", "zh-TW"
+    };
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
@@ -147,10 +158,25 @@ public class MainActivity extends AppCompatActivity {
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 this,
-                android.R.layout.simple_spinner_item,
-                new String[]{"English (EN)", "Korean (KO)"});
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                R.layout.spinner_item,
+                SOURCE_LABELS);
+        adapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
         sourceSpinner.setAdapter(adapter);
+        int savedSourceIndex = prefs.getInt("source_index", 0);
+        if (savedSourceIndex >= 0 && savedSourceIndex < SOURCE_CODES.length) {
+            sourceSpinner.setSelection(savedSourceIndex);
+        }
+        sourceSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                prefs.edit().putInt("source_index", position).apply();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // Keep the last saved source language.
+            }
+        });
 
         pickLauncher = registerForActivityResult(
                 new ActivityResultContracts.OpenDocument(),
@@ -417,6 +443,14 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private String selectedSourceLanguage() {
+        int index = sourceSpinner == null ? 0 : sourceSpinner.getSelectedItemPosition();
+        if (index < 0 || index >= SOURCE_CODES.length) {
+            index = 0;
+        }
+        return SOURCE_CODES[index];
+    }
+
     private void translateSelected() {
         final Bitmap sourceBitmap = originalBitmap;
         final File cbzFile = selectedCbzFile;
@@ -425,21 +459,20 @@ public class MainActivity extends AppCompatActivity {
             setStatus("⚠ سەرەتا وێنەی مانهوا یان فایلی CBZ هەڵبژێرە.");
             return;
         }
-        final boolean korean = sourceSpinner.getSelectedItemPosition() == 1;
-        final String sourceLanguage = korean ? "ko" : "en";
+        final String sourceLanguage = selectedSourceLanguage();
 
         setBusy(true);
         setStatus("دەستپێکردنی وەرگێڕان لەناو مۆبایلەکە…");
         executor.execute(() -> {
             try {
                 if (cbzFile != null) {
-                    translateCbzJob(cbzFile, cbzName, korean, sourceLanguage);
+                    translateCbzJob(cbzFile, cbzName, sourceLanguage);
                     return;
                 }
 
                 List<Segment> segments = ManhwaRenderer.recognize(
                         sourceBitmap,
-                        korean,
+                        sourceLanguage,
                         new ManhwaRenderer.Progress() {
                             @Override
                             public void onProgress(String message) {
@@ -506,7 +539,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void translateCbzJob(File cbz, String displayName, boolean korean,
+    private void translateCbzJob(File cbz, String displayName,
                                    String sourceLanguage) throws Exception {
         File jobDir = new File(getCacheDir(), "cbz-job-" + timestamp());
         File inputDir = new File(jobDir, "input");
@@ -556,7 +589,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     segments = ManhwaRenderer.recognize(
                             pageBitmap,
-                            korean,
+                            sourceLanguage,
                             new ManhwaRenderer.Progress() {
                                 @Override
                                 public void onProgress(String message) {
@@ -1303,8 +1336,8 @@ public class MainActivity extends AppCompatActivity {
             empty.setLayoutParams(new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT));
-            empty.setBackgroundResource(R.drawable.bg_input);
-            empty.setPadding(dp(12), dp(12), dp(12), dp(12));
+            empty.setBackgroundResource(R.drawable.bg_download_row);
+            empty.setPadding(dp(16), dp(15), dp(16), dp(15));
             empty.setText("هێشتا هیچ ئەنجامێک لە داگرتنەکاندا نییە؛ دوای یەکەم وەرگێڕان لێرە دەردەکەوێت.");
             empty.setTextColor(getColor(R.color.text_secondary));
             empty.setTextSize(13);
@@ -1334,8 +1367,9 @@ public class MainActivity extends AppCompatActivity {
     private View createDownloadRow(final File file) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.VERTICAL);
-        row.setBackgroundResource(R.drawable.bg_input);
-        row.setPadding(dp(12), dp(12), dp(12), dp(12));
+        row.setBackgroundResource(R.drawable.bg_download_row);
+        row.setElevation(dp(2));
+        row.setPadding(dp(15), dp(14), dp(15), dp(14));
         LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -1345,8 +1379,10 @@ public class MainActivity extends AppCompatActivity {
         TextView name = new TextView(this);
         name.setText(file.getName());
         name.setTextColor(getColor(R.color.text_primary));
-        name.setTextSize(13);
-        name.setTypeface(null, android.graphics.Typeface.BOLD);
+        name.setTextSize(13.5f);
+        name.setLineSpacing(0f, 1.15f);
+        name.setTypeface(android.graphics.Typeface.create("sans-serif-medium",
+                android.graphics.Typeface.BOLD));
         row.addView(name);
 
         TextView detail = new TextView(this);
@@ -1393,8 +1429,11 @@ public class MainActivity extends AppCompatActivity {
         Button button = new Button(this);
         button.setText(text);
         button.setAllCaps(false);
-        button.setTextSize(12);
-        button.setMinHeight(dp(42));
+        button.setTextSize(12.5f);
+        button.setTypeface(android.graphics.Typeface.create("sans-serif-medium",
+                android.graphics.Typeface.BOLD));
+        button.setStateListAnimator(null);
+        button.setMinHeight(dp(46));
         button.setMinWidth(0);
         button.setMinimumWidth(0);
         button.setPadding(dp(8), 0, dp(8), 0);
@@ -1522,6 +1561,7 @@ public class MainActivity extends AppCompatActivity {
         prefs.edit()
                 .putString("token", tokenValue())
                 .putString("chat_id", chatValue())
+                .putInt("source_index", sourceSpinner.getSelectedItemPosition())
                 .apply();
     }
 

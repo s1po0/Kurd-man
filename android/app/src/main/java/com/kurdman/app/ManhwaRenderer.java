@@ -17,6 +17,8 @@ import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.text.Text;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
+import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions;
+import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions;
 import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions;
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 
@@ -81,17 +83,31 @@ public class ManhwaRenderer {
         Fit fit;
     }
 
-    public static List<Segment> recognize(Bitmap original, boolean korean, Progress progress)
-            throws Exception {
+    private static TextRecognizer createRecognizer(String sourceLanguage) {
+        if ("ko".equals(sourceLanguage)) {
+            return TextRecognition.getClient(
+                    new KoreanTextRecognizerOptions.Builder().build());
+        }
+        if ("ja".equals(sourceLanguage)) {
+            return TextRecognition.getClient(
+                    new JapaneseTextRecognizerOptions.Builder().build());
+        }
+        if (sourceLanguage != null && sourceLanguage.startsWith("zh")) {
+            return TextRecognition.getClient(
+                    new ChineseTextRecognizerOptions.Builder().build());
+        }
+        return TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+    }
+
+    public static List<Segment> recognize(Bitmap original, String sourceLanguage,
+                                          Progress progress) throws Exception {
         if (original == null) {
             throw new IllegalArgumentException("No image selected");
         }
         int width = original.getWidth();
         int height = original.getHeight();
 
-        TextRecognizer recognizer = korean
-                ? TextRecognition.getClient(new KoreanTextRecognizerOptions.Builder().build())
-                : TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+        TextRecognizer recognizer = createRecognizer(sourceLanguage);
 
         List<Segment> raw = new ArrayList<>();
         try {
@@ -772,19 +788,39 @@ public class ManhwaRenderer {
 
     private static boolean isUsableText(String value) {
         int alphaNumeric = 0;
+        int cjk = 0;
         int nonSpace = 0;
-        for (int i = 0; i < value.length(); i++) {
-            char c = value.charAt(i);
-            if (Character.isLetterOrDigit(c)) {
+        for (int offset = 0; offset < value.length();) {
+            int codePoint = value.codePointAt(offset);
+            if (Character.isLetterOrDigit(codePoint)) {
                 alphaNumeric++;
             }
-            if (!Character.isWhitespace(c)) {
+            if (isCjkCodePoint(codePoint)) {
+                cjk++;
+            }
+            if (!Character.isWhitespace(codePoint)) {
                 nonSpace++;
             }
+            offset += Character.charCount(codePoint);
+        }
+        if (nonSpace == 0) {
+            return false;
+        }
+        float ratio = alphaNumeric / (float) nonSpace;
+        if (cjk > 0) {
+            // One Han/kana/Hangul character can already be a complete word.
+            return ratio >= 0.30f;
         }
         // Accept short dialogue such as "No!" or "Go…" as well as normal lines.
-        return alphaNumeric >= 2 && nonSpace >= 2
-                && (alphaNumeric / (float) nonSpace) >= 0.34f;
+        return alphaNumeric >= 2 && nonSpace >= 2 && ratio >= 0.34f;
+    }
+
+    private static boolean isCjkCodePoint(int codePoint) {
+        return (codePoint >= 0x3040 && codePoint <= 0x30FF)      // Hiragana/Katakana
+                || (codePoint >= 0x3400 && codePoint <= 0x4DBF)  // CJK Ext. A
+                || (codePoint >= 0x4E00 && codePoint <= 0x9FFF)  // CJK Unified
+                || (codePoint >= 0xAC00 && codePoint <= 0xD7AF)  // Hangul syllables
+                || (codePoint >= 0xF900 && codePoint <= 0xFAFF); // Compatibility ideographs
     }
 
     private static List<Segment> dedupe(List<Segment> raw) {

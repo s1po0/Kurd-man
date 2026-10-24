@@ -10,8 +10,8 @@ android {
         applicationId 'com.kurdman.app'
         minSdk 26
         targetSdk 35
-        versionCode 6
-        versionName '1.3.0'
+        versionCode 7
+        versionName '1.4.0'
         ndk {
             // Most modern phones are arm64; this keeps the ML Kit APK small
             // enough to send through Telegram and GitHub artifacts easily.
@@ -47,7 +47,9 @@ configurations.configureEach {
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'androidx.core:core:1.13.1'
-    // Bundled on-device OCR models (Latin for English, plus Korean raws).
-    implementation 'com.google.mlkit:text-recognition:16.0.0'
-    implementation 'com.google.mlkit:text-recognition-korean:16.0.0'
+    // Bundled on-device OCR models: Latin, Korean, Japanese and Chinese.
+    implementation 'com.google.mlkit:text-recognition:16.0.1'
+    implementation 'com.google.mlkit:text-recognition-korean:16.0.1'
+    implementation 'com.google.mlkit:text-recognition-japanese:16.0.1'
+    implementation 'com.google.mlkit:text-recognition-chinese:16.0.1'
 }
