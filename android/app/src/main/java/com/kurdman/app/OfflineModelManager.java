@@ -1,5 +1,6 @@
 package com.kurdman.app;
 
+import android.app.ActivityManager;
 import android.content.Context;
 import android.os.StatFs;
 import android.util.Log;
@@ -113,6 +114,22 @@ final class OfflineModelManager {
             total += spec.size;
         }
         return total;
+    }
+
+    /** Total device RAM in bytes, or -1 when it cannot be determined. */
+    long totalRamBytes() {
+        try {
+            ActivityManager manager = (ActivityManager)
+                    context.getSystemService(Context.ACTIVITY_SERVICE);
+            if (manager == null) {
+                return -1;
+            }
+            ActivityManager.MemoryInfo info = new ActivityManager.MemoryInfo();
+            manager.getMemoryInfo(info);
+            return info.totalMem;
+        } catch (Exception ignored) {
+            return -1;
+        }
     }
 
     boolean isModelReady() {

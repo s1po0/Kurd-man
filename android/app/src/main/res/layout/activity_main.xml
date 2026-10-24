@@ -109,7 +109,7 @@
                         android:paddingTop="6dp"
                         android:paddingEnd="11dp"
                         android:paddingBottom="6dp"
-                        android:text="v1.5  •  ئۆفلاین AI"
+                        android:text="v1.5.1  •  ئۆفلاین AI"
                         android:textColor="@color/white"
                         android:textSize="12sp"
                         android:textStyle="bold" />

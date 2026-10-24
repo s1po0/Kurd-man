@@ -26,6 +26,18 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # Reuse the same debug signing key on every CI run so new APKs
+      # install as updates over the previous version, keeping the app's
+      # saved token/settings and the downloaded offline model. Without
+      # this, each ephemeral runner generated a fresh debug key and
+      # Android forced an uninstall before every update. This caches a
+      # DEBUG key only; never use this pattern for release signing.
+      - name: Restore stable debug keystore
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: kurdman-debug-keystore-v1
+
       - name: Set up Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -38,6 +50,22 @@ jobs:
 
       - name: Build debug APK
         run: gradle --stacktrace -p android assembleDebug
+
+      - name: Report APK signer fingerprint
+        run: |
+          APK=$(ls android/app/build/outputs/apk/debug/*.apk | head -n 1)
+          if [ -f ~/.android/debug.keystore ]; then
+            echo "::notice::debug keystore present at ~/.android/debug.keystore"
+          else
+            echo "::warning::debug.keystore not found under ~/.android; update-over-install may not persist"
+          fi
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f 2>/dev/null | sort | tail -n 1)
+          if [ -n "$APK" ] && [ -n "$APKSIGNER" ]; then
+            DIGEST=$("$APKSIGNER" verify --print-certs "$APK" 2>/dev/null | grep -im1 'SHA-256 digest' | sed 's/.*digest: *//')
+            if [ -n "$DIGEST" ]; then
+              echo "::notice::APK signer SHA-256=$DIGEST"
+            fi
+          fi
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

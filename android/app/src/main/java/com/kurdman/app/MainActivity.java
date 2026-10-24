@@ -778,6 +778,13 @@ public class MainActivity extends AppCompatActivity {
                     segment.ckb = translator.translate(segment.text, sourceLanguage);
                 }
 
+                // Free the (offline) model before rendering copies the full
+                // bitmap. Holding ~1.3 GB of NLLB sessions plus two large
+                // bitmaps at once is what made low-RAM phones lag or kill
+                // the app. The finally block below tolerates a null here.
+                closeTranslator(translator);
+                translator = null;
+
                 setStatus("دانانی دەقە کوردییەکان لەسەر وێنەکە…");
                 ManhwaRenderer.RenderResult renderResult =
                         ManhwaRenderer.render(sourceBitmap, segments);
@@ -847,22 +854,75 @@ public class MainActivity extends AppCompatActivity {
                 throw new IOException("No images were found inside this CBZ");
             }
 
-            translator = createTranslator(offlineMode);
             StringBuilder allPairs = new StringBuilder();
             Bitmap firstRendered = null;
             int totalSegments = 0;
             int totalRendered = 0;
             int totalSkipped = 0;
             int partialPages = 0;
+            final int pageTotal = pages.size();
 
-            for (int i = 0; i < pages.size(); i++) {
+            // Work in three memory-separated phases so the (offline) model
+            // is never resident at the same time as page bitmaps or the
+            // full-size render copies. Keeping all of them together was
+            // enough to make mid-range phones lag heavily or kill the app.
+            //
+            // Phase 1: OCR every page; a null entry marks a page whose
+            // bitmap could not be decoded (copied through in phase 3).
+            List<List<Segment>> pageSegments = new ArrayList<>(pageTotal);
+            for (int i = 0; i < pageTotal; i++) {
                 final int pageNumber = i + 1;
-                final int pageTotal = pages.size();
                 File pageFile = pages.get(i);
                 setStatus("لاپەڕە " + pageNumber + "/" + pageTotal + ": خوێندنەوە…");
 
                 Bitmap pageBitmap = decodeBitmap(pageFile);
                 if (pageBitmap == null) {
+                    pageSegments.add(null);
+                    continue;
+                }
+                try {
+                    pageSegments.add(ManhwaRenderer.recognize(
+                            pageBitmap,
+                            sourceLanguage,
+                            new ManhwaRenderer.Progress() {
+                                @Override
+                                public void onProgress(String message) {
+                                    setStatus("لاپەڕە " + pageNumber + "/"
+                                            + pageTotal + ": " + message);
+                                }
+                            }));
+                } finally {
+                    pageBitmap.recycle();
+                }
+            }
+
+            // Phase 2: translate everything with no page bitmaps in memory,
+            // then free the model before any rendering happens.
+            translator = createTranslator(offlineMode);
+            for (int i = 0; i < pageTotal; i++) {
+                List<Segment> segments = pageSegments.get(i);
+                if (segments == null) {
+                    continue;
+                }
+                int pageNumber = i + 1;
+                for (int s = 0; s < segments.size(); s++) {
+                    Segment segment = segments.get(s);
+                    setStatus("لاپەڕە " + pageNumber + "/" + pageTotal
+                            + (offlineMode ? ": 🤖 وەرگێڕانی ئۆفلاین " : ": وەرگێڕان ")
+                            + (s + 1) + "/" + segments.size() + "…");
+                    segment.ckb = translator.translate(segment.text, sourceLanguage);
+                }
+            }
+            closeTranslator(translator);
+            translator = null;
+
+            // Phase 3: render (or copy through) each page.
+            for (int i = 0; i < pageTotal; i++) {
+                int pageNumber = i + 1;
+                File pageFile = pages.get(i);
+                List<Segment> segments = pageSegments.get(i);
+
+                if (segments == null) {
                     File keptPage = new File(outputDir, String.format(Locale.ROOT,
                             "%04d%s", pageNumber,
                             extensionWithDot(pageFile.getName(), ".jpg")));
@@ -876,28 +936,36 @@ public class MainActivity extends AppCompatActivity {
                     continue;
                 }
 
-                List<Segment> segments;
-                try {
-                    segments = ManhwaRenderer.recognize(
-                            pageBitmap,
-                            sourceLanguage,
-                            new ManhwaRenderer.Progress() {
-                                @Override
-                                public void onProgress(String message) {
-                                    setStatus("لاپەڕە " + pageNumber + "/"
-                                            + pageTotal + ": " + message);
-                                }
-                            });
-                    for (int s = 0; s < segments.size(); s++) {
-                        Segment segment = segments.get(s);
-                        setStatus("لاپەڕە " + pageNumber + "/" + pageTotal
-                                + (offlineMode ? ": 🤖 وەرگێڕانی ئۆفلاین " : ": وەرگێڕان ")
-                                + (s + 1) + "/" + segments.size() + "…");
-                        segment.ckb = translator.translate(segment.text, sourceLanguage);
+                setStatus("لاپەڕە " + pageNumber + "/" + pageTotal
+                        + ": دانانی دەقە کوردییەکان…");
+                Bitmap pageBitmap = decodeBitmap(pageFile);
+                if (pageBitmap == null) {
+                    // Decoded fine in phase 1 but not now: keep the original
+                    // page and report its segments as text-only.
+                    File keptPage = new File(outputDir, String.format(Locale.ROOT,
+                            "%04d%s", pageNumber,
+                            extensionWithDot(pageFile.getName(), ".jpg")));
+                    copyFile(pageFile, keptPage);
+                    int pageSkipped = segments.size();
+                    totalSegments += segments.size();
+                    totalSkipped += pageSkipped;
+                    if (pageSkipped > 0) {
+                        partialPages++;
                     }
-                } catch (Exception e) {
-                    pageBitmap.recycle();
-                    throw e;
+                    if (allPairs.length() > 0) {
+                        allPairs.append("\n\n");
+                    }
+                    allPairs.append("=== لاپەڕە ").append(pageNumber)
+                            .append('/').append(pageTotal).append(" ===\n");
+                    allPairs.append(segments.isEmpty()
+                            ? "(هیچ دەقێکی ڕوون نەدۆزرایەوە)"
+                            : buildPairs(segments));
+                    if (pageSkipped > 0) {
+                        allPairs.append("\n[⚠ ").append(pageSkipped)
+                                .append(" دەق لەسەر ئەم لاپەڕەیە دانەندرا و بە زمانی ڕەسەن مایەوە؛ ")
+                                .append("وەرگێڕانەکەی لە سەرەوە بە «لەسەر وێنەکە دانەندرا» دیاری کراوە.]");
+                    }
+                    continue;
                 }
 
                 ManhwaRenderer.RenderResult renderResult =

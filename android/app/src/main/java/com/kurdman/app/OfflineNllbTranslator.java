@@ -70,8 +70,21 @@ final class OfflineNllbTranslator
         try {
             environment = OrtEnvironment.getEnvironment();
             sessionOptions = new OrtSession.SessionOptions();
-            int threads = Math.max(2, Math.min(4,
+            // Phones with little RAM were lagging badly or being killed
+            // while the three ~450 MB sessions loaded/ran. On those, trade
+            // some speed for a much lighter footprint: fewer compute
+            // threads (less heat/CPU saturation), no CPU arena (ORT's
+            // arena retains large blocks instead of returning them to the
+            // OS), and only basic graph optimizations (lower load spike).
+            long totalRam = modelManager.totalRamBytes();
+            boolean lowRam = totalRam > 0 && totalRam < 5_000_000_000L;
+            int threads = lowRam ? 2 : Math.max(2, Math.min(4,
                     Runtime.getRuntime().availableProcessors()));
+            if (lowRam) {
+                sessionOptions.setCPUArenaAllocator(false);
+                sessionOptions.setOptimizationLevel(
+                        OrtSession.SessionOptions.OptLevel.BASIC_OPT);
+            }
             sessionOptions.setIntraOpNumThreads(threads);
             sessionOptions.setInterOpNumThreads(1);
 
@@ -92,6 +105,7 @@ final class OfflineNllbTranslator
             tokenizer = loadedTokenizer;
 
             Log.i(TAG, "Offline NLLB ready (threads=" + threads
+                    + ", totalRam=" + totalRam + ", lowRam=" + lowRam
                     + ", decoderPastInputs="
                     + decoderWithPastSession.getInputNames().size() + ")");
         } catch (IOException e) {
