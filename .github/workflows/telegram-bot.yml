@@ -1,8 +1,8 @@
 # Telegram test-message sender.
 #
 # WHY: the Arena sandbox cannot reach api.telegram.org directly, but a
-# GitHub Actions runner can. The agent triggers this workflow (via push /
-# workflow_dispatch) and the runner sends the message — proving control.
+# GitHub Actions runner can. Trigger this workflow manually
+# (workflow_dispatch) and the runner sends the message — proving control.
 #
 # SETUP (once, by the repo owner — never paste the token in chat/code):
 #   Repo -> Settings -> Secrets and variables -> Actions -> New repository secret
@@ -22,10 +22,6 @@ on:
         description: "Optional custom message text"
         required: false
         default: ""
-  push:
-    branches: ["arena/121d982b-kurd-man"]
-    paths:
-      - ".github/workflows/telegram-bot.yml"
 
 jobs:
   send-test:

@@ -9,11 +9,6 @@ name: Manhwa to Sorani (Free)
 
 on:
   workflow_dispatch: {}
-  push:
-    branches: ["arena/121d982b-kurd-man"]
-    paths:
-      - "manhwa/sample/chapter1_en.txt"
-      - ".github/workflows/manhwa-translate.yml"
 
 jobs:
   translate:
