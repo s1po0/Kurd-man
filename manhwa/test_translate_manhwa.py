@@ -4,8 +4,9 @@ Run:  python -m unittest test_translate_manhwa -v   (from manhwa/)
 import tempfile, unittest
 from pathlib import Path
 import translate_manhwa as tm
-from translate_manhwa import (Segment, TranslationCache, Translator, _shape_with_native,
-                              _text_kwargs, _wrap, assess_render_plan, assess_segments,
+from translate_manhwa import (Segment, TranslationCache, Translator, _clean_render_text,
+                              _shape_with_native, _text_kwargs, _wrap,
+                              assess_render_plan, assess_segments,
                               assign_render_boxes, dedupe_segments, dedupe_words,
                               filter_segments, find_sorani_font, is_probable_ocr_junk,
                               load_glossary, make_tiles, merge_same_bubble_segments,
@@ -125,6 +126,43 @@ class TestCore(unittest.TestCase):
         self.assertEqual(_text_kwargs("hello", True), {})
         self.assertEqual(_text_kwargs("سلاو", False), {})
 
+    def test_render_text_never_keeps_tofu_glyphs(self):
+        # Ubuntu's static Noto Arabic has no Latin letters: a leftover
+        # Latin token in a Sorani string drew as the circled empty boxes.
+        missing = set("ORB?")
+        self.assertEqual(_clean_render_text("گۆی ORB? ژەهر", missing), "گۆی ژەهر")
+        self.assertEqual(_clean_render_text("ئەمە چییە?", missing), "ئەمە چییە؟")
+        original_load, original_sig = tm._load_font, tm._glyph_signature
+        tm._load_font = lambda path, size, cache: object()
+        tm._glyph_signature = lambda font, ch: "notdef" if ch in {"\U0010ffff", "O", "R", "B"} else ch
+        try:
+            self.assertEqual(tm._font_missing_chars("fake.ttf", ["گۆی ORB"]), {"O", "R", "B"})
+        finally:
+            tm._load_font, tm._glyph_signature = original_load, original_sig
+
+    def test_bubble_crop_ocr_filters_outline_edge_words(self):
+        try:
+            from PIL import Image
+        except Exception:
+            self.skipTest("Pillow not installed")
+        header = "level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext\n"
+        row = "5\t1\t1\t1\t1\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n"
+        tsv = header + "".join([
+            row.format(1, 2, 80, 20, 20, 96, "JIN"),
+            row.format(2, 100, 80, 70, 20, 97, "HELLO"),
+            row.format(3, 185, 80, 75, 20, 96, "WORLD"),
+        ])
+        original = tm.run_tesseract_tsv
+        tm.run_tesseract_tsv = lambda path, src, psm=6: tsv
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                tile = Path(d) / "crop.png"
+                Image.new("RGB", (400, 200), "white").save(tile)
+                segs = tm._ocr_tile_segments(tile, "en", min_conf=55, edge_margin_ratio=0.05)
+        finally:
+            tm.run_tesseract_tsv = original
+        self.assertEqual([s.text for s in segs], ["HELLO WORLD"])
+
     def test_sorani_font_selection_is_explicit(self):
         with tempfile.TemporaryDirectory() as d:
             font = Path(d) / "NotoNaskhArabic-Regular.ttf"; font.write_bytes(b"font")
@@ -164,7 +202,7 @@ class TestCore(unittest.TestCase):
         dirty = Segment("POISON junk", (130, 105, 280, 40), confidence=90)
         existing = [dirty]
         seen = {}
-        def fake_ocr(path, src):
+        def fake_ocr(path, src, **_kwargs):
             with Image.open(path) as crop:
                 seen["corner"] = crop.convert("L").getpixel((2, 2))
             return [Segment("Clean text", (300, 150, 240, 60), confidence=98)]

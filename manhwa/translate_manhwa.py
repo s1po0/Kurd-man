@@ -570,23 +570,43 @@ def run_tesseract_tsv(image_path: Path, src: str, psm: int = 6, timeout: int = 1
         raise OCRError(f"tesseract: {p.stderr.strip()[:300]}")
     return p.stdout
 
-def _ocr_tile_segments(tile_path: Path, src: str) -> list[Segment]:
+def _ocr_tile_segments(tile_path: Path, src: str, min_conf: float = 35,
+                       edge_margin_ratio: float = 0.0) -> list[Segment]:
     """Run uniform-block and sparse-text OCR, then merge at word level.
 
     PSM 6 is steadier inside a normal bubble; PSM 11 notices isolated bubbles
     scattered over artwork. Neither pass is trusted blindly: identical words
     are deduplicated before our own spatial line/bubble grouping runs.
+
+    Bubble-interior crops can pass a stricter confidence floor and an edge
+    margin: the printed outline at the crop perimeter otherwise OCRs as
+    short junk tokens that survive translation as untranslated Latin and
+    render as tofu boxes in an Arabic-only font.
     """
     words: list[dict] = []
     errors: list[str] = []
     for psm in (6, 11):
         try:
-            words.extend(parse_tesseract_words(run_tesseract_tsv(tile_path, src, psm=psm)))
+            words.extend(parse_tesseract_words(
+                run_tesseract_tsv(tile_path, src, psm=psm), min_conf=min_conf))
         except OCRError as e:
             errors.append(str(e))
     if errors and not words:
         raise OCRError(errors[0])
-    return group_lines_into_segments(group_words_into_lines(dedupe_words(words)))
+    words = dedupe_words(words)
+    if edge_margin_ratio and words:
+        try:
+            width, height = image_size(tile_path)
+            mx = max(6.0, width * edge_margin_ratio)
+            my = max(6.0, height * edge_margin_ratio)
+            inside = [w for w in words
+                      if mx <= _center(_word_box(w))[0] <= width - mx
+                      and my <= _center(_word_box(w))[1] <= height - my]
+            if inside:
+                words = inside
+        except Exception:
+            pass
+    return group_lines_into_segments(group_words_into_lines(words))
 
 def image_size(path: Path) -> tuple[int, int]:
     from PIL import Image
@@ -857,7 +877,7 @@ def _ocr_uncovered_bubbles(img, existing: list[Segment], src: str, tempdir: Path
             mask = np.zeros(arr.shape[:2], dtype=np.uint8)
             local_contour = cand["contour"] - np.array([[[cx0, cy0]]], dtype=cand["contour"].dtype)
             cv2.drawContours(mask, [local_contour], -1, 255, -1)
-            mask = cv2.erode(mask, np.ones((3, 3), np.uint8), iterations=1)
+            mask = cv2.erode(mask, np.ones((5, 5), np.uint8), iterations=1)
             if np.any(mask):
                 arr[mask == 0] = (255, 255, 255)
                 crop = Image.fromarray(cv2.cvtColor(arr, cv2.COLOR_BGR2RGB))
@@ -870,7 +890,8 @@ def _ocr_uncovered_bubbles(img, existing: list[Segment], src: str, tempdir: Path
         crop_path = Path(tempdir) / f"bubble_{idx:03d}.png"
         prepared.save(crop_path)
         try:
-            bubble_segs = _ocr_tile_segments(crop_path, src)
+            bubble_segs = _ocr_tile_segments(
+                crop_path, src, min_conf=55, edge_margin_ratio=0.05)
         except OCRError:
             continue
         found_here: list[Segment] = []
@@ -1082,6 +1103,78 @@ def _load_font(font_path, size, cache: dict):
         cache[key] = ImageFont.truetype(font_path, size)
     return cache[key]
 
+def _glyph_signature(font, ch: str):
+    mask = font.getmask(ch)
+    return (mask.size, mask.getbbox(), bytes(mask), round(float(font.getlength(ch)), 3))
+
+def _font_missing_chars(font_path: str, texts) -> set[str]:
+    """Characters this font would draw as tofu (.notdef) boxes.
+
+    Ubuntu's static Noto Arabic fonts contain no Latin letters at all, so a
+    Latin token left over from OCR junk or an untranslated term rendered as
+    the empty rectangles the user circled. Compare each glyph with a known
+    unassigned codepoint instead of trusting the font's name.
+    """
+    import unicodedata
+    unique = {ch for text in texts for ch in str(text or "")}
+    font = _load_font(font_path, 32, {})
+    sentinel_sig = _glyph_signature(font, "\U0010ffff")
+    missing: set[str] = set()
+    for ch in unique:
+        if ch.isspace() or unicodedata.category(ch).startswith("C"):
+            continue
+        try:
+            if ch == "\ufffd" or _glyph_signature(font, ch) == sentinel_sig:
+                missing.add(ch)
+        except Exception:
+            continue
+    return missing
+
+def _choose_render_font(texts, candidates: list[str] | None = None):
+    """Pick the candidate covering the most of the actual translated text."""
+    paths: list[str] = []
+    for candidate in (FONT_CANDIDATES if candidates is None else candidates):
+        if candidate and Path(candidate).exists() and str(candidate) not in paths:
+            paths.append(str(candidate))
+    best = None
+    for idx, path in enumerate(paths):
+        try:
+            missing = _font_missing_chars(path, texts)
+        except Exception:
+            continue
+        key = (sum(1 for ch in missing if _contains_arabic(ch)), len(missing), idx)
+        if best is None or key < best[0]:
+            best = (key, path, missing)
+    if best is not None:
+        return best[1], best[2]
+    return find_sorani_font(candidates), set()
+
+_RENDER_PUNCT_REPLACEMENTS = {"?": "؟", ";": "؛", ",": "،", "…": "..."}
+
+def _clean_render_text(text: str, missing: set[str]) -> str:
+    """Remove glyphs the chosen font cannot draw (never typeset tofu)."""
+    original = str(text or "").strip()
+    if not missing:
+        return original
+    kept: list[str] = []
+    for token in original.split():
+        converted = "".join(
+            _RENDER_PUNCT_REPLACEMENTS.get(ch, ch)
+            if _RENDER_PUNCT_REPLACEMENTS.get(ch, ch) not in missing else ch
+            for ch in token)
+        had_missing_alnum = any(ch in missing and ch.isalnum() for ch in converted)
+        cleaned = "".join(ch for ch in converted if ch not in missing)
+        # A wholly unsupported token (e.g. leftover Latin "ORB?") goes away
+        # with its punctuation instead of leaving a row of empty boxes.
+        if had_missing_alnum and not any(ch.isalpha() and _contains_arabic(ch) for ch in cleaned):
+            continue
+        if cleaned:
+            kept.append(cleaned)
+    cleaned_text = " ".join(kept)
+    cleaned_text = re.sub(r"\s+([؟،؛.!:])", r"\1", cleaned_text)
+    cleaned_text = re.sub(r"([؟،؛.!:])(?:\s*\1)+", r"\1", cleaned_text)
+    return normalize(cleaned_text)
+
 def _split_long_word(draw, word, font, width):
     chunks, current = [], ""
     for ch in word:
@@ -1246,7 +1339,7 @@ def render_image(inp: Path, segs: list[Segment], out: Path, render_report: dict 
     from PIL import Image, ImageDraw   # lazy: text mode works without Pillow
     inp, out = Path(inp), Path(out)
     require_text_shaping()
-    font_path = find_sorani_font()
+    font_path, missing_glyphs = _choose_render_font([seg.ckb for seg in segs])
     if not font_path:
         raise RuntimeError(
             "فۆنتی گونجاوی سۆرانی نەدۆزرایەوە؛ ڕێندەر ڕاگیرا بۆ ئەوەی پیتەکان "
@@ -1264,8 +1357,12 @@ def render_image(inp: Path, segs: list[Segment], out: Path, render_report: dict 
     measure = ImageDraw.Draw(img)
     font_cache: dict = {}
     layouts = []
+    cleaned_segments = 0
     for seg in segs:
-        text = (seg.ckb or "").strip()
+        original_text = (seg.ckb or "").strip()
+        text = _clean_render_text(original_text, missing_glyphs)
+        if text != original_text:
+            cleaned_segments += 1
         if not text:
             continue
         x, y, w, h = seg.render_box or seg.box
@@ -1294,7 +1391,9 @@ def render_image(inp: Path, segs: list[Segment], out: Path, render_report: dict 
         img.save(out)
     if render_report is not None:
         render_report.update({"requested": len(segs), "rendered": len(layouts),
-                              "shaping": shaping_backend(), "font": font_path})
+                              "shaping": shaping_backend(), "font": font_path,
+                              "missing_codepoints": [f"U+{ord(ch):04X}" for ch in sorted(missing_glyphs)],
+                              "cleaned_segments": cleaned_segments})
     return out
 
 def render_debug_image(inp: Path, segs: list[Segment], out: Path):
