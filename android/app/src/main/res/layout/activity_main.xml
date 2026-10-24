@@ -131,7 +131,7 @@
                         android:paddingTop="6dp"
                         android:paddingEnd="11dp"
                         android:paddingBottom="6dp"
-                        android:text="v1.6.1  •  ڕێکخستنی ئاسان + ئۆفلاین AI"
+                        android:text="v1.6.2  •  ستۆدیۆی گەورە و ئاسان + ئۆفلاین AI"
                         android:textColor="@color/white"
                         android:textSize="12sp"
                         android:textStyle="bold" />

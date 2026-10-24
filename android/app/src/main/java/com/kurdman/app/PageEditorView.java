@@ -215,9 +215,26 @@ public class PageEditorView extends View {
         if (bitmap == null || getWidth() <= 0 || getHeight() <= 0) {
             return;
         }
-        float scale = Math.min(
-                getWidth() / (float) bitmap.getWidth(),
-                getHeight() / (float) bitmap.getHeight());
+        // A long webtoon page must not be squeezed into a tiny unreadable
+        // strip just to show every pixel at once. Start on the selected
+        // text at a readable size; the whole page remains available through
+        // fitEntirePage(), and a normal page still fits completely.
+        if (isTallPage()) {
+            if (selectedIndex >= 0 && selectedIndex < segments.size()) {
+                centerOnSegment(selectedIndex);
+            } else {
+                fitWidth();
+            }
+            return;
+        }
+        fitEntirePage();
+    }
+
+    public void fitEntirePage() {
+        if (bitmap == null || getWidth() <= 0 || getHeight() <= 0) {
+            return;
+        }
+        float scale = fitAllScale();
         imageMatrix.reset();
         imageMatrix.postScale(scale, scale);
         float dx = (getWidth() - bitmap.getWidth() * scale) / 2f;
@@ -225,6 +242,56 @@ public class PageEditorView extends View {
         imageMatrix.postTranslate(dx, dy);
         matrixInitialized = true;
         invalidate();
+    }
+
+    public void fitWidth() {
+        if (bitmap == null || getWidth() <= 0 || getHeight() <= 0) {
+            return;
+        }
+        float scale = fitWidthScale();
+        float scaledHeight = bitmap.getHeight() * scale;
+        float dy;
+        if (scaledHeight <= getHeight()) {
+            dy = (getHeight() - scaledHeight) / 2f;
+        } else if (selectedIndex >= 0 && selectedIndex < segments.size()) {
+            Rect box = segments.get(selectedIndex).getRenderBox();
+            dy = getHeight() / 2f - box.exactCenterY() * scale;
+            dy = Math.max(getHeight() - scaledHeight, Math.min(0f, dy));
+        } else {
+            dy = 0f;
+        }
+        imageMatrix.reset();
+        imageMatrix.postScale(scale, scale);
+        imageMatrix.postTranslate(0f, dy);
+        matrixInitialized = true;
+        invalidate();
+    }
+
+    public void focusSelected() {
+        if (selectedIndex >= 0) {
+            centerOnSegment(selectedIndex);
+        } else {
+            fitToScreen();
+        }
+    }
+
+    private boolean isTallPage() {
+        if (bitmap == null || getWidth() <= 0 || getHeight() <= 0) {
+            return false;
+        }
+        float imageAspect = bitmap.getHeight() / (float) bitmap.getWidth();
+        float viewAspect = getHeight() / (float) getWidth();
+        return imageAspect > viewAspect * 1.15f;
+    }
+
+    private float fitAllScale() {
+        return Math.min(
+                getWidth() / (float) bitmap.getWidth(),
+                getHeight() / (float) bitmap.getHeight());
+    }
+
+    private float fitWidthScale() {
+        return getWidth() / (float) bitmap.getWidth();
     }
 
     public void zoomBy(float factor) {
@@ -238,13 +305,14 @@ public class PageEditorView extends View {
             return;
         }
         Rect box = segments.get(index).getRenderBox();
-        float fitScale = Math.min(
-                getWidth() / (float) bitmap.getWidth(),
-                getHeight() / (float) bitmap.getHeight());
+        float fitScale = fitAllScale();
         float desired = Math.min(
-                getWidth() * 0.82f / Math.max(1f, box.width()),
-                getHeight() * 0.66f / Math.max(1f, box.height()));
-        float scale = Math.max(fitScale, Math.min(desired, fitScale * 8f));
+                getWidth() * 0.78f / Math.max(1f, box.width()),
+                getHeight() * 0.56f / Math.max(1f, box.height()));
+        // For very long pages fitScale can be tiny. Allow enough zoom for
+        // the block and its handles to be touched without losing context.
+        float maximum = Math.max(fitScale * 16f, fitWidthScale() * 1.8f);
+        float scale = Math.max(fitScale, Math.min(desired, maximum));
         imageMatrix.reset();
         imageMatrix.postScale(scale, scale);
         float dx = getWidth() / 2f - box.exactCenterX() * scale;

@@ -59,8 +59,17 @@ public class EditorActivity extends AppCompatActivity
     public static final String EXTRA_EXPORT = "export_edited_project";
     private static final String PREFS_NAME = "kurdman_settings";
     private static final String PREF_GLOBAL_STYLE = "global_text_style_json";
-    private static final int PANEL_SIMPLE = 0;
-    private static final int PANEL_ADVANCED_TEXT = 1;
+    private static final int PANEL_TEXTS = 0;
+    private static final int PANEL_POSITION = 1;
+    private static final int PANEL_STYLE = 2;
+    private static final int PANEL_FINISH = 3;
+    private static final int PANEL_ADVANCED_FIRST = 4;
+    private static final int PANEL_ADVANCED_TEXT = 4;
+    private static final int PANEL_ADVANCED_STYLE = 5;
+    private static final int PANEL_ADVANCED_COLOR = 6;
+    private static final int PANEL_ADVANCED_BACKGROUND = 7;
+    private static final int PANEL_ADVANCED_POSITION = 8;
+    private static final int PANEL_ADVANCED_PROJECT = 9;
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -81,14 +90,18 @@ public class EditorActivity extends AppCompatActivity
     private LinearLayout tabsContainer;
     private View tabsScroll;
     private ScrollView panelScroll;
-    private Button simpleModeButton;
-    private Button advancedModeButton;
+    private Button sectionTextsButton;
+    private Button sectionPositionButton;
+    private Button sectionStyleButton;
+    private Button sectionFinishButton;
+    private Button showControlsButton;
     private Button toolMoveButton;
     private Button toolResizeButton;
     private Button toolRotateButton;
     private Button toolViewButton;
     private TextView toolHint;
-    private int currentPanelIndex = PANEL_SIMPLE;
+    private int currentPanelIndex = PANEL_TEXTS;
+    private boolean panelCollapsed = false;
     private TextView simpleSelectedText;
     private Button simpleFontButton;
     private TextView simpleSizeLabel;
@@ -179,13 +192,11 @@ public class EditorActivity extends AppCompatActivity
         tabsContainer = findViewById(R.id.editorTabs);
         tabsScroll = findViewById(R.id.editorTabsScroll);
         panelScroll = findViewById(R.id.editorPanelScroll);
-        simpleModeButton = findViewById(R.id.editorSimpleModeButton);
-        advancedModeButton = findViewById(R.id.editorAdvancedModeButton);
-        toolMoveButton = findViewById(R.id.editorToolMoveButton);
-        toolResizeButton = findViewById(R.id.editorToolResizeButton);
-        toolRotateButton = findViewById(R.id.editorToolRotateButton);
-        toolViewButton = findViewById(R.id.editorToolViewButton);
-        toolHint = findViewById(R.id.editorToolHint);
+        sectionTextsButton = findViewById(R.id.editorSectionTextsButton);
+        sectionPositionButton = findViewById(R.id.editorSectionPositionButton);
+        sectionStyleButton = findViewById(R.id.editorSectionStyleButton);
+        sectionFinishButton = findViewById(R.id.editorSectionFinishButton);
+        showControlsButton = findViewById(R.id.editorShowControlsButton);
 
         canvas.setListener(this);
         canvas.setResolver(style -> FontCatalog.getTypeface(
@@ -299,7 +310,7 @@ public class EditorActivity extends AppCompatActivity
                 } else if (page.segments.isEmpty()) {
                     setStatus("ئەم لاپەڕەیە هیچ دەقێکی نییە — دەتوانیت «دەقی نوێ» زیاد بکەیت.");
                 } else {
-                    setStatus("دەقێک هەڵبژێرە: ڕایکێشە بۆ جوڵاندن، گۆشەکە بۆ قەبارە، بازنە زەردەکە بۆ سووڕاندن.");
+                    setStatus("ئامادەیە — لە خوارەوە: ١ دەقەکان، ٢ شوێن، ٣ ستایل، ٤ دەرکردن.");
                 }
                 bindSelectedControls();
                 updateNavigation();
@@ -417,7 +428,7 @@ public class EditorActivity extends AppCompatActivity
         findViewById(R.id.editorBlockListButton).setOnClickListener(
                 v -> showBlockList());
         findViewById(R.id.editorFitButton).setOnClickListener(
-                v -> canvas.fitToScreen());
+                v -> canvas.fitWidth());
         findViewById(R.id.editorZoomInButton).setOnClickListener(
                 v -> canvas.zoomBy(1.25f));
         findViewById(R.id.editorZoomOutButton).setOnClickListener(
@@ -478,10 +489,14 @@ public class EditorActivity extends AppCompatActivity
     // ------------------------------------------------------------------
 
     private void buildPanels() {
-        // Progressive disclosure: Simple is the normal editor. The six
-        // detailed panels remain available, but they are not shown (or even
-        // listed) until the user explicitly opens Advanced tools.
-        buildSimplePanel();
+        // One job per bottom section. The simple workflow is deliberately
+        // not one long panel any more: Texts, Position, Style and Finish
+        // are four separate screens below the large canvas. Detailed
+        // panels stay hidden until a section's Advanced button is tapped.
+        buildSimpleTextsPanel();
+        buildSimplePositionPanel();
+        buildSimpleStylePanel();
+        buildSimpleFinishPanel();
         buildTextPanel();
         buildStylePanel();
         buildColorPanel();
@@ -501,26 +516,26 @@ public class EditorActivity extends AppCompatActivity
                     ViewGroup.LayoutParams.WRAP_CONTENT, dp(44));
             params.setMargins(dp(3), 0, dp(3), 0);
             tab.setLayoutParams(params);
-            tab.setOnClickListener(v -> showPanel(index + 1));
+            tab.setOnClickListener(v -> showPanel(index + PANEL_ADVANCED_FIRST));
             tabsContainer.addView(tab);
             tabButtons.add(tab);
         }
         refreshFontSpinner();
-        showPanel(PANEL_SIMPLE);
+        showPanel(PANEL_TEXTS);
     }
 
     private void showPanel(int index) {
         if (index < 0 || index >= panels.size()) {
-            index = PANEL_SIMPLE;
+            index = PANEL_TEXTS;
         }
         currentPanelIndex = index;
-        boolean advanced = index > PANEL_SIMPLE;
+        boolean advanced = index >= PANEL_ADVANCED_FIRST;
         for (int i = 0; i < panels.size(); i++) {
             panels.get(i).setVisibility(i == index ? View.VISIBLE : View.GONE);
         }
         for (int i = 0; i < tabButtons.size(); i++) {
             Button tab = tabButtons.get(i);
-            boolean selected = advanced && i == index - 1;
+            boolean selected = advanced && i == index - PANEL_ADVANCED_FIRST;
             tab.setBackgroundResource(selected
                     ? R.drawable.bg_button_primary : R.drawable.bg_button_secondary);
             tab.setTextColor(selected ? Color.WHITE : Color.rgb(94, 234, 212));
@@ -528,36 +543,92 @@ public class EditorActivity extends AppCompatActivity
         if (tabsScroll != null) {
             tabsScroll.setVisibility(advanced ? View.VISIBLE : View.GONE);
         }
-        updateEditorModeButton(simpleModeButton, !advanced);
-        updateEditorModeButton(advancedModeButton, advanced);
+        int section = sectionForPanel(index);
+        updateStudioSectionButton(sectionTextsButton, section == PANEL_TEXTS);
+        updateStudioSectionButton(sectionPositionButton, section == PANEL_POSITION);
+        updateStudioSectionButton(sectionStyleButton, section == PANEL_STYLE);
+        updateStudioSectionButton(sectionFinishButton, section == PANEL_FINISH);
+        boolean wasCollapsed = panelCollapsed;
+        panelCollapsed = false;
         if (panelScroll != null) {
+            panelScroll.setVisibility(View.VISIBLE);
             panelScroll.post(() -> panelScroll.scrollTo(0, 0));
+        }
+        if (showControlsButton != null) {
+            showControlsButton.setVisibility(View.GONE);
+        }
+        if (wasCollapsed && canvas != null) {
+            canvas.post(canvas::focusSelected);
         }
     }
 
-    private void updateEditorModeButton(Button button, boolean selected) {
+    private int sectionForPanel(int index) {
+        if (index <= PANEL_FINISH) {
+            return Math.max(PANEL_TEXTS, index);
+        }
+        if (index == PANEL_ADVANCED_TEXT) {
+            return PANEL_TEXTS;
+        }
+        if (index == PANEL_ADVANCED_POSITION) {
+            return PANEL_POSITION;
+        }
+        if (index == PANEL_ADVANCED_PROJECT) {
+            return PANEL_FINISH;
+        }
+        return PANEL_STYLE;
+    }
+
+    private void updateStudioSectionButton(Button button, boolean selected) {
         if (button == null) {
             return;
         }
         button.setSelected(selected);
         button.setBackgroundResource(selected
                 ? R.drawable.bg_button_primary : R.drawable.bg_button_secondary);
-        button.setTextColor(selected ? Color.WHITE : Color.rgb(196, 181, 253));
+        button.setTextColor(selected ? Color.WHITE : Color.rgb(226, 232, 240));
+    }
+
+    private void setEditorPanelCollapsed(boolean collapsed) {
+        panelCollapsed = collapsed;
+        if (panelScroll != null) {
+            panelScroll.setVisibility(collapsed ? View.GONE : View.VISIBLE);
+        }
+        if (showControlsButton != null) {
+            showControlsButton.setVisibility(collapsed ? View.VISIBLE : View.GONE);
+        }
+        if (canvas != null) {
+            // After the canvas grows/shrinks, keep the current text large
+            // and centred instead of leaving it at the old screen position.
+            canvas.post(canvas::focusSelected);
+        }
+        if (collapsed) {
+            setStatus("کۆنترۆڵەکان شاردرانەوە — بۆ گەڕاندنەوەیان «کۆنترۆڵەکان» لەسەر وێنەکە دابگرە.");
+        }
     }
 
     private void wireEditorTools() {
-        simpleModeButton.setOnClickListener(v -> showPanel(PANEL_SIMPLE));
-        advancedModeButton.setOnClickListener(v -> showPanel(
-                currentPanelIndex > PANEL_SIMPLE
-                        ? currentPanelIndex : PANEL_ADVANCED_TEXT));
-        toolMoveButton.setOnClickListener(
-                v -> setEditorTool(PageEditorView.Tool.MOVE));
-        toolResizeButton.setOnClickListener(
-                v -> setEditorTool(PageEditorView.Tool.RESIZE));
-        toolRotateButton.setOnClickListener(
-                v -> setEditorTool(PageEditorView.Tool.ROTATE));
-        toolViewButton.setOnClickListener(
-                v -> setEditorTool(PageEditorView.Tool.VIEW));
+        sectionTextsButton.setOnClickListener(v -> showPanel(PANEL_TEXTS));
+        sectionPositionButton.setOnClickListener(v -> showPanel(PANEL_POSITION));
+        sectionStyleButton.setOnClickListener(v -> showPanel(PANEL_STYLE));
+        sectionFinishButton.setOnClickListener(v -> showPanel(PANEL_FINISH));
+        showControlsButton.setOnClickListener(
+                v -> setEditorPanelCollapsed(false));
+        if (toolMoveButton != null) {
+            toolMoveButton.setOnClickListener(
+                    v -> setEditorTool(PageEditorView.Tool.MOVE));
+        }
+        if (toolResizeButton != null) {
+            toolResizeButton.setOnClickListener(
+                    v -> setEditorTool(PageEditorView.Tool.RESIZE));
+        }
+        if (toolRotateButton != null) {
+            toolRotateButton.setOnClickListener(
+                    v -> setEditorTool(PageEditorView.Tool.ROTATE));
+        }
+        if (toolViewButton != null) {
+            toolViewButton.setOnClickListener(
+                    v -> setEditorTool(PageEditorView.Tool.VIEW));
+        }
         setEditorTool(PageEditorView.Tool.MOVE);
     }
 
@@ -601,15 +672,9 @@ public class EditorActivity extends AppCompatActivity
         button.setTextColor(selected ? Color.WHITE : Color.rgb(94, 234, 212));
     }
 
-    private void buildSimplePanel() {
+    private void buildSimpleTextsPanel() {
         LinearLayout panel = createPanel();
-        heading(panel, "دەستکاری ئاسان — تەنها ٤ هەنگاو");
-        hint(panel, "هەموو گۆڕانکارییەکان بە خۆکار پاشەکەوت دەبن. "
-                + "ئەگەر ئامرازێکی وردترت ویست، لە کۆتاییدا «پێشکەوتوو» بکەرەوە.");
-        button(panel, "؟  ڕێنمایی خێرا — چۆن کار دەکات؟", false,
-                v -> showSimpleHelp());
-
-        heading(panel, "١) دەقەکە هەڵبژێرە");
+        heading(panel, "١) دەقەکان — هەڵبژاردن و وشەکان");
         simpleSelectedText = textBox(panel, "هیچ دەقێک هەڵنەبژێردراوە");
         LinearLayout selectRow = row(panel);
         button(selectRow, "‹  پێشتر", false,
@@ -617,18 +682,54 @@ public class EditorActivity extends AppCompatActivity
         button(selectRow, "›  دواتر", false,
                 v -> selectSegment(selectedSegmentIndex + 1, true));
         button(selectRow, "☰  لیستەکە", false, v -> showBlockList());
+        addSelected(button(panel, "✎  وشەکانی ئەم دەقە بگۆڕە", true,
+                v -> showEditTextDialog()));
         LinearLayout addRow = row(panel);
-        button(addRow, "＋  دەقی نوێ زیاد بکە", true, v -> addSegment());
+        button(addRow, "＋  دەقی نوێ", true, v -> addSegment());
         addSelected(button(addRow, "⧉  کۆپی بکە", false,
                 v -> duplicateSegment()));
+        LinearLayout visibilityRow = row(panel);
+        simpleVisibilityButton = addSelected(button(visibilityRow,
+                "👁  پیشاندانی دەق", false, v -> toggleSimpleVisibility()));
+        addSelected(button(visibilityRow, "🗑  سڕینەوە", false,
+                v -> deleteSegment()));
+        button(panel, "⚙  وردەکاری زیاتر بۆ دەقەکە", false,
+                v -> showPanel(PANEL_ADVANCED_TEXT));
+        hint(panel, "هەموو گۆڕانکارییەکان بە خۆکار پاشەکەوت دەبن. "
+                + "دوای هەڵبژاردنی دەقەکە بڕۆ بۆ بەشی «٢) شوێن».");
+    }
 
-        heading(panel, "٢) ئامرازەکە لە سەرەوە هەڵبژێرە");
-        hint(panel, "«جوڵاندن» دەقەکە دەجوڵێنێت؛ «قەبارە» تەنها چوارگۆشە سەوزەکە؛ "
-                + "«سووڕان» تەنها بازنە زەردەکە؛ «بینین» هیچ شتێک ناجوڵێنێت.");
+    private void buildSimplePositionPanel() {
+        LinearLayout panel = createPanel();
+        heading(panel, "٢) شوێن — ئامرازێک هەڵبژێرە و ڕابکێشە");
+        LinearLayout toolRow1 = row(panel);
+        toolMoveButton = button(toolRow1, "↔  جوڵاندن", true, null);
+        toolResizeButton = button(toolRow1, "⤢  قەبارە", false, null);
+        LinearLayout toolRow2 = row(panel);
+        toolRotateButton = button(toolRow2, "⟳  سووڕان", false, null);
+        toolViewButton = button(toolRow2, "🔍  بینین / زووم", false, null);
+        toolHint = label(panel,
+                "جوڵاندن: دەقە هەڵبژێردراوەکە بە یەک پەنجە ڕابکێشە.");
+        toolHint.setGravity(android.view.Gravity.CENTER);
+        addSelected(button(panel, "⌂  بگەڕێنەوە بۆ قسەهەڵگرە ڕەسەنەکە", false,
+                v -> resetPosition()));
 
-        heading(panel, "٣) وشە و شێواز بگۆڕە");
-        addSelected(button(panel, "✎  وشەکانی وەرگێڕانەکە بگۆڕە", true,
-                v -> showEditTextDialog()));
+        heading(panel, "بینینی وێنەکە");
+        LinearLayout viewRow = row(panel);
+        button(viewRow, "◎  دەقەکە", false, v -> canvas.focusSelected());
+        button(viewRow, "↔  پانایی", false, v -> canvas.fitWidth());
+        button(viewRow, "⛶  هەمووی", false, v -> canvas.fitEntirePage());
+        button(panel, "⛶  وێنەکە گەورە بکە — کۆنترۆڵەکان بشارەوە", true,
+                v -> setEditorPanelCollapsed(true));
+        button(panel, "⚙  جوڵاندنی ورد و ڕیزبەندی چینەکان", false,
+                v -> showPanel(PANEL_ADVANCED_POSITION));
+        hint(panel, "لە دۆخی بینیندا هیچ دەقێک ناجوڵێت؛ تەنها دەتوانیت "
+                + "بەناو وێنەکەدا بگەڕێیت و زووم بکەیت.");
+    }
+
+    private void buildSimpleStylePanel() {
+        LinearLayout panel = createPanel();
+        heading(panel, "٣) ستایل — فۆنت، قەبارە و ڕەنگ");
         simpleFontButton = addSelected(button(panel, "A  فۆنت هەڵبژێرە", false,
                 v -> showSimpleFontPicker()));
         addSelected(button(panel, "✦  ستایلێکی ئامادە هەڵبژێرە", false,
@@ -644,30 +745,36 @@ public class EditorActivity extends AppCompatActivity
                 v -> openColorPicker("text")));
         addSelected(button(colorRow, "▦  ڕەنگی پاشبنەما", false,
                 v -> openColorPicker("background")));
-        LinearLayout placeRow = row(panel);
-        simpleVisibilityButton = addSelected(button(placeRow,
-                "👁  پیشاندانی دەق", false, v -> toggleSimpleVisibility()));
-        addSelected(button(placeRow, "⌂  بگەڕێنەوە بۆ قسەهەڵگرەکە", false,
-                v -> resetPosition()));
+        button(panel, "⚙  دەوروبەر، سێبەر و ستایلی وردتر", false,
+                v -> showPanel(PANEL_ADVANCED_STYLE));
+        hint(panel, "ئەم گۆڕانکارییانە تەنها لەسەر دەقە هەڵبژێردراوەکە "
+                + "جێبەجێ دەبن و ڕاستەوخۆ لەسەر وێنەکە دەبیندرێن.");
+    }
 
-        heading(panel, "٤) کۆتایی پێبهێنە");
-        button(panel, "✓  پاشەکەوتکردن و دەرکردنی وێنە/CBZی نوێ", true,
+    private void buildSimpleFinishPanel() {
+        LinearLayout panel = createPanel();
+        heading(panel, "٤) دەرکردن — کۆتایی پێبهێنە");
+        hint(panel, "پرۆژەکە بەردەوام بە خۆکار پاشەکەوت دەبێت. «دەرکردن» "
+                + "وێنە یان CBZی نوێ و فایلی TXT لە Download/KurdMan دروست دەکات.");
+        button(panel, "✓  پاشەکەوتکردن و دەرکردنی نوێ", true,
                 v -> saveAndExport());
-        button(panel, "⚙  ئامرازە پێشکەوتووەکان بکەرەوە", false,
+        button(panel, "؟  ڕێنمایی خێرا", false, v -> showSimpleHelp());
+        button(panel, "⚙  هەموو ئامرازە پێشکەوتووەکان", false,
                 v -> showPanel(PANEL_ADVANCED_TEXT));
-        hint(panel, "ئەگەر تەنها دەتهەوێت دواتر بەردەوام بیت، دوگمەی ✕ لە سەرەوە دابگرە؛ "
-                + "پرۆژەکە پاشەکەوتکراوە و نامێنێتەوە.");
+        button(panel, "✕  داخستن و دواتر بەردەوامبوون", false,
+                v -> closeWithoutExport());
+        hint(panel, "ئەگەر دەستکارییەکە هێشتا تەواو نەبووە، «داخستن» هەڵبژێرە؛ "
+                + "دوایین پرۆژە لە مۆبایلەکەدا دەمێنێتەوە.");
     }
 
     private void showSimpleHelp() {
         new AlertDialog.Builder(this)
                 .setTitle("چۆن دەقێک دەستکاری بکەم؟")
-                .setMessage("١) سەرەتا لەسەر دەقێک لە وێنەکە بکە، یان «لیستەکە» بەکاربهێنە.\n\n"
-                        + "٢) بۆ جوڵاندن: ئامرازی «جوڵاندن» هەڵبژێرە و دەقەکە ڕابکێشە.\n\n"
-                        + "٣) بۆ گەورە/بچووککردن: «قەبارە» هەڵبژێرە و چوارگۆشە سەوزە گەورەکە ڕابکێشە.\n\n"
-                        + "٤) بۆ سووڕاندن: «سووڕان» هەڵبژێرە و بازنە زەردەکە ڕابکێشە.\n\n"
-                        + "٥) «بینین» تەنها بۆ هاتوچۆ و زوومە و هیچ دەقێک ناجوڵێنێت.\n\n"
-                        + "٦) وشە، فۆنت و ڕەنگ لە هەنگاوی ٣ بگۆڕە؛ لە کۆتاییدا «دەرکردن» دابگرە.")
+                .setMessage("١) لە بەشی «دەقەکان» دەقێک هەڵبژێرە و ئەگەر پێویست بوو وشەکانی بگۆڕە.\n\n"
+                        + "٢) لە بەشی «شوێن»: جوڵاندن دەقەکە دەجوڵێنێت، قەبارە تەنها چوارگۆشە سەوزەکە، سووڕان تەنها بازنە زەردەکە، بینین تەنها بۆ زووم و گەڕانە.\n\n"
+                        + "٣) ئەگەر وێنەکە هێشتا بچووک دیار بوو، لە بەشی شوێن «وێنەکە گەورە بکە» دابگرە؛ دوگمەی «کۆنترۆڵەکان»ی سەر وێنەکە بەشەکە دەگەڕێنێتەوە.\n\n"
+                        + "٤) لە بەشی «ستایل» فۆنت، قەبارە و ڕەنگ بگۆڕە.\n\n"
+                        + "٥) لە بەشی «دەرکردن» کاری کۆتایی بکە. پرۆژەکە بە خۆکار پاشەکەوت دەبێت.")
                 .setPositiveButton("تێگەیشتم", null)
                 .show();
     }
@@ -1438,8 +1545,8 @@ public class EditorActivity extends AppCompatActivity
         bindSelectedControls();
         updateNavigation();
         scheduleAutosave();
-        showPanel(currentPanelIndex == PANEL_SIMPLE
-                ? PANEL_SIMPLE : PANEL_ADVANCED_TEXT);
+        showPanel(currentPanelIndex < PANEL_ADVANCED_FIRST
+                ? PANEL_TEXTS : PANEL_ADVANCED_TEXT);
     }
 
     private void duplicateSegment() {
