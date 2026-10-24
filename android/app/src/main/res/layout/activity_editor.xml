@@ -96,7 +96,9 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:background="@drawable/bg_status"
+            android:ellipsize="end"
             android:lineSpacingMultiplier="1.15"
+            android:maxLines="2"
             android:paddingStart="12dp"
             android:paddingTop="9dp"
             android:paddingEnd="12dp"
@@ -273,14 +275,148 @@
         android:id="@+id/editorCanvas"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1.18"
+        android:layout_weight="1.55"
         android:background="#020617" />
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#F2070D18"
+        android:orientation="vertical"
+        android:paddingStart="8dp"
+        android:paddingTop="7dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="6dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/editorToolMoveButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_button_primary"
+                android:minHeight="48dp"
+                android:minWidth="0dp"
+                android:padding="2dp"
+                android:stateListAnimator="@null"
+                android:text="↔ جوڵاندن"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/editorToolResizeButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_button_secondary"
+                android:minHeight="48dp"
+                android:minWidth="0dp"
+                android:padding="2dp"
+                android:stateListAnimator="@null"
+                android:text="⤢ قەبارە"
+                android:textAllCaps="false"
+                android:textColor="#5EEAD4"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/editorToolRotateButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_button_secondary"
+                android:minHeight="48dp"
+                android:minWidth="0dp"
+                android:padding="2dp"
+                android:stateListAnimator="@null"
+                android:text="⟳ سووڕان"
+                android:textAllCaps="false"
+                android:textColor="#FDE68A"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/editorToolViewButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/bg_button_secondary"
+                android:minHeight="48dp"
+                android:minWidth="0dp"
+                android:padding="2dp"
+                android:stateListAnimator="@null"
+                android:text="🔍 بینین"
+                android:textAllCaps="false"
+                android:textColor="#BFDBFE"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/editorToolHint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="2"
+            android:text="جوڵاندن: دەقە هەڵبژێردراوەکە بە یەک پەنجە ڕابکێشە."
+            android:textColor="@color/text_secondary"
+            android:textDirection="firstStrongRtl"
+            android:textSize="12sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="6dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/editorSimpleModeButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_button_primary"
+                android:fontFamily="sans-serif-black"
+                android:minHeight="48dp"
+                android:minWidth="0dp"
+                android:stateListAnimator="@null"
+                android:text="✓ دۆخی ئاسان"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/editorAdvancedModeButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/bg_button_secondary"
+                android:minHeight="48dp"
+                android:minWidth="0dp"
+                android:stateListAnimator="@null"
+                android:text="⚙ ئامرازە پێشکەوتووەکان"
+                android:textAllCaps="false"
+                android:textColor="#C4B5FD"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </LinearLayout>
+
     <HorizontalScrollView
+        android:id="@+id/editorTabsScroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="#E6070D18"
-        android:scrollbars="none">
+        android:scrollbars="none"
+        android:visibility="gone">
 
         <LinearLayout
             android:id="@+id/editorTabs"
@@ -294,9 +430,10 @@
     </HorizontalScrollView>
 
     <ScrollView
+        android:id="@+id/editorPanelScroll"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="0.82"
+        android:layout_weight="0.72"
         android:background="#F2070D18"
         android:fillViewport="true">
 

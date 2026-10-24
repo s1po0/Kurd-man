@@ -38,6 +38,7 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -102,6 +103,11 @@ public class MainActivity extends AppCompatActivity {
     };
     private static final String PREF_GLOBAL_STYLE = "global_text_style_json";
     private static final String PREF_KEEP_SCREEN = "keep_screen_on_during_jobs";
+    private static final String PREF_MAIN_PAGE = "main_page_index_v161";
+    private static final int PAGE_TRANSLATE = 0;
+    private static final int PAGE_STYLE = 1;
+    private static final int PAGE_RESULTS = 2;
+    private static final int PAGE_SETTINGS = 3;
 
     // Process-wide so a recreated activity cannot accidentally terminate a
     // job that the keep-alive foreground service is protecting.
@@ -161,6 +167,17 @@ public class MainActivity extends AppCompatActivity {
     private TextView statusText;
     private TextView resultText;
     private ImageView previewImage;
+    private ScrollView mainScrollView;
+    private View pageTranslate;
+    private View pageStyle;
+    private View pageResults;
+    private View pageSettings;
+    private Button navTranslateButton;
+    private Button navStyleButton;
+    private Button navResultsButton;
+    private Button navSettingsButton;
+    private Button openStudioFromStyleButton;
+    private int currentMainPage = PAGE_TRANSLATE;
 
     private ActivityResultLauncher<String[]> pickLauncher;
     private ActivityResultLauncher<String[]> importFontLauncher;
@@ -238,6 +255,16 @@ public class MainActivity extends AppCompatActivity {
         statusText = findViewById(R.id.statusText);
         resultText = findViewById(R.id.resultText);
         previewImage = findViewById(R.id.previewImage);
+        mainScrollView = findViewById(R.id.mainScrollView);
+        pageTranslate = findViewById(R.id.pageTranslate);
+        pageStyle = findViewById(R.id.pageStyle);
+        pageResults = findViewById(R.id.pageResults);
+        pageSettings = findViewById(R.id.pageSettings);
+        navTranslateButton = findViewById(R.id.navTranslateButton);
+        navStyleButton = findViewById(R.id.navStyleButton);
+        navResultsButton = findViewById(R.id.navResultsButton);
+        navSettingsButton = findViewById(R.id.navSettingsButton);
+        openStudioFromStyleButton = findViewById(R.id.openStudioFromStyleButton);
 
         // The token stays in this app's private storage on this phone only.
         tokenInput.setText(prefs.getString("token", ""));
@@ -353,7 +380,9 @@ public class MainActivity extends AppCompatActivity {
         keepAliveToggleButton.setOnClickListener(v -> toggleManualKeepAlive());
         batterySettingsButton.setOnClickListener(v -> openBatteryOptimizationSettings());
         editResultButton.setOnClickListener(v -> openTextStudio());
+        openStudioFromStyleButton.setOnClickListener(v -> openTextStudio());
         initializeStyleControls();
+        initializeMainPages();
 
         pasteTokenButton.setOnClickListener(v -> pasteTokenFromClipboard());
         pasteChatButton.setOnClickListener(v -> pasteChatIdFromClipboard());
@@ -418,6 +447,69 @@ public class MainActivity extends AppCompatActivity {
         // the foreground keep-alive service may be protecting a job while
         // Android recreates this activity.
         super.onDestroy();
+    }
+
+    // ------------------------------------------------------------------
+    // Main pages: one clear job per bottom-tab page
+    // ------------------------------------------------------------------
+
+    private void initializeMainPages() {
+        navTranslateButton.setOnClickListener(v -> showMainPage(PAGE_TRANSLATE));
+        navStyleButton.setOnClickListener(v -> showMainPage(PAGE_STYLE));
+        navResultsButton.setOnClickListener(v -> showMainPage(PAGE_RESULTS));
+        navSettingsButton.setOnClickListener(v -> showMainPage(PAGE_SETTINGS));
+        int savedPage = prefs == null
+                ? PAGE_TRANSLATE
+                : prefs.getInt(PREF_MAIN_PAGE, PAGE_TRANSLATE);
+        showMainPage(savedPage, false);
+    }
+
+    private void showMainPage(int page) {
+        showMainPage(page, true);
+    }
+
+    private void showMainPage(int page, boolean save) {
+        if (pageTranslate == null || pageStyle == null
+                || pageResults == null || pageSettings == null) {
+            return;
+        }
+        if (page < PAGE_TRANSLATE || page > PAGE_SETTINGS) {
+            page = PAGE_TRANSLATE;
+        }
+        currentMainPage = page;
+        pageTranslate.setVisibility(page == PAGE_TRANSLATE ? View.VISIBLE : View.GONE);
+        pageStyle.setVisibility(page == PAGE_STYLE ? View.VISIBLE : View.GONE);
+        pageResults.setVisibility(page == PAGE_RESULTS ? View.VISIBLE : View.GONE);
+        pageSettings.setVisibility(page == PAGE_SETTINGS ? View.VISIBLE : View.GONE);
+        updateMainNavButton(navTranslateButton, page == PAGE_TRANSLATE);
+        updateMainNavButton(navStyleButton, page == PAGE_STYLE);
+        updateMainNavButton(navResultsButton, page == PAGE_RESULTS);
+        updateMainNavButton(navSettingsButton, page == PAGE_SETTINGS);
+        if (save && prefs != null) {
+            prefs.edit().putInt(PREF_MAIN_PAGE, page).apply();
+        }
+        if (mainScrollView != null) {
+            mainScrollView.post(() -> mainScrollView.scrollTo(0, 0));
+        }
+        if (page == PAGE_RESULTS) {
+            refreshDownloadsList();
+        } else if (page == PAGE_SETTINGS) {
+            refreshOfflineModelUi();
+            refreshKeepAliveUi();
+        }
+    }
+
+    private void updateMainNavButton(Button button, boolean selected) {
+        if (button == null) {
+            return;
+        }
+        button.setSelected(selected);
+        button.setAlpha(1f);
+        button.setBackgroundResource(selected
+                ? R.drawable.bg_button_primary
+                : R.drawable.bg_button_secondary);
+        button.setTextColor(ContextCompat.getColor(
+                this, selected ? R.color.white : R.color.text_primary));
     }
 
     // ------------------------------------------------------------------
@@ -1374,6 +1466,9 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        // Move straight to the visible result/progress page; the user should
+        // not have to hunt through the other sections while a job is running.
+        showMainPage(PAGE_RESULTS);
         setBusy(true);
         setStatus(offlineMode
                 ? "🤖 دەستپێکردنی وەرگێڕانی ئۆفلاین لەناو مۆبایلەکە…"
@@ -1775,6 +1870,7 @@ public class MainActivity extends AppCompatActivity {
             updateButtons(false);
             return;
         }
+        showMainPage(PAGE_RESULTS);
         setBusy(true);
         setStatus("دەرکردنی وەشانی دەستکاریکراو…");
         executor.execute(() -> {
@@ -3003,13 +3099,20 @@ public class MainActivity extends AppCompatActivity {
             deleteOfflineButton.setEnabled(enabled && hasModelData);
         }
         sendResultButton.setEnabled(enabled && resultFile != null && resultFile.exists());
+        boolean hasProject = TranslationProjectStore.hasCompletedProject(this);
         if (editResultButton != null) {
-            boolean hasProject = TranslationProjectStore.hasCompletedProject(this);
             editResultButton.setEnabled(enabled && hasProject);
             editResultButton.setAlpha(enabled && hasProject ? 1f : 0.55f);
             editResultButton.setText(hasProject
                     ? "✏  دەستکاری شوێن، فۆنت و ڕەنگی نووسینەکان"
                     : "✏  دەستکاری نووسینەکان — سەرەتا وەربگێڕە");
+        }
+        if (openStudioFromStyleButton != null) {
+            openStudioFromStyleButton.setEnabled(enabled && hasProject);
+            openStudioFromStyleButton.setAlpha(enabled && hasProject ? 1f : 0.55f);
+            openStudioFromStyleButton.setText(hasProject
+                    ? "✏  کردنەوەی ستۆدیۆی دەق"
+                    : "✏  ستۆدیۆی دەق — سەرەتا وەربگێڕە");
         }
     }
 }

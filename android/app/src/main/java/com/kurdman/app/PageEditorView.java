@@ -43,6 +43,11 @@ public class PageEditorView extends View {
         boolean onImageTap(float imageX, float imageY);
     }
 
+    /** One explicit finger job at a time, chosen by the editor toolbar. */
+    public enum Tool {
+        MOVE, RESIZE, ROTATE, VIEW
+    }
+
     private enum Mode {
         NONE, MOVE, RESIZE, ROTATE, PAN
     }
@@ -61,6 +66,7 @@ public class PageEditorView extends View {
     private final ScaleGestureDetector scaleDetector;
 
     private Mode mode = Mode.NONE;
+    private Tool tool = Tool.MOVE;
     private int activePointerId = MotionEvent.INVALID_POINTER_ID;
     private final PointF downView = new PointF();
     private final PointF downImage = new PointF();
@@ -183,6 +189,21 @@ public class PageEditorView extends View {
 
     public void setSnapEnabled(boolean enabled) {
         snapEnabled = enabled;
+    }
+
+    public void setTool(Tool newTool) {
+        Tool next = newTool == null ? Tool.MOVE : newTool;
+        if (tool != next) {
+            finishGeometryMode();
+            mode = Mode.NONE;
+            activePointerId = MotionEvent.INVALID_POINTER_ID;
+            tool = next;
+        }
+        invalidate();
+    }
+
+    public Tool getTool() {
+        return tool;
     }
 
     public void refreshStyles() {
@@ -361,26 +382,31 @@ public class PageEditorView extends View {
         float textY = topLeft.y - (fm.ascent + fm.descent) / 2f;
         canvas.drawText(String.valueOf(index + 1), topLeft.x, textY, badgeTextPaint);
 
-        if (selected && !style.locked) {
+        if (selected && !style.locked && tool == Tool.RESIZE) {
+            // Simple tools show only the one handle that can be dragged now.
             PointF resize = resizeHandle(segment);
-            float half = dp(10f);
+            float half = dp(16f);
             handlePaint.setColor(Color.rgb(45, 212, 191));
             RectF handleRect = new RectF(
                     resize.x - half, resize.y - half, resize.x + half, resize.y + half);
-            canvas.drawRoundRect(handleRect, dp(4f), dp(4f), handlePaint);
-            canvas.drawRoundRect(handleRect, dp(4f), dp(4f), handleStrokePaint);
-
+            canvas.drawRoundRect(handleRect, dp(7f), dp(7f), handlePaint);
+            canvas.drawRoundRect(handleRect, dp(7f), dp(7f), handleStrokePaint);
+            badgeTextPaint.setTextSize(dp(16f));
+            canvas.drawText("⤢", resize.x,
+                    resize.y - (fm.ascent + fm.descent) / 2f, badgeTextPaint);
+            badgeTextPaint.setTextSize(dp(11f));
+        } else if (selected && !style.locked && tool == Tool.ROTATE) {
             PointF rotate = rotateHandle(segment);
             PointF topCenter = topCenter(segment);
             Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
             line.setStyle(Paint.Style.STROKE);
-            line.setStrokeWidth(dp(1.5f));
+            line.setStrokeWidth(dp(2f));
             line.setColor(Color.WHITE);
             canvas.drawLine(topCenter.x, topCenter.y, rotate.x, rotate.y, line);
             handlePaint.setColor(Color.rgb(250, 204, 21));
-            canvas.drawCircle(rotate.x, rotate.y, dp(10f), handlePaint);
-            canvas.drawCircle(rotate.x, rotate.y, dp(10f), handleStrokePaint);
-            badgeTextPaint.setTextSize(dp(12f));
+            canvas.drawCircle(rotate.x, rotate.y, dp(16f), handlePaint);
+            canvas.drawCircle(rotate.x, rotate.y, dp(16f), handleStrokePaint);
+            badgeTextPaint.setTextSize(dp(17f));
             canvas.drawText("↻", rotate.x,
                     rotate.y - (fm.ascent + fm.descent) / 2f, badgeTextPaint);
             badgeTextPaint.setTextSize(dp(11f));
@@ -457,11 +483,16 @@ public class PageEditorView extends View {
 
         Segment selected = getSelectedSegment();
         if (selected != null && !selected.ensureStyle().locked) {
-            if (distance(viewX, viewY, resizeHandle(selected)) <= dp(30f)) {
+            // The selected toolbar tool decides which single handle is live.
+            // This prevents an intended resize/rotate from accidentally
+            // moving the whole text block.
+            if (tool == Tool.RESIZE
+                    && distance(viewX, viewY, resizeHandle(selected)) <= dp(40f)) {
                 beginGeometry(Mode.RESIZE, selected, imagePoint);
                 return;
             }
-            if (distance(viewX, viewY, rotateHandle(selected)) <= dp(30f)) {
+            if (tool == Tool.ROTATE
+                    && distance(viewX, viewY, rotateHandle(selected)) <= dp(40f)) {
                 beginGeometry(Mode.ROTATE, selected, imagePoint);
                 return;
             }
@@ -478,7 +509,9 @@ public class PageEditorView extends View {
                 listener.onDoubleTapSegment(hit);
             }
             Segment hitSegment = segments.get(hit);
-            if (hitSegment.ensureStyle().locked) {
+            if (hitSegment.ensureStyle().locked || tool != Tool.MOVE) {
+                // Resize/Rotate/View can select a block without moving it;
+                // dragging then pans the page instead of changing geometry.
                 mode = Mode.PAN;
                 lastPanView.set(viewX, viewY);
             } else {
@@ -677,7 +710,7 @@ public class PageEditorView extends View {
 
     private PointF rotateHandle(Segment segment) {
         Rect box = segment.getRenderBox();
-        float offset = dp(34f) / Math.max(0.01f, currentScale());
+        float offset = dp(44f) / Math.max(0.01f, currentScale());
         PointF rotated = rotatePoint(0f, -box.height() / 2f - offset,
                 segment.ensureStyle().rotationDegrees);
         return imageToView(box.exactCenterX() + rotated.x,
