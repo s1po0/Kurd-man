@@ -337,7 +337,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="وێنەیەکی ڕوون هەڵبژێرە؛ OCR لەناو مۆبایلەکە دەخوێنرێتەوە و دەقەکان دەکرێنە کوردی سۆرانی."
+                    android:text="وێنەیەکی ڕوون یان فایلێکی CBZ هەڵبژێرە؛ وێنەکانی ناو CBZـەکە دەردەهێنرێن، OCR دەکرێن و دەکرێنە کوردی سۆرانی."
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp" />
 
@@ -345,7 +345,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:text="زمانی سەرچاوەی وێنەکە"
+                    android:text="زمانی سەرچاوەی وێنە / CBZ"
                     android:textColor="@color/text_primary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -383,7 +383,7 @@
                     android:layout_marginTop="14dp"
                     android:background="@drawable/bg_button_secondary"
                     android:minHeight="54dp"
-                    android:text="🖼 هەڵبژاردنی وێنەی مانهوا"
+                    android:text="🖼 / 📚 هەڵبژاردنی وێنە یان CBZ"
                     android:textAllCaps="false"
                     android:textColor="@color/primary"
                     android:textSize="15sp" />
@@ -480,7 +480,7 @@
                     android:textSize="14sp" />
             </LinearLayout>
 
-            <!-- Optional bot message -->
+            <!-- Step 4: downloads on this phone -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -501,6 +501,88 @@
                         android:background="@drawable/bg_step_badge"
                         android:gravity="center"
                         android:text="٤"
+                        android:textColor="@color/text_on_primary"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:text="داگرتنەکان لەم مۆبایلەدا"
+                        android:textColor="@color/text_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="ئەنجامە وەرگێڕدراوەکان (CBZ، وێنە و دەق) لە Download/KurdMan پاشەکەوت دەکرێن و لێرە دەردەکەون؛ دەتوانیت بیانکەیتەوە یان هاوبەشیان بکەیت."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
+
+                <LinearLayout
+                    android:id="@+id/downloadsContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="vertical" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/refreshDownloadsButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_button_secondary"
+                        android:minHeight="50dp"
+                        android:text="↻ نوێکردنەوەی لیست"
+                        android:textAllCaps="false"
+                        android:textColor="@color/primary"
+                        android:textSize="13sp" />
+
+                    <Button
+                        android:id="@+id/openDownloadsButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_button_primary"
+                        android:minHeight="50dp"
+                        android:text="⬇ کردنەوەی داگرتنەکانی مۆبایل"
+                        android:textAllCaps="false"
+                        android:textColor="@color/text_on_primary"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Optional bot message -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:background="@drawable/bg_step_badge"
+                        android:gravity="center"
+                        android:text="٥"
                         android:textColor="@color/text_on_primary"
                         android:textStyle="bold" />
 
