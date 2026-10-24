@@ -324,6 +324,15 @@ public class ManhwaRenderer {
                 continue;
             }
 
+            // Measure the real bubble outline so the fit can guarantee no
+            // line crosses the border, and typeset inside the bubble body
+            // (the grown rectangle may include the tail or, for connected
+            // double balloons, part of the sister balloon).
+            Rect bubbleBody = computeInteriorSpans(original, segment);
+            if (bubbleBody != null) {
+                segment.renderBox = bubbleBody;
+            }
+
             StyledTextRenderer.FitResult fit = StyledTextRenderer.createFit(
                     segment, resolver, false);
             if (fit == null) {
@@ -476,6 +485,199 @@ public class ManhwaRenderer {
             }
         }
         return 1f;
+    }
+
+    /**
+     * Traces the actual bubble interior inside the segment's erase box:
+     * for every row, the leftmost/rightmost interior pixels. The interior
+     * is the background-like component around the OCR text, found with the
+     * same colour rule the clean eraser uses. On success the spans are
+     * stored on the segment (so the typesetter can keep every line inside
+     * the real outline, even for connected double balloons whose grown
+     * rectangle covers two circles) and the bubble "body" rectangle —
+     * the interior bounds with narrow tail rows trimmed — is returned.
+     * Returns {@code null} (and stores nothing) when the trace looks
+     * unreliable, leaving the caller with the previous rectangle logic.
+     */
+    static Rect computeInteriorSpans(Bitmap original, Segment segment) {
+        if (original == null || original.isRecycled() || segment == null) {
+            return null;
+        }
+        Rect region = new Rect(segment.getEraseBox());
+        if (!region.intersect(0, 0, original.getWidth(), original.getHeight())
+                || region.width() < 16 || region.height() < 12) {
+            return null;
+        }
+        int width = region.width();
+        int height = region.height();
+        long count = (long) width * (long) height;
+        if (count > 3_500_000L) {
+            return null;
+        }
+        int n = (int) count;
+        int[] pixels = new int[n];
+        try {
+            original.getPixels(pixels, 0, width,
+                    region.left, region.top, width, height);
+        } catch (RuntimeException unreadable) {
+            return null;
+        }
+        int bgColor = segment.detectedBackgroundColor;
+        int bgRed = Color.red(bgColor);
+        int bgGreen = Color.green(bgColor);
+        int bgBlue = Color.blue(bgColor);
+        boolean[] bgLike = new boolean[n];
+        for (int i = 0; i < n; i++) {
+            int pixel = pixels[i];
+            int distance = Math.max(
+                    Math.abs(Color.red(pixel) - bgRed),
+                    Math.max(Math.abs(Color.green(pixel) - bgGreen),
+                            Math.abs(Color.blue(pixel) - bgBlue)));
+            bgLike[i] = distance <= 40;
+        }
+
+        int[] labels = new int[n];
+        int[] queue = new int[n];
+        // Per component: area, minX, minY, maxX, maxY.
+        List<int[]> stats = new ArrayList<>();
+        stats.add(null);
+        int components = 0;
+        for (int start = 0; start < n; start++) {
+            if (labels[start] != 0 || !bgLike[start]) {
+                continue;
+            }
+            components++;
+            int[] st = new int[]{0, width, height, -1, -1};
+            stats.add(st);
+            int head = 0;
+            int tail = 0;
+            labels[start] = components;
+            queue[tail++] = start;
+            while (head < tail) {
+                int index = queue[head++];
+                int x = index % width;
+                int y = index / width;
+                st[0]++;
+                if (x < st[1]) st[1] = x;
+                if (y < st[2]) st[2] = y;
+                if (x > st[3]) st[3] = x;
+                if (y > st[4]) st[4] = y;
+                if (x > 0 && labels[index - 1] == 0 && bgLike[index - 1]) {
+                    labels[index - 1] = components;
+                    queue[tail++] = index - 1;
+                }
+                if (x + 1 < width && labels[index + 1] == 0 && bgLike[index + 1]) {
+                    labels[index + 1] = components;
+                    queue[tail++] = index + 1;
+                }
+                if (y > 0 && labels[index - width] == 0 && bgLike[index - width]) {
+                    labels[index - width] = components;
+                    queue[tail++] = index - width;
+                }
+                if (y + 1 < height && labels[index + width] == 0 && bgLike[index + width]) {
+                    labels[index + width] = components;
+                    queue[tail++] = index + width;
+                }
+            }
+        }
+        if (components == 0) {
+            return null;
+        }
+
+        int cx = clampInt(Math.round(segment.box.exactCenterX()) - region.left,
+                0, width - 1);
+        int cy = clampInt(Math.round(segment.box.exactCenterY()) - region.top,
+                0, height - 1);
+        int interior = 0;
+        if (bgLike[cy * width + cx]) {
+            interior = labels[cy * width + cx];
+            // The text centre can land inside a letter counter (the hole
+            // in an "O"); that pocket is far too small to be the bubble.
+            if (stats.get(interior)[0] < n * 0.18) {
+                interior = 0;
+            }
+        }
+        if (interior == 0) {
+            int best = -1;
+            int fallback = 0;
+            int fallbackBest = -1;
+            for (int id = 1; id <= components; id++) {
+                int[] st = stats.get(id);
+                if (st[0] > fallbackBest) {
+                    fallbackBest = st[0];
+                    fallback = id;
+                }
+                if (st[1] <= cx && cx <= st[3] && st[2] <= cy && cy <= st[4]
+                        && st[0] > best) {
+                    best = st[0];
+                    interior = id;
+                }
+            }
+            if (interior == 0) {
+                interior = fallback;
+            }
+        }
+        int interiorArea = stats.get(interior)[0];
+        if (interiorArea < n * 0.18) {
+            return null;
+        }
+
+        int[] left = new int[height];
+        int[] right = new int[height];
+        for (int y = 0; y < height; y++) {
+            left[y] = -1;
+            right[y] = -1;
+            int base = y * width;
+            for (int x = 0; x < width; x++) {
+                if (labels[base + x] == interior) {
+                    if (left[y] < 0) {
+                        left[y] = region.left + x;
+                    }
+                    right[y] = region.left + x;
+                }
+            }
+        }
+
+        int maxSpan = 0;
+        for (int y = 0; y < height; y++) {
+            if (left[y] >= 0) {
+                maxSpan = Math.max(maxSpan, right[y] - left[y]);
+            }
+        }
+        int threshold = Math.max(12, Math.round(maxSpan * 0.35f));
+        int bodyTopRow = -1;
+        int bodyBottomRow = -1;
+        for (int y = 0; y < height; y++) {
+            if (left[y] >= 0 && right[y] - left[y] >= threshold) {
+                if (bodyTopRow < 0) {
+                    bodyTopRow = y;
+                }
+                bodyBottomRow = y;
+            }
+        }
+        if (bodyTopRow < 0) {
+            return null;
+        }
+        int bodyLeft = Integer.MAX_VALUE;
+        int bodyRight = Integer.MIN_VALUE;
+        for (int y = bodyTopRow; y <= bodyBottomRow; y++) {
+            if (left[y] >= 0) {
+                bodyLeft = Math.min(bodyLeft, left[y]);
+                bodyRight = Math.max(bodyRight, right[y]);
+            }
+        }
+        Rect body = new Rect(bodyLeft, region.top + bodyTopRow,
+                bodyRight + 1, region.top + bodyBottomRow + 1);
+        if (body.width() < 24 || body.height() < 16
+                || body.width() < segment.box.width() * 0.7f
+                || (long) body.width() * body.height() < count * 0.30) {
+            return null;
+        }
+
+        segment.interiorTop = region.top;
+        segment.interiorLeft = left;
+        segment.interiorRight = right;
+        return body;
     }
 
     private static Rect growRegion(Bitmap original, Rect seed, Rect textBox, Background bg) {

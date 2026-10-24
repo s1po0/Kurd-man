@@ -26,6 +26,13 @@ public class Segment {
     /** True when the detected bubble is round/oval, so text must be fitted
      * to the ellipse inside the rectangle, not to the rectangle itself. */
     public boolean bubbleOval = false;
+    /** Per-row horizontal extent (absolute page X, -1 when empty) of the
+     * actual bubble interior inside {@link #eraseBox}, starting at
+     * {@link #interiorTop}. When present, text lines are fitted against
+     * this real outline so they can never cross the bubble border. */
+    public int interiorTop = -1;
+    public int[] interiorLeft = null;
+    public int[] interiorRight = null;
     public TextStyleSettings style = new TextStyleSettings();
     /** Set by a renderer when this segment was actually drawn on the page. */
     public boolean rendered;
@@ -83,6 +90,9 @@ public class Segment {
         copy.detectedInkColor = detectedInkColor;
         copy.autoBackgroundReliable = autoBackgroundReliable;
         copy.bubbleOval = bubbleOval;
+        copy.interiorTop = interiorTop;
+        copy.interiorLeft = interiorLeft == null ? null : interiorLeft.clone();
+        copy.interiorRight = interiorRight == null ? null : interiorRight.clone();
         copy.style = new TextStyleSettings(ensureStyle());
         copy.rendered = rendered;
         return copy;

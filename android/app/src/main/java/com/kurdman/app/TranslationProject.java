@@ -243,6 +243,12 @@ public class TranslationProject {
         json.put("detectedInkColor", segment.detectedInkColor);
         json.put("autoBackgroundReliable", segment.autoBackgroundReliable);
         json.put("bubbleOval", segment.bubbleOval);
+        if (segment.interiorLeft != null && segment.interiorRight != null
+                && segment.interiorLeft.length == segment.interiorRight.length) {
+            json.put("interiorTop", segment.interiorTop);
+            json.put("interiorLeft", intsToJson(segment.interiorLeft));
+            json.put("interiorRight", intsToJson(segment.interiorRight));
+        }
         json.put("style", segment.ensureStyle().toJson());
         return json;
     }
@@ -270,8 +276,37 @@ public class TranslationProject {
         segment.autoBackgroundReliable = json.optBoolean(
                 "autoBackgroundReliable", false);
         segment.bubbleOval = json.optBoolean("bubbleOval", false);
+        segment.interiorTop = json.optInt("interiorTop", -1);
+        segment.interiorLeft = intsFromJson(json.optJSONArray("interiorLeft"));
+        segment.interiorRight = intsFromJson(json.optJSONArray("interiorRight"));
+        if (segment.interiorLeft == null || segment.interiorRight == null
+                || segment.interiorLeft.length != segment.interiorRight.length
+                || segment.interiorTop < 0) {
+            segment.interiorLeft = null;
+            segment.interiorRight = null;
+            segment.interiorTop = -1;
+        }
         segment.style = TextStyleSettings.fromJson(json.optJSONObject("style"));
         return segment;
+    }
+
+    private static JSONArray intsToJson(int[] values) {
+        JSONArray array = new JSONArray();
+        for (int value : values) {
+            array.put(value);
+        }
+        return array;
+    }
+
+    private static int[] intsFromJson(JSONArray array) {
+        if (array == null || array.length() == 0) {
+            return null;
+        }
+        int[] values = new int[array.length()];
+        for (int i = 0; i < array.length(); i++) {
+            values[i] = array.optInt(i, -1);
+        }
+        return values;
     }
 
     private static JSONObject rectToJson(Rect rect) throws JSONException {

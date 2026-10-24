@@ -94,11 +94,19 @@ public final class StyledTextRenderer {
 
         TextPaint paint = createBasePaint(segment, resolver);
         float widthTolerance = Math.max(2f, width * 0.02f);
+        // The bubble's real outline (traced per row by the renderer) is the
+        // strongest constraint: it follows connected double balloons and
+        // tails that no rectangle or ellipse model matches. It only
+        // applies while the text box still sits over the detected bubble;
+        // a box the user dragged elsewhere in the editor is unconstrained.
+        boolean hasMask = segment.interiorLeft != null
+                && segment.interiorRight != null
+                && segment.getEraseBox().contains(rect.centerX(), rect.centerY());
         // A round bubble inside this rectangle has much less room near its
         // top and bottom. Narrow the layout step by step (recentring it via
         // the padding, like real scanlation typesetting) until every line
-        // stays inside the ellipse; only then fall back to a smaller font.
-        float[] widthFractions = segment.bubbleOval
+        // stays inside the bubble; only then fall back to a smaller font.
+        float[] widthFractions = (segment.bubbleOval || hasMask)
                 ? new float[]{1f, 0.92f, 0.84f, 0.76f, 0.68f, 0.60f}
                 : new float[]{1f};
         for (int size = startSize; size >= minSize; size--) {
@@ -112,10 +120,14 @@ public final class StyledTextRenderer {
                         segment.ckb.trim(), paint, layoutWidth, style);
                 fallbackLayout = layout;
                 fallbackPad = effectivePad;
+                boolean shapeOk = hasMask
+                        ? linesInsideInterior(segment, rect, layout,
+                                effectivePad, verticalPadding)
+                        : (!segment.bubbleOval || linesInsideEllipse(
+                                rect, layout, effectivePad, verticalPadding));
                 boolean fits = layout.getHeight() <= maxHeight
                         && maxLineWidth(layout) <= layoutWidth + widthTolerance
-                        && (!segment.bubbleOval || linesInsideEllipse(
-                                rect, layout, effectivePad, verticalPadding));
+                        && shapeOk;
                 if (fits) {
                     FitResult fit = new FitResult();
                     fit.layout = layout;
@@ -551,6 +563,49 @@ public final class StyledTextRenderer {
                     || !insideEllipse(right, lineCentreY - lineHalfHeight, cx, cy, rx, ry)
                     || !insideEllipse(right, lineCentreY + lineHalfHeight, cx, cy, rx, ry)) {
                 return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Checks every laid-out line against the traced bubble interior: at
+     * the top, middle and bottom of each line's glyph band, the line's
+     * left and right ends must stay between that row's interior edges
+     * (minus a small safety margin). Coordinates are absolute page
+     * coordinates, exactly as {@code drawText} will place the layout.
+     */
+    private static boolean linesInsideInterior(Segment segment, Rect rect,
+                                               StaticLayout layout,
+                                               int horizontalPadding,
+                                               int verticalPadding) {
+        int[] lefts = segment.interiorLeft;
+        int[] rights = segment.interiorRight;
+        if (lefts == null || rights == null || segment.interiorTop < 0) {
+            return true;
+        }
+        float safetyX = Math.max(3f, rect.width() * 0.015f);
+        int availableHeight = Math.max(0, rect.height() - verticalPadding * 2);
+        int yOffset = verticalPadding
+                + Math.max(0, (availableHeight - layout.getHeight()) / 2);
+        float originX = rect.left + horizontalPadding;
+        float originY = rect.top + yOffset;
+        for (int i = 0; i < layout.getLineCount(); i++) {
+            float lineHeight = layout.getLineBottom(i) - layout.getLineTop(i);
+            float topY = originY + layout.getLineTop(i) + lineHeight * 0.10f;
+            float bottomY = originY + layout.getLineBottom(i) - lineHeight * 0.10f;
+            float left = originX + layout.getLineLeft(i);
+            float right = originX + layout.getLineRight(i);
+            float[] rows = {topY, (topY + bottomY) / 2f, bottomY};
+            for (float yy : rows) {
+                int row = Math.round(yy) - segment.interiorTop;
+                if (row < 0 || row >= lefts.length || lefts[row] < 0) {
+                    return false;
+                }
+                if (left < lefts[row] + safetyX
+                        || right > rights[row] - safetyX) {
+                    return false;
+                }
             }
         }
         return true;
