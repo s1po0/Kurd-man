@@ -1,7 +1,10 @@
 package com.kurdman.app;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -10,9 +13,12 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.text.method.HideReturnsTransformationMethod;
+import android.text.method.PasswordTransformationMethod;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -38,6 +44,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity {
     private static final String PREFS_NAME = "kurdman_settings";
@@ -49,6 +57,9 @@ public class MainActivity extends AppCompatActivity {
     private EditText chatInput;
     private EditText messageInput;
     private Spinner sourceSpinner;
+    private Button pasteTokenButton;
+    private Button pasteChatButton;
+    private CheckBox showTokenCheck;
     private Button saveButton;
     private Button verifyButton;
     private Button sendTextButton;
@@ -74,6 +85,9 @@ public class MainActivity extends AppCompatActivity {
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         tokenInput = findViewById(R.id.tokenInput);
         chatInput = findViewById(R.id.chatInput);
+        pasteTokenButton = findViewById(R.id.pasteTokenButton);
+        pasteChatButton = findViewById(R.id.pasteChatButton);
+        showTokenCheck = findViewById(R.id.showTokenCheck);
         messageInput = findViewById(R.id.messageInput);
         sourceSpinner = findViewById(R.id.sourceSpinner);
         saveButton = findViewById(R.id.saveButton);
@@ -90,6 +104,7 @@ public class MainActivity extends AppCompatActivity {
         // The token stays in this app's private storage on this phone only.
         tokenInput.setText(prefs.getString("token", ""));
         chatInput.setText(prefs.getString("chat_id", ""));
+        tokenInput.setTransformationMethod(PasswordTransformationMethod.getInstance());
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 this,
@@ -109,6 +124,10 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
 
+        pasteTokenButton.setOnClickListener(v -> pasteTokenFromClipboard());
+        pasteChatButton.setOnClickListener(v -> pasteChatIdFromClipboard());
+        showTokenCheck.setOnCheckedChangeListener(
+                (buttonView, isChecked) -> setTokenVisible(isChecked));
         saveButton.setOnClickListener(v -> {
             saveSettings();
             setStatus("✅ تۆکن و Chat ID لەسەر ئەم مۆبایلە پاشەکەوت کرا.");
@@ -173,6 +192,65 @@ public class MainActivity extends AppCompatActivity {
                 setBusy(false);
             }
         });
+    }
+
+    private void setTokenVisible(boolean visible) {
+        int start = Math.max(0, tokenInput.getSelectionStart());
+        int end = Math.max(0, tokenInput.getSelectionEnd());
+        tokenInput.setTransformationMethod(visible
+                ? HideReturnsTransformationMethod.getInstance()
+                : PasswordTransformationMethod.getInstance());
+        int length = tokenInput.getText().length();
+        tokenInput.setSelection(Math.min(start, length), Math.min(end, length));
+    }
+
+    private void pasteTokenFromClipboard() {
+        String raw = clipboardText();
+        Matcher tokenMatcher = Pattern
+                .compile("\\b\\d{6,}:[-_A-Za-z0-9]{20,}\\b")
+                .matcher(raw);
+        String clean = tokenMatcher.find()
+                ? tokenMatcher.group()
+                : raw.replaceAll("\\s+", "");
+        if (clean.isEmpty()) {
+            setStatus("⚠ کلیپبۆردەکە بەتاڵە؛ سەرەتا تۆکنەکە لە @BotFather کۆپی بکە.");
+            return;
+        }
+        tokenInput.setText(clean);
+        tokenInput.setSelection(clean.length());
+        tokenInput.requestFocus();
+        if (isValidToken(clean)) {
+            setStatus("✅ تۆکنەکە لکێنرا. ئێستا «پاشەکەوتکردن» پاشان «پشکنینی بۆت» دابگرە.");
+        } else {
+            setStatus("⚠ ئەوەی لکێنرا وەک تۆکن ناچێت؛ تۆکنەکە بە ژمارە و «:» دەستپێدەکات.");
+        }
+    }
+
+    private void pasteChatIdFromClipboard() {
+        Matcher idMatcher = Pattern.compile("-?\\d{5,}").matcher(clipboardText());
+        String clean = idMatcher.find() ? idMatcher.group() : "";
+        if (clean.isEmpty() || clean.equals("-")) {
+            setStatus("⚠ کلیپبۆردەکە ژمارەیەکی تێدا نییە؛ سەرەتا IDـەکە لە @userinfobot کۆپی بکە.");
+            return;
+        }
+        chatInput.setText(clean);
+        chatInput.setSelection(clean.length());
+        chatInput.requestFocus();
+        setStatus("✅ Chat ID لکێنرا. ئێستا «پاشەکەوتکردن» پاشان «پشکنینی بۆت» دابگرە.");
+    }
+
+    private String clipboardText() {
+        ClipboardManager manager =
+                (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        if (manager == null || !manager.hasPrimaryClip()) {
+            return "";
+        }
+        ClipData clip = manager.getPrimaryClip();
+        if (clip == null || clip.getItemCount() == 0) {
+            return "";
+        }
+        CharSequence text = clip.getItemAt(0).coerceToText(this);
+        return text == null ? "" : text.toString();
     }
 
     private void sendTextMessage() {
@@ -517,11 +595,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String tokenValue() {
-        return tokenInput.getText().toString().trim();
+        // A bot token never contains whitespace; drop it so a token pasted
+        // across wrapped lines still works.
+        return tokenInput.getText().toString().replaceAll("\\s+", "");
     }
 
     private String chatValue() {
-        return chatInput.getText().toString().trim();
+        return chatInput.getText().toString().replaceAll("\\s+", "");
     }
 
     private boolean isValidToken(String token) {
@@ -608,6 +688,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateButtons(boolean busy) {
         boolean enabled = !busy;
+        pasteTokenButton.setEnabled(enabled);
+        pasteChatButton.setEnabled(enabled);
+        showTokenCheck.setEnabled(enabled);
         saveButton.setEnabled(enabled);
         verifyButton.setEnabled(enabled);
         sendTextButton.setEnabled(enabled);

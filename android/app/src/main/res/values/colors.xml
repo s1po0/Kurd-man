@@ -1,8 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="primary">#0B6E4F</color>
-    <color name="primary_dark">#06402D</color>
+    <color name="primary_dark">#063F2D</color>
+    <color name="primary_light">#E7F3EC</color>
+    <color name="primary_mid">#12815F</color>
     <color name="accent">#F2C94C</color>
+    <color name="page">#F3F6F4</color>
+    <color name="card">#FFFFFF</color>
+    <color name="input_bg">#F8FAF9</color>
+    <color name="border">#D8E2DC</color>
+    <color name="border_dark">#BFD2C7</color>
+    <color name="text_primary">#15241C</color>
+    <color name="text_secondary">#5E7066</color>
+    <color name="text_on_primary">#FFFFFF</color>
+    <color name="text_on_primary_muted">#DDF1E7</color>
+    <color name="disabled">#A9BAB1</color>
+    <color name="preview_bg">#EDF1EE</color>
     <color name="surface">#FFFFFF</color>
     <color name="ic_launcher_background">#0B6E4F</color>
 </resources>
