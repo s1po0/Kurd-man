@@ -16,8 +16,8 @@ android {
         applicationId 'com.kurdman.app'
         minSdk 26
         targetSdk 35
-        versionCode 18
-        versionName '1.7.3'
+        versionCode 19
+        versionName '1.7.4'
         ndk {
             // Most modern phones are arm64; this keeps the ML Kit APK small
             // enough to send through Telegram and GitHub artifacts easily.

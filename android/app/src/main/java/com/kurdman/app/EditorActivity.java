@@ -294,6 +294,11 @@ public class EditorActivity extends AppCompatActivity
         executor.execute(() -> {
             File source = page.sourceFile(project.projectDir);
             Bitmap decoded = source == null ? null : BitmapIo.decodeFile(source);
+            boolean upgraded = decoded != null
+                    && upgradeSegmentsForCleanErase(decoded, page.segments);
+            if (upgraded) {
+                runOnUiThread(this::scheduleAutosave);
+            }
             runOnUiThread(() -> {
                 if (generation != loadGeneration || isFinishing() || isDestroyed()) {
                     if (decoded != null) {
@@ -321,6 +326,35 @@ public class EditorActivity extends AppCompatActivity
                 updateNavigation();
             });
         });
+    }
+
+    /**
+     * Projects rendered by older versions carry the solid-fill background
+     * mode and no bubble-shape flag, which repainted a white rectangle
+     * sticking out of round balloons. Upgrade those auto-generated styles
+     * in place (deliberate custom colours are left alone) and re-detect
+     * oval bubbles so studio previews and exports match the new renderer.
+     */
+    private boolean upgradeSegmentsForCleanErase(Bitmap bitmap,
+                                                 java.util.List<Segment> segments) {
+        boolean changed = false;
+        if (bitmap == null || bitmap.isRecycled() || segments == null) {
+            return false;
+        }
+        for (Segment segment : segments) {
+            if (segment.ensureStyle().backgroundMode
+                    == TextStyleSettings.BG_AUTO) {
+                segment.ensureStyle().backgroundMode = TextStyleSettings.BG_CLEAN;
+                changed = true;
+            }
+            if (!segment.bubbleOval && ManhwaRenderer.looksOval(
+                    bitmap, segment.getEraseBox(),
+                    segment.detectedBackgroundColor)) {
+                segment.bubbleOval = true;
+                changed = true;
+            }
+        }
+        return changed;
     }
 
     private TranslationProject.Page currentPage() {

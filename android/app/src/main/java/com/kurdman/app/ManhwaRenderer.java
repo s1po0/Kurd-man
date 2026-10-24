@@ -413,10 +413,13 @@ public class ManhwaRenderer {
      * Decides whether the grown rectangle wraps a round/oval bubble. On an
      * oval bubble the rectangle's corners stick out into the artwork, so
      * they do not match the bubble fill colour; on a rectangular narration
-     * box they do. The result lets the typesetter fit text to the ellipse
-     * instead of the rectangle, so no line can cross the bubble border.
+     * box they do. When the bubble sits on a plain white page the corners
+     * match too, so a second test casts rays down from the top edge: on an
+     * oval the border is met near the centre long before the sides. The
+     * result lets the typesetter fit text to the ellipse instead of the
+     * rectangle, so no line can cross the bubble border.
      */
-    private static boolean looksOval(Bitmap original, Rect region, int bgColor) {
+    static boolean looksOval(Bitmap original, Rect region, int bgColor) {
         if (region.width() < 24 || region.height() < 24) {
             return false;
         }
@@ -449,7 +452,30 @@ public class ManhwaRenderer {
                 outsideCorners++;
             }
         }
-        return outsideCorners >= 2;
+        if (outsideCorners >= 2) {
+            return true;
+        }
+        float hitCentre = borderRay(original, region, bgColor, 0.50f);
+        float hitLeft = borderRay(original, region, bgColor, 0.12f);
+        float hitRight = borderRay(original, region, bgColor, 0.88f);
+        return hitCentre <= 0.15f
+                && hitLeft - hitCentre > 0.12f
+                && hitRight - hitCentre > 0.12f;
+    }
+
+    /** Fraction of the region height at which a downward ray first hits a
+     * strongly contrasting pixel (the border), or 1 when none is found. */
+    private static float borderRay(Bitmap original, Rect region, int bgColor, float fx) {
+        int x = clampInt(region.left + Math.round(region.width() * fx),
+                0, original.getWidth() - 1);
+        int limit = Math.min(original.getHeight(),
+                region.top + region.height() / 2);
+        for (int y = Math.max(0, region.top); y < limit; y++) {
+            if (colorDistanceSum(original.getPixel(x, y), bgColor) > 300) {
+                return (y - region.top) / (float) region.height();
+            }
+        }
+        return 1f;
     }
 
     private static Rect growRegion(Bitmap original, Rect seed, Rect textBox, Background bg) {
