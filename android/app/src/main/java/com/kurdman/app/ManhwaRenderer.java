@@ -338,7 +338,7 @@ public class ManhwaRenderer {
         if (gap < -Math.round(minLh * 0.35f)) {
             return false; // overlapping rows: side-by-side blocks
         }
-        if (gap > Math.round(minLh * 2.2f)) {
+        if (gap > Math.round(maxLh * 2.6f)) {
             return false;
         }
         int minW = Math.min(upper.box.width(), lower.box.width());
@@ -359,7 +359,7 @@ public class ManhwaRenderer {
         if (unionW > maxW * 1.75f) {
             return false;
         }
-        if (gap <= Math.round(minLh * 1.05f)) {
+        if (gap <= Math.round(maxLh * 1.15f)) {
             return true;
         }
         // Wider gaps (a heading separated from its body, a blank line)
@@ -374,8 +374,15 @@ public class ManhwaRenderer {
                                                    Segment lower) {
         try {
             DominantColor bg = estimateDominantColor(original, upper.box);
-            if (bg == null || bg.fraction < 0.30) {
+            DominantColor bgLower = estimateDominantColor(original, lower.box);
+            boolean upperKnown = bg != null && bg.fraction >= 0.30;
+            boolean lowerKnown = bgLower != null && bgLower.fraction >= 0.30;
+            if (!upperKnown && !lowerKnown) {
                 return false;
+            }
+            if (upperKnown && lowerKnown
+                    && colorDistanceSum(bg.color, bgLower.color) > 190) {
+                return false; // different interiors: not one bubble/box
             }
             int left = Math.max(upper.box.left, lower.box.left);
             int right = Math.min(upper.box.right, lower.box.right);
@@ -392,7 +399,11 @@ public class ManhwaRenderer {
                     || strip.width() < 8 || strip.height() < 2) {
                 return false;
             }
-            return fractionSimilar(original, strip, bg.color) >= 0.80;
+            boolean upperMatch = upperKnown
+                    && fractionSimilar(original, strip, bg.color) >= 0.72;
+            boolean lowerMatch = lowerKnown
+                    && fractionSimilar(original, strip, bgLower.color) >= 0.72;
+            return upperMatch || lowerMatch;
         } catch (RuntimeException unreadable) {
             return false;
         }
@@ -502,7 +513,14 @@ public class ManhwaRenderer {
 
             StyledTextRenderer.FitResult fit = StyledTextRenderer.createFit(
                     segment, resolver, false);
+            if (fit == null && !segment.outsideText
+                    && prepareOutsideText(original, segment)) {
+                // The bubble assumptions failed for this block; it may
+                // be lettering over artwork after all.
+                fit = StyledTextRenderer.createFit(segment, resolver, false);
+            }
             if (fit == null) {
+                segment.outsideText = false;
                 segment.ensureStyle().visible = false;
                 skippedFit++;
                 continue;

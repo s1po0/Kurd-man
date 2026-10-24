@@ -200,6 +200,7 @@ final class CleanEraser {
         int padX = Math.max(8, Math.round(box.width() * 0.14f));
         int padY = Math.max(10, Math.round(box.height() * 0.38f));
         Rect rect = expanded(box, padX, padY, source);
+        long initialArea = (long) rect.width() * rect.height();
         OutsideAnalysis analysis = null;
         for (int iteration = 0; iteration < 4; iteration++) {
             int[] pixels = readPixels(source, rect);
@@ -212,7 +213,8 @@ final class CleanEraser {
                 return null;
             }
             Rect grown = grownRect(rect, analysis.touchSides, box, source);
-            if (grown.equals(rect)) {
+            if (grown.equals(rect)
+                    || (long) grown.width() * grown.height() > initialArea * 4) {
                 break;
             }
             rect = grown;
@@ -237,26 +239,41 @@ final class CleanEraser {
         Rect extent = new Rect(analysis.keepBounds);
         extent.offset(rect.left, rect.top);
         extent.inset(-margin, -margin);
-        if (!extent.intersect(rect)) {
+        // Artwork that happens to be accepted as "ink" far from the OCR
+        // box (hair spikes below the lettering) must not stretch the
+        // extent: cap it to a generous dilation of the OCR box itself.
+        Rect cap = expanded(box,
+                Math.max(30, Math.round(box.width() * 0.30f)),
+                Math.max(36, Math.round(box.height() * 0.60f)), source);
+        if (!extent.intersect(cap) || !extent.intersect(rect)) {
             return null;
         }
-        int ghost = 0;
-        int localLeft = extent.left - rect.left;
-        int localTop = extent.top - rect.top;
-        int localRight = extent.right - rect.left;
-        int localBottom = extent.bottom - rect.top;
-        for (int y = localTop; y < localBottom; y++) {
-            int base = y * rect.width();
-            for (int x = localLeft; x < localRight; x++) {
-                if (analysis.otherCore[base + x]) {
-                    ghost++;
-                }
-            }
-        }
-        if (ghost > analysis.kept * 0.30) {
+        Rect extentLocal = new Rect(extent);
+        extentLocal.offset(-rect.left, -rect.top);
+        if (ghostInkInside(analysis, extentLocal) > analysis.kept * 0.30) {
             return null;
         }
         return extent;
+    }
+
+    /**
+     * Ink that would survive an erase inside {@code area}: only
+     * rejected components lying fully inside it count (a word the
+     * analysis refused). Artwork entering from outside — hair spikes,
+     * a balloon tail — has a bounding box reaching beyond the area
+     * and is supposed to remain; counting its pixels made the guard
+     * refuse perfectly erasable SFX next to white hair.
+     */
+    private static int ghostInkInside(OutsideAnalysis analysis, Rect area) {
+        int ghost = 0;
+        for (int[] other : analysis.otherBoxes) {
+            if (other[0] >= area.left - 2 && other[1] >= area.top - 2
+                    && other[2] <= area.right + 2
+                    && other[3] <= area.bottom + 2) {
+                ghost += other[4];
+            }
+        }
+        return ghost;
     }
 
     /**
@@ -297,13 +314,12 @@ final class CleanEraser {
                 || analysis.kept < n * 0.004 || analysis.kept > n * 0.50) {
             return null;
         }
-        int other = 0;
-        for (boolean core : analysis.otherCore) {
-            if (core) {
-                other++;
-            }
-        }
-        if (other > analysis.kept * 0.30) {
+        // The extent was already ghost-checked on a larger rectangle;
+        // here only a catastrophic mismatch (most ink unerased, fully
+        // inside the patch) refuses. Artwork touching the patch edges
+        // is expected and stays.
+        Rect inner = new Rect(3, 3, width - 3, height - 3);
+        if (ghostInkInside(analysis, inner) > analysis.kept * 0.60) {
             return null;
         }
 
@@ -364,8 +380,11 @@ final class CleanEraser {
         boolean[] otherCore;
         int kept;
         Rect keepBounds;
-        /** Bit flags: 1 top, 2 bottom, 4 left, 8 right (ink within 5px). */
+        /** Bit flags: 1 top, 2 bottom, 4 left, 8 right — an accepted
+         * component is actually cut at that side of the patch. */
         int touchSides;
+        /** Per rejected component: minX, minY, maxX+1, maxY+1, area. */
+        final List<int[]> otherBoxes = new ArrayList<>();
     }
 
     private static OutsideAnalysis analyzeOutside(int[] pixels, int width,
@@ -426,6 +445,23 @@ final class CleanEraser {
             boolean anchored = anchorLocal == null || Rect.intersects(
                     anchorLocal, new Rect(st[1], st[2], st[3] + 1, st[4] + 1));
             accepted[id] = !reject && anchored;
+            if (accepted[id]) {
+                if (runTop[id] > 0) {
+                    result.touchSides |= 1;
+                }
+                if (runBottom[id] > 0) {
+                    result.touchSides |= 2;
+                }
+                if (runLeft[id] > 0) {
+                    result.touchSides |= 4;
+                }
+                if (runRight[id] > 0) {
+                    result.touchSides |= 8;
+                }
+            } else {
+                result.otherBoxes.add(new int[]{
+                        st[1], st[2], st[3] + 1, st[4] + 1, area});
+            }
         }
 
         int minX = Integer.MAX_VALUE;
@@ -446,10 +482,6 @@ final class CleanEraser {
                 if (y < minY) minY = y;
                 if (x > maxX) maxX = x;
                 if (y > maxY) maxY = y;
-                if (y < 5) result.touchSides |= 1;
-                if (y >= height - 5) result.touchSides |= 2;
-                if (x < 5) result.touchSides |= 4;
-                if (x >= width - 5) result.touchSides |= 8;
             } else {
                 result.otherCore[i] = true;
             }
