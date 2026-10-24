@@ -131,7 +131,7 @@
                         android:paddingTop="6dp"
                         android:paddingEnd="11dp"
                         android:paddingBottom="6dp"
-                        android:text="v1.8.0  •  OCRی تەواوی بلۆک + Unlimited-OCR"
+                        android:text="v1.8.1  •  چەند وێنە پێکەوە + ڕاپۆرتی کێشەکان"
                         android:textColor="@color/white"
                         android:textSize="12sp"
                         android:textStyle="bold" />
@@ -452,7 +452,7 @@
                     android:lineSpacingMultiplier="1.2"
                     android:minHeight="76dp"
                     android:stateListAnimator="@null"
-                    android:text="+  هەڵبژاردنی وێنە یان CBZ&#10;JPG • PNG • WEBP • CBZ"
+                    android:text="+  هەڵبژاردنی وێنەکان یان CBZ&#10;دەتوانیت چەند وێنەیەک پێکەوە هەڵبژێریت"
                     android:textAllCaps="false"
                     android:textColor="#5EEAD4"
                     android:textDirection="firstStrongRtl"
@@ -478,7 +478,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:gravity="center"
-                    android:text="CBZ بە خۆکاری دەکرێتەوە، هەموو لاپەڕەکان وەردەگێڕدرێن و دووبارە کۆدەکرێنەوە. لە دۆخی ئۆفلایندا تەنها ناردن بۆ تلگرام پێویستی بە ئینتەرنێتە."
+                    android:text="بۆ چەند وێنە، لە هەڵبژێرەکەدا دەست لەسەر یەکەم وێنە ڕابگرە و ئەوانی تریش هەڵبژێرە؛ بەپێی ژمارەی ناوەکانیان ڕیز دەکرێن، هەر وێنەیەک جیاواز و CBZێکی هاوبەشیش پاشەکەوت دەکرێت. CBZ دەبێت بە تەنیا هەڵبژێردرێت."
                     android:textColor="@color/text_muted"
                     android:textDirection="firstStrongRtl"
                     android:textSize="12sp" />
@@ -1948,6 +1948,227 @@
                 android:textSize="10sp"
                 android:textStyle="bold" />            </LinearLayout>
 
+            <LinearLayout
+                android:id="@+id/pageReports"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:fontFamily="sans-serif-black"
+                    android:text="📋 ڕاپۆرتی کێشەکان"
+                    android:textColor="@color/text_primary"
+                    android:textDirection="firstStrongRtl"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:lineSpacingMultiplier="1.25"
+                    android:text="هەر هەڵەیەک لە خوێندنەوە، وەرگێڕان، دابەزاندن یان ناردندا لێرە بە کات و هۆکار و شوێنی تەکنیکییەوە تۆمار دەکرێت؛ تەنانەت دوای داخستنی ئەپەکەش دەمێنێتەوە."
+                    android:textColor="@color/text_secondary"
+                    android:textDirection="firstStrongRtl"
+                    android:textSize="13sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_card"
+                    android:elevation="5dp"
+                    android:orientation="vertical"
+                    android:paddingStart="18dp"
+                    android:paddingTop="19dp"
+                    android:paddingEnd="18dp"
+                    android:paddingBottom="19dp">
+
+                    <TextView
+                        android:id="@+id/reportSummaryText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_feature_tile"
+                        android:lineSpacingMultiplier="1.3"
+                        android:paddingStart="14dp"
+                        android:paddingTop="13dp"
+                        android:paddingEnd="14dp"
+                        android:paddingBottom="13dp"
+                        android:text="✅ هیچ هەڵەیەک هێشتا تۆمار نەکراوە."
+                        android:textColor="@color/text_primary"
+                        android:textDirection="firstStrongRtl"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:text="تێبینیی خۆت زیاد بکە"
+                        android:textColor="@color/text_primary"
+                        android:textDirection="firstStrongRtl"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <EditText
+                        android:id="@+id/reportNoteInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="9dp"
+                        android:background="@drawable/bg_input"
+                        android:gravity="top|start"
+                        android:hint="بۆ نموونە: لە کام وێنە/لاپەڕە و لە کام گامدا کێشەکە ڕوویدا؟"
+                        android:inputType="textMultiLine"
+                        android:minHeight="76dp"
+                        android:minLines="2"
+                        android:paddingStart="14dp"
+                        android:paddingTop="12dp"
+                        android:paddingEnd="14dp"
+                        android:paddingBottom="12dp"
+                        android:textColor="@color/text_primary"
+                        android:textColorHint="@color/text_muted"
+                        android:textDirection="firstStrongRtl"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/addReportNoteButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_button_secondary"
+                        android:minHeight="52dp"
+                        android:stateListAnimator="@null"
+                        android:text="✚  زیادکردنی تێبینی بۆ ڕاپۆرت"
+                        android:textAllCaps="false"
+                        android:textColor="#5EEAD4"
+                        android:textDirection="firstStrongRtl"
+                        android:textSize="14sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/copyReportButton"
+                            android:layout_width="0dp"
+                            android:layout_height="54dp"
+                            android:layout_marginEnd="7dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_button_primary"
+                            android:fontFamily="sans-serif-black"
+                            android:minHeight="54dp"
+                            android:minWidth="0dp"
+                            android:stateListAnimator="@null"
+                            android:text="📋  کۆپی ڕاپۆرت"
+                            android:textAllCaps="false"
+                            android:textColor="@color/white"
+                            android:textDirection="firstStrongRtl"
+                            android:textSize="14sp" />
+
+                        <Button
+                            android:id="@+id/shareReportButton"
+                            android:layout_width="0dp"
+                            android:layout_height="54dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_button_telegram"
+                            android:fontFamily="sans-serif-black"
+                            android:minHeight="54dp"
+                            android:minWidth="0dp"
+                            android:stateListAnimator="@null"
+                            android:text="↗  هاوبەشکردن"
+                            android:textAllCaps="false"
+                            android:textColor="@color/white"
+                            android:textDirection="firstStrongRtl"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="9dp"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/refreshReportButton"
+                            android:layout_width="0dp"
+                            android:layout_height="50dp"
+                            android:layout_marginEnd="7dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_button_secondary"
+                            android:minHeight="50dp"
+                            android:minWidth="0dp"
+                            android:stateListAnimator="@null"
+                            android:text="↻  نوێکردنەوە"
+                            android:textAllCaps="false"
+                            android:textColor="#5EEAD4"
+                            android:textDirection="firstStrongRtl"
+                            android:textSize="13sp" />
+
+                        <Button
+                            android:id="@+id/clearReportButton"
+                            android:layout_width="0dp"
+                            android:layout_height="50dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_button_secondary"
+                            android:minHeight="50dp"
+                            android:minWidth="0dp"
+                            android:stateListAnimator="@null"
+                            android:text="🗑  پاککردنەوە"
+                            android:textAllCaps="false"
+                            android:textColor="#FCA5A5"
+                            android:textDirection="firstStrongRtl"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:text="وردەکاریی تەکنیکی"
+                        android:textColor="@color/text_primary"
+                        android:textDirection="firstStrongRtl"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/reportText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="9dp"
+                        android:background="@drawable/bg_input"
+                        android:fontFamily="monospace"
+                        android:gravity="start"
+                        android:layoutDirection="ltr"
+                        android:lineSpacingMultiplier="1.15"
+                        android:paddingStart="12dp"
+                        android:paddingTop="12dp"
+                        android:paddingEnd="12dp"
+                        android:paddingBottom="12dp"
+                        android:text="هیچ ڕاپۆرتێک نییە."
+                        android:textColor="@color/text_secondary"
+                        android:textDirection="ltr"
+                        android:textIsSelectable="true"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:gravity="center"
+                        android:lineSpacingMultiplier="1.25"
+                        android:text="تۆکنی تێلێگرام، Chat ID و کلیلەکانی API بە ئەنقەست ناخرێنە ناو ڕاپۆرتەکەوە."
+                        android:textColor="@color/text_muted"
+                        android:textDirection="firstStrongRtl"
+                        android:textSize="11sp" />
+                </LinearLayout>
+            </LinearLayout>
+
         </LinearLayout>
     </ScrollView>
 
@@ -2017,6 +2238,7 @@
             android:id="@+id/navSettingsButton"
             android:layout_width="0dp"
             android:layout_height="match_parent"
+            android:layout_marginEnd="5dp"
             android:layout_weight="1"
             android:background="@drawable/bg_button_secondary"
             android:lineSpacingMultiplier="1.05"
@@ -2024,10 +2246,26 @@
             android:minWidth="0dp"
             android:padding="2dp"
             android:stateListAnimator="@null"
-            android:text="⚙&#10;ڕێکخستنەکان"
+            android:text="⚙&#10;ڕێکخستن"
             android:textAllCaps="false"
             android:textColor="@color/text_primary"
-            android:textSize="12sp" />
+            android:textSize="11sp" />
+
+        <Button
+            android:id="@+id/navReportsButton"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/bg_button_secondary"
+            android:lineSpacingMultiplier="1.05"
+            android:minHeight="48dp"
+            android:minWidth="0dp"
+            android:padding="2dp"
+            android:stateListAnimator="@null"
+            android:text="📋&#10;ڕاپۆرت"
+            android:textAllCaps="false"
+            android:textColor="@color/text_primary"
+            android:textSize="11sp" />
 
     </LinearLayout>
 </LinearLayout>

@@ -2218,11 +2218,18 @@ public class ManhwaRenderer {
         boolean linesChanged = false;
 
         if (!existing.lines.isEmpty() && !challenger.lines.isEmpty()) {
-            boolean[] used = new boolean[existing.lines.size()];
+            // Match only against the lines that existed when this merge
+            // started. Complementary lines are collected separately and
+            // appended after matching: growing existing.lines here made
+            // the next inner-loop iteration read used[initialSize]
+            // (ArrayIndexOutOfBoundsException "length=4; index=4").
+            int initialLineCount = existing.lines.size();
+            boolean[] used = new boolean[initialLineCount];
+            List<OcrLineData> appendedLines = new ArrayList<>();
             for (OcrLineData challengerLine : challenger.lines) {
                 int bestIndex = -1;
                 float bestIou = 0f;
-                for (int i = 0; i < existing.lines.size(); i++) {
+                for (int i = 0; i < initialLineCount; i++) {
                     if (used[i]) {
                         continue;
                     }
@@ -2235,14 +2242,13 @@ public class ManhwaRenderer {
                 if (bestIndex < 0 || bestIou < 0.16f) {
                     // A complementary line the selected reading missed
                     // (the crop re-read saw one more line of the
-                    // bubble). Append it when it sits in a free
-                    // vertical band with new text; dropping it while
-                    // still unioning the boxes below used to inflate
-                    // the box without its text, corrupting the pitch
-                    // estimate and the grouping decisions.
-                    if (isNewLineBand(existing, challengerLine)) {
-                        existing.lines.add(challengerLine.copy());
-                        linesChanged = true;
+                    // bubble). Keep it when it sits in a free vertical
+                    // band with new text; dropping it while still
+                    // unioning the boxes below used to inflate the box
+                    // without its text, corrupting the pitch estimate
+                    // and the grouping decisions.
+                    if (isNewLineBand(existing, appendedLines, challengerLine)) {
+                        appendedLines.add(challengerLine.copy());
                     }
                     continue;
                 }
@@ -2262,6 +2268,10 @@ public class ManhwaRenderer {
                             existingLine.confidence, challengerLine.confidence);
                     linesChanged = true;
                 }
+            }
+            if (!appendedLines.isEmpty()) {
+                existing.lines.addAll(appendedLines);
+                linesChanged = true;
             }
         }
 
@@ -2296,29 +2306,43 @@ public class ManhwaRenderer {
     }
 
     private static boolean isNewLineBand(OcrCandidate existing,
+                                         List<OcrLineData> pendingLines,
                                          OcrLineData line) {
         String newText = comparisonText(line.text);
         if (newText.isEmpty() || line.box == null
                 || line.box.height() <= 4) {
             return false;
         }
+        return !lineConflictsWith(existing.lines, line, newText)
+                && !lineConflictsWith(pendingLines, line, newText);
+    }
+
+    private static boolean lineConflictsWith(List<OcrLineData> lines,
+                                             OcrLineData line,
+                                             String newText) {
+        if (lines == null) {
+            return false;
+        }
         float centreY = line.box.exactCenterY();
-        for (OcrLineData other : existing.lines) {
+        for (OcrLineData other : lines) {
+            if (other == null || other.box == null) {
+                continue;
+            }
             String otherText = comparisonText(other.text);
             if (!otherText.isEmpty()
                     && (otherText.contains(newText)
                             || newText.contains(otherText))) {
-                return false;
+                return true;
             }
             float slack = Math.max(3f, other.box.height() * 0.25f);
             if (centreY >= other.box.top - slack
                     && centreY <= other.box.bottom + slack) {
                 // Same row band: a different segmentation of a line
                 // we already have, not an additional line.
-                return false;
+                return true;
             }
         }
-        return true;
+        return false;
     }
 
     private static String comparisonText(String text) {

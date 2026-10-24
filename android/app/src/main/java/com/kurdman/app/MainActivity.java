@@ -27,6 +27,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Parcelable;
 import android.os.PowerManager;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
@@ -122,6 +123,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int PAGE_STYLE = 1;
     private static final int PAGE_RESULTS = 2;
     private static final int PAGE_SETTINGS = 3;
+    private static final int PAGE_REPORTS = 4;
 
     // Process-wide so a recreated activity cannot accidentally terminate a
     // job that the keep-alive foreground service is protecting.
@@ -198,10 +200,20 @@ public class MainActivity extends AppCompatActivity {
     private View pageStyle;
     private View pageResults;
     private View pageSettings;
+    private View pageReports;
     private Button navTranslateButton;
     private Button navStyleButton;
     private Button navResultsButton;
     private Button navSettingsButton;
+    private Button navReportsButton;
+    private TextView reportSummaryText;
+    private TextView reportText;
+    private EditText reportNoteInput;
+    private Button addReportNoteButton;
+    private Button copyReportButton;
+    private Button shareReportButton;
+    private Button refreshReportButton;
+    private Button clearReportButton;
     private Button openStudioFromStyleButton;
     private int currentMainPage = PAGE_TRANSLATE;
 
@@ -218,6 +230,11 @@ public class MainActivity extends AppCompatActivity {
     private File selectedCbzFile;
     private String selectedName = "";
     private int selectedCbzPages = 0;
+    /** Files/names for a multi-image selection, naturally page-sorted. */
+    private final List<File> selectedBatchFiles = new ArrayList<>();
+    private final List<String> selectedBatchNames = new ArrayList<>();
+    private String selectedBatchLabel = "";
+    private String selectedBatchBase = "";
 
     private static class ExtractedPage {
         final String entryName;
@@ -226,6 +243,20 @@ public class MainActivity extends AppCompatActivity {
         ExtractedPage(String entryName, File file) {
             this.entryName = entryName;
             this.file = file;
+        }
+    }
+
+    private static class PickedInput {
+        final Uri uri;
+        final String displayName;
+        final String mimeType;
+        final boolean cbz;
+
+        PickedInput(Uri uri, String displayName, String mimeType, boolean cbz) {
+            this.uri = uri;
+            this.displayName = displayName;
+            this.mimeType = mimeType;
+            this.cbz = cbz;
         }
     }
 
@@ -297,10 +328,20 @@ public class MainActivity extends AppCompatActivity {
         pageStyle = findViewById(R.id.pageStyle);
         pageResults = findViewById(R.id.pageResults);
         pageSettings = findViewById(R.id.pageSettings);
+        pageReports = findViewById(R.id.pageReports);
         navTranslateButton = findViewById(R.id.navTranslateButton);
         navStyleButton = findViewById(R.id.navStyleButton);
         navResultsButton = findViewById(R.id.navResultsButton);
         navSettingsButton = findViewById(R.id.navSettingsButton);
+        navReportsButton = findViewById(R.id.navReportsButton);
+        reportSummaryText = findViewById(R.id.reportSummaryText);
+        reportText = findViewById(R.id.reportText);
+        reportNoteInput = findViewById(R.id.reportNoteInput);
+        addReportNoteButton = findViewById(R.id.addReportNoteButton);
+        copyReportButton = findViewById(R.id.copyReportButton);
+        shareReportButton = findViewById(R.id.shareReportButton);
+        refreshReportButton = findViewById(R.id.refreshReportButton);
+        clearReportButton = findViewById(R.id.clearReportButton);
         openStudioFromStyleButton = findViewById(R.id.openStudioFromStyleButton);
 
         // The token stays in this app's private storage on this phone only.
@@ -359,12 +400,12 @@ public class MainActivity extends AppCompatActivity {
                 });
 
         pickLauncher = registerForActivityResult(
-                new ActivityResultContracts.OpenDocument(),
-                new ActivityResultCallback<Uri>() {
+                new ActivityResultContracts.OpenMultipleDocuments(),
+                new ActivityResultCallback<List<Uri>>() {
                     @Override
-                    public void onActivityResult(Uri uri) {
-                        if (uri != null) {
-                            loadPickedFile(uri);
+                    public void onActivityResult(List<Uri> uris) {
+                        if (uris != null && !uris.isEmpty()) {
+                            loadPickedFiles(uris);
                         }
                     }
                 });
@@ -505,6 +546,21 @@ public class MainActivity extends AppCompatActivity {
         sendResultButton.setOnClickListener(v -> sendResultToTelegram());
         refreshDownloadsButton.setOnClickListener(v -> refreshDownloadsList());
         openDownloadsButton.setOnClickListener(v -> openSystemDownloads());
+        if (addReportNoteButton != null) {
+            addReportNoteButton.setOnClickListener(v -> addReportNote());
+        }
+        if (copyReportButton != null) {
+            copyReportButton.setOnClickListener(v -> copyReportToClipboard());
+        }
+        if (shareReportButton != null) {
+            shareReportButton.setOnClickListener(v -> shareReport());
+        }
+        if (refreshReportButton != null) {
+            refreshReportButton.setOnClickListener(v -> refreshReportUi());
+        }
+        if (clearReportButton != null) {
+            clearReportButton.setOnClickListener(v -> confirmClearReport());
+        }
 
         refreshOfflineModelUi();
         refreshPaddleOcrUi();
@@ -516,6 +572,10 @@ public class MainActivity extends AppCompatActivity {
         }
         updateButtons(currentBusy);
         refreshDownloadsList();
+        refreshReportUi();
+        if (savedInstanceState == null) {
+            handleIncomingShareIntent(getIntent());
+        }
     }
 
     @Override
@@ -546,6 +606,84 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIncomingShareIntent(intent);
+    }
+
+    /**
+     * Accept one or many images (or one CBZ) shared from Gallery,
+     * Files, Telegram and other apps. The extras are consumed
+     * immediately so activity recreation cannot load the same share
+     * twice. While another job runs, the share is reported and the
+     * user is asked to send it again after stopping/finishing; silently
+     * queueing it behind the protected executor could replace the
+     * current selection at a surprising time.
+     */
+    private void handleIncomingShareIntent(Intent intent) {
+        if (intent == null || intent.getAction() == null) {
+            return;
+        }
+        String action = intent.getAction();
+        boolean single = Intent.ACTION_SEND.equals(action);
+        boolean multiple = Intent.ACTION_SEND_MULTIPLE.equals(action);
+        if (!single && !multiple) {
+            return;
+        }
+
+        List<Uri> uris = new ArrayList<>();
+        if (multiple) {
+            ArrayList<Uri> shared =
+                    intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+            if (shared != null) {
+                for (Uri uri : shared) {
+                    if (uri != null) {
+                        uris.add(uri);
+                    }
+                }
+            }
+        } else {
+            Parcelable shared = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+            if (shared instanceof Uri) {
+                uris.add((Uri) shared);
+            }
+        }
+        if (uris.isEmpty() && intent.getClipData() != null) {
+            ClipData clip = intent.getClipData();
+            for (int i = 0; i < clip.getItemCount(); i++) {
+                Uri uri = clip.getItemAt(i).getUri();
+                if (uri != null && !uris.contains(uri)) {
+                    uris.add(uri);
+                }
+            }
+        }
+
+        intent.removeExtra(Intent.EXTRA_STREAM);
+        intent.setClipData(null);
+        intent.setAction(Intent.ACTION_MAIN);
+        if (uris.isEmpty()) {
+            DiagnosticLog.warning(getApplicationContext(), "share-intent",
+                    "Share intent had no readable stream URI; action=" + action
+                            + ", type=" + intent.getType());
+            setStatus("⚠ فایلە هاوبەشکراوەکە نەخوێنرایەوە؛ لە ناو KurdMan هەڵیبژێرە.");
+            return;
+        }
+        if (currentBusy || JobRuntime.isRunning()) {
+            DiagnosticLog.warning(getApplicationContext(), "share-intent",
+                    "Rejected shared selection while another job is running; count="
+                            + uris.size());
+            setStatus("⚠ کارێک لە ئێستادا بەڕێوەیە؛ کاتێک تەواو بوو یان STOPت داگرت، وێنەکان دووبارە بنێرە.");
+            return;
+        }
+        DiagnosticLog.info(getApplicationContext(), "share-intent",
+                "Accepted shared selection: count=" + uris.size()
+                        + ", action=" + action + ", type=" + intent.getType());
+        showMainPage(PAGE_TRANSLATE);
+        loadPickedFiles(uris);
+    }
+
     // ------------------------------------------------------------------
     // Main pages: one clear job per bottom-tab page
     // ------------------------------------------------------------------
@@ -555,6 +693,9 @@ public class MainActivity extends AppCompatActivity {
         navStyleButton.setOnClickListener(v -> showMainPage(PAGE_STYLE));
         navResultsButton.setOnClickListener(v -> showMainPage(PAGE_RESULTS));
         navSettingsButton.setOnClickListener(v -> showMainPage(PAGE_SETTINGS));
+        if (navReportsButton != null) {
+            navReportsButton.setOnClickListener(v -> showMainPage(PAGE_REPORTS));
+        }
         int savedPage = prefs == null
                 ? PAGE_TRANSLATE
                 : prefs.getInt(PREF_MAIN_PAGE, PAGE_TRANSLATE);
@@ -567,10 +708,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void showMainPage(int page, boolean save) {
         if (pageTranslate == null || pageStyle == null
-                || pageResults == null || pageSettings == null) {
+                || pageResults == null || pageSettings == null
+                || pageReports == null) {
             return;
         }
-        if (page < PAGE_TRANSLATE || page > PAGE_SETTINGS) {
+        if (page < PAGE_TRANSLATE || page > PAGE_REPORTS) {
             page = PAGE_TRANSLATE;
         }
         currentMainPage = page;
@@ -578,10 +720,12 @@ public class MainActivity extends AppCompatActivity {
         pageStyle.setVisibility(page == PAGE_STYLE ? View.VISIBLE : View.GONE);
         pageResults.setVisibility(page == PAGE_RESULTS ? View.VISIBLE : View.GONE);
         pageSettings.setVisibility(page == PAGE_SETTINGS ? View.VISIBLE : View.GONE);
+        pageReports.setVisibility(page == PAGE_REPORTS ? View.VISIBLE : View.GONE);
         updateMainNavButton(navTranslateButton, page == PAGE_TRANSLATE);
         updateMainNavButton(navStyleButton, page == PAGE_STYLE);
         updateMainNavButton(navResultsButton, page == PAGE_RESULTS);
         updateMainNavButton(navSettingsButton, page == PAGE_SETTINGS);
+        updateMainNavButton(navReportsButton, page == PAGE_REPORTS);
         if (save && prefs != null) {
             prefs.edit().putInt(PREF_MAIN_PAGE, page).apply();
         }
@@ -594,6 +738,8 @@ public class MainActivity extends AppCompatActivity {
             refreshOfflineModelUi();
             refreshPaddleOcrUi();
             refreshKeepAliveUi();
+        } else if (page == PAGE_REPORTS) {
+            refreshReportUi();
         }
     }
 
@@ -608,6 +754,120 @@ public class MainActivity extends AppCompatActivity {
                 : R.drawable.bg_button_secondary);
         button.setTextColor(ContextCompat.getColor(
                 this, selected ? R.color.white : R.color.text_primary));
+    }
+
+    // ------------------------------------------------------------------
+    // Diagnostic reports: what happened, in a form the user can send
+    // ------------------------------------------------------------------
+
+    private void refreshReportUi() {
+        if (reportText == null && reportSummaryText == null) {
+            return;
+        }
+        String report = DiagnosticLog.readReport(getApplicationContext());
+        if (reportText != null) {
+            reportText.setText(report);
+        }
+        if (reportSummaryText != null) {
+            reportSummaryText.setText(latestReportHeadline(report));
+        }
+    }
+
+    private String latestReportHeadline(String report) {
+        if (report == null || report.trim().isEmpty()
+                || report.contains("No diagnostic problem has been recorded yet")) {
+            return "✅ هیچ هەڵەیەک هێشتا تۆمار نەکراوە. ئەگەر کێشەیەک ڕووبدات، "
+                    + "هۆکار و کات و قۆناغەکەی لێرە دەردەکەوێت.";
+        }
+        String[] lines = report.split("\\n");
+        int errorCount = 0;
+        boolean hasWarning = false;
+        String latest = null;
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            boolean errorLine = line.contains("] ERROR /")
+                    || line.contains("UNCAUGHT_CRASH")
+                    || line.contains("STATUS_ERROR");
+            if (line.contains("] WARN /") || line.contains("STATUS_WARN")) {
+                hasWarning = true;
+            }
+            if (errorLine) {
+                if (line.contains("] ERROR /")) {
+                    errorCount++;
+                }
+                String detail = i + 1 < lines.length ? lines[i + 1].trim() : "";
+                latest = detail.isEmpty() ? line.trim() : detail;
+            }
+        }
+        if (latest != null) {
+            return "❌ دوایین هەڵە (" + errorCount + " هەڵە تۆمارکراوە):\n"
+                    + latest
+                    + "\n\nوردەکاریی تەکنیکی لە خوارەوەیە؛ «کۆپی ڕاپۆرت» دابگرە و بینێرە بۆ پشتیوانی.";
+        }
+        if (hasWarning) {
+            return "⚠ هەندێک ئاگادارکردنەوە تۆمارکراون، بەڵام هەڵەیەکی گەورە نییە. "
+                    + "وردەکاری لە خوارەوەیە.";
+        }
+        return "✅ هیچ هەڵە و ئاگادارکردنەوەیەک هێشتا تۆمار نەکراوە. ئەگەر "
+                + "کێشەیەک ڕووبدات، هۆکار و کات و قۆناغەکەی لێرە دەردەکەوێت.";
+    }
+
+    private void addReportNote() {
+        String note = reportNoteInput == null
+                ? "" : reportNoteInput.getText().toString().trim();
+        if (note.isEmpty()) {
+            setStatus("⚠ سەرەتا تێبینییەکت لەسەر کێشەکە بنووسە.");
+            return;
+        }
+        DiagnosticLog.note(getApplicationContext(), note);
+        reportNoteInput.setText("");
+        refreshReportUi();
+        setStatus("✅ تێبینییەکەت خرایە ناو ڕاپۆرتەکەوە.");
+    }
+
+    private void copyReportToClipboard() {
+        String report = reportText != null
+                && reportText.getText() != null
+                && reportText.getText().length() > 0
+                ? reportText.getText().toString()
+                : DiagnosticLog.readReport(getApplicationContext());
+        ClipboardManager manager =
+                (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        if (manager == null) {
+            setStatus("❌ کلیپبۆرد بەردەست نییە.");
+            return;
+        }
+        manager.setPrimaryClip(ClipData.newPlainText("KurdMan diagnostic report", report));
+        setStatus("✅ ڕاپۆرتەکە کۆپی کرا؛ دەتوانیت لێرە یان لە تێلێگرام بیلكێنیت.");
+    }
+
+    private void shareReport() {
+        String report = DiagnosticLog.readReport(getApplicationContext());
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("text/plain");
+        intent.putExtra(Intent.EXTRA_SUBJECT, "KurdMan diagnostic report");
+        intent.putExtra(Intent.EXTRA_TEXT, report);
+        try {
+            startActivity(Intent.createChooser(intent, "هاوبەشکردنی ڕاپۆرت"));
+        } catch (ActivityNotFoundException e) {
+            DiagnosticLog.error(getApplicationContext(), "report-share", e,
+                    "No activity can share text/plain");
+            setStatus("❌ هیچ ئەپێک نەدۆزرایەوە بۆ هاوبەشکردن؛ «کۆپی ڕاپۆرت» بەکاربهێنە.");
+        }
+    }
+
+    private void confirmClearReport() {
+        new AlertDialog.Builder(this)
+                .setTitle("پاککردنەوەی ڕاپۆرت؟")
+                .setMessage("هەموو مێژووی هەڵە و ئاگادارکردنەوەکان دەسڕدرێنەوە. "
+                        + "ئەگەر دەتەوێت ڕاپۆرتەکە بنێریت، سەرەتا کۆپی بکە.")
+                .setNegativeButton("هەڵوەشاندنەوە", null)
+                .setPositiveButton("پاککردنەوە", (dialog, which) -> {
+                    DiagnosticLog.clear(getApplicationContext());
+                    refreshReportUi();
+                    setStatus("✅ ڕاپۆرتەکە پاککرایەوە.");
+                })
+                .show();
     }
 
     // ------------------------------------------------------------------
@@ -1808,6 +2068,273 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void clearBatchSelection() {
+        selectedBatchFiles.clear();
+        selectedBatchNames.clear();
+        selectedBatchLabel = "";
+        selectedBatchBase = "";
+    }
+
+    private void loadPickedFiles(List<Uri> uris) {
+        if (uris == null || uris.isEmpty()) {
+            return;
+        }
+        if (uris.size() == 1) {
+            loadPickedFile(uris.get(0));
+            return;
+        }
+
+        List<PickedInput> picked = new ArrayList<>();
+        for (Uri uri : uris) {
+            if (uri == null) {
+                continue;
+            }
+            String displayName = queryDisplayName(uri);
+            String mimeType = getContentResolver().getType(uri);
+            picked.add(new PickedInput(uri, displayName, mimeType,
+                    isCbzSelection(displayName, mimeType)));
+        }
+        if (picked.isEmpty()) {
+            return;
+        }
+        for (PickedInput input : picked) {
+            if (input.cbz) {
+                String message = "بۆ چەند فایل پێکەوە تەنیا وێنەکان هەڵبژێرە؛ "
+                        + "CBZ دەبێت بە تەنیا هەڵبژێردرێت.";
+                DiagnosticLog.warning(getApplicationContext(), "file-picker",
+                        "Mixed multi-selection rejected: CBZ must be selected alone; count="
+                                + picked.size());
+                setStatus("⚠ " + message);
+                return;
+            }
+        }
+        Collections.sort(picked, new Comparator<PickedInput>() {
+            @Override
+            public int compare(PickedInput a, PickedInput b) {
+                return naturalFileNameCompare(a.displayName, b.displayName);
+            }
+        });
+        final int requestedCount = picked.size();
+        final int ignoredCount = Math.max(0, requestedCount - 300);
+        if (ignoredCount > 0) {
+            picked = new ArrayList<>(picked.subList(0, 300));
+        }
+        final List<PickedInput> finalPicked = picked;
+
+        setBusy(true);
+        setStatus("خوێندنەوەی " + finalPicked.size() + " وێنە…");
+        executor.execute(() -> {
+            JobRuntime.markThreadStarted();
+            try {
+                List<File> copiedFiles = new ArrayList<>();
+                List<String> copiedNames = new ArrayList<>();
+                List<String> skippedNames = new ArrayList<>();
+                Bitmap preview = null;
+                long totalBytes = 0L;
+                String batchStamp = timestamp() + "-" + System.nanoTime();
+
+                for (int i = 0; i < finalPicked.size(); i++) {
+                    throwIfJobStopped();
+                    PickedInput input = finalPicked.get(i);
+                    if (!isSupportedImageSelection(input)) {
+                        skippedNames.add(input.displayName);
+                        DiagnosticLog.warning(getApplicationContext(), "file-picker",
+                                "Skipped non-image in multi-selection: "
+                                        + input.displayName + " mime=" + input.mimeType);
+                        continue;
+                    }
+                    setStatus("خوێندنەوەی وێنەکان " + (i + 1) + "/"
+                            + finalPicked.size() + "…");
+                    File copied = new File(getCacheDir(),
+                            "selected-batch-" + batchStamp + "-"
+                                    + String.format(Locale.ROOT, "%04d", i + 1)
+                                    + extensionWithDot(input.displayName, ".jpg"));
+                    long bytes = copyUriToFile(
+                            input.uri, copied, 300L * 1024L * 1024L);
+                    totalBytes += bytes;
+                    if (totalBytes > 1024L * 1024L * 1024L) {
+                        throw new IOException(
+                                "Selected images are too large together (max 1 GB)");
+                    }
+                    if (preview == null) {
+                        preview = decodeBitmap(copied);
+                        if (preview == null) {
+                            skippedNames.add(input.displayName);
+                            DiagnosticLog.warning(getApplicationContext(),
+                                    "file-picker",
+                                    "Could not decode selected image: "
+                                            + input.displayName);
+                            continue;
+                        }
+                    }
+                    copiedFiles.add(copied);
+                    copiedNames.add(input.displayName);
+                }
+                if (copiedFiles.isEmpty()) {
+                    throw new IOException("No readable images were selected");
+                }
+
+                final Bitmap finalPreview = preview;
+                final String batchBase = batchBaseName(copiedNames);
+                final String batchLabel = batchBase + " — "
+                        + copiedFiles.size() + " وێنە";
+                StringBuilder summary = new StringBuilder();
+                summary.append("🖼 ").append(copiedFiles.size())
+                        .append(" وێنە هەڵبژێردراون و بە ڕیزبەندیی ژمارەیی ناوەکانیان ")
+                        .append("وەک لاپەڕەکانی یەک بەش وەردەگێڕدرێن.\n");
+                int shown = Math.min(12, copiedNames.size());
+                for (int i = 0; i < shown; i++) {
+                    summary.append(i + 1).append(". ")
+                            .append(copiedNames.get(i)).append('\n');
+                }
+                if (copiedNames.size() > shown) {
+                    summary.append("… و ").append(copiedNames.size() - shown)
+                            .append(" وێنەی تر\n");
+                }
+                if (!skippedNames.isEmpty()) {
+                    summary.append("⚠ ").append(skippedNames.size())
+                            .append(" فایل نەخوێنرانەوە/وێنە نەبوون.\n");
+                }
+                if (ignoredCount > 0) {
+                    summary.append("⚠ تەنیا 300 وێنەی یەکەم وەرگیران؛ ")
+                            .append(ignoredCount).append(" دانە پشتگوێ خران.\n");
+                }
+                final String summaryText = summary.toString().trim();
+                DiagnosticLog.info(getApplicationContext(), "file-picker",
+                        "Selected image batch: accepted=" + copiedFiles.size()
+                                + ", skipped=" + skippedNames.size()
+                                + ", ignoredOver300=" + ignoredCount
+                                + ", totalBytes=" + totalBytes
+                                + ", base=" + batchBase);
+
+                runOnUiThread(() -> {
+                    clearBatchSelection();
+                    selectedBatchFiles.addAll(copiedFiles);
+                    selectedBatchNames.addAll(copiedNames);
+                    selectedBatchLabel = batchLabel;
+                    selectedBatchBase = batchBase;
+                    selectedImageFile = copiedFiles.get(0);
+                    selectedCbzFile = null;
+                    selectedName = copiedNames.get(0);
+                    selectedCbzPages = copiedFiles.size();
+                    originalBitmap = finalPreview;
+                    resultBitmap = null;
+                    resultFile = null;
+                    resultTextFile = null;
+                    pairsText = "";
+                    if (finalPreview != null) {
+                        previewImage.setImageBitmap(finalPreview);
+                    }
+                    resultText.setText(summaryText);
+                    updateButtons(false);
+                });
+                setStatus("✅ " + copiedFiles.size()
+                        + " وێنە ئامادەن بە ڕیزبەندیی ناوەکانیان."
+                        + (ignoredCount > 0
+                                ? " (" + ignoredCount + " دانە لە دەرەوەی سنووری 300 پشتگوێ خران.)"
+                                : ""));
+            } catch (Throwable e) {
+                if (JobRuntime.wasStopped(e)) {
+                    setStatus("🛑 خوێندنەوەی وێنەکان بە داوای تۆ وەستێنرا.");
+                } else {
+                    DiagnosticLog.error(getApplicationContext(), "file-picker", e,
+                            "Loading multi-image selection; requested="
+                                    + requestedCount);
+                    setStatus("❌ نەتوانرا وێنەکان بخوێندرێنەوە: "
+                            + friendlyError(e)
+                            + " وردەکاری لە بەشی «ڕاپۆرت»دا تۆمار کرا.");
+                }
+            } finally {
+                setBusy(false);
+            }
+        });
+    }
+
+    private boolean isSupportedImageSelection(PickedInput input) {
+        if (input == null) {
+            return false;
+        }
+        if (input.mimeType != null
+                && input.mimeType.toLowerCase(Locale.ROOT).startsWith("image/")) {
+            return true;
+        }
+        return isImageEntry(input.displayName == null
+                ? "" : input.displayName.toLowerCase(Locale.ROOT));
+    }
+
+    private String batchBaseName(List<String> names) {
+        if (names == null || names.isEmpty()) {
+            return "kurdman-pages";
+        }
+        String prefix = baseNameWithoutExtension(names.get(0));
+        for (int n = 1; n < names.size() && !prefix.isEmpty(); n++) {
+            String other = baseNameWithoutExtension(names.get(n));
+            int max = Math.min(prefix.length(), other.length());
+            int i = 0;
+            while (i < max && prefix.charAt(i) == other.charAt(i)) {
+                i++;
+            }
+            prefix = prefix.substring(0, i);
+        }
+        prefix = prefix.replaceAll("[-_ .]*\\d*$", "").trim();
+        while (!prefix.isEmpty()) {
+            char last = prefix.charAt(prefix.length() - 1);
+            if (last == '-' || last == '_' || last == ' ' || last == '.') {
+                prefix = prefix.substring(0, prefix.length() - 1).trim();
+            } else {
+                break;
+            }
+        }
+        String clean = sanitizeFileName(prefix);
+        return clean.length() >= 3 ? clean : "kurdman-pages";
+    }
+
+    /** Numeric-aware name order: page-2 before page-10. */
+    private int naturalFileNameCompare(String first, String second) {
+        String a = first == null ? "" : first.toLowerCase(Locale.ROOT);
+        String b = second == null ? "" : second.toLowerCase(Locale.ROOT);
+        int i = 0;
+        int j = 0;
+        while (i < a.length() && j < b.length()) {
+            char ca = a.charAt(i);
+            char cb = b.charAt(j);
+            if (Character.isDigit(ca) && Character.isDigit(cb)) {
+                int startA = i;
+                int startB = j;
+                while (i < a.length() && Character.isDigit(a.charAt(i))) {
+                    i++;
+                }
+                while (j < b.length() && Character.isDigit(b.charAt(j))) {
+                    j++;
+                }
+                String numberA = stripLeadingZeros(a.substring(startA, i));
+                String numberB = stripLeadingZeros(b.substring(startB, j));
+                if (numberA.length() != numberB.length()) {
+                    return Integer.compare(numberA.length(), numberB.length());
+                }
+                int byNumber = numberA.compareTo(numberB);
+                if (byNumber != 0) {
+                    return byNumber;
+                }
+                continue;
+            }
+            if (ca != cb) {
+                return Character.compare(ca, cb);
+            }
+            i++;
+            j++;
+        }
+        return Integer.compare(a.length() - i, b.length() - j);
+    }
+
+    private String stripLeadingZeros(String value) {
+        int i = 0;
+        while (i + 1 < value.length() && value.charAt(i) == '0') {
+            i++;
+        }
+        return value.substring(i);
+    }
+
     private void loadPickedFile(Uri uri) {
         final String displayName = queryDisplayName(uri);
         final String mimeType = getContentResolver().getType(uri);
@@ -1844,6 +2371,7 @@ public class MainActivity extends AppCompatActivity {
                     final Bitmap previewBitmap = preview;
                     final int finalPageCount = pageCount;
                     runOnUiThread(() -> {
+                        clearBatchSelection();
                         selectedImageFile = null;
                         selectedCbzFile = copied;
                         selectedName = displayName;
@@ -1873,6 +2401,7 @@ public class MainActivity extends AppCompatActivity {
                         throw new IOException("Could not decode image");
                     }
                     runOnUiThread(() -> {
+                        clearBatchSelection();
                         selectedImageFile = copiedImage;
                         selectedCbzFile = null;
                         selectedName = displayName;
@@ -1910,8 +2439,16 @@ public class MainActivity extends AppCompatActivity {
         final File imageFile = selectedImageFile;
         final File cbzFile = selectedCbzFile;
         final String cbzName = selectedName;
+        final List<File> batchFiles = new ArrayList<>(selectedBatchFiles);
+        final List<String> batchNames = new ArrayList<>(selectedBatchNames);
+        final String batchLabel = selectedBatchLabel;
+        final String batchBase = selectedBatchBase;
+        final boolean imageBatch = cbzFile == null && batchFiles.size() > 1;
         final TextStyleSettings chosenStyle = new TextStyleSettings(globalTextStyle);
-        if (sourceBitmap == null && (cbzFile == null || !cbzFile.exists())) {
+        if (!imageBatch && sourceBitmap == null
+                && (cbzFile == null || !cbzFile.exists())) {
+            DiagnosticLog.warning(getApplicationContext(), "translation",
+                    "Translate tapped with no selected image/CBZ.");
             setStatus("⚠ سەرەتا وێنەی مانهوا یان فایلی CBZ هەڵبژێرە.");
             return;
         }
@@ -1929,6 +2466,19 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        DiagnosticLog.info(getApplicationContext(), "translation",
+                "Job started: type=" + (cbzFile != null ? "CBZ"
+                        : (imageBatch ? "IMAGE_BATCH" : "IMAGE"))
+                        + ", file=" + (cbzFile != null ? cbzName
+                                : (imageBatch ? batchLabel : cbzName))
+                        + ", pages=" + (cbzFile != null ? selectedCbzPages
+                                : (imageBatch ? batchFiles.size() : 1))
+                        + ", source=" + sourceLanguage
+                        + ", offline=" + offlineMode
+                        + ", accurateOcr=" + accurateOcr
+                        + ", createPdf=" + createPdf
+                        + ", unlimitedOcr=" + (unlimitedOcr != null));
+
         // Move straight to the visible result/progress page; the user should
         // not have to hunt through the other sections while a job is running.
         showMainPage(PAGE_RESULTS);
@@ -1942,10 +2492,14 @@ public class MainActivity extends AppCompatActivity {
             PaddleOcrClient paddleOcrClient = null;
             try {
                 throwIfJobStopped();
-                if (cbzFile != null) {
-                    translateCbzJob(cbzFile, cbzName, sourceLanguage,
-                            offlineMode, accurateOcr, createPdf, chosenStyle,
-                            unlimitedOcr);
+                if (cbzFile != null || imageBatch) {
+                    translateMultiPageJob(cbzFile,
+                            imageBatch ? batchFiles : null,
+                            imageBatch ? batchNames : null,
+                            imageBatch ? batchLabel : cbzName,
+                            imageBatch ? batchBase : null,
+                            sourceLanguage, offlineMode, accurateOcr,
+                            createPdf, chosenStyle, unlimitedOcr);
                     return;
                 }
 
@@ -2078,7 +2632,16 @@ public class MainActivity extends AppCompatActivity {
                 if (JobRuntime.wasStopped(e)) {
                     setStatus("🛑 کارەکە بە داوای تۆ وەستێنرا.");
                 } else {
-                    setStatus("❌ " + friendlyTranslationError(e));
+                    DiagnosticLog.error(getApplicationContext(), "translation", e,
+                            "type=" + (cbzFile != null ? "CBZ"
+                                    : (imageBatch ? "IMAGE_BATCH" : "IMAGE"))
+                                    + ", file=" + (imageBatch ? batchLabel : cbzName)
+                                    + ", source=" + sourceLanguage
+                                    + ", offline=" + offlineMode
+                                    + ", accurateOcr=" + accurateOcr
+                                    + ", createPdf=" + createPdf);
+                    setStatus("❌ " + friendlyTranslationError(e)
+                            + " وردەکاریی تەواو لە بەشی «ڕاپۆرت»دا تۆمار کرا.");
                 }
             } finally {
                 closePaddleOcrClient(paddleOcrClient);
@@ -2088,17 +2651,27 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void translateCbzJob(File cbz, String displayName,
-                                   String sourceLanguage,
-                                   boolean offlineMode,
-                                   boolean accurateOcr,
-                                   boolean createPdf,
-                                   TextStyleSettings chosenStyle,
-                                   ManhwaRenderer.BlockOcr unlimitedOcr)
+    private void translateMultiPageJob(File cbz,
+                                       List<File> selectedImagePages,
+                                       List<String> selectedPageNames,
+                                       String displayName,
+                                       String projectBaseOverride,
+                                       String sourceLanguage,
+                                       boolean offlineMode,
+                                       boolean accurateOcr,
+                                       boolean createPdf,
+                                       TextStyleSettings chosenStyle,
+                                       ManhwaRenderer.BlockOcr unlimitedOcr)
             throws Exception {
-        String projectBase = sanitizeFileName(baseNameWithoutExtension(displayName));
+        final boolean imageBatch = cbz == null;
+        final boolean saveIndividualPages = imageBatch;
+        String projectBase = sanitizeFileName(projectBaseOverride == null
+                ? "" : projectBaseOverride);
         if (projectBase.isEmpty()) {
-            projectBase = "chapter";
+            projectBase = sanitizeFileName(baseNameWithoutExtension(displayName));
+        }
+        if (projectBase.isEmpty()) {
+            projectBase = imageBatch ? "kurdman-pages" : "chapter";
         }
         TranslationProject project = TranslationProjectStore.createNew(
                 getApplicationContext(), true, displayName,
@@ -2107,17 +2680,27 @@ public class MainActivity extends AppCompatActivity {
         File outputDir = new File(getCacheDir(), "cbz-output-" + timestamp());
         if ((!inputDir.exists() && !inputDir.mkdirs())
                 || (!outputDir.exists() && !outputDir.mkdirs())) {
-            throw new IOException("Could not create CBZ work directory");
+            throw new IOException("Could not create multi-page work directory");
         }
 
         SoraniTranslator translator = null;
         PaddleOcrClient paddleOcrClient = null;
         try {
             throwIfJobStopped();
-            setStatus("دەرهێنانی وێنەکانی ناو CBZ…");
-            List<File> pages = extractCbzImages(cbz, inputDir);
-            if (pages.isEmpty()) {
-                throw new IOException("No images were found inside this CBZ");
+            List<File> pages;
+            if (cbz != null) {
+                setStatus("دەرهێنانی وێنەکانی ناو CBZ…");
+                pages = extractCbzImages(cbz, inputDir);
+                if (pages.isEmpty()) {
+                    throw new IOException("No images were found inside this CBZ");
+                }
+            } else {
+                setStatus("ئامادەکردنی وێنە هەڵبژێردراوەکان…");
+                pages = prepareSelectedImagePages(
+                        selectedImagePages, selectedPageNames, inputDir);
+                if (pages.isEmpty()) {
+                    throw new IOException("No selected images could be prepared");
+                }
             }
             for (int i = 0; i < pages.size(); i++) {
                 File pageFile = pages.get(i);
@@ -2133,6 +2716,7 @@ public class MainActivity extends AppCompatActivity {
             int totalRendered = 0;
             int totalSkipped = 0;
             int partialPages = 0;
+            int individualSaved = 0;
             final int pageTotal = pages.size();
 
             // Work in three memory-separated phases so the (offline) model
@@ -2271,6 +2855,10 @@ public class MainActivity extends AppCompatActivity {
                 File outPage = new File(outputDir,
                         String.format(Locale.ROOT, "%04d.jpg", pageNumber));
                 writeJpeg(outPage, rendered);
+                if (saveIndividualPages && saveIndividualBatchPage(
+                        outPage, selectedPageNames, i, projectBase, pageNumber)) {
+                    individualSaved++;
+                }
                 if (firstRendered == null) {
                     firstRendered = rendered;
                 } else {
@@ -2333,21 +2921,36 @@ public class MainActivity extends AppCompatActivity {
                 refreshDownloadsList();
             });
 
+            String archiveLabel = imageBatch ? "CBZی وێنەکان" : "CBZ";
             String savedNote = downloadCbzUri != null
-                    ? " CBZەکە لە Download/KurdMan پاشەکەوت کرا."
-                    : " CBZەکە لە بەشی «داگرتنەکان» پاشەکەوت کرا.";
+                    ? " " + archiveLabel + " لە Download/KurdMan پاشەکەوت کرا."
+                    : " " + archiveLabel + " لە بەشی «داگرتنەکان» پاشەکەوت کرا.";
+            if (saveIndividualPages) {
+                savedNote += " " + individualSaved
+                        + " وێنەی جیاوازیش لە Download/KurdMan پاشەکەوت کران.";
+            }
             savedNote += pdfNote;
             savedNote += " ئێستا دەتوانیت هەر لاپەڕەیەک لە ستۆدیۆی دەقدا دەستکاری بکەیت.";
+            DiagnosticLog.info(getApplicationContext(), "translation",
+                    "Multi-page job finished: type="
+                            + (imageBatch ? "IMAGE_BATCH" : "CBZ")
+                            + ", pages=" + pages.size()
+                            + ", rendered=" + totalRendered
+                            + ", segments=" + totalSegments
+                            + ", skipped=" + totalSkipped
+                            + ", partialPages=" + partialPages
+                            + ", individualPagesSaved=" + individualSaved);
             if (totalSegments == 0) {
-                setStatus("⚠ CBZەکە دروست کرا، بەڵام هیچ دەقێکی ڕوون نەدۆزرایەوە." + savedNote);
+                setStatus("⚠ " + archiveLabel
+                        + " دروست کرا، بەڵام هیچ دەقێکی ڕوون نەدۆزرایەوە." + savedNote);
             } else if (totalSkipped > 0) {
-                setStatus("⚠ CBZ ئامادەیە: " + pages.size() + " لاپەڕە، "
+                setStatus("⚠ " + archiveLabel + " ئامادەیە: " + pages.size() + " لاپەڕە، "
                         + totalRendered + "/" + totalSegments
                         + " دەق لەسەر وێنەکان داندرا؛ " + totalSkipped
                         + " دەق لە " + partialPages
                         + " لاپەڕەدا تەنیا لە TXTەکەدایە." + savedNote);
             } else {
-                setStatus("✅ CBZ ئامادەیە: " + pages.size() + " لاپەڕە، "
+                setStatus("✅ " + archiveLabel + " ئامادەیە: " + pages.size() + " لاپەڕە، "
                         + totalRendered + "/" + totalSegments
                         + " دەق لەسەر وێنەکان داندرا." + savedNote);
             }
@@ -2358,6 +2961,64 @@ public class MainActivity extends AppCompatActivity {
             // store under files/projects/current/pages. Only rendered output
             // pages in cache are temporary.
             deleteRecursive(outputDir);
+        }
+    }
+
+    private List<File> prepareSelectedImagePages(List<File> sources,
+                                                  List<String> names,
+                                                  File destDir) throws Exception {
+        List<File> pages = new ArrayList<>();
+        if (sources == null || sources.isEmpty()) {
+            return pages;
+        }
+        if (sources.size() > 300) {
+            throw new IOException("Too many selected images (max 300)");
+        }
+        long totalBytes = 0L;
+        for (int i = 0; i < sources.size(); i++) {
+            throwIfJobStopped();
+            File source = sources.get(i);
+            if (source == null || !source.exists()) {
+                throw new IOException("Selected image is missing: " + (i + 1));
+            }
+            String displayName = names != null && i < names.size()
+                    ? names.get(i) : source.getName();
+            File out = new File(destDir, String.format(Locale.ROOT,
+                    "%04d%s", i + 1, extensionWithDot(displayName, ".jpg")));
+            totalBytes += copyFile(source, out);
+            if (totalBytes > 1024L * 1024L * 1024L) {
+                throw new IOException(
+                        "Selected images are too large together (max 1 GB)");
+            }
+            pages.add(out);
+        }
+        return pages;
+    }
+
+    private boolean saveIndividualBatchPage(File renderedPage,
+                                            List<String> sourceNames,
+                                            int pageIndex,
+                                            String projectBase,
+                                            int pageNumber) {
+        try {
+            String sourceName = sourceNames != null
+                    && pageIndex >= 0 && pageIndex < sourceNames.size()
+                    ? sourceNames.get(pageIndex) : renderedPage.getName();
+            String base = sanitizeFileName(baseNameWithoutExtension(sourceName));
+            if (base.isEmpty()) {
+                base = projectBase + "-"
+                        + String.format(Locale.ROOT, "%04d", pageNumber);
+            }
+            File individual = new File(getCacheDir(), base + ".ckb.jpg");
+            copyFile(renderedPage, individual);
+            Uri downloadUri = saveFileToDownloads(individual, "image/jpeg");
+            File libraryFile = copyToDownloadsLibrary(individual);
+            return downloadUri != null || libraryFile != null;
+        } catch (Exception e) {
+            DiagnosticLog.warning(getApplicationContext(), "downloads",
+                    "Could not save individual batch page " + pageNumber
+                            + ": " + DiagnosticLog.shortSummary(e));
+            return false;
         }
     }
 
@@ -3670,6 +4331,11 @@ public class MainActivity extends AppCompatActivity {
         if (JobRuntime.wasStopped(error)) {
             return "کارەکە بە داوای تۆ وەستێنرا.";
         }
+        // Every handled failure that reaches the user also leaves a full
+        // stack trace in Reports; duplicate formatting of the same error
+        // is de-duplicated inside DiagnosticLog.
+        DiagnosticLog.error(getApplicationContext(), "handled-error", error,
+                "A handled error was formatted for display.");
         String message = error.getMessage();
         if (message == null || message.trim().isEmpty()) {
             message = error.getClass().getSimpleName();
@@ -3716,6 +4382,13 @@ public class MainActivity extends AppCompatActivity {
             return "سێرفەرەکانی وەرگێڕانی خۆڕایی بۆ ماوەیەک داواکارییەکەیان ڕەتکردەوە؛ "
                     + "چەند خولەکێک بوەستە و دووبارە هەوڵبدە. (" + raw + ")";
         }
+        if (lower.contains("arrayindexoutofboundsexception")
+                || lower.contains("indexoutofboundsexception")) {
+            return "هەڵەیەکی ناوخۆیی لە پرۆسێسکردنی دەق/دێڕەکانی ئەم لاپەڕەیە ڕوویدا. "
+                    + "هۆکاری تەواو و شوێنی هەڵەکە لە بەشی «ڕاپۆرت»دا تۆمار کراوە؛ "
+                    + "ڕاپۆرتەکە کۆپی بکە و بینێرە تاکوو لەسەر هەمان کێشە چاکبکرێت. ("
+                    + raw + ")";
+        }
         return raw;
     }
 
@@ -3753,6 +4426,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setStatus(final String text) {
+        DiagnosticLog.status(getApplicationContext(), text);
         JobRuntime.setStatus(text);
         runOnUiThread(() -> statusText.setText(text));
         if (KeepAliveService.isServiceRunning()) {
@@ -3820,6 +4494,26 @@ public class MainActivity extends AppCompatActivity {
         }
         if (unlimitedOcrModelInput != null) {
             unlimitedOcrModelInput.setEnabled(enabled);
+        }
+        if (reportNoteInput != null) {
+            reportNoteInput.setEnabled(enabled);
+        }
+        if (addReportNoteButton != null) {
+            addReportNoteButton.setEnabled(enabled);
+        }
+        if (clearReportButton != null) {
+            clearReportButton.setEnabled(enabled);
+        }
+        // Copying/sharing/refreshing a report is most useful precisely
+        // while a stuck job is still on screen, so keep those enabled.
+        if (copyReportButton != null) {
+            copyReportButton.setEnabled(true);
+        }
+        if (shareReportButton != null) {
+            shareReportButton.setEnabled(true);
+        }
+        if (refreshReportButton != null) {
+            refreshReportButton.setEnabled(true);
         }
         if (fontSpinner != null) {
             fontSpinner.setEnabled(enabled);
