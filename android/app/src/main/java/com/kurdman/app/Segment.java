@@ -18,6 +18,15 @@ public class Segment {
     /** Detected source rectangle that can be cleaned before replacement. */
     public Rect eraseBox;
     public int lines;
+    /** Typical source line pitch in page pixels, measured from the OCR
+     * line boxes themselves (median distance between consecutive line
+     * tops, or glyph height × leading for a single line). Zero when
+     * unknown. The typesetter starts from this instead of
+     * {@code box.height() / lines}: ML Kit block boxes are loosely
+     * padded, so box/lines over- or under-estimates the real font size
+     * differently for every fragment — one root cause of the "some
+     * words small, some words large" output. */
+    public float sourceLineHeight = 0f;
     /** OCR confidence in [0,1], or -1 when the engine did not report it. */
     public float ocrConfidence = -1f;
     public int detectedBackgroundColor = Color.WHITE;
@@ -92,6 +101,7 @@ public class Segment {
         copy.originalCkb = originalCkb;
         copy.renderBox = new Rect(getRenderBox());
         copy.eraseBox = new Rect(getEraseBox());
+        copy.sourceLineHeight = sourceLineHeight;
         copy.ocrConfidence = ocrConfidence;
         copy.detectedBackgroundColor = detectedBackgroundColor;
         copy.detectedInkColor = detectedInkColor;

@@ -234,6 +234,7 @@ public class TranslationProject {
         json.put("ckb", segment.ckb == null ? "" : segment.ckb);
         json.put("originalCkb", segment.originalCkb == null ? "" : segment.originalCkb);
         json.put("lines", segment.lines);
+        json.put("sourceLineHeight", segment.sourceLineHeight);
         json.put("ocrConfidence", segment.ocrConfidence);
         json.put("rendered", segment.rendered);
         json.put("box", rectToJson(segment.box));
@@ -260,6 +261,7 @@ public class TranslationProject {
         Segment segment = new Segment(
                 json.optString("text", ""), box, json.optInt("lines", 1));
         segment.ckb = json.optString("ckb", "");
+        segment.sourceLineHeight = (float) json.optDouble("sourceLineHeight", 0.0);
         segment.ocrConfidence = (float) json.optDouble("ocrConfidence", -1.0);
         segment.originalCkb = json.optString("originalCkb", segment.ckb);
         segment.rendered = json.optBoolean("rendered", false);

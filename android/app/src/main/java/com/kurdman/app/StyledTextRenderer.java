@@ -84,8 +84,13 @@ public final class StyledTextRenderer {
                 && segment.interiorRight != null
                 && segment.getEraseBox().contains(rect.centerX(), rect.centerY());
 
-        float sourceLineHeight = segment.box.height()
-                / (float) Math.max(1, segment.lines);
+        // Measured line pitch from the OCR line boxes when available;
+        // box/lines is only a fallback because ML Kit pads block boxes
+        // unevenly, which made fragments typeset at unrelated sizes.
+        float sourceLineHeight = segment.sourceLineHeight > 0f
+                ? segment.sourceLineHeight
+                : segment.box.height()
+                        / (float) Math.max(1, segment.lines);
         if (sourceLineHeight <= 0f) {
             sourceLineHeight = Math.max(12f, rect.height());
         }

@@ -110,6 +110,10 @@ public class MainActivity extends AppCompatActivity {
     };
     private static final String PREF_GLOBAL_STYLE = "global_text_style_json";
     private static final String PREF_ACCURATE_OCR = "accurate_ocr_v170";
+    private static final String PREF_UNLIMITED_OCR_ENABLED = "unlimited_ocr_enabled_v180";
+    private static final String PREF_UNLIMITED_OCR_URL = "unlimited_ocr_url_v180";
+    private static final String PREF_UNLIMITED_OCR_KEY = "unlimited_ocr_key_v180";
+    private static final String PREF_UNLIMITED_OCR_MODEL = "unlimited_ocr_model_v180";
     private static final String PREF_CREATE_PDF = "create_pdf_when_finished_v171";
     private static final String PREF_CLEAN_DEFAULT = "clean_erase_default_v174";
     private static final String PREF_KEEP_SCREEN = "keep_screen_on_during_jobs";
@@ -143,6 +147,10 @@ public class MainActivity extends AppCompatActivity {
     private Button downloadPaddleOcrButton;
     private Button deletePaddleOcrButton;
     private PaddleOcrModelManager paddleOcrModelManager;
+    private CheckBox unlimitedOcrCheck;
+    private EditText unlimitedOcrUrlInput;
+    private EditText unlimitedOcrKeyInput;
+    private EditText unlimitedOcrModelInput;
     private Button pasteTokenButton;
     private Button pasteChatButton;
     private CheckBox showTokenCheck;
@@ -246,6 +254,10 @@ public class MainActivity extends AppCompatActivity {
         downloadPaddleOcrButton = findViewById(R.id.downloadPaddleOcrButton);
         deletePaddleOcrButton = findViewById(R.id.deletePaddleOcrButton);
         paddleOcrModelManager = new PaddleOcrModelManager(this);
+        unlimitedOcrCheck = findViewById(R.id.unlimitedOcrCheck);
+        unlimitedOcrUrlInput = findViewById(R.id.unlimitedOcrUrlInput);
+        unlimitedOcrKeyInput = findViewById(R.id.unlimitedOcrKeyInput);
+        unlimitedOcrModelInput = findViewById(R.id.unlimitedOcrModelInput);
         saveButton = findViewById(R.id.saveButton);
         verifyButton = findViewById(R.id.verifyButton);
         sendTextButton = findViewById(R.id.sendTextButton);
@@ -421,6 +433,47 @@ public class MainActivity extends AppCompatActivity {
         accurateOcrCheck.setOnCheckedChangeListener(
                 (buttonView, isChecked) -> prefs.edit()
                         .putBoolean(PREF_ACCURATE_OCR, isChecked).apply());
+        if (unlimitedOcrCheck != null) {
+            unlimitedOcrCheck.setChecked(
+                    prefs.getBoolean(PREF_UNLIMITED_OCR_ENABLED, false));
+            unlimitedOcrCheck.setOnCheckedChangeListener(
+                    (buttonView, isChecked) -> prefs.edit()
+                            .putBoolean(PREF_UNLIMITED_OCR_ENABLED, isChecked)
+                            .apply());
+        }
+        if (unlimitedOcrUrlInput != null) {
+            unlimitedOcrUrlInput.setText(
+                    prefs.getString(PREF_UNLIMITED_OCR_URL, ""));
+            unlimitedOcrUrlInput.setOnFocusChangeListener((v, hasFocus) -> {
+                if (!hasFocus) {
+                    prefs.edit().putString(PREF_UNLIMITED_OCR_URL,
+                            unlimitedOcrUrlInput.getText().toString().trim())
+                            .apply();
+                }
+            });
+        }
+        if (unlimitedOcrKeyInput != null) {
+            unlimitedOcrKeyInput.setText(
+                    prefs.getString(PREF_UNLIMITED_OCR_KEY, ""));
+            unlimitedOcrKeyInput.setOnFocusChangeListener((v, hasFocus) -> {
+                if (!hasFocus) {
+                    prefs.edit().putString(PREF_UNLIMITED_OCR_KEY,
+                            unlimitedOcrKeyInput.getText().toString().trim())
+                            .apply();
+                }
+            });
+        }
+        if (unlimitedOcrModelInput != null) {
+            unlimitedOcrModelInput.setText(
+                    prefs.getString(PREF_UNLIMITED_OCR_MODEL, ""));
+            unlimitedOcrModelInput.setOnFocusChangeListener((v, hasFocus) -> {
+                if (!hasFocus) {
+                    prefs.edit().putString(PREF_UNLIMITED_OCR_MODEL,
+                            unlimitedOcrModelInput.getText().toString().trim())
+                            .apply();
+                }
+            });
+        }
         createPdfCheck.setChecked(prefs.getBoolean(PREF_CREATE_PDF, false));
         createPdfCheck.setOnCheckedChangeListener(
                 (buttonView, isChecked) -> {
@@ -1046,6 +1099,42 @@ public class MainActivity extends AppCompatActivity {
             return createPdfCheck.isChecked();
         }
         return prefs != null && prefs.getBoolean(PREF_CREATE_PDF, false);
+    }
+
+    /**
+     * Builds the optional Unlimited-OCR block reader from the Settings
+     * widgets (call on the UI thread before a job starts). Returns null
+     * unless the user enabled it and entered a usable http(s) address;
+     * the current widget values are persisted for next time either way.
+     */
+    private ManhwaRenderer.BlockOcr createUnlimitedOcrIfEnabled() {
+        boolean enabled = unlimitedOcrCheck != null
+                ? unlimitedOcrCheck.isChecked()
+                : prefs.getBoolean(PREF_UNLIMITED_OCR_ENABLED, false);
+        String url = unlimitedOcrUrlInput != null
+                ? unlimitedOcrUrlInput.getText().toString().trim()
+                : prefs.getString(PREF_UNLIMITED_OCR_URL, "");
+        String key = unlimitedOcrKeyInput != null
+                ? unlimitedOcrKeyInput.getText().toString().trim()
+                : prefs.getString(PREF_UNLIMITED_OCR_KEY, "");
+        String model = unlimitedOcrModelInput != null
+                ? unlimitedOcrModelInput.getText().toString().trim()
+                : prefs.getString(PREF_UNLIMITED_OCR_MODEL, "");
+        prefs.edit()
+                .putBoolean(PREF_UNLIMITED_OCR_ENABLED, enabled)
+                .putString(PREF_UNLIMITED_OCR_URL, url)
+                .putString(PREF_UNLIMITED_OCR_KEY, key)
+                .putString(PREF_UNLIMITED_OCR_MODEL, model)
+                .apply();
+        if (!enabled) {
+            return null;
+        }
+        if (!UnlimitedOcrClient.isConfigured(url)) {
+            setStatus("⚠ Unlimited-OCR چالاکە بەڵام ناونیشانی سێرڤەر دروست نییە؛ "
+                    + "OCRی ناو مۆبایل بەکاردەهێنرێت.");
+            return null;
+        }
+        return new UnlimitedOcrClient(url, key, model);
     }
 
     private PaddleOcrClient startPaddleOcrIfAvailable(
@@ -1830,6 +1919,8 @@ public class MainActivity extends AppCompatActivity {
         final boolean offlineMode = selectedOfflineMode();
         final boolean accurateOcr = accurateOcrCheck == null
                 || accurateOcrCheck.isChecked();
+        final ManhwaRenderer.BlockOcr unlimitedOcr =
+                createUnlimitedOcrIfEnabled();
         final boolean createPdf = selectedCreatePdf();
         if (offlineMode && !offlineModelManager.isModelReady()) {
             refreshOfflineModelUi();
@@ -1853,7 +1944,8 @@ public class MainActivity extends AppCompatActivity {
                 throwIfJobStopped();
                 if (cbzFile != null) {
                     translateCbzJob(cbzFile, cbzName, sourceLanguage,
-                            offlineMode, accurateOcr, createPdf, chosenStyle);
+                            offlineMode, accurateOcr, createPdf, chosenStyle,
+                            unlimitedOcr);
                     return;
                 }
 
@@ -1897,7 +1989,8 @@ public class MainActivity extends AppCompatActivity {
                                 }
                             },
                             accurateOcr,
-                            createPaddleSecondaryOcr(paddleOcrClient));
+                            createPaddleSecondaryOcr(paddleOcrClient),
+                            unlimitedOcr);
                 } finally {
                     closePaddleOcrClient(paddleOcrClient);
                     paddleOcrClient = null;
@@ -2000,7 +2093,9 @@ public class MainActivity extends AppCompatActivity {
                                    boolean offlineMode,
                                    boolean accurateOcr,
                                    boolean createPdf,
-                                   TextStyleSettings chosenStyle) throws Exception {
+                                   TextStyleSettings chosenStyle,
+                                   ManhwaRenderer.BlockOcr unlimitedOcr)
+            throws Exception {
         String projectBase = sanitizeFileName(baseNameWithoutExtension(displayName));
         if (projectBase.isEmpty()) {
             projectBase = "chapter";
@@ -2079,7 +2174,8 @@ public class MainActivity extends AppCompatActivity {
                                 }
                             },
                             accurateOcr,
-                            paddleSecondaryOcr);
+                            paddleSecondaryOcr,
+                            unlimitedOcr);
                     projectPage.segments.addAll(recognized);
                     pageSegments.add(recognized);
                 } finally {
@@ -3712,6 +3808,18 @@ public class MainActivity extends AppCompatActivity {
         }
         if (cleanEraseCheck != null) {
             cleanEraseCheck.setEnabled(enabled);
+        }
+        if (unlimitedOcrCheck != null) {
+            unlimitedOcrCheck.setEnabled(enabled);
+        }
+        if (unlimitedOcrUrlInput != null) {
+            unlimitedOcrUrlInput.setEnabled(enabled);
+        }
+        if (unlimitedOcrKeyInput != null) {
+            unlimitedOcrKeyInput.setEnabled(enabled);
+        }
+        if (unlimitedOcrModelInput != null) {
+            unlimitedOcrModelInput.setEnabled(enabled);
         }
         if (fontSpinner != null) {
             fontSpinner.setEnabled(enabled);

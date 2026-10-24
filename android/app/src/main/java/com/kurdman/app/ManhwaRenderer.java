@@ -42,6 +42,16 @@ public class ManhwaRenderer {
         List<LineText> recognizeLines(Bitmap page, List<Rect> boxes) throws Exception;
     }
 
+    /**
+     * A whole-block re-reader: given one grouped text block (a whole
+     * bubble or narration box), return its full text. Backed by the
+     * optional Unlimited-OCR server in MainActivity. Returning null or
+     * throwing keeps the ML Kit reading.
+     */
+    public interface BlockOcr {
+        String readBlock(Bitmap page, Rect box) throws Exception;
+    }
+
     public static final class LineText {
         public final String text;
         public final float confidence;
@@ -149,7 +159,15 @@ public class ManhwaRenderer {
 
     public static List<Segment> recognize(Bitmap original, String sourceLanguage,
                                           Progress progress) throws Exception {
-        return recognize(original, sourceLanguage, progress, true, null);
+        return recognize(original, sourceLanguage, progress, true, null, null);
+    }
+
+    public static List<Segment> recognize(Bitmap original, String sourceLanguage,
+                                          Progress progress,
+                                          boolean highAccuracy,
+                                          SecondaryOcr secondaryOcr) throws Exception {
+        return recognize(original, sourceLanguage, progress,
+                highAccuracy, secondaryOcr, null);
     }
 
     /**
@@ -158,15 +176,24 @@ public class ManhwaRenderer {
      * <p>The old implementation asked ML Kit once per page tile. That was
      * fast, but a single misread stylised manhwa word went straight into
      * translation. This version keeps ML Kit's reliable on-device detector,
-     * reads each tile again after contrast/upscale preprocessing, re-reads
-     * weak bubbles from enlarged crops, scores the competing readings with
-     * ML Kit word confidence, and can then ask PP-OCR to re-read individual
-     * lines as an independent second opinion.</p>
+     * reads each tile again after contrast/upscale preprocessing, and
+     * scores the competing readings with ML Kit word confidence.</p>
+     *
+     * <p>Crucially, the readings are grouped back into whole text blocks
+     * (one bubble / narration box) at the LINE level, immediately after
+     * candidate selection — before any crop refinement, PP-OCR second
+     * opinion, optional Unlimited-OCR block re-read, or translation.
+     * ML Kit loves to return one bubble as several blocks (first line
+     * alone, heading alone); refining and translating those fragments
+     * separately is exactly what produced mixed tiny/large Kurdish words
+     * in cramped strips. Grouping first means every later stage sees the
+     * whole writing at once, and refinement crops the whole bubble.</p>
      */
     public static List<Segment> recognize(Bitmap original, String sourceLanguage,
                                           Progress progress,
                                           boolean highAccuracy,
-                                          SecondaryOcr secondaryOcr) throws Exception {
+                                          SecondaryOcr secondaryOcr,
+                                          BlockOcr blockOcr) throws Exception {
         if (original == null) {
             throw new IllegalArgumentException("No image selected");
         }
@@ -257,11 +284,18 @@ public class ManhwaRenderer {
             }
 
             List<OcrCandidate> selected = mergeCandidates(candidates);
+            // Re-join the fragments of one bubble/box FIRST, while the
+            // true per-line boxes are still available, so refinement
+            // crops a whole bubble and translation sees whole sentences.
+            selected = groupCandidates(original, selected);
             if (highAccuracy && !selected.isEmpty()) {
                 refineCandidates(original, recognizer, selected, progress);
             }
             if (highAccuracy && secondaryOcr != null && !selected.isEmpty()) {
                 applySecondaryOcr(original, selected, secondaryOcr, progress);
+            }
+            if (blockOcr != null && !selected.isEmpty()) {
+                applyBlockOcr(original, selected, blockOcr, progress);
             }
 
             List<Segment> result = new ArrayList<>();
@@ -270,6 +304,7 @@ public class ManhwaRenderer {
                 candidate.segment.lines = Math.max(1,
                         candidate.lines.isEmpty()
                                 ? candidate.segment.lines : candidate.lines.size());
+                candidate.segment.sourceLineHeight = estimateLinePitch(candidate);
                 if (isUsableText(candidate.segment.text)) {
                     result.add(candidate.segment);
                 }
@@ -298,10 +333,14 @@ public class ManhwaRenderer {
     private static List<Segment> groupSegments(Bitmap original,
                                                List<Segment> segments) {
         List<Segment> list = new ArrayList<>(segments);
-        boolean merged = true;
-        while (merged) {
-            merged = false;
-            outer:
+        // Always merge the vertically nearest pair first: merging
+        // non-adjacent fragments (heading+body) before their middle
+        // neighbour (description) would strand the middle one inside
+        // the combined box, where no later test can reach it.
+        while (true) {
+            Segment bestUpper = null;
+            Segment bestLower = null;
+            int bestGap = Integer.MAX_VALUE;
             for (int i = 0; i < list.size(); i++) {
                 for (int j = i + 1; j < list.size(); j++) {
                     Segment a = list.get(i);
@@ -309,36 +348,56 @@ public class ManhwaRenderer {
                     Segment upper = a.box.top <= b.box.top ? a : b;
                     Segment lower = upper == a ? b : a;
                     if (shouldGroup(original, upper, lower)) {
-                        list.remove(upper);
-                        list.remove(lower);
-                        list.add(combineSegments(upper, lower));
-                        merged = true;
-                        break outer;
+                        int gap = lower.box.top - upper.box.bottom;
+                        if (gap < bestGap) {
+                            bestGap = gap;
+                            bestUpper = upper;
+                            bestLower = lower;
+                        }
                     }
                 }
             }
+            if (bestUpper == null) {
+                break;
+            }
+            list.remove(bestUpper);
+            list.remove(bestLower);
+            list.add(combineSegments(bestUpper, bestLower));
         }
         sortReadingOrder(list);
         return list;
     }
 
+    private static float segmentLineHeight(Segment segment) {
+        if (segment.sourceLineHeight > 0f) {
+            return segment.sourceLineHeight;
+        }
+        return segment.box.height() / (float) Math.max(1, segment.lines);
+    }
+
     private static boolean shouldGroup(Bitmap original, Segment upper,
                                        Segment lower) {
-        float lhUpper = upper.box.height() / (float) Math.max(1, upper.lines);
-        float lhLower = lower.box.height() / (float) Math.max(1, lower.lines);
+        return shouldGroupPair(original, upper, segmentLineHeight(upper),
+                lower, segmentLineHeight(lower));
+    }
+
+    /**
+     * Shared fragment test used at candidate level (with line-box
+     * pitches) and again as a segment-level safety net. The pitch is
+     * the distance between line tops, not the glyph height, so ordinary
+     * line spacing always counts as a "direct" merge.
+     */
+    private static boolean shouldGroupPair(Bitmap original, Segment upper,
+                                           float lhUpper, Segment lower,
+                                           float lhLower) {
         if (lhUpper <= 0f || lhLower <= 0f) {
             return false;
         }
         float minLh = Math.min(lhUpper, lhLower);
         float maxLh = Math.max(lhUpper, lhLower);
-        if (maxLh > minLh * 1.9f) {
-            return false; // very different font sizes: not one block
-        }
-        int gap = lower.box.top - upper.box.bottom;
-        if (gap < -Math.round(minLh * 0.35f)) {
-            return false; // overlapping rows: side-by-side blocks
-        }
-        if (gap > Math.round(maxLh * 2.6f)) {
+        // A narration-box heading is legitimately larger than its body;
+        // only wildly different sizes mean different blocks.
+        if (maxLh > minLh * 2.2f) {
             return false;
         }
         int minW = Math.min(upper.box.width(), lower.box.width());
@@ -359,31 +418,213 @@ public class ManhwaRenderer {
         if (unionW > maxW * 1.75f) {
             return false;
         }
-        if (gap <= Math.round(maxLh * 1.15f)) {
+        int gap = lower.box.top - upper.box.bottom;
+        if (gap < 0) {
+            // ML Kit pads block boxes, so stacked fragments of one
+            // bubble often overlap slightly. Accept a shallow overlap
+            // for well-aligned fragments; a deep overlap means
+            // side-by-side columns, which must never merge.
+            return gap >= -Math.round(minLh * 0.55f)
+                    && overlapW >= minW * 0.5f;
+        }
+        if (gap <= Math.round(maxLh * 0.85f)) {
             return true;
         }
-        // Wider gaps (a heading separated from its body, a blank line)
-        // merge only when one continuous background — the same bubble
-        // interior or narration box — fills the space between the
-        // fragments. A bubble border in between means two bubbles.
+        if (gap > Math.round(maxLh * 3.2f)) {
+            return false;
+        }
+        // Anything wider than tight line spacing (a heading separated
+        // from its body, a blank line) merges only when one continuous
+        // background — the same bubble interior or narration box —
+        // fills the space between the fragments, with no bubble border
+        // line crossing it. Two distinct stacked bubbles can sit
+        // within one pitch of each other, so the border check must
+        // apply well before the old "direct merge" distance.
         return gapBackgroundContinuous(original, upper, lower);
     }
 
+    /**
+     * Line-level grouping, run right after candidate selection. Doing
+     * this here (instead of only on finished segments) is what makes
+     * refinement crop whole bubbles and keeps one pitch per bubble.
+     */
+    private static List<OcrCandidate> groupCandidates(
+            Bitmap original, List<OcrCandidate> candidates) {
+        List<OcrCandidate> list = new ArrayList<>(candidates);
+        // Nearest pair first, for the same reason as groupSegments.
+        while (true) {
+            OcrCandidate bestUpper = null;
+            OcrCandidate bestLower = null;
+            int bestGap = Integer.MAX_VALUE;
+            for (int i = 0; i < list.size(); i++) {
+                for (int j = i + 1; j < list.size(); j++) {
+                    OcrCandidate a = list.get(i);
+                    OcrCandidate b = list.get(j);
+                    OcrCandidate upper =
+                            a.segment.box.top <= b.segment.box.top ? a : b;
+                    OcrCandidate lower = upper == a ? b : a;
+                    if (shouldGroupPair(original, upper.segment,
+                            estimateLinePitch(upper),
+                            lower.segment, estimateLinePitch(lower))) {
+                        int gap = lower.segment.box.top
+                                - upper.segment.box.bottom;
+                        if (gap < bestGap) {
+                            bestGap = gap;
+                            bestUpper = upper;
+                            bestLower = lower;
+                        }
+                    }
+                }
+            }
+            if (bestUpper == null) {
+                break;
+            }
+            list.remove(bestUpper);
+            list.remove(bestLower);
+            list.add(combineCandidates(bestUpper, bestLower));
+        }
+        return list;
+    }
+
+    private static OcrCandidate combineCandidates(OcrCandidate upper,
+                                                  OcrCandidate lower) {
+        Rect union = new Rect(upper.segment.box);
+        union.union(lower.segment.box);
+        List<OcrLineData> lines = new ArrayList<>();
+        if (upper.lines.isEmpty()) {
+            lines.add(new OcrLineData(upper.segment.text,
+                    upper.segment.box, upper.confidence));
+        } else {
+            for (OcrLineData line : upper.lines) {
+                lines.add(line.copy());
+            }
+        }
+        if (lower.lines.isEmpty()) {
+            lines.add(new OcrLineData(lower.segment.text,
+                    lower.segment.box, lower.confidence));
+        } else {
+            for (OcrLineData line : lower.lines) {
+                lines.add(line.copy());
+            }
+        }
+        sortLinesReadingOrder(lines);
+        StringBuilder text = new StringBuilder();
+        for (OcrLineData line : lines) {
+            if (text.length() > 0) {
+                text.append('\n');
+            }
+            text.append(line.text);
+        }
+        Segment segment = new Segment(cleanText(text.toString()), union,
+                Math.max(1, lines.size()));
+        OcrCandidate combined = new OcrCandidate(segment,
+                combinePass(upper, lower));
+        combined.lines.addAll(lines);
+        combined.refined = upper.refined || lower.refined;
+        combined.disagreement = upper.disagreement || lower.disagreement;
+        refreshCandidate(combined, false);
+        segment.sourceLineHeight = estimateLinePitch(combined);
+        return combined;
+    }
+
+    private static int combinePass(OcrCandidate a, OcrCandidate b) {
+        // The inverted pass (4) stays subordinate: a normal reading of
+        // any fragment promotes the combined block out of that class.
+        if (a.pass == 4 && b.pass != 4) {
+            return b.pass;
+        }
+        if (b.pass == 4 && a.pass != 4) {
+            return a.pass;
+        }
+        return letterOrDigitCount(a.segment.text)
+                >= letterOrDigitCount(b.segment.text) ? a.pass : b.pass;
+    }
+
+    private static void sortLinesReadingOrder(List<OcrLineData> lines) {
+        Collections.sort(lines, new Comparator<OcrLineData>() {
+            @Override
+            public int compare(OcrLineData a, OcrLineData b) {
+                int rowA = Math.round(a.box.exactCenterY() / 60f);
+                int rowB = Math.round(b.box.exactCenterY() / 60f);
+                if (rowA != rowB) {
+                    return Integer.compare(rowA, rowB);
+                }
+                int byLeft = Integer.compare(a.box.left, b.box.left);
+                if (byLeft != 0) {
+                    return byLeft;
+                }
+                return Integer.compare(a.box.top, b.box.top);
+            }
+        });
+    }
+
+    /**
+     * Typical line pitch (top-to-top distance) of a candidate, from
+     * its real line boxes. Falls back to glyph height × leading for a
+     * single line, and to box/lines when no line boxes exist. This is
+     * the single source of "how big is the source font" for grouping,
+     * refinement scale, and the final typeset size — previously each
+     * stage guessed differently, per fragment.
+     */
+    private static float estimateLinePitch(OcrCandidate candidate) {
+        if (candidate == null || candidate.segment == null) {
+            return 0f;
+        }
+        Segment segment = candidate.segment;
+        List<Integer> heights = new ArrayList<>();
+        List<Integer> tops = new ArrayList<>();
+        for (OcrLineData line : candidate.lines) {
+            if (line.box != null && line.box.height() > 4) {
+                heights.add(line.box.height());
+                tops.add(line.box.top);
+            }
+        }
+        if (heights.isEmpty()) {
+            return segment.box.height()
+                    / (float) Math.max(1, segment.lines);
+        }
+        int textLines = 1 + countChar(segment.text, '\n');
+        if (heights.size() == 1 && textLines > 1) {
+            // One synthetic "line" spanning the whole block: its box
+            // height is the block height, not a glyph height.
+            return segment.box.height() / (float) textLines;
+        }
+        float glyph = medianOf(heights);
+        if (tops.size() >= 2) {
+            Collections.sort(tops);
+            List<Integer> deltas = new ArrayList<>();
+            for (int i = 1; i < tops.size(); i++) {
+                int delta = tops.get(i) - tops.get(i - 1);
+                if (delta > 4) {
+                    deltas.add(delta);
+                }
+            }
+            if (!deltas.isEmpty()) {
+                float pitch = medianOf(deltas);
+                return Math.max(glyph * 0.85f,
+                        Math.min(pitch, glyph * 2.4f));
+            }
+        }
+        return glyph * 1.35f;
+    }
+
+    /**
+     * Is the space between two fragments one continuous interior?
+     *
+     * <p>The background colour is taken from the strip itself, then
+     * required to be a major colour inside PADDED versions of both
+     * fragment boxes. The previous version estimated each box's
+     * dominant colour directly — but a tight box around one line of
+     * bold light-on-dark lettering is mostly INK (white), so the
+     * "background" came out white, the black strip matched neither
+     * side, and narration-box fragments never merged (measured on the
+     * user's Shadow Slave page: heading box dominant = white ink at
+     * 47%, strip match 0%). Padding lets the true background win.</p>
+     */
     private static boolean gapBackgroundContinuous(Bitmap original,
                                                    Segment upper,
                                                    Segment lower) {
         try {
-            DominantColor bg = estimateDominantColor(original, upper.box);
-            DominantColor bgLower = estimateDominantColor(original, lower.box);
-            boolean upperKnown = bg != null && bg.fraction >= 0.30;
-            boolean lowerKnown = bgLower != null && bgLower.fraction >= 0.30;
-            if (!upperKnown && !lowerKnown) {
-                return false;
-            }
-            if (upperKnown && lowerKnown
-                    && colorDistanceSum(bg.color, bgLower.color) > 190) {
-                return false; // different interiors: not one bubble/box
-            }
             int left = Math.max(upper.box.left, lower.box.left);
             int right = Math.min(upper.box.right, lower.box.right);
             if (right - left < 16) {
@@ -399,14 +640,52 @@ public class ManhwaRenderer {
                     || strip.width() < 8 || strip.height() < 2) {
                 return false;
             }
-            boolean upperMatch = upperKnown
-                    && fractionSimilar(original, strip, bg.color) >= 0.72;
-            boolean lowerMatch = lowerKnown
-                    && fractionSimilar(original, strip, bgLower.color) >= 0.72;
-            return upperMatch || lowerMatch;
+            DominantColor stripBg = estimateDominantColor(original, strip);
+            if (stripBg == null || stripBg.fraction < 0.50) {
+                return false; // strip is artwork/clutter, not interior
+            }
+            Rect upperPad = expandBox(upper.box,
+                    original.getWidth(), original.getHeight());
+            Rect lowerPad = expandBox(lower.box,
+                    original.getWidth(), original.getHeight());
+            if (fractionSimilar(original, upperPad, stripBg.color) < 0.38
+                    || fractionSimilar(original, lowerPad, stripBg.color)
+                            < 0.38) {
+                return false; // strip colour belongs to neither side
+            }
+            // A bubble border crossing the strip means two different
+            // bubbles, even when both interiors share the page-white
+            // colour: the thin border line is only a few percent of
+            // the strip area, so the fraction tests above cannot see
+            // it. Refuse when a contrasting line spans most of the
+            // strip width on any sampled row.
+            return !stripHasBorderLine(original, strip, stripBg.color);
         } catch (RuntimeException unreadable) {
             return false;
         }
+    }
+
+    private static boolean stripHasBorderLine(Bitmap original, Rect strip,
+                                              int bgColor) {
+        int bgLuminance = luminance(bgColor);
+        int stepX = Math.max(1, strip.width() / 60);
+        int stepY = Math.max(1, strip.height() / 40);
+        for (int y = strip.top; y < strip.bottom; y += stepY) {
+            int total = 0;
+            int foreign = 0;
+            for (int x = strip.left; x < strip.right; x += stepX) {
+                int pixel = original.getPixel(x, y);
+                total++;
+                if (colorDistanceSum(pixel, bgColor) > 260
+                        || Math.abs(luminance(pixel) - bgLuminance) > 90) {
+                    foreign++;
+                }
+            }
+            if (total >= 8 && foreign >= total * 0.55) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static Segment combineSegments(Segment upper, Segment lower) {
@@ -427,6 +706,11 @@ public class ManhwaRenderer {
         } else {
             combined.ocrConfidence = cb;
         }
+        int linesA = Math.max(1, upper.lines);
+        int linesB = Math.max(1, lower.lines);
+        combined.sourceLineHeight =
+                (segmentLineHeight(upper) * linesA
+                        + segmentLineHeight(lower) * linesB) / (linesA + linesB);
         return combined;
     }
 
@@ -1949,6 +2233,17 @@ public class ManhwaRenderer {
                     }
                 }
                 if (bestIndex < 0 || bestIou < 0.16f) {
+                    // A complementary line the selected reading missed
+                    // (the crop re-read saw one more line of the
+                    // bubble). Append it when it sits in a free
+                    // vertical band with new text; dropping it while
+                    // still unioning the boxes below used to inflate
+                    // the box without its text, corrupting the pitch
+                    // estimate and the grouping decisions.
+                    if (isNewLineBand(existing, challengerLine)) {
+                        existing.lines.add(challengerLine.copy());
+                        linesChanged = true;
+                    }
                     continue;
                 }
                 used[bestIndex] = true;
@@ -1994,8 +2289,36 @@ public class ManhwaRenderer {
         if (!linesChanged) {
             existing.confidence = Math.max(
                     existing.confidence, challenger.confidence);
+        } else {
+            sortLinesReadingOrder(existing.lines);
         }
         refreshCandidate(existing, linesChanged);
+    }
+
+    private static boolean isNewLineBand(OcrCandidate existing,
+                                         OcrLineData line) {
+        String newText = comparisonText(line.text);
+        if (newText.isEmpty() || line.box == null
+                || line.box.height() <= 4) {
+            return false;
+        }
+        float centreY = line.box.exactCenterY();
+        for (OcrLineData other : existing.lines) {
+            String otherText = comparisonText(other.text);
+            if (!otherText.isEmpty()
+                    && (otherText.contains(newText)
+                            || newText.contains(otherText))) {
+                return false;
+            }
+            float slack = Math.max(3f, other.box.height() * 0.25f);
+            if (centreY >= other.box.top - slack
+                    && centreY <= other.box.bottom + slack) {
+                // Same row band: a different segmentation of a line
+                // we already have, not an additional line.
+                return false;
+            }
+        }
+        return true;
     }
 
     private static String comparisonText(String text) {
@@ -2182,8 +2505,7 @@ public class ManhwaRenderer {
             Bitmap crop = Bitmap.createBitmap(original,
                     cropRect.left, cropRect.top,
                     cropRect.width(), cropRect.height());
-            float averageLineHeight = candidate.segment.box.height()
-                    / (float) Math.max(1, candidate.lines.size());
+            float averageLineHeight = estimateLinePitch(candidate);
             float scale = 52f / Math.max(8f, averageLineHeight);
             scale = Math.max(1.25f, Math.min(3.5f, scale));
             while (scale > 1.25f
@@ -2245,8 +2567,7 @@ public class ManhwaRenderer {
                 return true;
             }
         }
-        float averageLineHeight = candidate.segment.box.height()
-                / (float) Math.max(1, candidate.lines.size());
+        float averageLineHeight = estimateLinePitch(candidate);
         return averageLineHeight < 28f || isSuspiciousText(candidate.segment.text);
     }
 
@@ -2427,6 +2748,70 @@ public class ManhwaRenderer {
             if (changed) {
                 refreshCandidate(candidate, true);
             }
+        }
+    }
+
+    /**
+     * Optional third opinion from a whole-block reader (Unlimited-OCR
+     * server): grouped blocks that still look weak are re-read as ONE
+     * crop — the entire bubble at once, never line fragments — and the
+     * result replaces the ML Kit text only when it is clean and its
+     * length is plausible. Any failure keeps the on-device reading.
+     */
+    private static void applyBlockOcr(Bitmap original,
+                                      List<OcrCandidate> selected,
+                                      BlockOcr blockOcr,
+                                      Progress progress) throws Exception {
+        List<OcrCandidate> targets = new ArrayList<>();
+        for (OcrCandidate candidate : selected) {
+            Rect box = candidate.segment.box;
+            if (box.width() >= 24 && box.height() >= 14
+                    && needsRefinement(candidate)) {
+                targets.add(candidate);
+            }
+        }
+        int total = Math.min(targets.size(), 40);
+        for (int i = 0; i < total; i++) {
+            JobRuntime.throwIfStopped();
+            OcrCandidate candidate = targets.get(i);
+            if (progress != null) {
+                progress.onProgress("Unlimited-OCR: خوێندنەوەی هەموو بلۆکەکە "
+                        + (i + 1) + "/" + total + "…");
+            }
+            String read;
+            try {
+                read = blockOcr.readBlock(original,
+                        new Rect(candidate.segment.box));
+            } catch (Exception e) {
+                if (JobRuntime.wasStopped(e)) {
+                    throw e;
+                }
+                read = null;
+            }
+            if (read == null) {
+                continue;
+            }
+            String cleaned = cleanText(read);
+            if (!isUsableText(cleaned) || isSuspiciousText(cleaned)) {
+                continue;
+            }
+            if (comparisonText(cleaned).equals(
+                    comparisonText(candidate.segment.text))) {
+                candidate.disagreement = false;
+                continue;
+            }
+            int oldLetters = letterOrDigitCount(candidate.segment.text);
+            int newLetters = letterOrDigitCount(cleaned);
+            boolean lengthSane = oldLetters == 0
+                    || (newLetters >= oldLetters * 0.45
+                            && newLetters <= oldLetters * 2.2);
+            if (!lengthSane
+                    && !isSuspiciousText(candidate.segment.text)) {
+                continue;
+            }
+            candidate.segment.text = cleaned;
+            candidate.disagreement = false;
+            refreshCandidate(candidate, false);
         }
     }
 
