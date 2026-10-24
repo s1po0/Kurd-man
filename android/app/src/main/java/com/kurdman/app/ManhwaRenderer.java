@@ -314,6 +314,7 @@ public class ManhwaRenderer {
             segment.autoBackgroundReliable = bg.reliable;
             segment.renderBox = new Rect(region);
             segment.eraseBox = new Rect(region);
+            segment.bubbleOval = looksOval(original, region, bg.color);
 
             if (!bg.reliable) {
                 // The block remains available in the editor, but automatic
@@ -406,6 +407,49 @@ public class ManhwaRenderer {
                 && (bg.enclosed || seedDominant.fraction >= 0.48
                 || bg.dominantFraction >= 0.55);
         return bg;
+    }
+
+    /**
+     * Decides whether the grown rectangle wraps a round/oval bubble. On an
+     * oval bubble the rectangle's corners stick out into the artwork, so
+     * they do not match the bubble fill colour; on a rectangular narration
+     * box they do. The result lets the typesetter fit text to the ellipse
+     * instead of the rectangle, so no line can cross the bubble border.
+     */
+    private static boolean looksOval(Bitmap original, Rect region, int bgColor) {
+        if (region.width() < 24 || region.height() < 24) {
+            return false;
+        }
+        int outsideCorners = 0;
+        int[][] corners = {
+                {0, 0}, {1, 0}, {0, 1}, {1, 1}
+        };
+        for (int[] corner : corners) {
+            int total = 0;
+            int foreign = 0;
+            for (int i = 0; i < 5; i++) {
+                float fx = 0.03f + i * 0.022f;
+                float fy = 0.03f + (4 - i) * 0.022f;
+                int x = corner[0] == 0
+                        ? region.left + Math.round(region.width() * fx)
+                        : region.right - 1 - Math.round(region.width() * fx);
+                int y = corner[1] == 0
+                        ? region.top + Math.round(region.height() * fy)
+                        : region.bottom - 1 - Math.round(region.height() * fy);
+                x = clampInt(x, 0, original.getWidth() - 1);
+                y = clampInt(y, 0, original.getHeight() - 1);
+                int pixel = original.getPixel(x, y);
+                total++;
+                if (colorDistanceSum(pixel, bgColor) > 170
+                        || Math.abs(luminance(pixel) - luminance(bgColor)) > 70) {
+                    foreign++;
+                }
+            }
+            if (total > 0 && foreign >= 3) {
+                outsideCorners++;
+            }
+        }
+        return outsideCorners >= 2;
     }
 
     private static Rect growRegion(Bitmap original, Rect seed, Rect textBox, Background bg) {

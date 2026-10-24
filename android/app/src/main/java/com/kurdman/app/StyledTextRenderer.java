@@ -94,20 +94,51 @@ public final class StyledTextRenderer {
 
         TextPaint paint = createBasePaint(segment, resolver);
         float widthTolerance = Math.max(2f, width * 0.02f);
+        // A round bubble inside this rectangle has much less room near its
+        // top and bottom. Narrow the layout step by step (recentring it via
+        // the padding, like real scanlation typesetting) until every line
+        // stays inside the ellipse; only then fall back to a smaller font.
+        float[] widthFractions = segment.bubbleOval
+                ? new float[]{1f, 0.92f, 0.84f, 0.76f, 0.68f, 0.60f}
+                : new float[]{1f};
         for (int size = startSize; size >= minSize; size--) {
             applyTextSizeAndShadow(paint, style, size);
-            StaticLayout layout = buildLayout(
-                    segment.ckb.trim(), paint, width, style);
-            boolean fits = layout.getHeight() <= maxHeight
-                    && maxLineWidth(layout) <= width + widthTolerance;
-            if (fits || (allowOverflow && size == minSize)) {
+            StaticLayout fallbackLayout = null;
+            int fallbackPad = horizontalPadding;
+            for (float fraction : widthFractions) {
+                int layoutWidth = Math.max(16, Math.round(width * fraction));
+                int effectivePad = horizontalPadding + (width - layoutWidth) / 2;
+                StaticLayout layout = buildLayout(
+                        segment.ckb.trim(), paint, layoutWidth, style);
+                fallbackLayout = layout;
+                fallbackPad = effectivePad;
+                boolean fits = layout.getHeight() <= maxHeight
+                        && maxLineWidth(layout) <= layoutWidth + widthTolerance
+                        && (!segment.bubbleOval || linesInsideEllipse(
+                                rect, layout, effectivePad, verticalPadding));
+                if (fits) {
+                    FitResult fit = new FitResult();
+                    fit.layout = layout;
+                    fit.paint = paint;
+                    fit.horizontalPadding = effectivePad;
+                    fit.verticalPadding = verticalPadding;
+                    fit.textSize = size;
+                    fit.overflow = false;
+                    return fit;
+                }
+                if (layout.getHeight() > maxHeight) {
+                    // Narrower layouts only get taller; shrink the font.
+                    break;
+                }
+            }
+            if (allowOverflow && size == minSize && fallbackLayout != null) {
                 FitResult fit = new FitResult();
-                fit.layout = layout;
+                fit.layout = fallbackLayout;
                 fit.paint = paint;
-                fit.horizontalPadding = horizontalPadding;
+                fit.horizontalPadding = fallbackPad;
                 fit.verticalPadding = verticalPadding;
                 fit.textSize = size;
-                fit.overflow = !fits;
+                fit.overflow = true;
                 return fit;
             }
         }
@@ -205,7 +236,8 @@ public final class StyledTextRenderer {
                 Color.red(eraseColor), Color.green(eraseColor), Color.blue(eraseColor)));
         Rect erase = segment.getEraseBox();
         float radius = backgroundRadius(style, erase);
-        drawShape(canvas, new RectF(erase), style.backgroundShape, radius, fill);
+        drawShape(canvas, new RectF(erase),
+                effectiveShape(segment, style), radius, fill);
     }
 
     /**
@@ -279,11 +311,12 @@ public final class StyledTextRenderer {
         fill.setColor(TextStyleSettings.withOpacity(color, style.backgroundOpacity));
 
         Rect rect = segment.getRenderBox();
+        int shape = effectiveShape(segment, style);
         canvas.save();
         rotateAroundRect(canvas, rect, style.rotationDegrees);
-        drawShape(canvas, new RectF(rect), style.backgroundShape,
+        drawShape(canvas, new RectF(rect), shape,
                 backgroundRadius(style, rect), fill);
-        drawBorder(canvas, rect, style);
+        drawBorder(canvas, rect, style, shape);
         canvas.restore();
     }
 
@@ -295,11 +328,12 @@ public final class StyledTextRenderer {
         Rect rect = segment.getRenderBox();
         canvas.save();
         rotateAroundRect(canvas, rect, style.rotationDegrees);
-        drawBorder(canvas, rect, style);
+        drawBorder(canvas, rect, style, effectiveShape(segment, style));
         canvas.restore();
     }
 
-    private static void drawBorder(Canvas canvas, Rect rect, TextStyleSettings style) {
+    private static void drawBorder(Canvas canvas, Rect rect,
+                                   TextStyleSettings style, int shape) {
         if (!style.backgroundBorder || style.backgroundBorderWidth <= 0f) {
             return;
         }
@@ -311,7 +345,7 @@ public final class StyledTextRenderer {
         RectF inset = new RectF(rect);
         float half = style.backgroundBorderWidth / 2f;
         inset.inset(half, half);
-        drawShape(canvas, inset, style.backgroundShape,
+        drawShape(canvas, inset, shape,
                 backgroundRadius(style, rect), border);
     }
 
@@ -472,6 +506,61 @@ public final class StyledTextRenderer {
         if (Math.abs(degrees) > 0.01f) {
             canvas.rotate(degrees, rect.exactCenterX(), rect.exactCenterY());
         }
+    }
+
+    /**
+     * A detected round bubble is always painted as an ellipse so no square
+     * corners can stick out of it, whatever shape the style asks for.
+     */
+    private static int effectiveShape(Segment segment, TextStyleSettings style) {
+        return segment.bubbleOval
+                ? TextStyleSettings.SHAPE_ELLIPSE : style.backgroundShape;
+    }
+
+    /**
+     * Checks every laid-out line against the ellipse inscribed in the
+     * render rectangle (shrunk by a small safety margin, since the grown
+     * rectangle can overshoot the true border by a few pixels). The text
+     * block is vertically centred exactly as {@code drawText} centres it.
+     */
+    private static boolean linesInsideEllipse(Rect rect, StaticLayout layout,
+                                              int horizontalPadding,
+                                              int verticalPadding) {
+        float safety = Math.max(3f, Math.min(rect.width(), rect.height()) * 0.035f);
+        float rx = rect.width() / 2f - safety;
+        float ry = rect.height() / 2f - safety;
+        if (rx <= 4f || ry <= 4f) {
+            return false;
+        }
+        float cx = rect.exactCenterX();
+        float cy = rect.exactCenterY();
+        int availableHeight = Math.max(0, rect.height() - verticalPadding * 2);
+        int yOffset = verticalPadding
+                + Math.max(0, (availableHeight - layout.getHeight()) / 2);
+        float originX = rect.left + horizontalPadding;
+        float originY = rect.top + yOffset;
+        for (int i = 0; i < layout.getLineCount(); i++) {
+            float lineHalfHeight =
+                    (layout.getLineBottom(i) - layout.getLineTop(i)) * 0.40f;
+            float lineCentreY = originY
+                    + (layout.getLineTop(i) + layout.getLineBottom(i)) / 2f;
+            float left = originX + layout.getLineLeft(i);
+            float right = originX + layout.getLineRight(i);
+            if (!insideEllipse(left, lineCentreY - lineHalfHeight, cx, cy, rx, ry)
+                    || !insideEllipse(left, lineCentreY + lineHalfHeight, cx, cy, rx, ry)
+                    || !insideEllipse(right, lineCentreY - lineHalfHeight, cx, cy, rx, ry)
+                    || !insideEllipse(right, lineCentreY + lineHalfHeight, cx, cy, rx, ry)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean insideEllipse(float x, float y, float cx, float cy,
+                                         float rx, float ry) {
+        float dx = (x - cx) / rx;
+        float dy = (y - cy) / ry;
+        return dx * dx + dy * dy <= 1f;
     }
 
     private static float maxLineWidth(StaticLayout layout) {

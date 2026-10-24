@@ -23,6 +23,9 @@ public class Segment {
     public int detectedBackgroundColor = Color.WHITE;
     public int detectedInkColor = Color.BLACK;
     public boolean autoBackgroundReliable = false;
+    /** True when the detected bubble is round/oval, so text must be fitted
+     * to the ellipse inside the rectangle, not to the rectangle itself. */
+    public boolean bubbleOval = false;
     public TextStyleSettings style = new TextStyleSettings();
     /** Set by a renderer when this segment was actually drawn on the page. */
     public boolean rendered;
@@ -79,6 +82,7 @@ public class Segment {
         copy.detectedBackgroundColor = detectedBackgroundColor;
         copy.detectedInkColor = detectedInkColor;
         copy.autoBackgroundReliable = autoBackgroundReliable;
+        copy.bubbleOval = bubbleOval;
         copy.style = new TextStyleSettings(ensureStyle());
         copy.rendered = rendered;
         return copy;

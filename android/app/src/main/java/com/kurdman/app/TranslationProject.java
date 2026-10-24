@@ -242,6 +242,7 @@ public class TranslationProject {
         json.put("detectedBackgroundColor", segment.detectedBackgroundColor);
         json.put("detectedInkColor", segment.detectedInkColor);
         json.put("autoBackgroundReliable", segment.autoBackgroundReliable);
+        json.put("bubbleOval", segment.bubbleOval);
         json.put("style", segment.ensureStyle().toJson());
         return json;
     }
@@ -268,6 +269,7 @@ public class TranslationProject {
                 "detectedInkColor", segment.detectedInkColor);
         segment.autoBackgroundReliable = json.optBoolean(
                 "autoBackgroundReliable", false);
+        segment.bubbleOval = json.optBoolean("bubbleOval", false);
         segment.style = TextStyleSettings.fromJson(json.optJSONObject("style"));
         return segment;
     }

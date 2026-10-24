@@ -111,6 +111,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String PREF_GLOBAL_STYLE = "global_text_style_json";
     private static final String PREF_ACCURATE_OCR = "accurate_ocr_v170";
     private static final String PREF_CREATE_PDF = "create_pdf_when_finished_v171";
+    private static final String PREF_CLEAN_DEFAULT = "clean_erase_default_v173";
     private static final String PREF_KEEP_SCREEN = "keep_screen_on_during_jobs";
     private static final String PREF_MAIN_PAGE = "main_page_index_v161";
     private static final int PAGE_TRANSLATE = 0;
@@ -569,6 +570,19 @@ public class MainActivity extends AppCompatActivity {
         globalTextStyle = TextStyleSettings.fromJsonString(
                 prefs.getString(PREF_GLOBAL_STYLE, ""));
         globalTextStyle.prepareAsGlobalDefault();
+        // v1.7.3: clean erase becomes the default once, so existing styles
+        // saved by older versions stop painting the white square patch
+        // without the user having to find any toggle. Turning it off
+        // afterwards is still possible and stays off.
+        if (!prefs.getBoolean(PREF_CLEAN_DEFAULT, false)) {
+            if (globalTextStyle.backgroundMode != TextStyleSettings.BG_CUSTOM) {
+                globalTextStyle.backgroundMode = TextStyleSettings.BG_CLEAN;
+            }
+            prefs.edit()
+                    .putBoolean(PREF_CLEAN_DEFAULT, true)
+                    .putString(PREF_GLOBAL_STYLE, globalTextStyle.toJsonString())
+                    .apply();
+        }
 
         ArrayAdapter<String> presetAdapter = new ArrayAdapter<>(
                 this, R.layout.spinner_item, TextStyleSettings.PRESET_LABELS);

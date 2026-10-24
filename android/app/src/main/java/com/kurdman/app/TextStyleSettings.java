@@ -73,7 +73,7 @@ public class TextStyleSettings {
     public int shadowColor = Color.BLACK;
     public float shadowStrength = 0.55f;
 
-    public int backgroundMode = BG_AUTO;
+    public int backgroundMode = BG_CLEAN;
     public int backgroundColor = Color.WHITE;
     public int backgroundOpacity = 255;
     public int backgroundShape = SHAPE_ROUNDED;
@@ -246,7 +246,7 @@ public class TextStyleSettings {
             default:
                 autoTextColor = true;
                 textColor = Color.BLACK;
-                backgroundMode = BG_AUTO;
+                backgroundMode = BG_CLEAN;
                 backgroundColor = Color.WHITE;
                 break;
         }
