@@ -115,3 +115,49 @@ jobs:
           else
             echo "::warning::Telegram APK send did not return ok:true"
           fi
+
+  # The chat-delivery sandbox cannot reach the Azure blob host that
+  # serves Actions artifacts, so the APK also travels back as an
+  # unreferenced git blob fetched through api.github.com. It is not
+  # committed anywhere; only its SHA is printed as a run annotation.
+  publish-apk-blob:
+    name: Publish APK blob for chat delivery
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download built APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: kurd-man-debug-apk
+          path: apk
+
+      - name: Create git blob from APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          APK=$(find apk -name '*.apk' | head -n 1)
+          if [ -z "$APK" ]; then
+            echo "::error::APK not found in downloaded artifact"
+            exit 1
+          fi
+          APK_BYTES=$(stat -c%s "$APK")
+          APK_SHA256=$(sha256sum "$APK" | cut -d' ' -f1)
+          python3 - "$APK" <<'PY'
+          import base64, json, sys
+          data = open(sys.argv[1], 'rb').read()
+          payload = {'content': base64.b64encode(data).decode(),
+                     'encoding': 'base64'}
+          open('/tmp/apk-blob.json', 'w').write(json.dumps(payload))
+          PY
+          BLOB_SHA=$(gh api -X POST "repos/${{ github.repository }}/git/blobs" \
+            --input /tmp/apk-blob.json --jq .sha)
+          echo "::notice::APK_BLOB_SHA=$BLOB_SHA"
+          echo "::notice::APK_FILE_SHA256=$APK_SHA256 bytes=$APK_BYTES"
+          {
+            echo "APK_BLOB_SHA=$BLOB_SHA"
+            echo "APK_FILE_SHA256=$APK_SHA256"
+            echo "APK_BYTES=$APK_BYTES"
+          } >> "$GITHUB_STEP_SUMMARY"
