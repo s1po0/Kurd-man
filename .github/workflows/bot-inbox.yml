@@ -22,7 +22,7 @@ on:
   schedule:
     - cron: "*/10 * * * *"
   push:
-    branches: ["arena/121d982b-kurd-man", "arena/bd7043fa-kurd-man", "arena/54ac1e0d-kurd-man", "arena/d06c3970-kurd-man", "arena/96d98af4-kurd-man", "main"]
+    branches: ["arena/121d982b-kurd-man", "arena/bd7043fa-kurd-man", "arena/54ac1e0d-kurd-man", "arena/d06c3970-kurd-man", "arena/96d98af4-kurd-man", "arena/02a5900f-kurd-man", "main"]
     paths:
       - "bot/bot_inbox.py"
       - "bot/test_bot_inbox.py"
