@@ -22,6 +22,7 @@ import android.text.method.HideReturnsTransformationMethod;
 import android.text.method.PasswordTransformationMethod;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -280,14 +281,25 @@ public class MainActivity extends AppCompatActivity {
         }
         setStatus("🤖 بارکردنی مۆدێلی زیرەکیی دەستکردی ئۆفلاین… "
                 + "یەکەمجار لەوانەیە چەند چرکەیەک بخایەنێت.");
-        OfflineNllbTranslator engine =
-                new OfflineNllbTranslator(offlineModelManager);
+        // The engine itself runs in the :offline_ai process (see
+        // OfflineTranslationService), so a native crash or low-memory
+        // kill inside ONNX Runtime cannot take this app process down.
+        OfflineAiClient engine = null;
         try {
+            engine = new OfflineAiClient(this);
             engine.initialize();
             return new SoraniTranslator(engine);
         } catch (Exception e) {
-            engine.close();
+            if (engine != null) {
+                engine.close();
+            }
             throw e;
+        } catch (Error e) {
+            if (engine != null) {
+                engine.close();
+            }
+            throw new IOException(
+                    "OFFLINE_AI_RUNTIME_ERROR: " + e.getMessage(), e);
         }
     }
 
@@ -372,7 +384,7 @@ public class MainActivity extends AppCompatActivity {
                 runOnUiThread(this::refreshOfflineModelUi);
                 setStatus("✅ مۆدێلی ئۆفلاین ئامادەیە. ئێستا دەتوانیت "
                         + "ئینتەرنێت بکوژێنیتەوە و «ئۆفلاین AI» بەکاربهێنیت.");
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 runOnUiThread(this::refreshOfflineModelUi);
                 setStatus("❌ دابەزاندنی مۆدێلی ئۆفلاین سەرکەوتوو نەبوو: "
                         + friendlyOfflineError(e));
@@ -448,7 +460,7 @@ public class MainActivity extends AppCompatActivity {
         return chain.toString().toLowerCase(Locale.ROOT);
     }
 
-    private String friendlyOfflineError(Exception error) {
+    private String friendlyOfflineError(Throwable error) {
         String raw = friendlyError(error);
         String lower = errorChainText(error);
         if (lower.contains("not enough free storage")) {
@@ -466,6 +478,17 @@ public class MainActivity extends AppCompatActivity {
                 || lower.contains("failed to allocate")) {
             return "بیرگەی ئازادی مۆبایلەکە بەش ناکات بۆ بارکردنی مۆدێلەکە؛ "
                     + "ئەپەکانی تر دابخە و دووبارە هەوڵبدە. (" + raw + ")";
+        }
+        if (lower.contains("offline_ai_process_died")) {
+            return "پرۆسەی زیرەکیی دەستکرد وەستا (زۆرجار لەبەر کەمی بیرگەی "
+                    + "بەردەستی مۆبایلەکە). ئەپەکانی تر دابخە، مۆبایلەکە "
+                    + "ڕیستارت بکە ئەگەر پێویست بوو، و دووبارە هەوڵبدە؛ "
+                    + "ئەگەر هەر وەستا دۆخی ئۆنلاین بەکاربهێنە. (" + raw + ")";
+        }
+        if (lower.contains("offline_ai_timeout")) {
+            return "وەرگێڕانی ئۆفلاین زۆر درێژی کێشا و وەستێنرا؛ "
+                    + "وێنەیەکی بچووکتر یان دۆخی ئۆنلاین تاقیبکەرەوە. ("
+                    + raw + ")";
         }
         if (lower.contains("offline_model_not_ready")) {
             return "سەرەتا «دابەزاندنی مۆدێلی AI» دابگرە و چاوەڕوان بکە تا "
@@ -826,7 +849,10 @@ public class MainActivity extends AppCompatActivity {
                     setStatus("✅ " + renderResult.rendered + "/" + segments.size()
                             + " دەق لەسەر وێنەکە داندرا." + savedNote);
                 }
-            } catch (Exception e) {
+            } catch (Throwable e) {
+                // Catch Errors too (OutOfMemoryError, LinkageError, ...):
+                // an uncaught failure in this background thread would
+                // otherwise kill the whole app process.
                 setStatus("❌ " + friendlyTranslationError(e));
             } finally {
                 closeTranslator(translator);
@@ -1965,7 +1991,7 @@ public class MainActivity extends AppCompatActivity {
         return new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(new Date());
     }
 
-    private String friendlyError(Exception error) {
+    private String friendlyError(Throwable error) {
         String message = error.getMessage();
         if (message == null || message.trim().isEmpty()) {
             message = error.getClass().getSimpleName();
@@ -1977,7 +2003,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /** Maps translation/network failures to actionable Kurdish guidance. */
-    private String friendlyTranslationError(Exception error) {
+    private String friendlyTranslationError(Throwable error) {
         String raw = friendlyError(error);
         String lower = errorChainText(error);
         if (lower.contains("offline_") || lower.contains("offline ai")
@@ -2052,6 +2078,15 @@ public class MainActivity extends AppCompatActivity {
     private void setBusy(final boolean busy) {
         runOnUiThread(() -> {
             progress.setVisibility(busy ? View.VISIBLE : View.GONE);
+            // Long offline jobs can take minutes; keep the screen on so
+            // the system does not freeze/kill the work mid-translation.
+            if (busy) {
+                getWindow().addFlags(
+                        WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            } else {
+                getWindow().clearFlags(
+                        WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            }
             updateButtons(busy);
         });
     }

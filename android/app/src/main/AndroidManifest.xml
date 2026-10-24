@@ -26,6 +26,14 @@
             </intent-filter>
         </activity>
 
+        <!-- Offline ONNX/NLLB inference runs in its own process so a
+             native abort or low-memory kill there cannot take the
+             whole app down with it. -->
+        <service
+            android:name=".OfflineTranslationService"
+            android:exported="false"
+            android:process=":offline_ai" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

@@ -77,9 +77,22 @@ final class OfflineNllbTranslator
             // arena retains large blocks instead of returning them to the
             // OS), and only basic graph optimizations (lower load spike).
             long totalRam = modelManager.totalRamBytes();
-            boolean lowRam = totalRam > 0 && totalRam < 5_000_000_000L;
+            boolean lowRam = totalRam > 0 && totalRam < 6_500_000_000L;
             int threads = lowRam ? 2 : Math.max(2, Math.min(4,
                     Runtime.getRuntime().availableProcessors()));
+            // Stability over peak speed on every device:
+            // - disable_prepacking avoids duplicating the INT8 weights
+            //   into packed buffers while the three sessions load.
+            // - disable KleidiAI keeps MLAS on its generic Arm kernels;
+            //   the newer SME/i8mm paths can abort natively on some SoCs.
+            try {
+                sessionOptions.addConfigEntry(
+                        "session.disable_prepacking", "1");
+                sessionOptions.addConfigEntry(
+                        "mlas.disable_kleidiai", "1");
+            } catch (OrtException | RuntimeException ignored) {
+                // Unknown config keys must never block model loading.
+            }
             if (lowRam) {
                 sessionOptions.setCPUArenaAllocator(false);
                 sessionOptions.setOptimizationLevel(
@@ -571,7 +584,10 @@ final class OfflineNllbTranslator
         if (clean.isEmpty()) {
             return;
         }
-        if (tokenizer.tokenCount(clean) <= MAX_INPUT_TOKENS) {
+        // Do not run the O(n^2) BPE token count over a pathological
+        // whole-page segment; split it down by characters first.
+        if (clean.length() <= 600
+                && tokenizer.tokenCount(clean) <= MAX_INPUT_TOKENS) {
             output.add(clean);
             return;
         }
