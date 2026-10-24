@@ -130,8 +130,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void verifyBot() {
         final String token = tokenValue();
-        if (!isValidToken(token)) {
-            setStatus("⚠ سەرەتا تۆکنی دروست بنووسە (بە شێوەی ژمارە:پیت).");
+        final String chatId = chatValue();
+        String problem = settingsError(token, chatId, false);
+        if (problem != null) {
+            setStatus("⚠ " + problem);
             return;
         }
         saveSettings();
@@ -139,13 +141,34 @@ public class MainActivity extends AppCompatActivity {
         setStatus("پەیوەستبوون بە تێلێگرام…");
         executor.execute(() -> {
             try {
-                JSONObject me = new TelegramApi(token).getMe();
+                TelegramApi api = new TelegramApi(token);
+                JSONObject me = api.getMe();
                 String username = me.optString("username", "");
-                setStatus(username.isEmpty()
+                String status = username.isEmpty()
                         ? "✅ تۆکنەکە پەیوەستە."
-                        : "✅ پەیوەستە: @" + username);
+                        : "✅ تۆکنەکە پەیوەستە: @" + username;
+                if (!chatId.isEmpty()) {
+                    // Prove the bot can actually reach this chat; getMe alone
+                    // does not validate the Chat ID at all.
+                    api.sendChatAction(chatId, "typing");
+                    status += " — و Chat IDـەکەش وەڵامی دا ✅";
+                    try {
+                        JSONObject chat = api.getChat(chatId);
+                        String title = chat.optString("title",
+                                chat.optString("first_name",
+                                        chat.optString("username", "")));
+                        if (!title.isEmpty()) {
+                            status += " (" + title + ")";
+                        }
+                    } catch (Exception ignored) {
+                        // sendChatAction already proved reachability.
+                    }
+                } else {
+                    status += " (Chat ID هێشتا نەنووسراوە)";
+                }
+                setStatus(status);
             } catch (Exception e) {
-                setStatus("❌ " + friendlyError(e));
+                setStatus("❌ " + friendlyTelegramError(e));
             } finally {
                 setBusy(false);
             }
@@ -156,12 +179,9 @@ public class MainActivity extends AppCompatActivity {
         final String token = tokenValue();
         final String chatId = chatValue();
         final String text = messageInput.getText().toString().trim();
-        if (!isValidToken(token)) {
-            setStatus("⚠ سەرەتا تۆکنی دروست بنووسە.");
-            return;
-        }
-        if (chatId.isEmpty()) {
-            setStatus("⚠ Chat ID بنووسە.");
+        String problem = settingsError(token, chatId, true);
+        if (problem != null) {
+            setStatus("⚠ " + problem);
             return;
         }
         if (text.isEmpty()) {
@@ -180,7 +200,7 @@ public class MainActivity extends AppCompatActivity {
                 runOnUiThread(() -> messageInput.setText(""));
                 setStatus("✅ نامەکە نێردرا.");
             } catch (Exception e) {
-                setStatus("❌ " + friendlyError(e));
+                setStatus("❌ " + friendlyTelegramError(e));
             } finally {
                 setBusy(false);
             }
@@ -288,35 +308,49 @@ public class MainActivity extends AppCompatActivity {
         final String chatId = chatValue();
         final File file = resultFile;
         final String pairs = pairsText;
-        if (!isValidToken(token)) {
-            setStatus("⚠ سەرەتا تۆکنی دروست بنووسە.");
+        String problem = settingsError(token, chatId, true);
+        if (problem != null) {
+            setStatus("⚠ " + problem);
             return;
         }
-        if (chatId.isEmpty()) {
-            setStatus("⚠ Chat ID بنووسە.");
-            return;
-        }
-        if (file == null || !file.exists()) {
+        if (file == null || !file.exists() || file.length() <= 0) {
             setStatus("⚠ سەرەتا وێنەیەک وەربگێڕە.");
             return;
         }
         saveSettings();
         setBusy(true);
-        setStatus("ناردنی ئەنجامەکە بۆ تێلێگرام…");
+        setStatus("ناردنی ئەنجامەکە بۆ تێلێگرام (" + formatMb(file.length()) + ")…");
         executor.execute(() -> {
             try {
                 TelegramApi api = new TelegramApi(token);
-                api.sendDocument(chatId, file, "✅ ئەنجامی وەرگێڕانی مانهوا — Kurd-man");
+                // Fail fast (and clearly) if the bot cannot reach this chat,
+                // instead of uploading the whole file first.
+                api.sendChatAction(chatId, "upload_document");
+                JSONObject sent = api.sendDocument(
+                        chatId, file, "✅ ئەنجامی وەرگێڕانی مانهوا — Kurd-man");
+                long messageId = sent.optLong("message_id", 0);
+                String doneNote = messageId > 0
+                        ? "✅ وێنەکە نێردرا بۆ تێلێگرام (message_id=" + messageId + ")."
+                        : "✅ وێنەکە نێردرا بۆ تێلێگرام.";
+                setStatus(doneNote);
+
+                // The document is already delivered at this point; report a
+                // text failure separately instead of marking everything failed.
                 if (pairs != null && !pairs.trim().isEmpty()) {
-                    List<String> chunks = splitText(pairs, 3300);
-                    for (int i = 0; i < chunks.size(); i++) {
-                        String prefix = i == 0 ? "📝 دەقەکان:\n\n" : "";
-                        api.sendMessage(chatId, prefix + chunks.get(i));
+                    try {
+                        List<String> chunks = splitText(pairs, 3300);
+                        for (int i = 0; i < chunks.size(); i++) {
+                            String prefix = i == 0 ? "📝 دەقەکان:\n\n" : "";
+                            api.sendMessage(chatId, prefix + chunks.get(i));
+                        }
+                        setStatus(doneNote + " دەقەکانیش نێردران ✅");
+                    } catch (Exception textError) {
+                        setStatus(doneNote + " بەڵام دەقەکان نەچوون: "
+                                + friendlyTelegramError(textError));
                     }
                 }
-                setStatus("✅ ئەنجامەکە نێردرا بۆ تێلێگرام.");
             } catch (Exception e) {
-                setStatus("❌ " + friendlyError(e));
+                setStatus("❌ " + friendlyTelegramError(e));
             } finally {
                 setBusy(false);
             }
@@ -494,6 +528,25 @@ public class MainActivity extends AppCompatActivity {
         return token != null && token.length() > 20 && token.indexOf(':') > 0;
     }
 
+    /** Returns a Kurdish explanation when the Telegram settings cannot work. */
+    private String settingsError(String token, String chatId, boolean requireChat) {
+        if (!isValidToken(token)) {
+            return "سەرەتا تۆکنی دروست بنووسە (بە شێوەی ژمارە:پیت، لە @BotFather).";
+        }
+        if (chatId == null || chatId.isEmpty()) {
+            return requireChat ? "Chat IDـی خۆت بنووسە (لە @userinfobot وەریبگرە)." : null;
+        }
+        if (!chatId.matches("-?\\d{5,}")) {
+            return "Chat ID دەبێت تەنها ژمارە بێت؛ ناوی بەکارهێنەر یان ناوی بۆتەکە مەنووسە.";
+        }
+        String botId = token.substring(0, token.indexOf(':')).trim();
+        if (chatId.equals(botId)) {
+            return "ئەم ژمارەیە IDـی بۆتەکەیە (بەشی پێش «:» لە تۆکندا)، نەک IDـی خۆت. "
+                    + "IDـی خۆت لە @userinfobot وەربگرە.";
+        }
+        return null;
+    }
+
     private String timestamp() {
         return new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(new Date());
     }
@@ -507,6 +560,39 @@ public class MainActivity extends AppCompatActivity {
             message = message.substring(0, 220) + "…";
         }
         return message;
+    }
+
+    /** Maps common Telegram failures to a clear Kurdish explanation. */
+    private String friendlyTelegramError(Exception error) {
+        String raw = friendlyError(error);
+        String lower = raw.toLowerCase(Locale.ROOT);
+        String hint = null;
+        if (lower.contains("unauthorized") || lower.contains("http 401")) {
+            hint = "تۆکنەکە هەڵەیە یان لە @BotFather هەڵوەشێنراوەتەوە. تۆکنەکە دووبارە کۆپی بکە.";
+        } else if (lower.contains("chat not found")) {
+            hint = "Chat ID هەڵەیە، یان بۆتەکەت لە تلگرام نەکراوەتەوە و /start نەدراوە. "
+                    + "IDـی خۆت لە @userinfobot بپشکنە.";
+        } else if (lower.contains("bot was blocked") || lower.contains("forbidden")) {
+            hint = "بۆتەکە بلۆک کراوە یان ناتوانێت نامە بنێرێت؛ لە تلگرام بیکەرەوە و /start دابگرە.";
+        } else if (lower.contains("file is too big") || lower.contains("too large")
+                || lower.contains("http 413")) {
+            hint = "فایلەکە زۆر گەورەیە بۆ سنووری بۆتەکانی تلگرام (50 MB). "
+                    + "وێنەکە بکە بە دوو بەش و هەر بەشێک جیا وەربگێڕە.";
+        } else if (lower.contains("timed out") || lower.contains("timeout")
+                || lower.contains("unable to resolve host")
+                || lower.contains("failed to connect")
+                || lower.contains("connection reset")
+                || lower.contains("network is unreachable")
+                || lower.contains("empty response")) {
+            hint = "پەیوەندییەکە بە تلگرامەوە نەبەسترا یان پچڕا؛ ئینتەرنێتەکە بپشکنە و دووبارە هەوڵبدە.";
+        } else if (lower.contains("message is too long")) {
+            hint = "نامەکە زۆر درێژ بوو بۆ تلگرام.";
+        }
+        return hint == null ? raw : hint + " (" + raw + ")";
+    }
+
+    private String formatMb(long bytes) {
+        return String.format(Locale.ROOT, "%.1f MB", bytes / 1024f / 1024f);
     }
 
     private void setStatus(final String text) {

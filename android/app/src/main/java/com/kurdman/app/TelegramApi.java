@@ -27,6 +27,19 @@ public class TelegramApi {
         return postJson("getMe", new JSONObject());
     }
 
+    public JSONObject getChat(String chatId) throws Exception {
+        JSONObject body = new JSONObject();
+        body.put("chat_id", chatId);
+        return postJson("getChat", body);
+    }
+
+    public JSONObject sendChatAction(String chatId, String action) throws Exception {
+        JSONObject body = new JSONObject();
+        body.put("chat_id", chatId);
+        body.put("action", action);
+        return postJson("sendChatAction", body);
+    }
+
     public JSONObject sendMessage(String chatId, String text) throws Exception {
         JSONObject body = new JSONObject();
         body.put("chat_id", chatId);
@@ -38,25 +51,60 @@ public class TelegramApi {
         if (file == null || !file.exists()) {
             throw new IOException("Document file does not exist");
         }
+        if (file.length() <= 0) {
+            throw new IOException("Document file is empty");
+        }
         if (file.length() > 49L * 1024L * 1024L) {
-            throw new IOException("Document is larger than Telegram's bot upload limit");
+            throw new IOException("Bad Request: file is too big ("
+                    + file.length() + " bytes)");
+        }
+        String safeCaption = caption == null ? "" : caption.trim();
+        if (safeCaption.length() > 1024) {
+            safeCaption = safeCaption.substring(0, 1024);
         }
 
-        HttpURLConnection conn = open("sendDocument");
         String boundary = "KurdMan-" + UUID.randomUUID().toString();
+
+        // Build everything except the file bytes up front so the request can
+        // use a fixed Content-Length (like curl) instead of chunked
+        // transfer-encoding, which some servers/proxies handle poorly.
+        ByteArrayOutputStream prefixBuffer = new ByteArrayOutputStream();
+        DataOutputStream prefix = new DataOutputStream(prefixBuffer);
+        writeField(prefix, boundary, "chat_id", chatId);
+        if (!safeCaption.isEmpty()) {
+            writeField(prefix, boundary, "caption", safeCaption);
+        }
+        writeFileHeader(prefix, boundary, "document", file);
+        prefix.flush();
+        byte[] suffix = ("\r\n--" + boundary + "--\r\n")
+                .getBytes(StandardCharsets.UTF_8);
+        long contentLength = prefixBuffer.size() + file.length() + suffix.length;
+
+        HttpURLConnection conn = open("sendDocument");
         conn.setRequestMethod("POST");
         conn.setDoOutput(true);
+        conn.setDoInput(true);
+        conn.setUseCaches(false);
+        conn.setReadTimeout(300000);
         conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
-        conn.setChunkedStreamingMode(64 * 1024);
+        conn.setRequestProperty("Accept", "application/json");
+        conn.setRequestProperty("Connection", "Keep-Alive");
+        conn.setFixedLengthStreamingMode(contentLength);
 
-        DataOutputStream out = new DataOutputStream(conn.getOutputStream());
+        OutputStream out = conn.getOutputStream();
         try {
-            writeField(out, boundary, "chat_id", chatId);
-            if (caption != null && !caption.trim().isEmpty()) {
-                writeField(out, boundary, "caption", caption);
+            prefixBuffer.writeTo(out);
+            FileInputStream in = new FileInputStream(file);
+            try {
+                byte[] buffer = new byte[64 * 1024];
+                int read;
+                while ((read = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, read);
+                }
+            } finally {
+                in.close();
             }
-            writeFile(out, boundary, "document", file);
-            out.writeBytes("--" + boundary + "--\r\n");
+            out.write(suffix);
             out.flush();
         } finally {
             out.close();
@@ -68,7 +116,10 @@ public class TelegramApi {
         HttpURLConnection conn = open(method);
         conn.setRequestMethod("POST");
         conn.setDoOutput(true);
+        conn.setDoInput(true);
+        conn.setUseCaches(false);
         conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+        conn.setRequestProperty("Accept", "application/json");
         byte[] bytes = body.toString().getBytes(StandardCharsets.UTF_8);
         conn.setFixedLengthStreamingMode(bytes.length);
         OutputStream out = conn.getOutputStream();
@@ -93,11 +144,21 @@ public class TelegramApi {
         int code = conn.getResponseCode();
         InputStream in = code >= 200 && code < 300 ? conn.getInputStream() : conn.getErrorStream();
         String text = readAll(in);
-        JSONObject root = new JSONObject(text);
-        if (!root.optBoolean("ok")) {
-            throw new IOException(method + ": " + root.optString("description", "Telegram error " + code));
+        if (text == null || text.trim().isEmpty()) {
+            throw new IOException(method + " HTTP " + code + " (empty response)");
         }
-        Object result = root.get("result");
+        JSONObject root;
+        try {
+            root = new JSONObject(text);
+        } catch (Exception parseError) {
+            String preview = text.length() > 200 ? text.substring(0, 200) : text;
+            throw new IOException(method + " HTTP " + code + ": " + preview);
+        }
+        if (!root.optBoolean("ok")) {
+            throw new IOException(method + " HTTP " + code + ": "
+                    + root.optString("description", "Telegram error"));
+        }
+        Object result = root.opt("result");
         if (result instanceof JSONObject) {
             return (JSONObject) result;
         }
@@ -131,7 +192,7 @@ public class TelegramApi {
         out.writeBytes("\r\n");
     }
 
-    private void writeFile(DataOutputStream out, String boundary, String name, File file)
+    private void writeFileHeader(DataOutputStream out, String boundary, String name, File file)
             throws IOException {
         String contentType = URLConnection.guessContentTypeFromName(file.getName());
         if (contentType == null) {
@@ -141,17 +202,5 @@ public class TelegramApi {
         out.writeBytes("Content-Disposition: form-data; name=\"" + name + "\"; filename=\""
                 + file.getName() + "\"\r\n");
         out.writeBytes("Content-Type: " + contentType + "\r\n\r\n");
-
-        FileInputStream in = new FileInputStream(file);
-        try {
-            byte[] buffer = new byte[64 * 1024];
-            int read;
-            while ((read = in.read(buffer)) != -1) {
-                out.write(buffer, 0, read);
-            }
-        } finally {
-            in.close();
-        }
-        out.writeBytes("\r\n");
     }
 }
