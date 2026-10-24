@@ -35,8 +35,22 @@ jobs:
       - name: Restore stable debug keystore
         uses: actions/cache@v4
         with:
-          path: ~/.android/debug.keystore
-          key: kurdman-debug-keystore-v1
+          path: ~/kurdman-debug.keystore
+          key: kurdman-debug-keystore-v2
+
+      - name: Prepare stable debug keystore
+        run: |
+          KEYSTORE="$HOME/kurdman-debug.keystore"
+          if [ ! -f "$KEYSTORE" ]; then
+            keytool -genkeypair -v -keystore "$KEYSTORE" -storetype PKCS12 \
+              -storepass android -keypass android -alias androiddebugkey \
+              -keyalg RSA -keysize 2048 -validity 10950 \
+              -dname "CN=Android Debug,O=Android,C=US"
+            echo "::notice::generated a new stable debug keystore (first run)"
+          else
+            echo "::notice::reusing cached stable debug keystore"
+          fi
+          echo "KURDMAN_DEBUG_KEYSTORE=$KEYSTORE" >> "$GITHUB_ENV"
 
       - name: Set up Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
@@ -54,10 +68,10 @@ jobs:
       - name: Report APK signer fingerprint
         run: |
           APK=$(ls android/app/build/outputs/apk/debug/*.apk | head -n 1)
-          if [ -f ~/.android/debug.keystore ]; then
-            echo "::notice::debug keystore present at ~/.android/debug.keystore"
+          if [ -n "$KURDMAN_DEBUG_KEYSTORE" ] && [ -f "$KURDMAN_DEBUG_KEYSTORE" ]; then
+            echo "::notice::stable debug keystore present at $KURDMAN_DEBUG_KEYSTORE"
           else
-            echo "::warning::debug.keystore not found under ~/.android; update-over-install may not persist"
+            echo "::warning::stable debug keystore missing; update-over-install may not persist"
           fi
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f 2>/dev/null | sort | tail -n 1)
           if [ -n "$APK" ] && [ -n "$APKSIGNER" ]; then
