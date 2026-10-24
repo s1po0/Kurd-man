@@ -33,6 +33,13 @@ public class Segment {
     public int interiorTop = -1;
     public int[] interiorLeft = null;
     public int[] interiorRight = null;
+    /** True when this block is lettering drawn over artwork (SFX outside
+     * any speech bubble). Such blocks are erased glyph-by-glyph against
+     * the artwork and re-typeset in the original ink colour. Only set
+     * after the outside eraser has validated the block. */
+    public boolean outsideText = false;
+    /** Whether the outside lettering is bright ink on a dark background. */
+    public boolean outsideBrightInk = true;
     public TextStyleSettings style = new TextStyleSettings();
     /** Set by a renderer when this segment was actually drawn on the page. */
     public boolean rendered;
@@ -93,6 +100,8 @@ public class Segment {
         copy.interiorTop = interiorTop;
         copy.interiorLeft = interiorLeft == null ? null : interiorLeft.clone();
         copy.interiorRight = interiorRight == null ? null : interiorRight.clone();
+        copy.outsideText = outsideText;
+        copy.outsideBrightInk = outsideBrightInk;
         copy.style = new TextStyleSettings(ensureStyle());
         copy.rendered = rendered;
         return copy;

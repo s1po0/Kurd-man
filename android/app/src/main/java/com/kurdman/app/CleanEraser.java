@@ -176,6 +176,236 @@ final class CleanEraser {
                 Bitmap.Config.ARGB_8888);
     }
 
+    // ---- Lettering that sits on artwork instead of in a bubble (SFX) ----
+
+    /**
+     * Whether the letters inside {@code rect} can be removed safely when
+     * the text is lettering drawn over artwork (outside any bubble).
+     * Runs the full mask analysis without producing a bitmap, so callers
+     * can validate a block before accepting it for typesetting.
+     */
+    static boolean outsideErasable(Bitmap source, Rect rect, boolean brightInk) {
+        return buildOutside(source, rect, brightInk) != null;
+    }
+
+    /**
+     * Returns a bitmap of exactly {@code rect} with outside-bubble
+     * lettering removed and the artwork behind it smoothly continued,
+     * or {@code null} when the letters cannot be separated from the art
+     * (the caller then draws nothing — never a rectangle).
+     *
+     * <p>How letters are identified (verified against real pages, e.g.
+     * white handwritten SFX with a black outline over a night sky): the
+     * extreme-luminance cores of the ink are labelled, solid slabs that
+     * enter the patch broadly from its edges (a neighbouring balloon,
+     * hair) are rejected by their density and edge contact, the erase
+     * mask then grows a few pixels through the letters' own neutral
+     * anti-aliasing and outline only, and the hole is filled by
+     * diffusion so gradients like sky continue seamlessly.</p>
+     */
+    static Bitmap createOutsidePatch(Bitmap source, Rect rect, boolean brightInk) {
+        OutsideData data = buildOutside(source, rect, brightInk);
+        if (data == null) {
+            return null;
+        }
+        int n = data.pixels.length;
+        boolean[] seed = new boolean[n];
+        for (int i = 0; i < n; i++) {
+            seed[i] = !data.mask[i];
+        }
+        int[] queue = new int[n];
+        fillFromSeeds(data.pixels, data.mask, seed,
+                data.width, data.height, queue, Color.BLACK);
+        diffuse(data.pixels, data.mask, data.width, data.height,
+                n > 600_000 ? 25 : 50);
+        return Bitmap.createBitmap(data.pixels, data.width, data.height,
+                Bitmap.Config.ARGB_8888);
+    }
+
+    private static final class OutsideData {
+        int[] pixels;
+        boolean[] mask;
+        int width;
+        int height;
+    }
+
+    private static OutsideData buildOutside(Bitmap source, Rect rect,
+                                            boolean brightInk) {
+        if (source == null || source.isRecycled() || rect == null
+                || rect.width() <= 0 || rect.height() <= 0) {
+            return null;
+        }
+        int width = rect.width();
+        int height = rect.height();
+        long count = (long) width * (long) height;
+        if (count > MAX_PIXELS) {
+            return null;
+        }
+        int n = (int) count;
+        int[] pixels = new int[n];
+        try {
+            source.getPixels(pixels, 0, width,
+                    rect.left, rect.top, width, height);
+        } catch (RuntimeException unreadable) {
+            return null;
+        }
+
+        boolean[] core = new boolean[n];
+        for (int i = 0; i < n; i++) {
+            int lum = luminanceOf(pixels[i]);
+            core[i] = brightInk ? lum >= 180 : lum <= 75;
+        }
+
+        int[] labels = new int[n];
+        int[] queue = new int[n];
+        List<int[]> stats = new ArrayList<>();
+        stats.add(null);
+        labelComponents(core, width, height, labels, queue, stats);
+        int components = stats.size() - 1;
+        if (components <= 0) {
+            return null;
+        }
+
+        // How much of each patch side every component occupies. A balloon
+        // or lock of hair entering the patch covers a long run of one
+        // side; a letter only ever clips a side at a point.
+        int[] runTop = new int[components + 1];
+        int[] runBottom = new int[components + 1];
+        int[] runLeft = new int[components + 1];
+        int[] runRight = new int[components + 1];
+        for (int x = 0; x < width; x++) {
+            runTop[labels[x]]++;
+            runBottom[labels[(height - 1) * width + x]]++;
+        }
+        for (int y = 0; y < height; y++) {
+            runLeft[labels[y * width]]++;
+            runRight[labels[y * width + width - 1]]++;
+        }
+
+        boolean[] accepted = new boolean[components + 1];
+        for (int id = 1; id <= components; id++) {
+            int[] st = stats.get(id);
+            if (st[5] == 0) {
+                continue; // not an ink-core component
+            }
+            int area = st[0];
+            int boxW = st[3] - st[1] + 1;
+            int boxH = st[4] - st[2] + 1;
+            double density = area / (double) Math.max(1, boxW * boxH);
+            int edgeRun = Math.max(Math.max(runTop[id], runBottom[id]),
+                    Math.max(runLeft[id], runRight[id]));
+            boolean reject = area > n * 0.45
+                    || edgeRun > width * 0.35
+                    || (edgeRun > 14 && density > 0.55 && area > n * 0.03);
+            accepted[id] = !reject;
+        }
+
+        boolean[] keep = new boolean[n];
+        int kept = 0;
+        for (int i = 0; i < n; i++) {
+            if (labels[i] >= 1 && labels[i] <= components
+                    && accepted[labels[i]]) {
+                keep[i] = true;
+                kept++;
+            }
+        }
+        if (kept == 0 || kept < n * 0.004 || kept > n * 0.42) {
+            return null;
+        }
+
+        // labels buffer is free now; reuse it for the distance transform.
+        int[] dist = labels;
+        chebyshevDistance(keep, dist, width, height);
+        boolean[] mask = new boolean[n];
+        int maskCount = 0;
+        for (int i = 0; i < n; i++) {
+            boolean neutral = channelSpread(pixels[i]) <= 30;
+            if (keep[i] || dist[i] <= 1 || (dist[i] <= 6 && neutral)) {
+                mask[i] = true;
+                maskCount++;
+            }
+        }
+        if (maskCount > n * 0.55) {
+            return null;
+        }
+
+        OutsideData data = new OutsideData();
+        data.pixels = pixels;
+        data.mask = mask;
+        data.width = width;
+        data.height = height;
+        return data;
+    }
+
+    /**
+     * Laplace diffusion restricted to the mask: repeatedly replaces each
+     * masked pixel by the average of its neighbours (scanning in
+     * alternating directions). This continues smooth gradients (sky,
+     * walls) through the erased strokes without visible seams, where a
+     * plain nearest-colour fill leaves blocky cells.
+     */
+    private static void diffuse(int[] pixels, boolean[] mask,
+                                int width, int height, int iterations) {
+        for (int it = 0; it < iterations; it++) {
+            boolean forward = (it % 2 == 0);
+            for (int yy = 0; yy < height; yy++) {
+                int y = forward ? yy : height - 1 - yy;
+                for (int xx = 0; xx < width; xx++) {
+                    int x = forward ? xx : width - 1 - xx;
+                    int index = y * width + x;
+                    if (!mask[index]) {
+                        continue;
+                    }
+                    int red = 0;
+                    int green = 0;
+                    int blue = 0;
+                    int neighbours = 0;
+                    if (x > 0) {
+                        red += Color.red(pixels[index - 1]);
+                        green += Color.green(pixels[index - 1]);
+                        blue += Color.blue(pixels[index - 1]);
+                        neighbours++;
+                    }
+                    if (x + 1 < width) {
+                        red += Color.red(pixels[index + 1]);
+                        green += Color.green(pixels[index + 1]);
+                        blue += Color.blue(pixels[index + 1]);
+                        neighbours++;
+                    }
+                    if (y > 0) {
+                        red += Color.red(pixels[index - width]);
+                        green += Color.green(pixels[index - width]);
+                        blue += Color.blue(pixels[index - width]);
+                        neighbours++;
+                    }
+                    if (y + 1 < height) {
+                        red += Color.red(pixels[index + width]);
+                        green += Color.green(pixels[index + width]);
+                        blue += Color.blue(pixels[index + width]);
+                        neighbours++;
+                    }
+                    if (neighbours > 0) {
+                        pixels[index] = Color.argb(255,
+                                red / neighbours, green / neighbours,
+                                blue / neighbours);
+                    }
+                }
+            }
+        }
+    }
+
+    private static int luminanceOf(int pixel) {
+        return (299 * Color.red(pixel) + 587 * Color.green(pixel)
+                + 114 * Color.blue(pixel)) / 1000;
+    }
+
+    private static int channelSpread(int pixel) {
+        int r = Color.red(pixel);
+        int g = Color.green(pixel);
+        int b = Color.blue(pixel);
+        return Math.max(r, Math.max(g, b)) - Math.min(r, Math.min(g, b));
+    }
+
     /**
      * Returns {averageColour, permilleOfSamples} of the dominant colour
      * bin, or null when sampling found nothing.

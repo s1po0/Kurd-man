@@ -73,13 +73,29 @@ public final class StyledTextRenderer {
         int width = Math.max(16, rect.width() - horizontalPadding * 2);
         int maxHeight = Math.max(12, rect.height() - verticalPadding * 2);
 
+        // The bubble's real outline (traced per row by the renderer) is
+        // the strongest fit constraint: it follows connected double
+        // balloons and tails that no rectangle or ellipse model
+        // matches. It only applies while the text box still sits over
+        // the detected bubble; a box the user dragged elsewhere in the
+        // editor is unconstrained. Computed early because the starting
+        // font size may grow when it is present.
+        boolean hasMask = segment.interiorLeft != null
+                && segment.interiorRight != null
+                && segment.getEraseBox().contains(rect.centerX(), rect.centerY());
+
         float sourceLineHeight = segment.box.height()
                 / (float) Math.max(1, segment.lines);
         if (sourceLineHeight <= 0f) {
             sourceLineHeight = Math.max(12f, rect.height());
         }
-        int startSize = clampInt(
-                Math.round(sourceLineHeight * 0.97f * style.sizeScale), 8, 220);
+        // With a traced outline the fit below is exact, so the font may
+        // start somewhat larger than the source lines and only shrink
+        // if a line would truly cross the border. Without this, text in
+        // big bubbles used to come out needlessly small.
+        float startFactor = (hasMask && !allowOverflow) ? 1.20f : 0.97f;
+        int startSize = clampInt(Math.round(
+                sourceLineHeight * startFactor * style.sizeScale), 8, 220);
         int minSize = clampInt(
                 Math.round(sourceLineHeight * 0.30f * style.sizeScale), 6, startSize);
         // A box made much larger in the editor should be able to use the
@@ -94,14 +110,6 @@ public final class StyledTextRenderer {
 
         TextPaint paint = createBasePaint(segment, resolver);
         float widthTolerance = Math.max(2f, width * 0.02f);
-        // The bubble's real outline (traced per row by the renderer) is the
-        // strongest constraint: it follows connected double balloons and
-        // tails that no rectangle or ellipse model matches. It only
-        // applies while the text box still sits over the detected bubble;
-        // a box the user dragged elsewhere in the editor is unconstrained.
-        boolean hasMask = segment.interiorLeft != null
-                && segment.interiorRight != null
-                && segment.getEraseBox().contains(rect.centerX(), rect.centerY());
         // A round bubble inside this rectangle has much less room near its
         // top and bottom. Narrow the layout step by step (recentring it via
         // the padding, like real scanlation typesetting) until every line
@@ -129,10 +137,15 @@ public final class StyledTextRenderer {
                         && maxLineWidth(layout) <= layoutWidth + widthTolerance
                         && shapeOk;
                 if (fits) {
+                    int pad = effectivePad;
+                    if (hasMask) {
+                        pad = recentredPad(segment, rect, layout,
+                                effectivePad, verticalPadding);
+                    }
                     FitResult fit = new FitResult();
                     fit.layout = layout;
                     fit.paint = paint;
-                    fit.horizontalPadding = effectivePad;
+                    fit.horizontalPadding = pad;
                     fit.verticalPadding = verticalPadding;
                     fit.textSize = size;
                     fit.overflow = false;
@@ -225,7 +238,8 @@ public final class StyledTextRenderer {
         if (!style.visible && !style.forceErase) {
             return false;
         }
-        return segment.autoBackgroundReliable || style.forceErase;
+        return segment.autoBackgroundReliable || style.forceErase
+                || segment.outsideText;
     }
 
     private static void eraseOriginal(Canvas canvas, Segment segment, Paint fill) {
@@ -300,8 +314,11 @@ public final class StyledTextRenderer {
         if (!erase.intersect(0, 0, source.getWidth(), source.getHeight())) {
             return;
         }
-        Bitmap patch = CleanEraser.createPatch(
-                source, erase, segment.detectedBackgroundColor);
+        Bitmap patch = segment.outsideText
+                ? CleanEraser.createOutsidePatch(
+                        source, erase, segment.outsideBrightInk)
+                : CleanEraser.createPatch(
+                        source, erase, segment.detectedBackgroundColor);
         if (patch != null) {
             canvas.drawBitmap(patch, erase.left, erase.top, null);
             patch.recycle();
@@ -609,6 +626,70 @@ public final class StyledTextRenderer {
             }
         }
         return true;
+    }
+
+    /**
+     * Shifts a fitting layout sideways so its widest line is centred
+     * between the traced bubble edges at that line's own height. The
+     * body rectangle of an asymmetric or connected balloon is not
+     * always centred on the outline, which made text hug one side of
+     * big bubbles. The original padding is kept when the shift would
+     * break the fit.
+     */
+    private static int recentredPad(Segment segment, Rect rect,
+                                    StaticLayout layout, int pad,
+                                    int verticalPadding) {
+        int[] lefts = segment.interiorLeft;
+        int[] rights = segment.interiorRight;
+        if (lefts == null || rights == null || segment.interiorTop < 0
+                || layout.getLineCount() == 0) {
+            return pad;
+        }
+        int widest = 0;
+        float widestWidth = -1f;
+        for (int i = 0; i < layout.getLineCount(); i++) {
+            float lineWidth = layout.getLineRight(i) - layout.getLineLeft(i);
+            if (lineWidth > widestWidth) {
+                widestWidth = lineWidth;
+                widest = i;
+            }
+        }
+        int availableHeight = Math.max(0, rect.height() - verticalPadding * 2);
+        int yOffset = verticalPadding
+                + Math.max(0, (availableHeight - layout.getHeight()) / 2);
+        float centreY = rect.top + yOffset
+                + (layout.getLineTop(widest) + layout.getLineBottom(widest)) / 2f;
+        long leftSum = 0;
+        long rightSum = 0;
+        int rows = 0;
+        for (int dy = -4; dy <= 4; dy += 2) {
+            int row = Math.round(centreY) + dy - segment.interiorTop;
+            if (row >= 0 && row < lefts.length && lefts[row] >= 0) {
+                leftSum += lefts[row];
+                rightSum += rights[row];
+                rows++;
+            }
+        }
+        if (rows == 0) {
+            return pad;
+        }
+        float spanCentre = (leftSum / (float) rows + rightSum / (float) rows) / 2f;
+        float lineCentre = rect.left + pad
+                + (layout.getLineLeft(widest) + layout.getLineRight(widest)) / 2f;
+        float delta = spanCentre - lineCentre;
+        float maxShift = rect.width() * 0.10f;
+        if (delta > maxShift) {
+            delta = maxShift;
+        }
+        if (delta < -maxShift) {
+            delta = -maxShift;
+        }
+        int newPad = pad + Math.round(delta);
+        if (newPad == pad || newPad < 0) {
+            return pad;
+        }
+        return linesInsideInterior(segment, rect, layout, newPad, verticalPadding)
+                ? newPad : pad;
     }
 
     private static boolean insideEllipse(float x, float y, float cx, float cy,

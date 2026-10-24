@@ -226,6 +226,31 @@ public class ManhwaRenderer {
                     }
                 }
 
+                // Light lettering on dark artwork (white SFX over a
+                // night sky) is invisible to the normal passes. One
+                // inverted re-read of tiles that actually contain dark
+                // areas finds it; its candidates are scored below every
+                // normal reading, so they only fill real gaps.
+                if (tileDarkFraction(tile) >= 0.12f) {
+                    float invertedScale = enhancedScaleFor(tile);
+                    double invertedPixels = (double) tile.getWidth() * invertedScale
+                            * tile.getHeight() * invertedScale;
+                    Bitmap inverted = invertedPixels <= 9_000_000.0
+                            ? createInvertedVariant(tile, invertedScale) : null;
+                    if (inverted != null) {
+                        try {
+                            Text invertedText = Tasks.await(recognizer.process(
+                                    InputImage.fromBitmap(inverted, 0)));
+                            JobRuntime.throwIfStopped();
+                            candidates.addAll(extractCandidates(
+                                    invertedText, 0, y0, 1f / invertedScale,
+                                    width, height, coreTop, coreBottom, 4, true));
+                        } finally {
+                            inverted.recycle();
+                        }
+                    }
+                }
+
                 if (y1 == height) {
                     break;
                 }
@@ -281,6 +306,7 @@ public class ManhwaRenderer {
 
         for (Segment segment : segments) {
             segment.rendered = false;
+            segment.outsideText = false;
             segment.style = new TextStyleSettings(initialStyle);
             segment.ensureStyle().visible = true;
             if (segment.originalCkb == null || segment.originalCkb.trim().isEmpty()) {
@@ -317,18 +343,25 @@ public class ManhwaRenderer {
             segment.bubbleOval = looksOval(original, region, bg.color);
 
             if (!bg.reliable) {
-                // The block remains available in the editor, but automatic
-                // rendering stays conservative around faces/artwork.
-                segment.ensureStyle().visible = false;
-                skippedBackground++;
-                continue;
+                // Not inside a bubble: this may be lettering over artwork
+                // (handwritten SFX). Accept it only when the glyph-level
+                // outside eraser proves it can remove the letters
+                // cleanly; otherwise the block remains available in the
+                // editor, but automatic rendering stays conservative
+                // around faces/artwork.
+                if (!prepareOutsideText(original, segment)) {
+                    segment.ensureStyle().visible = false;
+                    skippedBackground++;
+                    continue;
+                }
             }
 
             // Measure the real bubble outline so the fit can guarantee no
             // line crosses the border, and typeset inside the bubble body
             // (the grown rectangle may include the tail or, for connected
             // double balloons, part of the sister balloon).
-            Rect bubbleBody = computeInteriorSpans(original, segment);
+            Rect bubbleBody = segment.outsideText ? null
+                    : computeInteriorSpans(original, segment, segments);
             if (bubbleBody != null) {
                 segment.renderBox = bubbleBody;
             }
@@ -368,6 +401,116 @@ public class ManhwaRenderer {
         }
         return new RenderResult(output, rendered, skippedBackground,
                 skippedFit, skippedNoTranslation);
+    }
+
+    /**
+     * Validates and prepares lettering that sits on artwork instead of
+     * inside a speech bubble (handwritten SFX, signs). The block is
+     * accepted only when it is small and legible and the glyph-level
+     * outside eraser confirms it can remove the original letters; the
+     * Kurdish text is then drawn in the same spot using the original
+     * ink colour with a contrasting outline, so it reads like the
+     * lettering it replaces. Anything less certain stays untouched
+     * (and editable in the studio).
+     */
+    private static boolean prepareOutsideText(Bitmap original, Segment segment) {
+        try {
+            Rect box = new Rect(segment.box);
+            if (!box.intersect(0, 0, original.getWidth(), original.getHeight())
+                    || box.width() < 24 || box.height() < 14) {
+                return false;
+            }
+            long pageArea = (long) original.getWidth() * original.getHeight();
+            if ((long) box.width() * box.height() > pageArea * 0.08) {
+                return false;
+            }
+            if (segment.lines > 4 || segment.text == null
+                    || letterOrDigitCount(segment.text) < 3) {
+                return false;
+            }
+            if (segment.ocrConfidence >= 0f && segment.ocrConfidence < 0.22f) {
+                return false;
+            }
+            int padX = Math.max(6, Math.round(box.width() * 0.08f));
+            int padY = Math.max(6, Math.round(box.height() * 0.18f));
+            Rect rect = new Rect(
+                    Math.max(0, box.left - padX),
+                    Math.max(0, box.top - padY),
+                    Math.min(original.getWidth(), box.right + padX),
+                    Math.min(original.getHeight(), box.bottom + padY));
+            int width = rect.width();
+            int height = rect.height();
+            long count = (long) width * (long) height;
+            if (count > 2_600_000L) {
+                return false;
+            }
+            int[] pixels = new int[(int) count];
+            original.getPixels(pixels, 0, width,
+                    rect.left, rect.top, width, height);
+
+            // Ink statistics decide bright-on-dark vs dark-on-light and
+            // give the replacement text the original ink colour.
+            int bright = 0;
+            int dark = 0;
+            for (int pixel : pixels) {
+                int lum = luminance(pixel);
+                if (lum >= 180) {
+                    bright++;
+                } else if (lum <= 75) {
+                    dark++;
+                }
+            }
+            boolean brightInk = bright >= dark;
+            long redSum = 0;
+            long greenSum = 0;
+            long blueSum = 0;
+            int inkSamples = 0;
+            for (int pixel : pixels) {
+                int lum = luminance(pixel);
+                if (brightInk ? lum >= 205 : lum <= 55) {
+                    redSum += Color.red(pixel);
+                    greenSum += Color.green(pixel);
+                    blueSum += Color.blue(pixel);
+                    inkSamples++;
+                }
+            }
+            int inkColor = brightInk ? Color.WHITE : Color.BLACK;
+            if (inkSamples >= 20) {
+                inkColor = Color.rgb(
+                        (int) (redSum / inkSamples),
+                        (int) (greenSum / inkSamples),
+                        (int) (blueSum / inkSamples));
+            }
+
+            if (!CleanEraser.outsideErasable(original, rect, brightInk)) {
+                return false;
+            }
+
+            segment.outsideText = true;
+            segment.outsideBrightInk = brightInk;
+            segment.bubbleOval = false;
+            segment.interiorTop = -1;
+            segment.interiorLeft = null;
+            segment.interiorRight = null;
+            segment.detectedInkColor = inkColor;
+            segment.renderBox = new Rect(rect);
+            segment.eraseBox = new Rect(rect);
+
+            TextStyleSettings style = segment.ensureStyle();
+            style.visible = true;
+            style.eraseOriginal = true;
+            style.backgroundMode = TextStyleSettings.BG_CLEAN;
+            style.autoTextColor = false;
+            style.textColor = inkColor;
+            style.outline = true;
+            style.outlineColor = brightInk ? Color.BLACK : Color.WHITE;
+            style.outlineWidthRatio = Math.max(0.13f, style.outlineWidthRatio);
+            style.fontWeight = Math.max(700, style.fontWeight);
+            style.sizeScale = Math.max(1.0f, style.sizeScale * 1.25f);
+            return true;
+        } catch (RuntimeException failed) {
+            return false;
+        }
     }
 
     private static Rect expandBox(Rect box, int imageWidth, int imageHeight) {
@@ -498,8 +641,14 @@ public class ManhwaRenderer {
      * the interior bounds with narrow tail rows trimmed — is returned.
      * Returns {@code null} (and stores nothing) when the trace looks
      * unreliable, leaving the caller with the previous rectangle logic.
+     *
+     * <p>The body rectangle is taken from the band of rows that belongs
+     * to this text's own balloon (see {@link #bubbleBandBody}); the full
+     * span bounds are only a fallback, because on connected double
+     * balloons they cover the union of both circles.</p>
      */
-    static Rect computeInteriorSpans(Bitmap original, Segment segment) {
+    static Rect computeInteriorSpans(Bitmap original, Segment segment,
+                                     List<Segment> allSegments) {
         if (original == null || original.isRecycled() || segment == null) {
             return null;
         }
@@ -638,6 +787,124 @@ public class ManhwaRenderer {
             }
         }
 
+        Rect body = bubbleBandBody(
+                left, right, height, region, segment, allSegments);
+        if (body == null) {
+            body = bubbleSpanBody(left, right, height, region, segment, count);
+        }
+        if (body == null) {
+            return null;
+        }
+
+        segment.interiorTop = region.top;
+        segment.interiorLeft = left;
+        segment.interiorRight = right;
+        return body;
+    }
+
+    /**
+     * The balloon that actually owns this text. Starting from the OCR
+     * text rows, walk up and down while the traced outline stays wide
+     * and roughly centred on the text, stopping at rows that belong to
+     * another block or narrow into a neck/tail. Connected double
+     * balloons trace as one interior, so without this band the previous
+     * body covered both circles and the translation was typeset small
+     * in the middle of the union instead of centred in its own balloon.
+     */
+    private static Rect bubbleBandBody(int[] left, int[] right, int height,
+                                       Rect region, Segment segment,
+                                       List<Segment> allSegments) {
+        int textTop = clampInt(segment.box.top - region.top, 0, height - 1);
+        int textBottom = clampInt(
+                segment.box.bottom - 1 - region.top, 0, height - 1);
+        if (textBottom < textTop) {
+            return null;
+        }
+        List<Integer> widths = new ArrayList<>();
+        List<Integer> centres = new ArrayList<>();
+        for (int y = textTop; y <= textBottom; y++) {
+            if (left[y] >= 0) {
+                widths.add(right[y] - left[y]);
+                centres.add((left[y] + right[y]) / 2);
+            }
+        }
+        if (widths.size() < 3) {
+            return null;
+        }
+        int refWidth = medianOf(widths);
+        int refCentre = medianOf(centres);
+        if (refWidth < 24) {
+            return null;
+        }
+        int bandTop = textTop;
+        while (bandTop > 0 && bandRowOk(left, right, bandTop - 1,
+                refWidth, refCentre, region, segment, allSegments)) {
+            bandTop--;
+        }
+        int bandBottom = textBottom;
+        while (bandBottom + 1 < height && bandRowOk(left, right,
+                bandBottom + 1, refWidth, refCentre,
+                region, segment, allSegments)) {
+            bandBottom++;
+        }
+        int bodyLeft = Integer.MAX_VALUE;
+        int bodyRight = Integer.MIN_VALUE;
+        for (int y = bandTop; y <= bandBottom; y++) {
+            if (left[y] >= 0) {
+                bodyLeft = Math.min(bodyLeft, left[y]);
+                bodyRight = Math.max(bodyRight, right[y]);
+            }
+        }
+        if (bodyLeft == Integer.MAX_VALUE) {
+            return null;
+        }
+        Rect body = new Rect(bodyLeft, region.top + bandTop,
+                bodyRight + 1, region.top + bandBottom + 1);
+        if (body.width() < 24 || body.height() < 16
+                || body.width() < segment.box.width() * 0.7f
+                || body.height() < segment.box.height()) {
+            return null;
+        }
+        return body;
+    }
+
+    private static boolean bandRowOk(int[] left, int[] right, int y,
+                                     int refWidth, int refCentre,
+                                     Rect region, Segment segment,
+                                     List<Segment> allSegments) {
+        if (left[y] < 0) {
+            return false;
+        }
+        int spanWidth = right[y] - left[y];
+        if (spanWidth < Math.max(24, Math.round(refWidth * 0.45f))) {
+            return false;
+        }
+        int centre = (left[y] + right[y]) / 2;
+        if (Math.abs(centre - refCentre) > refWidth * 0.35f) {
+            return false;
+        }
+        if (allSegments != null) {
+            int pageY = region.top + y;
+            for (Segment other : allSegments) {
+                if (other == null || other == segment || other.box == null) {
+                    continue;
+                }
+                if (pageY >= other.box.top - 6
+                        && pageY <= other.box.bottom + 6) {
+                    float otherCentreX = other.box.exactCenterX();
+                    if (otherCentreX >= left[y] && otherCentreX <= right[y]) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    /** Original body estimate: full span bounds minus narrow rows. */
+    private static Rect bubbleSpanBody(int[] left, int[] right, int height,
+                                       Rect region, Segment segment,
+                                       long regionPixels) {
         int maxSpan = 0;
         for (int y = 0; y < height; y++) {
             if (left[y] >= 0) {
@@ -670,14 +937,16 @@ public class ManhwaRenderer {
                 bodyRight + 1, region.top + bodyBottomRow + 1);
         if (body.width() < 24 || body.height() < 16
                 || body.width() < segment.box.width() * 0.7f
-                || (long) body.width() * body.height() < count * 0.30) {
+                || (long) body.width() * body.height() < regionPixels * 0.30) {
             return null;
         }
-
-        segment.interiorTop = region.top;
-        segment.interiorLeft = left;
-        segment.interiorRight = right;
         return body;
+    }
+
+    private static int medianOf(List<Integer> values) {
+        List<Integer> copy = new ArrayList<>(values);
+        Collections.sort(copy);
+        return copy.get(copy.size() / 2);
     }
 
     private static Rect growRegion(Bitmap original, Rect seed, Rect textBox, Background bg) {
@@ -1370,8 +1639,12 @@ public class ManhwaRenderer {
             score += 2.0;
         } else if (pass == 2) {
             score += 6.0;
-        } else if (pass >= 3) {
+        } else if (pass == 3) {
             score += 8.0;
+        } else if (pass == 4) {
+            // Inverted (light-on-dark) pass: it only fills gaps the
+            // normal passes missed and must never outrank them.
+            score -= 6.0;
         }
         return score;
     }
@@ -1462,7 +1735,13 @@ public class ManhwaRenderer {
         if (existing == null || challenger == null || existing == challenger) {
             return;
         }
-        existing.pass = Math.max(existing.pass, challenger.pass);
+        if (challenger.pass >= 1 && challenger.pass <= 3) {
+            // A normal-pass re-read also promotes an inverted-only
+            // candidate (pass 4) out of its subordinate score class.
+            existing.pass = existing.pass == 4
+                    ? challenger.pass
+                    : Math.max(existing.pass, challenger.pass);
+        }
         existing.refined = existing.refined || challenger.refined;
         if (textSimilarity(existing.segment.text, challenger.segment.text) < 0.92) {
             existing.disagreement = true;
@@ -1627,6 +1906,57 @@ public class ManhwaRenderer {
             matrix.postConcat(contrast);
             paint.setColorFilter(new ColorMatrixColorFilter(matrix));
         }
+        canvas.drawBitmap(source,
+                new Rect(0, 0, source.getWidth(), source.getHeight()),
+                new RectF(0f, 0f, targetWidth, targetHeight), paint);
+        return output;
+    }
+
+    /**
+     * Fraction of sampled pixels that are dark. Only tiles with a real
+     * dark area can carry light-on-dark lettering, so only they pay for
+     * the extra inverted OCR pass.
+     */
+    private static float tileDarkFraction(Bitmap tile) {
+        try {
+            int stepX = Math.max(1, tile.getWidth() / 90);
+            int stepY = Math.max(1, tile.getHeight() / 90);
+            int total = 0;
+            int dark = 0;
+            for (int y = stepY / 2; y < tile.getHeight(); y += stepY) {
+                for (int x = stepX / 2; x < tile.getWidth(); x += stepX) {
+                    total++;
+                    if (luminance(tile.getPixel(x, y)) < 90) {
+                        dark++;
+                    }
+                }
+            }
+            return total == 0 ? 0f : dark / (float) total;
+        } catch (RuntimeException unreadable) {
+            return 0f;
+        }
+    }
+
+    /** Grayscale + inverted copy so light-on-dark text reads as dark-on-light. */
+    private static Bitmap createInvertedVariant(Bitmap source, float scale) {
+        if (source == null || scale <= 0f) {
+            return null;
+        }
+        int targetWidth = Math.max(1, Math.round(source.getWidth() * scale));
+        int targetHeight = Math.max(1, Math.round(source.getHeight() * scale));
+        Bitmap output = Bitmap.createBitmap(
+                targetWidth, targetHeight, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(output);
+        Paint paint = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG);
+        ColorMatrix matrix = new ColorMatrix();
+        matrix.setSaturation(0f);
+        ColorMatrix invert = new ColorMatrix(new float[]{
+                -1f, 0f, 0f, 0f, 255f,
+                0f, -1f, 0f, 0f, 255f,
+                0f, 0f, -1f, 0f, 255f,
+                0f, 0f, 0f, 1f, 0f});
+        matrix.postConcat(invert);
+        paint.setColorFilter(new ColorMatrixColorFilter(matrix));
         canvas.drawBitmap(source,
                 new Rect(0, 0, source.getWidth(), source.getHeight()),
                 new RectF(0f, 0f, targetWidth, targetHeight), paint);

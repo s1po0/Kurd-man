@@ -434,6 +434,8 @@ public class PageEditorView extends View {
         }
         String signature = erase.left + "," + erase.top + "," + erase.right
                 + "," + erase.bottom + "|" + segment.detectedBackgroundColor
+                + "|" + (segment.outsideText
+                        ? "out" + segment.outsideBrightInk : "in")
                 + "|" + bitmap.getWidth() + "x" + bitmap.getHeight();
         CachedPatch cached = cleanPatchCache.get(segment);
         if (cached != null && signature.equals(cached.signature)) {
@@ -446,8 +448,11 @@ public class PageEditorView extends View {
         CachedPatch next = new CachedPatch();
         next.signature = signature;
         next.rect = new Rect(erase);
-        next.patch = CleanEraser.createPatch(
-                bitmap, erase, segment.detectedBackgroundColor);
+        next.patch = segment.outsideText
+                ? CleanEraser.createOutsidePatch(
+                        bitmap, erase, segment.outsideBrightInk)
+                : CleanEraser.createPatch(
+                        bitmap, erase, segment.detectedBackgroundColor);
         cleanPatchCache.put(segment, next);
         return next;
     }

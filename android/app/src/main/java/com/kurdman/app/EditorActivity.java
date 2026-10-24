@@ -347,15 +347,16 @@ public class EditorActivity extends AppCompatActivity
                 segment.ensureStyle().backgroundMode = TextStyleSettings.BG_CLEAN;
                 changed = true;
             }
-            if (!segment.bubbleOval && ManhwaRenderer.looksOval(
+            if (!segment.bubbleOval && !segment.outsideText
+                    && ManhwaRenderer.looksOval(
                     bitmap, segment.getEraseBox(),
                     segment.detectedBackgroundColor)) {
                 segment.bubbleOval = true;
                 changed = true;
             }
-            if (segment.interiorLeft == null
-                    && ManhwaRenderer.computeInteriorSpans(bitmap, segment)
-                            != null) {
+            if (segment.interiorLeft == null && !segment.outsideText
+                    && ManhwaRenderer.computeInteriorSpans(
+                            bitmap, segment, segments) != null) {
                 // Spans only: the editor keeps the user's own box, but the
                 // fit now keeps lines inside the traced bubble outline.
                 changed = true;
