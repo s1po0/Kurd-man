@@ -1062,7 +1062,8 @@ public class EditorActivity extends AppCompatActivity
                 simpleAdapter(new String[]{
                         "خۆکار — ڕەنگی قسەهەڵگری ڕەسەن",
                         "ڕەنگی دیاریکراو",
-                        "بێ پاشبنەما"}));
+                        "بێ پاشبنەما",
+                        "🧼 سڕینەوەی خاوێن — بێ پاشبنەمای سپی"}));
         backgroundColorButton = colorButton(panel, "▦  ڕەنگی پاشبنەما", "background");
         backgroundOpacitySeek = seek(panel, "ڕوونی پاشبنەما", "backgroundOpacity", 255);
         backgroundShapeSpinner = spinner(panel, "شێوە", "backgroundShape",

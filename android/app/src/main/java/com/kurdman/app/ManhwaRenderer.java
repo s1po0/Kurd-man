@@ -343,7 +343,7 @@ public class ManhwaRenderer {
         // backgrounds, and only then draw Kurdish text. This keeps nearby
         // bubbles from painting over words that were already placed.
         for (Placement placement : placements) {
-            StyledTextRenderer.eraseOriginal(canvas, placement.segment);
+            StyledTextRenderer.eraseOriginal(canvas, original, placement.segment);
         }
         for (Placement placement : placements) {
             StyledTextRenderer.drawBackground(canvas, placement.segment);

@@ -118,7 +118,7 @@ public final class StyledTextRenderer {
                                             TypefaceResolver resolver) {
         Bitmap output = original.copy(Bitmap.Config.ARGB_8888, true);
         Canvas canvas = new Canvas(output);
-        eraseOriginals(canvas, segments);
+        eraseOriginals(canvas, original, segments);
 
         int rendered = 0;
         int skipped = 0;
@@ -173,15 +173,27 @@ public final class StyledTextRenderer {
         eraseOriginal(canvas, segment, fill);
     }
 
-    private static void eraseOriginal(Canvas canvas, Segment segment, Paint fill) {
+    /** Whether the source text of this segment may be erased at all. */
+    static boolean shouldEraseOriginal(Segment segment) {
         TextStyleSettings style = segment.ensureStyle();
         if (!style.eraseOriginal) {
-            return;
+            return false;
         }
         if (!style.visible && !style.forceErase) {
+            return false;
+        }
+        return segment.autoBackgroundReliable || style.forceErase;
+    }
+
+    private static void eraseOriginal(Canvas canvas, Segment segment, Paint fill) {
+        TextStyleSettings style = segment.ensureStyle();
+        if (style.backgroundMode == TextStyleSettings.BG_CLEAN) {
+            // Clean mode removes the glyphs themselves; see
+            // applyCleanErase / the editor's cached patches. Painting a
+            // solid block here would recreate the visible white patch.
             return;
         }
-        if (!segment.autoBackgroundReliable && !style.forceErase) {
+        if (!shouldEraseOriginal(segment)) {
             return;
         }
         int eraseColor = segment.detectedBackgroundColor;
@@ -196,9 +208,66 @@ public final class StyledTextRenderer {
         drawShape(canvas, new RectF(erase), style.backgroundShape, radius, fill);
     }
 
+    /**
+     * Erases one segment using its style: clean segments get a
+     * glyph-level inpainted patch taken from {@code source}, everything
+     * else keeps the classic detected-colour fill.
+     */
+    public static void eraseOriginal(Canvas canvas, Bitmap source, Segment segment) {
+        if (segment.ensureStyle().backgroundMode == TextStyleSettings.BG_CLEAN) {
+            applyCleanErase(canvas, source, segment);
+        } else {
+            eraseOriginal(canvas, segment);
+        }
+    }
+
+    /** Bitmap-aware variant used by the export/final render paths. */
+    public static void eraseOriginals(Canvas canvas, Bitmap source,
+                                      List<Segment> segments) {
+        if (segments == null) {
+            return;
+        }
+        Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
+        fill.setStyle(Paint.Style.FILL);
+        for (Segment segment : segments) {
+            if (segment.ensureStyle().backgroundMode
+                    == TextStyleSettings.BG_CLEAN) {
+                applyCleanErase(canvas, source, segment);
+            } else {
+                eraseOriginal(canvas, segment, fill);
+            }
+        }
+    }
+
+    /**
+     * Draws the clean-erased patch of one segment. The patch pixels match
+     * the surrounding image exactly outside the glyphs, so no rectangle
+     * edge is visible.
+     */
+    public static void applyCleanErase(Canvas canvas, Bitmap source,
+                                       Segment segment) {
+        if (canvas == null || source == null || source.isRecycled()
+                || segment.ensureStyle().backgroundMode
+                        != TextStyleSettings.BG_CLEAN
+                || !shouldEraseOriginal(segment)) {
+            return;
+        }
+        Rect erase = new Rect(segment.getEraseBox());
+        if (!erase.intersect(0, 0, source.getWidth(), source.getHeight())) {
+            return;
+        }
+        Bitmap patch = CleanEraser.createPatch(
+                source, erase, segment.detectedBackgroundColor);
+        if (patch != null) {
+            canvas.drawBitmap(patch, erase.left, erase.top, null);
+            patch.recycle();
+        }
+    }
+
     public static void drawBackground(Canvas canvas, Segment segment) {
         TextStyleSettings style = segment.ensureStyle();
         if (style.backgroundMode == TextStyleSettings.BG_NONE
+                || style.backgroundMode == TextStyleSettings.BG_CLEAN
                 || style.backgroundOpacity <= 0) {
             drawBorderOnly(canvas, segment, style);
             return;

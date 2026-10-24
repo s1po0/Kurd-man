@@ -131,7 +131,7 @@
                         android:paddingTop="6dp"
                         android:paddingEnd="11dp"
                         android:paddingBottom="6dp"
-                        android:text="v1.7.1  •  دەرکردنی PDF + OCR وردتر"
+                        android:text="v1.7.2  •  سڕینەوەی خاوێن + PDF"
                         android:textColor="@color/white"
                         android:textSize="12sp"
                         android:textStyle="bold" />
@@ -1210,6 +1210,53 @@
                         android:layout_marginTop="4dp"
                         android:lineSpacingMultiplier="1.25"
                         android:text="کاتێک ئەمە چالاکە، ئەنجامەکە وەک PDF لە Download/KurdMan و لە بەشی «⬇ ئەنجامەکان» پاشەکەوت دەبێت؛ لەوێ دەتوانیت بیکەیتەوە، هاوبەشی بکەیت یان بیسڕیتەوە. وێنە/CBZ و TXTەکەش هەر دەمێننەوە. وێنە زۆر درێژەکان بۆ چەند لاپەڕەیەکی A4 دابەش دەبن تاکوو خوێندنەوەیان ئاسان بێت."
+                        android:textColor="@color/text_secondary"
+                        android:textDirection="firstStrongRtl"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="11dp"
+                    android:background="@drawable/bg_feature_tile"
+                    android:orientation="vertical"
+                    android:paddingStart="14dp"
+                    android:paddingTop="14dp"
+                    android:paddingEnd="14dp"
+                    android:paddingBottom="14dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-black"
+                        android:text="🧼  سڕینەوەی خاوێنی دەقی ڕەسەن"
+                        android:textColor="#A7F3D0"
+                        android:textDirection="firstStrongRtl"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <CheckBox
+                        android:id="@+id/cleanEraseCheck"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:buttonTint="@color/primary"
+                        android:checked="false"
+                        android:lineSpacingMultiplier="1.2"
+                        android:minHeight="48dp"
+                        android:text="دەقی ڕەسەن بە خاوێنی بسرەوە — بێ پاشبنەمای سپی"
+                        android:textColor="@color/text_primary"
+                        android:textDirection="firstStrongRtl"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:lineSpacingMultiplier="1.25"
+                        android:text="کاتێک ئەمە چالاکە، تەنها پیتەکانی دەقە ڕەسەنەکە دەسڕدرێنەوە و شوێنەکانیان بە ڕەنگی خودی هەڵۆکەکە پڕ دەکرێنەوە، ئینجا دەقە کوردییەکە لە هەمان شوێن دادەنرێت — هیچ چوارگۆشە سپییەک لە پشت نووسینەکە نامێنێت. ئەگەر ناتەوێت، بیکوژێنەوە و شێوازی کۆن دەگەڕێتەوە. هەمان هەڵبژاردە لە بەشی «🎨 ستایل» لە لیستی جۆری پاشبنەماشدا هەیە."
                         android:textColor="@color/text_secondary"
                         android:textDirection="firstStrongRtl"
                         android:textSize="12sp" />

@@ -87,10 +87,17 @@ public class PageEditorView extends View {
     private final Paint badgeTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private final Map<Segment, CachedFit> fitCache = new HashMap<>();
+    private final Map<Segment, CachedPatch> cleanPatchCache = new HashMap<>();
 
     private static final class CachedFit {
         String signature;
         StyledTextRenderer.FitResult fit;
+    }
+
+    private static final class CachedPatch {
+        String signature;
+        Bitmap patch;
+        Rect rect;
     }
 
     public PageEditorView(Context context) {
@@ -137,6 +144,7 @@ public class PageEditorView extends View {
     public void setResolver(StyledTextRenderer.TypefaceResolver resolver) {
         this.resolver = resolver;
         fitCache.clear();
+        clearCleanPatchCache();
         invalidate();
     }
 
@@ -146,6 +154,7 @@ public class PageEditorView extends View {
         selectedIndex = clampSelection(newSelected);
         matrixInitialized = false;
         fitCache.clear();
+        clearCleanPatchCache();
         if (getWidth() > 0 && getHeight() > 0) {
             fitToScreen();
         }
@@ -156,6 +165,7 @@ public class PageEditorView extends View {
         segments = newSegments == null ? new ArrayList<>() : newSegments;
         selectedIndex = clampSelection(newSelected);
         fitCache.clear();
+        clearCleanPatchCache();
         invalidate();
     }
 
@@ -221,7 +231,17 @@ public class PageEditorView extends View {
 
     public void refreshStyles() {
         fitCache.clear();
+        clearCleanPatchCache();
         invalidate();
+    }
+
+    private void clearCleanPatchCache() {
+        for (CachedPatch cached : cleanPatchCache.values()) {
+            if (cached.patch != null && !cached.patch.isRecycled()) {
+                cached.patch.recycle();
+            }
+        }
+        cleanPatchCache.clear();
     }
 
     public void fitToScreen() {
@@ -362,6 +382,7 @@ public class PageEditorView extends View {
         canvas.concat(imageMatrix);
         canvas.drawBitmap(bitmap, 0f, 0f, null);
         if (!peekOriginal) {
+            drawCleanPatches(canvas);
             StyledTextRenderer.eraseOriginals(canvas, segments);
             for (Segment segment : segments) {
                 if (segment.ensureStyle().visible) {
@@ -384,6 +405,51 @@ public class PageEditorView extends View {
         if (!peekOriginal) {
             drawOverlays(canvas);
         }
+    }
+
+    /** Draws cached glyph-level inpaint patches for BG_CLEAN segments. */
+    private void drawCleanPatches(Canvas canvas) {
+        if (bitmap == null || bitmap.isRecycled()) {
+            return;
+        }
+        for (Segment segment : segments) {
+            if (segment.ensureStyle().backgroundMode
+                    != TextStyleSettings.BG_CLEAN
+                    || !StyledTextRenderer.shouldEraseOriginal(segment)) {
+                continue;
+            }
+            CachedPatch cached = cleanPatchFor(segment);
+            if (cached != null && cached.patch != null
+                    && !cached.patch.isRecycled() && cached.rect != null) {
+                canvas.drawBitmap(cached.patch,
+                        cached.rect.left, cached.rect.top, null);
+            }
+        }
+    }
+
+    private CachedPatch cleanPatchFor(Segment segment) {
+        Rect erase = new Rect(segment.getEraseBox());
+        if (!erase.intersect(0, 0, bitmap.getWidth(), bitmap.getHeight())) {
+            return null;
+        }
+        String signature = erase.left + "," + erase.top + "," + erase.right
+                + "," + erase.bottom + "|" + segment.detectedBackgroundColor
+                + "|" + bitmap.getWidth() + "x" + bitmap.getHeight();
+        CachedPatch cached = cleanPatchCache.get(segment);
+        if (cached != null && signature.equals(cached.signature)) {
+            return cached;
+        }
+        if (cached != null && cached.patch != null
+                && !cached.patch.isRecycled()) {
+            cached.patch.recycle();
+        }
+        CachedPatch next = new CachedPatch();
+        next.signature = signature;
+        next.rect = new Rect(erase);
+        next.patch = CleanEraser.createPatch(
+                bitmap, erase, segment.detectedBackgroundColor);
+        cleanPatchCache.put(segment, next);
+        return next;
     }
 
     private StyledTextRenderer.FitResult fitFor(Segment segment) {

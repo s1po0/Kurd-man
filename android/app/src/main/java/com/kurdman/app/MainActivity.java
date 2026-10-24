@@ -105,7 +105,8 @@ public class MainActivity extends AppCompatActivity {
     private static final String[] BACKGROUND_MODE_LABELS = {
             "خۆکار — ڕەنگی قسەهەڵگری ڕەسەن",
             "ڕەنگی دیاریکراو",
-            "بێ پاشبنەما"
+            "بێ پاشبنەما",
+            "🧼 سڕینەوەی خاوێن — بێ پاشبنەمای سپی"
     };
     private static final String PREF_GLOBAL_STYLE = "global_text_style_json";
     private static final String PREF_ACCURATE_OCR = "accurate_ocr_v170";
@@ -136,6 +137,7 @@ public class MainActivity extends AppCompatActivity {
     private OfflineModelManager offlineModelManager;
     private CheckBox accurateOcrCheck;
     private CheckBox createPdfCheck;
+    private CheckBox cleanEraseCheck;
     private TextView paddleOcrStatus;
     private Button downloadPaddleOcrButton;
     private Button deletePaddleOcrButton;
@@ -238,6 +240,7 @@ public class MainActivity extends AppCompatActivity {
         offlineModelManager = new OfflineModelManager(this);
         accurateOcrCheck = findViewById(R.id.accurateOcrCheck);
         createPdfCheck = findViewById(R.id.createPdfCheck);
+        cleanEraseCheck = findViewById(R.id.cleanEraseCheck);
         paddleOcrStatus = findViewById(R.id.paddleOcrStatus);
         downloadPaddleOcrButton = findViewById(R.id.downloadPaddleOcrButton);
         deletePaddleOcrButton = findViewById(R.id.deletePaddleOcrButton);
@@ -630,6 +633,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                         globalTextStyle.backgroundMode = position;
                         saveGlobalTextStyle();
+                        syncCleanEraseCheck();
                         updateStylePreview();
                     }
 
@@ -637,6 +641,22 @@ public class MainActivity extends AppCompatActivity {
                     public void onNothingSelected(AdapterView<?> parent) {
                     }
                 });
+
+        cleanEraseCheck.setChecked(
+                globalTextStyle.backgroundMode == TextStyleSettings.BG_CLEAN);
+        cleanEraseCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (bindingStyleControls) {
+                return;
+            }
+            globalTextStyle.backgroundMode = isChecked
+                    ? TextStyleSettings.BG_CLEAN
+                    : TextStyleSettings.BG_AUTO;
+            saveGlobalTextStyle();
+            refreshStyleControls();
+            setStatus(isChecked
+                    ? "✅ سڕینەوەی خاوێن چالاک کرا: دەقی ڕەسەن دەسڕدرێتەوە و کوردییەکە بێ پاشبنەمای سپی لە شوێنەکەی دادەنرێت."
+                    : "سڕینەوەی خاوێن کوژێنرایەوە؛ پاشبنەمای ئاسایی وەک پێشوو دەمێنێتەوە.");
+        });
 
         styleSizeSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -764,6 +784,20 @@ public class MainActivity extends AppCompatActivity {
         stylePreview.postDelayed(() -> bindingStyleControls = false, 450L);
     }
 
+    private void syncCleanEraseCheck() {
+        if (cleanEraseCheck == null) {
+            return;
+        }
+        boolean target = globalTextStyle.backgroundMode
+                == TextStyleSettings.BG_CLEAN;
+        if (cleanEraseCheck.isChecked() != target) {
+            boolean wasBinding = bindingStyleControls;
+            bindingStyleControls = true;
+            cleanEraseCheck.setChecked(target);
+            bindingStyleControls = wasBinding;
+        }
+    }
+
     private void refreshStyleControls() {
         if (stylePreview == null) {
             return;
@@ -771,6 +805,7 @@ public class MainActivity extends AppCompatActivity {
         bindingStyleControls = true;
         globalTextStyle.sanitize();
         backgroundModeSpinner.setSelection(globalTextStyle.backgroundMode, false);
+        syncCleanEraseCheck();
         styleSizeSeek.setProgress(Math.max(0, Math.min(170,
                 Math.round(globalTextStyle.sizeScale * 100f) - 50)));
         styleWeightSeek.setProgress(Math.max(0, Math.min(16,
@@ -3661,6 +3696,9 @@ public class MainActivity extends AppCompatActivity {
         }
         if (createPdfCheck != null) {
             createPdfCheck.setEnabled(enabled);
+        }
+        if (cleanEraseCheck != null) {
+            cleanEraseCheck.setEnabled(enabled);
         }
         if (fontSpinner != null) {
             fontSpinner.setEnabled(enabled);

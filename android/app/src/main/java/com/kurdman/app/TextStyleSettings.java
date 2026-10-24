@@ -17,6 +17,9 @@ public class TextStyleSettings {
     public static final int BG_AUTO = 0;
     public static final int BG_CUSTOM = 1;
     public static final int BG_NONE = 2;
+    /** Erase only the source glyphs and refill them with the bubble's own
+     * background, then typeset without any visible patch. */
+    public static final int BG_CLEAN = 3;
 
     public static final int ALIGN_START = 0;
     public static final int ALIGN_CENTER = 1;
@@ -272,7 +275,7 @@ public class TextStyleSettings {
         textOpacity = clampInt(textOpacity, 20, 255);
         outlineWidthRatio = clampFloat(outlineWidthRatio, 0f, 0.38f);
         shadowStrength = clampFloat(shadowStrength, 0f, 1f);
-        backgroundMode = clampInt(backgroundMode, BG_AUTO, BG_NONE);
+        backgroundMode = clampInt(backgroundMode, BG_AUTO, BG_CLEAN);
         backgroundOpacity = clampInt(backgroundOpacity, 0, 255);
         backgroundShape = clampInt(backgroundShape, SHAPE_ROUNDED, SHAPE_ELLIPSE);
         backgroundRadiusRatio = clampFloat(backgroundRadiusRatio, 0f, 0.5f);
