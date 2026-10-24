@@ -101,6 +101,13 @@ public class SoraniTranslator implements AutoCloseable {
         }
     }
 
+    /** Immediately fails an in-flight offline request after STOP. */
+    public void cancelOffline() {
+        if (offlineEngine instanceof OfflineAiClient) {
+            ((OfflineAiClient) offlineEngine).requestCancel();
+        }
+    }
+
     public String translate(String text, String sourceLanguage) throws Exception {
         String normalized = normalize(text);
         if (normalized.isEmpty()) {

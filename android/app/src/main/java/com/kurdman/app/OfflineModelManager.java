@@ -542,8 +542,8 @@ final class OfflineModelManager {
     }
 
     private static void checkInterrupted() throws IOException {
-        if (Thread.currentThread().isInterrupted()) {
-            throw new IOException("Offline model operation interrupted");
+        if (JobRuntime.isStopRequested() || Thread.currentThread().isInterrupted()) {
+            throw new IOException(JobRuntime.STOPPED_MESSAGE);
         }
     }
 }

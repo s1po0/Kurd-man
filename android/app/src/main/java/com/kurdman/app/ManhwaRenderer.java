@@ -80,7 +80,7 @@ public class ManhwaRenderer {
         Segment segment;
         Rect region;
         Background background;
-        Fit fit;
+        StyledTextRenderer.FitResult fit;
     }
 
     private static TextRecognizer createRecognizer(String sourceLanguage) {
@@ -120,6 +120,7 @@ public class ManhwaRenderer {
             int tileIndex = 0;
 
             for (int y0 = 0; ; y0 += step) {
+                JobRuntime.throwIfStopped();
                 tileIndex++;
                 int y1 = Math.min(height, y0 + tileHeight);
                 if (progress != null) {
@@ -129,6 +130,7 @@ public class ManhwaRenderer {
                 Bitmap tile = Bitmap.createBitmap(original, 0, y0, width, y1 - y0);
                 Text visionText = Tasks.await(
                         recognizer.process(InputImage.fromBitmap(tile, 0)));
+                JobRuntime.throwIfStopped();
 
                 int coreTop = y0 == 0 ? 0 : y0 + (overlap / 2);
                 int coreBottom = y1 == height ? height : y1 - (overlap / 2);
@@ -197,10 +199,18 @@ public class ManhwaRenderer {
     }
 
     public static RenderResult render(Bitmap original, List<Segment> segments) {
+        return render(original, segments, new TextStyleSettings(),
+                style -> Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
+    }
+
+    public static RenderResult render(Bitmap original, List<Segment> segments,
+                                      TextStyleSettings globalStyle,
+                                      StyledTextRenderer.TypefaceResolver resolver) {
         Bitmap output = original.copy(Bitmap.Config.ARGB_8888, true);
         Canvas canvas = new Canvas(output);
-        Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
-        fill.setStyle(Paint.Style.FILL);
+        TextStyleSettings initialStyle = new TextStyleSettings(
+                globalStyle == null ? new TextStyleSettings() : globalStyle);
+        initialStyle.prepareAsGlobalDefault();
 
         int skippedBackground = 0;
         int skippedFit = 0;
@@ -209,12 +219,21 @@ public class ManhwaRenderer {
 
         for (Segment segment : segments) {
             segment.rendered = false;
+            segment.style = new TextStyleSettings(initialStyle);
+            segment.ensureStyle().visible = true;
+            if (segment.originalCkb == null || segment.originalCkb.trim().isEmpty()) {
+                segment.originalCkb = segment.ckb == null ? "" : segment.ckb;
+            }
+
+            Rect seed = expandBox(segment.box, original.getWidth(), original.getHeight());
+            segment.renderBox = new Rect(seed);
+            segment.eraseBox = new Rect(seed);
             if (segment.ckb == null || segment.ckb.trim().isEmpty()) {
+                segment.ensureStyle().visible = false;
                 skippedNoTranslation++;
                 continue;
             }
 
-            Rect seed = expandBox(segment.box, original.getWidth(), original.getHeight());
             Background bg = analyzeBubble(original, segment, seed);
             Rect region = bg.region;
             if (!bg.reliable) {
@@ -223,17 +242,29 @@ public class ManhwaRenderer {
                 if (legacy.reliable) {
                     bg = legacy;
                     region = seed;
-                } else {
-                    skippedBackground++;
-                    continue;
                 }
             }
             if (region == null || region.width() <= 0 || region.height() <= 0) {
                 region = seed;
             }
+            segment.detectedBackgroundColor = bg.color;
+            segment.detectedInkColor = bg.inkColor;
+            segment.autoBackgroundReliable = bg.reliable;
+            segment.renderBox = new Rect(region);
+            segment.eraseBox = new Rect(region);
 
-            Fit fit = fitText(segment.ckb.trim(), region, bg.inkColor, segment);
+            if (!bg.reliable) {
+                // The block remains available in the editor, but automatic
+                // rendering stays conservative around faces/artwork.
+                segment.ensureStyle().visible = false;
+                skippedBackground++;
+                continue;
+            }
+
+            StyledTextRenderer.FitResult fit = StyledTextRenderer.createFit(
+                    segment, resolver, false);
             if (fit == null) {
+                segment.ensureStyle().visible = false;
                 skippedFit++;
                 continue;
             }
@@ -246,28 +277,21 @@ public class ManhwaRenderer {
             placements.add(placement);
         }
 
-        // Erase every accepted source-text area before drawing any Sorani.
-        // With nearby bubbles this prevents one segment's fill from painting
-        // over the previous segment's newly drawn Kurdish text.
+        // Clean every accepted source-text area first, then paint styled
+        // backgrounds, and only then draw Kurdish text. This keeps nearby
+        // bubbles from painting over words that were already placed.
         for (Placement placement : placements) {
-            fill.setColor(placement.background.color);
-            float radius = Math.max(6f, Math.min(34f,
-                    Math.min(placement.region.width(), placement.region.height()) * 0.20f));
-            canvas.drawRoundRect(new RectF(placement.region), radius, radius, fill);
+            StyledTextRenderer.eraseOriginal(canvas, placement.segment);
+        }
+        for (Placement placement : placements) {
+            StyledTextRenderer.drawBackground(canvas, placement.segment);
         }
 
         int rendered = 0;
         for (Placement placement : placements) {
-            int availableHeight = Math.max(0,
-                    placement.region.height() - (placement.fit.verticalPadding * 2));
-            int yOffset = placement.fit.verticalPadding
-                    + Math.max(0, (availableHeight - placement.fit.layout.getHeight()) / 2);
-            canvas.save();
-            canvas.translate(placement.region.left + placement.fit.horizontalPadding,
-                    placement.region.top + yOffset);
-            placement.fit.layout.draw(canvas);
-            canvas.restore();
+            StyledTextRenderer.drawText(canvas, placement.segment, placement.fit);
             placement.segment.rendered = true;
+            placement.segment.ensureStyle().visible = true;
             rendered++;
         }
         return new RenderResult(output, rendered, skippedBackground,

@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_page_gradient"
+    android:layoutDirection="rtl"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#F2070D18"
+        android:orientation="vertical"
+        android:paddingStart="10dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="10dp"
+        android:paddingBottom="8dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/editorBackButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_button_secondary"
+                android:minHeight="48dp"
+                android:minWidth="0dp"
+                android:stateListAnimator="@null"
+                android:text="✕"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="18sp" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:fontFamily="sans-serif-black"
+                android:text="ستۆدیۆی دەق"
+                android:textColor="@color/text_primary"
+                android:textSize="19sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/editorUndoButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_button_secondary"
+                android:minHeight="48dp"
+                android:minWidth="0dp"
+                android:stateListAnimator="@null"
+                android:text="↶"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="20sp" />
+
+            <Button
+                android:id="@+id/editorRedoButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_button_secondary"
+                android:minHeight="48dp"
+                android:minWidth="0dp"
+                android:stateListAnimator="@null"
+                android:text="↷"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="20sp" />
+
+            <Button
+                android:id="@+id/editorSaveButton"
+                android:layout_width="112dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_button_primary"
+                android:fontFamily="sans-serif-black"
+                android:minHeight="48dp"
+                android:minWidth="0dp"
+                android:stateListAnimator="@null"
+                android:text="✓ دەرکردن"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/editorStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_status"
+            android:lineSpacingMultiplier="1.15"
+            android:paddingStart="12dp"
+            android:paddingTop="9dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="9dp"
+            android:text="بارکردنی پرۆژەکە…"
+            android:textColor="@color/text_primary"
+            android:textDirection="firstStrongRtl"
+            android:textSize="12sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/editorPagePrevButton"
+                android:layout_width="44dp"
+                android:layout_height="42dp"
+                android:background="@drawable/bg_button_secondary"
+                android:minHeight="42dp"
+                android:minWidth="0dp"
+                android:stateListAnimator="@null"
+                android:text="‹"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="20sp" />
+
+            <TextView
+                android:id="@+id/editorPageLabel"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="لاپەڕە ١/١"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/editorPageNextButton"
+                android:layout_width="44dp"
+                android:layout_height="42dp"
+                android:background="@drawable/bg_button_secondary"
+                android:minHeight="42dp"
+                android:minWidth="0dp"
+                android:stateListAnimator="@null"
+                android:text="›"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="20sp" />
+
+            <Button
+                android:id="@+id/editorBlockListButton"
+                android:layout_width="86dp"
+                android:layout_height="42dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_button_secondary"
+                android:minHeight="42dp"
+                android:minWidth="0dp"
+                android:stateListAnimator="@null"
+                android:text="☰ دەقەکان"
+                android:textAllCaps="false"
+                android:textColor="#5EEAD4"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/editorFitButton"
+                android:layout_width="70dp"
+                android:layout_height="42dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_button_secondary"
+                android:minHeight="42dp"
+                android:minWidth="0dp"
+                android:stateListAnimator="@null"
+                android:text="⛶ گونجان"
+                android:textAllCaps="false"
+                android:textColor="#5EEAD4"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/editorBlockPrevButton"
+                android:layout_width="44dp"
+                android:layout_height="42dp"
+                android:background="@drawable/bg_button_secondary"
+                android:minHeight="42dp"
+                android:minWidth="0dp"
+                android:stateListAnimator="@null"
+                android:text="‹"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="20sp" />
+
+            <TextView
+                android:id="@+id/editorBlockLabel"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="هیچ دەقێک نییە"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/editorBlockNextButton"
+                android:layout_width="44dp"
+                android:layout_height="42dp"
+                android:background="@drawable/bg_button_secondary"
+                android:minHeight="42dp"
+                android:minWidth="0dp"
+                android:stateListAnimator="@null"
+                android:text="›"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="20sp" />
+
+            <Button
+                android:id="@+id/editorZoomOutButton"
+                android:layout_width="44dp"
+                android:layout_height="42dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_button_secondary"
+                android:minHeight="42dp"
+                android:minWidth="0dp"
+                android:stateListAnimator="@null"
+                android:text="−"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="20sp" />
+
+            <Button
+                android:id="@+id/editorZoomInButton"
+                android:layout_width="44dp"
+                android:layout_height="42dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_button_secondary"
+                android:minHeight="42dp"
+                android:minWidth="0dp"
+                android:stateListAnimator="@null"
+                android:text="+"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="20sp" />
+
+            <Button
+                android:id="@+id/editorPeekButton"
+                android:layout_width="76dp"
+                android:layout_height="42dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_button_secondary"
+                android:minHeight="42dp"
+                android:minWidth="0dp"
+                android:stateListAnimator="@null"
+                android:text="👁 ڕەسەن"
+                android:textAllCaps="false"
+                android:textColor="#C4B5FD"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <com.kurdman.app.PageEditorView
+        android:id="@+id/editorCanvas"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1.18"
+        android:background="#020617" />
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#E6070D18"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:id="@+id/editorTabs"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="8dp" />
+    </HorizontalScrollView>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="0.82"
+        android:background="#F2070D18"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:id="@+id/editorPanelContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="12dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="18dp" />
+    </ScrollView>
+</LinearLayout>

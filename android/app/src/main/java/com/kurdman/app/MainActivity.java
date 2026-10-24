@@ -1,5 +1,6 @@
 package com.kurdman.app;
 
+import android.Manifest;
 import android.app.DownloadManager;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
@@ -9,15 +10,21 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.PowerManager;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
+import android.provider.Settings;
 import android.text.method.HideReturnsTransformationMethod;
 import android.text.method.PasswordTransformationMethod;
 import android.view.View;
@@ -31,6 +38,7 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -39,6 +47,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
 import org.json.JSONObject;
@@ -86,7 +95,19 @@ public class MainActivity extends AppCompatActivity {
             "🤖 ئۆفلاین AI — Meta NLLB-200"
     };
 
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private static final String[] BACKGROUND_MODE_LABELS = {
+            "خۆکار — ڕەنگی قسەهەڵگری ڕەسەن",
+            "ڕەنگی دیاریکراو",
+            "بێ پاشبنەما"
+    };
+    private static final String PREF_GLOBAL_STYLE = "global_text_style_json";
+    private static final String PREF_KEEP_SCREEN = "keep_screen_on_during_jobs";
+
+    // Process-wide so a recreated activity cannot accidentally terminate a
+    // job that the keep-alive foreground service is protecting.
+    private static final ExecutorService executor =
+            Executors.newSingleThreadExecutor();
+    private static volatile SoraniTranslator activeTranslator;
 
     private SharedPreferences prefs;
     private EditText tokenInput;
@@ -106,7 +127,33 @@ public class MainActivity extends AppCompatActivity {
     private Button sendTextButton;
     private Button pickButton;
     private Button translateButton;
+    private Button editResultButton;
     private Button sendResultButton;
+    private Button stopJobButton;
+    private Button keepAliveToggleButton;
+    private Button batterySettingsButton;
+    private CheckBox keepScreenCheck;
+    private TextView keepAliveStatus;
+    private Spinner fontSpinner;
+    private Spinner stylePresetSpinner;
+    private Spinner backgroundModeSpinner;
+    private TextView stylePreview;
+    private TextView styleSizeLabel;
+    private TextView styleWeightLabel;
+    private SeekBar styleSizeSeek;
+    private SeekBar styleWeightSeek;
+    private Button importFontButton;
+    private Button textColorButton;
+    private Button backgroundColorButton;
+    private CheckBox styleAutoColorCheck;
+    private CheckBox styleOutlineCheck;
+    private CheckBox styleShadowCheck;
+    private CheckBox styleItalicCheck;
+    private TextStyleSettings globalTextStyle = new TextStyleSettings();
+    private List<FontCatalog.FontOption> fontOptions = new ArrayList<>();
+    private boolean bindingStyleControls = false;
+    private boolean globalPresetTouched = false;
+    private boolean currentBusy = false;
     private Button refreshDownloadsButton;
     private Button openDownloadsButton;
     private LinearLayout downloadsContainer;
@@ -116,11 +163,15 @@ public class MainActivity extends AppCompatActivity {
     private ImageView previewImage;
 
     private ActivityResultLauncher<String[]> pickLauncher;
+    private ActivityResultLauncher<String[]> importFontLauncher;
+    private ActivityResultLauncher<String> notificationPermissionLauncher;
+    private ActivityResultLauncher<Intent> editorLauncher;
     private Bitmap originalBitmap;
     private Bitmap resultBitmap;
     private File resultFile;
     private File resultTextFile;
     private String pairsText = "";
+    private File selectedImageFile;
     private File selectedCbzFile;
     private String selectedName = "";
     private int selectedCbzPages = 0;
@@ -158,7 +209,28 @@ public class MainActivity extends AppCompatActivity {
         sendTextButton = findViewById(R.id.sendTextButton);
         pickButton = findViewById(R.id.pickButton);
         translateButton = findViewById(R.id.translateButton);
+        editResultButton = findViewById(R.id.editResultButton);
         sendResultButton = findViewById(R.id.sendResultButton);
+        stopJobButton = findViewById(R.id.stopJobButton);
+        keepAliveToggleButton = findViewById(R.id.keepAliveToggleButton);
+        batterySettingsButton = findViewById(R.id.batterySettingsButton);
+        keepScreenCheck = findViewById(R.id.keepScreenCheck);
+        keepAliveStatus = findViewById(R.id.keepAliveStatus);
+        fontSpinner = findViewById(R.id.fontSpinner);
+        stylePresetSpinner = findViewById(R.id.stylePresetSpinner);
+        backgroundModeSpinner = findViewById(R.id.backgroundModeSpinner);
+        stylePreview = findViewById(R.id.stylePreview);
+        styleSizeLabel = findViewById(R.id.styleSizeLabel);
+        styleWeightLabel = findViewById(R.id.styleWeightLabel);
+        styleSizeSeek = findViewById(R.id.styleSizeSeek);
+        styleWeightSeek = findViewById(R.id.styleWeightSeek);
+        importFontButton = findViewById(R.id.importFontButton);
+        textColorButton = findViewById(R.id.textColorButton);
+        backgroundColorButton = findViewById(R.id.backgroundColorButton);
+        styleAutoColorCheck = findViewById(R.id.styleAutoColorCheck);
+        styleOutlineCheck = findViewById(R.id.styleOutlineCheck);
+        styleShadowCheck = findViewById(R.id.styleShadowCheck);
+        styleItalicCheck = findViewById(R.id.styleItalicCheck);
         refreshDownloadsButton = findViewById(R.id.refreshDownloadsButton);
         openDownloadsButton = findViewById(R.id.openDownloadsButton);
         downloadsContainer = findViewById(R.id.downloadsContainer);
@@ -233,6 +305,56 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
 
+        importFontLauncher = registerForActivityResult(
+                new ActivityResultContracts.OpenDocument(),
+                uri -> {
+                    if (uri != null) {
+                        importCustomFont(uri);
+                    }
+                });
+        notificationPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                granted -> {
+                    refreshKeepAliveUi();
+                    if (!granted) {
+                        setStatus("⚠ مۆڵەتی ئاگادارکردنەوە نەدرا؛ پارێزگارییەکە هەر کاردەکات، "
+                                + "بەڵام ڕەنگە ئاگادارکردنەوە و دوگمەی STOP لە دەرەوە نەبینیت.");
+                    }
+                });
+        editorLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    reloadGlobalTextStyleFromPrefs();
+                    if (result.getResultCode() == RESULT_OK
+                            && result.getData() != null
+                            && result.getData().getBooleanExtra(
+                                    EditorActivity.EXTRA_EXPORT, false)) {
+                        exportEditedProject();
+                    } else {
+                        updateButtons(currentBusy);
+                        if (TranslationProjectStore.hasCompletedProject(this)) {
+                            setStatus("پرۆژەکە پاشەکەوت کراوە؛ دەتوانیت دواتر دەستکارییەکە تەواو بکەیت و دەری بکەیت.");
+                        }
+                    }
+                });
+
+        JobRuntime.setStopAction(() -> {
+            SoraniTranslator translator = activeTranslator;
+            if (translator != null) {
+                translator.cancelOffline();
+            }
+        });
+        keepScreenCheck.setChecked(prefs.getBoolean(PREF_KEEP_SCREEN, true));
+        keepScreenCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            prefs.edit().putBoolean(PREF_KEEP_SCREEN, isChecked).apply();
+            updateKeepScreenFlag();
+        });
+        stopJobButton.setOnClickListener(v -> stopEverything());
+        keepAliveToggleButton.setOnClickListener(v -> toggleManualKeepAlive());
+        batterySettingsButton.setOnClickListener(v -> openBatteryOptimizationSettings());
+        editResultButton.setOnClickListener(v -> openTextStudio());
+        initializeStyleControls();
+
         pasteTokenButton.setOnClickListener(v -> pasteTokenFromClipboard());
         pasteChatButton.setOnClickListener(v -> pasteChatIdFromClipboard());
         showTokenCheck.setOnCheckedChangeListener(
@@ -260,14 +382,477 @@ public class MainActivity extends AppCompatActivity {
         openDownloadsButton.setOnClickListener(v -> openSystemDownloads());
 
         refreshOfflineModelUi();
-        updateButtons(false);
+        refreshKeepAliveUi();
+        if (JobRuntime.isRunning()) {
+            currentBusy = true;
+            progress.setVisibility(View.VISIBLE);
+            statusText.setText(JobRuntime.status());
+        }
+        updateButtons(currentBusy);
         refreshDownloadsList();
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        if (KeepAliveService.isManualDesired(this)
+                && !KeepAliveService.isServiceRunning()) {
+            // The user asked for protection until STOP; restart it when
+            // they reopen the app after Android/OEM stopped the process.
+            KeepAliveService.startManual(this);
+        }
+        reloadGlobalTextStyleFromPrefs();
+        refreshKeepAliveUi();
+        if (JobRuntime.isRunning()) {
+            currentBusy = true;
+            progress.setVisibility(View.VISIBLE);
+            statusText.setText(JobRuntime.status());
+        }
+        updateButtons(currentBusy);
+        updateKeepScreenFlag();
+    }
+
+    @Override
     protected void onDestroy() {
-        executor.shutdownNow();
+        // The executor is process-wide and deliberately not shut down here:
+        // the foreground keep-alive service may be protecting a job while
+        // Android recreates this activity.
         super.onDestroy();
+    }
+
+    // ------------------------------------------------------------------
+    // Keep-alive and global text style
+    // ------------------------------------------------------------------
+
+    private StyledTextRenderer.TypefaceResolver styledTypefaceResolver() {
+        final Context appContext = getApplicationContext();
+        return style -> FontCatalog.getTypeface(appContext, style);
+    }
+
+    private void initializeStyleControls() {
+        globalTextStyle = TextStyleSettings.fromJsonString(
+                prefs.getString(PREF_GLOBAL_STYLE, ""));
+        globalTextStyle.prepareAsGlobalDefault();
+
+        ArrayAdapter<String> presetAdapter = new ArrayAdapter<>(
+                this, R.layout.spinner_item, TextStyleSettings.PRESET_LABELS);
+        presetAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
+        stylePresetSpinner.setAdapter(presetAdapter);
+
+        ArrayAdapter<String> backgroundAdapter = new ArrayAdapter<>(
+                this, R.layout.spinner_item, BACKGROUND_MODE_LABELS);
+        backgroundAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
+        backgroundModeSpinner.setAdapter(backgroundAdapter);
+
+        fontSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view,
+                                       int position, long id) {
+                if (bindingStyleControls || position < 0 || position >= fontOptions.size()) {
+                    return;
+                }
+                String fontId = fontOptions.get(position).id;
+                if (!fontId.equals(globalTextStyle.fontId)) {
+                    globalTextStyle.fontId = fontId;
+                    saveGlobalTextStyle();
+                    updateStylePreview();
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+        stylePresetSpinner.setOnTouchListener((view, event) -> {
+            if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN) {
+                globalPresetTouched = true;
+            }
+            return false;
+        });
+        stylePresetSpinner.setOnItemSelectedListener(
+                new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> parent, View view,
+                                               int position, long id) {
+                        if (bindingStyleControls || !globalPresetTouched) {
+                            return;
+                        }
+                        globalPresetTouched = false;
+                        globalTextStyle.applyPreset(position);
+                        saveGlobalTextStyle();
+                        refreshStyleControls();
+                    }
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> parent) {
+                    }
+                });
+        backgroundModeSpinner.setOnItemSelectedListener(
+                new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> parent, View view,
+                                               int position, long id) {
+                        if (bindingStyleControls) {
+                            return;
+                        }
+                        globalTextStyle.backgroundMode = position;
+                        saveGlobalTextStyle();
+                        updateStylePreview();
+                    }
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> parent) {
+                    }
+                });
+
+        styleSizeSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (!fromUser || bindingStyleControls) {
+                    return;
+                }
+                globalTextStyle.sizeScale = (progress + 50) / 100f;
+                styleSizeLabel.setText("قەبارەی دەق: " + (progress + 50) + "%");
+                updateStylePreview();
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                saveGlobalTextStyle();
+            }
+        });
+        styleWeightSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (!fromUser || bindingStyleControls) {
+                    return;
+                }
+                globalTextStyle.fontWeight = 100 + progress * 50;
+                styleWeightLabel.setText(
+                        "ئەستووری فۆنت: " + globalTextStyle.fontWeight);
+                updateStylePreview();
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                saveGlobalTextStyle();
+            }
+        });
+
+        importFontButton.setOnClickListener(v -> importFontLauncher.launch(
+                new String[]{"font/*", "application/x-font-ttf",
+                        "application/octet-stream"}));
+        textColorButton.setOnClickListener(v -> ColorPicker.show(
+                this, "ڕەنگی دەق", globalTextStyle.textColor, color -> {
+                    globalTextStyle.textColor = color;
+                    globalTextStyle.autoTextColor = false;
+                    saveGlobalTextStyle();
+                    refreshStyleControls();
+                }));
+        backgroundColorButton.setOnClickListener(v -> ColorPicker.show(
+                this, "ڕەنگی پاشبنەما", globalTextStyle.backgroundColor, color -> {
+                    globalTextStyle.backgroundColor = color;
+                    globalTextStyle.backgroundMode = TextStyleSettings.BG_CUSTOM;
+                    saveGlobalTextStyle();
+                    refreshStyleControls();
+                }));
+        styleAutoColorCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (bindingStyleControls) {
+                return;
+            }
+            globalTextStyle.autoTextColor = isChecked;
+            saveGlobalTextStyle();
+            updateStylePreview();
+        });
+        styleOutlineCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (bindingStyleControls) {
+                return;
+            }
+            globalTextStyle.outline = isChecked;
+            if (isChecked && globalTextStyle.outlineWidthRatio <= 0f) {
+                globalTextStyle.outlineWidthRatio = 0.12f;
+            }
+            saveGlobalTextStyle();
+            updateStylePreview();
+        });
+        styleShadowCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (bindingStyleControls) {
+                return;
+            }
+            globalTextStyle.shadow = isChecked;
+            saveGlobalTextStyle();
+            updateStylePreview();
+        });
+        styleItalicCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (bindingStyleControls) {
+                return;
+            }
+            globalTextStyle.italic = isChecked;
+            saveGlobalTextStyle();
+            updateStylePreview();
+        });
+
+        refreshFontSpinnerOptions();
+        refreshStyleControls();
+    }
+
+    private void reloadGlobalTextStyleFromPrefs() {
+        if (prefs == null || fontSpinner == null) {
+            return;
+        }
+        globalTextStyle = TextStyleSettings.fromJsonString(
+                prefs.getString(PREF_GLOBAL_STYLE, ""));
+        globalTextStyle.prepareAsGlobalDefault();
+        refreshFontSpinnerOptions();
+        refreshStyleControls();
+    }
+
+    private void refreshFontSpinnerOptions() {
+        fontOptions = FontCatalog.getOptions(this);
+        int selectedFont = FontCatalog.indexOfId(fontOptions, globalTextStyle.fontId);
+        if (!fontOptions.isEmpty()
+                && !fontOptions.get(selectedFont).id.equals(globalTextStyle.fontId)) {
+            // A previously selected custom font may have been deleted in
+            // the editor; fall back instead of silently using system text.
+            globalTextStyle.fontId = fontOptions.get(selectedFont).id;
+            saveGlobalTextStyle();
+        }
+        bindingStyleControls = true;
+        fontSpinner.setAdapter(new FontSpinnerAdapter(this, fontOptions));
+        fontSpinner.setSelection(selectedFont, false);
+        stylePreview.postDelayed(() -> bindingStyleControls = false, 450L);
+    }
+
+    private void refreshStyleControls() {
+        if (stylePreview == null) {
+            return;
+        }
+        bindingStyleControls = true;
+        globalTextStyle.sanitize();
+        backgroundModeSpinner.setSelection(globalTextStyle.backgroundMode, false);
+        styleSizeSeek.setProgress(Math.max(0, Math.min(170,
+                Math.round(globalTextStyle.sizeScale * 100f) - 50)));
+        styleWeightSeek.setProgress(Math.max(0, Math.min(16,
+                (globalTextStyle.fontWeight - 100) / 50)));
+        styleSizeLabel.setText("قەبارەی دەق: "
+                + Math.round(globalTextStyle.sizeScale * 100f) + "%");
+        styleWeightLabel.setText("ئەستووری فۆنت: " + globalTextStyle.fontWeight);
+        styleAutoColorCheck.setChecked(globalTextStyle.autoTextColor);
+        styleOutlineCheck.setChecked(globalTextStyle.outline);
+        styleShadowCheck.setChecked(globalTextStyle.shadow);
+        styleItalicCheck.setChecked(globalTextStyle.italic);
+        textColorButton.setEnabled(!globalTextStyle.autoTextColor);
+        textColorButton.setText("A  ڕەنگی دەق  "
+                + TextStyleSettings.hex(globalTextStyle.textColor));
+        backgroundColorButton.setText("▦  ڕەنگی پاشبنەما  "
+                + TextStyleSettings.hex(globalTextStyle.backgroundColor));
+        updateStylePreview();
+        stylePreview.postDelayed(() -> bindingStyleControls = false, 450L);
+    }
+
+    private void updateStylePreview() {
+        if (stylePreview == null) {
+            return;
+        }
+        globalTextStyle.sanitize();
+        Typeface typeface = FontCatalog.getTypeface(this, globalTextStyle);
+        stylePreview.setTypeface(typeface);
+        stylePreview.setTextSize(Math.max(12f, Math.min(30f,
+                17f * globalTextStyle.sizeScale)));
+        stylePreview.setTextColor(TextStyleSettings.withOpacity(
+                globalTextStyle.autoTextColor ? Color.BLACK : globalTextStyle.textColor,
+                globalTextStyle.textOpacity));
+        if (globalTextStyle.shadow) {
+            stylePreview.setShadowLayer(5f, 2f, 3f,
+                    TextStyleSettings.withOpacity(globalTextStyle.shadowColor, 170));
+        } else {
+            stylePreview.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT);
+        }
+        GradientDrawable background = new GradientDrawable();
+        int previewBackground = globalTextStyle.backgroundMode == TextStyleSettings.BG_CUSTOM
+                ? globalTextStyle.backgroundColor
+                : (globalTextStyle.backgroundMode == TextStyleSettings.BG_NONE
+                        ? Color.rgb(15, 23, 42) : Color.WHITE);
+        background.setColor(TextStyleSettings.withOpacity(
+                previewBackground, globalTextStyle.backgroundOpacity));
+        background.setCornerRadius(18f * getResources().getDisplayMetrics().density);
+        if (globalTextStyle.backgroundBorder) {
+            background.setStroke(Math.max(1,
+                            Math.round(globalTextStyle.backgroundBorderWidth)),
+                    globalTextStyle.backgroundBorderColor);
+        }
+        stylePreview.setBackground(background);
+    }
+
+    private void saveGlobalTextStyle() {
+        globalTextStyle.prepareAsGlobalDefault();
+        prefs.edit()
+                .putString(PREF_GLOBAL_STYLE, globalTextStyle.toJsonString())
+                .apply();
+    }
+
+    private void importCustomFont(Uri uri) {
+        setStatus("هاوردەکردنی فۆنتەکە…");
+        new Thread(() -> {
+            try {
+                String fontId = FontCatalog.importFont(getApplicationContext(), uri);
+                runOnUiThread(() -> {
+                    globalTextStyle.fontId = fontId;
+                    saveGlobalTextStyle();
+                    refreshFontSpinnerOptions();
+                    refreshStyleControls();
+                    setStatus("✅ فۆنتەکە هاوردەکرا و وەک فۆنتی ئێستا هەڵبژێردرا.");
+                });
+            } catch (Throwable e) {
+                setStatus("❌ " + friendlyError(e));
+            }
+        }, "KurdManFontImport").start();
+    }
+
+    private void openTextStudio() {
+        if (currentBusy || JobRuntime.isRunning()) {
+            setStatus("⚠ چاوەڕوان بکە تا کارەکەی ئێستا تەواو بێت.");
+            return;
+        }
+        if (!TranslationProjectStore.hasCompletedProject(this)) {
+            setStatus("⚠ سەرەتا وێنەیەک یان CBZێک وەربگێڕە؛ دواتر دەتوانیت شوێن و ستایلی دەقەکان بگۆڕیت.");
+            return;
+        }
+        editorLauncher.launch(new Intent(this, EditorActivity.class));
+    }
+
+    private void refreshKeepAliveUi() {
+        if (keepAliveToggleButton == null || keepAliveStatus == null) {
+            return;
+        }
+        boolean manual = KeepAliveService.isManualDesired(this);
+        boolean running = JobRuntime.isRunning();
+        boolean service = KeepAliveService.isServiceRunning();
+        keepAliveToggleButton.setText(manual
+                ? "■  وەستاندنی پارێزگاری"
+                : "▶  پارێزگاری هەمیشەیی");
+        boolean batteryFree = isIgnoringBatteryOptimizations();
+        batterySettingsButton.setText(batteryFree
+                ? "✓  پاتری بەبێ سنوورە"
+                : "🔋  پاتری بەبێ سنوور");
+        String text;
+        if (running) {
+            text = "🟢 ئێستا کارەکە پارێزراوە: شاشە بکوژێتەوە یان لە ئەپەکە دەرچیت، "
+                    + "کارەکە بەردەوام دەبێت تا تەواو بێت یان STOP دابگریت.";
+        } else if (manual || service) {
+            text = "🟢 پارێزگاری هەمیشەیی چالاکە: KurdMan زیندوو دەمێنێتەوە و "
+                    + "ئاگادارکردنەوەی STOP پیشان دەدات تا خۆت بیوەستێنیت.";
+        } else {
+            text = "لەکاتی کارکردندا خۆکار چالاک دەبێت؛ ئاگادارکردنەوەیەکی هەمیشەیی "
+                    + "و CPU زیندوو دەهێڵێتەوە تەنانەت کاتێک شاشە دەکوژێتەوە.";
+        }
+        if (!batteryFree) {
+            text += "\nبۆ بەهێزترین پارێزگاری «پاتری بەبێ سنوور» چالاک بکە.";
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && ContextCompat.checkSelfPermission(this,
+                        Manifest.permission.POST_NOTIFICATIONS)
+                        != PackageManager.PERMISSION_GRANTED) {
+            text += "\nمۆڵەتی ئاگادارکردنەوە بدە تاکوو دوگمەی STOP لە دەرەوەش ببینیت.";
+        }
+        keepAliveStatus.setText(text);
+        if (stopJobButton != null) {
+            stopJobButton.setVisibility(currentBusy || running || manual || service
+                    ? View.VISIBLE : View.GONE);
+        }
+        updateKeepScreenFlag();
+    }
+
+    private void toggleManualKeepAlive() {
+        if (KeepAliveService.isManualDesired(this)) {
+            stopEverything();
+            return;
+        }
+        JobRuntime.setStatus("KurdMan چالاکە و پارێزراوە تا STOP");
+        KeepAliveService.startManual(this);
+        requestNotificationPermissionIfNeeded();
+        refreshKeepAliveUi();
+        setStatus("🛡 پارێزگاری هەمیشەیی چالاک کرا — تا خۆت STOP دابگریت نامرێت/ناکوژرێتەوە.");
+    }
+
+    private void stopEverything() {
+        KeepAliveService.stopAll(this);
+        setStatus(JobRuntime.isRunning()
+                ? "🛑 وەستاندن داواکرا؛ کارەکە لە یەکەم خاڵی سەلامەتدا دەوەستێت."
+                : "🛑 پارێزگاری و کارەکە وەستێنرا.");
+        if (!JobRuntime.isRunning()) {
+            currentBusy = false;
+            progress.setVisibility(View.GONE);
+            updateButtons(false);
+        }
+        refreshKeepAliveUi();
+    }
+
+    private void requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+                || prefs.getBoolean("notification_permission_asked", false)) {
+            return;
+        }
+        if (ContextCompat.checkSelfPermission(this,
+                        Manifest.permission.POST_NOTIFICATIONS)
+                        != PackageManager.PERMISSION_GRANTED
+                && notificationPermissionLauncher != null) {
+            prefs.edit().putBoolean("notification_permission_asked", true).apply();
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+        }
+    }
+
+    private boolean isIgnoringBatteryOptimizations() {
+        PowerManager powerManager = getSystemService(PowerManager.class);
+        return powerManager != null
+                && powerManager.isIgnoringBatteryOptimizations(getPackageName());
+    }
+
+    private void openBatteryOptimizationSettings() {
+        if (isIgnoringBatteryOptimizations()) {
+            setStatus("✅ پاتری بۆ KurdMan لەپێشوەختەوە بەبێ سنوورە.");
+            return;
+        }
+        try {
+            Intent intent = new Intent(
+                    Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+            intent.setData(Uri.parse("package:" + getPackageName()));
+            startActivity(intent);
+            setStatus("🔋 «بەبێ سنوور / Unrestricted» هەڵبژێرە تاکوو سیستەم بەهێواشی KurdMan نەکۆژێت.");
+        } catch (ActivityNotFoundException | SecurityException e) {
+            try {
+                startActivity(new Intent(
+                        Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+            } catch (RuntimeException second) {
+                setStatus("⚠ لە ڕێکخستنەکانی مۆبایلەکەتدا بڕۆ بۆ Apps → KurdMan → Battery و «Unrestricted» هەڵبژێرە.");
+            }
+        }
+    }
+
+    private void updateKeepScreenFlag() {
+        if (getWindow() == null || keepScreenCheck == null) {
+            return;
+        }
+        boolean keep = keepScreenCheck.isChecked()
+                && (currentBusy || JobRuntime.isRunning()
+                        || KeepAliveService.isManualDesired(this));
+        if (keep) {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        } else {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
+    }
+
+    private void throwIfJobStopped() throws InterruptedException {
+        JobRuntime.throwIfStopped();
     }
 
     private boolean selectedOfflineMode() {
@@ -277,7 +862,9 @@ public class MainActivity extends AppCompatActivity {
 
     private SoraniTranslator createTranslator(boolean offlineMode) throws Exception {
         if (!offlineMode) {
-            return new SoraniTranslator();
+            SoraniTranslator translator = new SoraniTranslator();
+            activeTranslator = translator;
+            return translator;
         }
         setStatus("🤖 بارکردنی مۆدێلی زیرەکیی دەستکردی ئۆفلاین… "
                 + "یەکەمجار لەوانەیە چەند چرکەیەک بخایەنێت.");
@@ -288,7 +875,9 @@ public class MainActivity extends AppCompatActivity {
         try {
             engine = new OfflineAiClient(this);
             engine.initialize();
-            return new SoraniTranslator(engine);
+            SoraniTranslator translator = new SoraniTranslator(engine);
+            activeTranslator = translator;
+            return translator;
         } catch (Exception e) {
             if (engine != null) {
                 engine.close();
@@ -305,6 +894,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void closeTranslator(SoraniTranslator translator) {
         if (translator != null) {
+            if (activeTranslator == translator) {
+                activeTranslator = null;
+            }
             try {
                 translator.close();
             } catch (Exception ignored) {
@@ -352,6 +944,7 @@ public class MainActivity extends AppCompatActivity {
         setStatus("⬇ دەستپێکردنی دابەزاندنی مۆدێلی ئۆفلاین ("
                 + formatStorage(OfflineModelManager.totalBytes()) + ")…");
         executor.execute(() -> {
+            JobRuntime.markThreadStarted();
             final int[] lastPercent = {-1};
             final boolean[] lastVerifying = {false};
             try {
@@ -416,6 +1009,7 @@ public class MainActivity extends AppCompatActivity {
         setBusy(true);
         setStatus("سڕینەوەی مۆدێلی ئۆفلاین…");
         executor.execute(() -> {
+            JobRuntime.markThreadStarted();
             try {
                 boolean deleted = offlineModelManager.deleteModel();
                 runOnUiThread(this::refreshOfflineModelUi);
@@ -461,6 +1055,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String friendlyOfflineError(Throwable error) {
+        if (JobRuntime.wasStopped(error)) {
+            return "کارەکە بە داوای تۆ وەستێنرا.";
+        }
         String raw = friendlyError(error);
         String lower = errorChainText(error);
         if (lower.contains("not enough free storage")) {
@@ -533,6 +1130,7 @@ public class MainActivity extends AppCompatActivity {
         setBusy(true);
         setStatus("پەیوەستبوون بە تێلێگرام…");
         executor.execute(() -> {
+            JobRuntime.markThreadStarted();
             try {
                 TelegramApi api = new TelegramApi(token);
                 JSONObject me = api.getMe();
@@ -644,6 +1242,7 @@ public class MainActivity extends AppCompatActivity {
         setBusy(true);
         setStatus("ناردنی نامەکە بە تۆکنەکە…");
         executor.execute(() -> {
+            JobRuntime.markThreadStarted();
             try {
                 TelegramApi api = new TelegramApi(token);
                 for (String chunk : splitText(text, 3500)) {
@@ -666,6 +1265,7 @@ public class MainActivity extends AppCompatActivity {
         setBusy(true);
         setStatus(cbz ? "خوێندنەوەی CBZ و دەرهێنانی وێنەکان…" : "خوێندنەوەی وێنەکە…");
         executor.execute(() -> {
+            JobRuntime.markThreadStarted();
             try {
                 if (cbz) {
                     File copied = new File(getCacheDir(),
@@ -694,6 +1294,7 @@ public class MainActivity extends AppCompatActivity {
                     final Bitmap previewBitmap = preview;
                     final int finalPageCount = pageCount;
                     runOnUiThread(() -> {
+                        selectedImageFile = null;
                         selectedCbzFile = copied;
                         selectedName = displayName;
                         selectedCbzPages = finalPageCount;
@@ -713,11 +1314,16 @@ public class MainActivity extends AppCompatActivity {
                     setStatus("✅ CBZ ئامادەیە: " + displayName
                             + " — " + finalPageCount + " لاپەڕە.");
                 } else {
-                    final Bitmap loaded = decodeBitmap(uri);
+                    File copiedImage = new File(getCacheDir(),
+                            "selected-image-" + timestamp()
+                                    + extensionWithDot(displayName, ".jpg"));
+                    copyUriToFile(uri, copiedImage, 300L * 1024L * 1024L);
+                    final Bitmap loaded = decodeBitmap(copiedImage);
                     if (loaded == null) {
                         throw new IOException("Could not decode image");
                     }
                     runOnUiThread(() -> {
+                        selectedImageFile = copiedImage;
                         selectedCbzFile = null;
                         selectedName = displayName;
                         selectedCbzPages = 0;
@@ -751,8 +1357,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void translateSelected() {
         final Bitmap sourceBitmap = originalBitmap;
+        final File imageFile = selectedImageFile;
         final File cbzFile = selectedCbzFile;
         final String cbzName = selectedName;
+        final TextStyleSettings chosenStyle = new TextStyleSettings(globalTextStyle);
         if (sourceBitmap == null && (cbzFile == null || !cbzFile.exists())) {
             setStatus("⚠ سەرەتا وێنەی مانهوا یان فایلی CBZ هەڵبژێرە.");
             return;
@@ -771,12 +1379,41 @@ public class MainActivity extends AppCompatActivity {
                 ? "🤖 دەستپێکردنی وەرگێڕانی ئۆفلاین لەناو مۆبایلەکە…"
                 : "دەستپێکردنی وەرگێڕان لەناو مۆبایلەکە…");
         executor.execute(() -> {
+            JobRuntime.markThreadStarted();
             SoraniTranslator translator = null;
             try {
+                throwIfJobStopped();
                 if (cbzFile != null) {
-                    translateCbzJob(cbzFile, cbzName, sourceLanguage, offlineMode);
+                    translateCbzJob(cbzFile, cbzName, sourceLanguage,
+                            offlineMode, chosenStyle);
                     return;
                 }
+
+                String imageBase = sanitizeFileName(
+                        baseNameWithoutExtension(cbzName));
+                if (imageBase.isEmpty()) {
+                    imageBase = "kurdman-image";
+                }
+                TranslationProject project = TranslationProjectStore.createNew(
+                        getApplicationContext(), false, cbzName,
+                        imageBase, sourceLanguage);
+                String sourceExtension = extensionWithDot(cbzName, ".jpg");
+                TranslationProject.Page projectPage = new TranslationProject.Page(
+                        TranslationProjectStore.pageRelativePath(1, sourceExtension),
+                        sourceExtension);
+                File projectSource = projectPage.sourceFile(project.projectDir);
+                if (imageFile != null && imageFile.exists()) {
+                    copyFile(imageFile, projectSource);
+                } else {
+                    projectPage.sourcePath = TranslationProjectStore.pageRelativePath(
+                            1, ".jpg");
+                    projectPage.originalExtension = ".jpg";
+                    writeJpeg(projectPage.sourceFile(project.projectDir), sourceBitmap);
+                }
+                projectPage.width = sourceBitmap.getWidth();
+                projectPage.height = sourceBitmap.getHeight();
+                project.pages.add(projectPage);
+                project.save();
 
                 List<Segment> segments = ManhwaRenderer.recognize(
                         sourceBitmap,
@@ -791,15 +1428,21 @@ public class MainActivity extends AppCompatActivity {
                     throw new IllegalStateException("هیچ دەقێکی ڕوون نەدۆزرایەوە. وێنەیەکی ڕوونتر تاقیبکەرەوە.");
                 }
 
+                projectPage.segments.addAll(segments);
+                project.save();
                 translator = createTranslator(offlineMode);
                 for (int i = 0; i < segments.size(); i++) {
+                    throwIfJobStopped();
                     Segment segment = segments.get(i);
                     setStatus((offlineMode
                                     ? "🤖 وەرگێڕانی ئۆفلاین بۆ سۆرانی "
                                     : "وەرگێڕان بۆ سۆرانی ")
                             + (i + 1) + "/" + segments.size() + "…");
                     segment.ckb = translator.translate(segment.text, sourceLanguage);
+                    segment.originalCkb = segment.ckb;
+                    throwIfJobStopped();
                 }
+                project.save();
 
                 // Free the (offline) model before rendering copies the full
                 // bitmap. Holding ~1.3 GB of NLLB sessions plus two large
@@ -808,9 +1451,13 @@ public class MainActivity extends AppCompatActivity {
                 closeTranslator(translator);
                 translator = null;
 
+                throwIfJobStopped();
                 setStatus("دانانی دەقە کوردییەکان لەسەر وێنەکە…");
                 ManhwaRenderer.RenderResult renderResult =
-                        ManhwaRenderer.render(sourceBitmap, segments);
+                        ManhwaRenderer.render(sourceBitmap, segments,
+                                chosenStyle, styledTypefaceResolver());
+                project.completed = true;
+                project.save();
                 final Bitmap rendered = renderResult.bitmap;
                 File cached = writeJpegToCache(rendered);
                 Uri savedUri = saveToPictures(rendered);
@@ -838,6 +1485,7 @@ public class MainActivity extends AppCompatActivity {
                         : (savedUri != null
                                 ? " لە Pictures/KurdMan پاشەکەوت کرا."
                                 : " لە کاشی ئەپەکەدا پاشەکەوت کرا.");
+                savedNote += " ئێستا دەتوانیت «دەستکاری شوێن، فۆنت و ڕەنگ» بکەیت.";
                 if (renderResult.rendered == 0) {
                     setStatus("⚠ دەقەکان وەرگێڕدران، بەڵام هیچ شوێنێکی سادە و پارێزراو "
                             + "نەبوو بۆ نووسینیان لەسەر وێنەکە؛ وەرگێڕانەکان لە خوارەوەن." + savedNote);
@@ -853,7 +1501,11 @@ public class MainActivity extends AppCompatActivity {
                 // Catch Errors too (OutOfMemoryError, LinkageError, ...):
                 // an uncaught failure in this background thread would
                 // otherwise kill the whole app process.
-                setStatus("❌ " + friendlyTranslationError(e));
+                if (JobRuntime.wasStopped(e)) {
+                    setStatus("🛑 کارەکە بە داوای تۆ وەستێنرا.");
+                } else {
+                    setStatus("❌ " + friendlyTranslationError(e));
+                }
             } finally {
                 closeTranslator(translator);
                 setBusy(false);
@@ -863,10 +1515,17 @@ public class MainActivity extends AppCompatActivity {
 
     private void translateCbzJob(File cbz, String displayName,
                                    String sourceLanguage,
-                                   boolean offlineMode) throws Exception {
-        File jobDir = new File(getCacheDir(), "cbz-job-" + timestamp());
-        File inputDir = new File(jobDir, "input");
-        File outputDir = new File(jobDir, "output");
+                                   boolean offlineMode,
+                                   TextStyleSettings chosenStyle) throws Exception {
+        String projectBase = sanitizeFileName(baseNameWithoutExtension(displayName));
+        if (projectBase.isEmpty()) {
+            projectBase = "chapter";
+        }
+        TranslationProject project = TranslationProjectStore.createNew(
+                getApplicationContext(), true, displayName,
+                projectBase, sourceLanguage);
+        File inputDir = new File(project.projectDir, "pages");
+        File outputDir = new File(getCacheDir(), "cbz-output-" + timestamp());
         if ((!inputDir.exists() && !inputDir.mkdirs())
                 || (!outputDir.exists() && !outputDir.mkdirs())) {
             throw new IOException("Could not create CBZ work directory");
@@ -874,11 +1533,19 @@ public class MainActivity extends AppCompatActivity {
 
         SoraniTranslator translator = null;
         try {
+            throwIfJobStopped();
             setStatus("دەرهێنانی وێنەکانی ناو CBZ…");
             List<File> pages = extractCbzImages(cbz, inputDir);
             if (pages.isEmpty()) {
                 throw new IOException("No images were found inside this CBZ");
             }
+            for (int i = 0; i < pages.size(); i++) {
+                File pageFile = pages.get(i);
+                project.pages.add(new TranslationProject.Page(
+                        "pages/" + pageFile.getName(),
+                        extensionWithDot(pageFile.getName(), ".jpg")));
+            }
+            project.save();
 
             StringBuilder allPairs = new StringBuilder();
             Bitmap firstRendered = null;
@@ -897,17 +1564,22 @@ public class MainActivity extends AppCompatActivity {
             // bitmap could not be decoded (copied through in phase 3).
             List<List<Segment>> pageSegments = new ArrayList<>(pageTotal);
             for (int i = 0; i < pageTotal; i++) {
+                throwIfJobStopped();
                 final int pageNumber = i + 1;
                 File pageFile = pages.get(i);
+                TranslationProject.Page projectPage = project.pages.get(i);
                 setStatus("لاپەڕە " + pageNumber + "/" + pageTotal + ": خوێندنەوە…");
 
                 Bitmap pageBitmap = decodeBitmap(pageFile);
                 if (pageBitmap == null) {
+                    projectPage.unreadable = true;
                     pageSegments.add(null);
                     continue;
                 }
                 try {
-                    pageSegments.add(ManhwaRenderer.recognize(
+                    projectPage.width = pageBitmap.getWidth();
+                    projectPage.height = pageBitmap.getHeight();
+                    List<Segment> recognized = ManhwaRenderer.recognize(
                             pageBitmap,
                             sourceLanguage,
                             new ManhwaRenderer.Progress() {
@@ -916,34 +1588,43 @@ public class MainActivity extends AppCompatActivity {
                                     setStatus("لاپەڕە " + pageNumber + "/"
                                             + pageTotal + ": " + message);
                                 }
-                            }));
+                            });
+                    projectPage.segments.addAll(recognized);
+                    pageSegments.add(recognized);
                 } finally {
                     pageBitmap.recycle();
                 }
             }
+            project.save();
 
             // Phase 2: translate everything with no page bitmaps in memory,
             // then free the model before any rendering happens.
             translator = createTranslator(offlineMode);
             for (int i = 0; i < pageTotal; i++) {
+                throwIfJobStopped();
                 List<Segment> segments = pageSegments.get(i);
                 if (segments == null) {
                     continue;
                 }
                 int pageNumber = i + 1;
                 for (int s = 0; s < segments.size(); s++) {
+                    throwIfJobStopped();
                     Segment segment = segments.get(s);
                     setStatus("لاپەڕە " + pageNumber + "/" + pageTotal
                             + (offlineMode ? ": 🤖 وەرگێڕانی ئۆفلاین " : ": وەرگێڕان ")
                             + (s + 1) + "/" + segments.size() + "…");
                     segment.ckb = translator.translate(segment.text, sourceLanguage);
+                    segment.originalCkb = segment.ckb;
+                    throwIfJobStopped();
                 }
             }
+            project.save();
             closeTranslator(translator);
             translator = null;
 
             // Phase 3: render (or copy through) each page.
             for (int i = 0; i < pageTotal; i++) {
+                throwIfJobStopped();
                 int pageNumber = i + 1;
                 File pageFile = pages.get(i);
                 List<Segment> segments = pageSegments.get(i);
@@ -995,7 +1676,8 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 ManhwaRenderer.RenderResult renderResult =
-                        ManhwaRenderer.render(pageBitmap, segments);
+                        ManhwaRenderer.render(pageBitmap, segments,
+                                chosenStyle, styledTypefaceResolver());
                 Bitmap rendered = renderResult.bitmap;
                 File outPage = new File(outputDir,
                         String.format(Locale.ROOT, "%04d.jpg", pageNumber));
@@ -1029,10 +1711,9 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
-            String base = sanitizeFileName(baseNameWithoutExtension(displayName));
-            if (base.isEmpty()) {
-                base = "chapter";
-            }
+            String base = projectBase;
+            project.completed = true;
+            project.save();
             File outCbz = new File(getCacheDir(), base + ".ckb.cbz");
             zipDirectory(outputDir, outCbz);
 
@@ -1064,6 +1745,7 @@ public class MainActivity extends AppCompatActivity {
             String savedNote = downloadCbzUri != null
                     ? " CBZەکە لە Download/KurdMan پاشەکەوت کرا."
                     : " CBZەکە لە بەشی «داگرتنەکان» پاشەکەوت کرا.";
+            savedNote += " ئێستا دەتوانیت هەر لاپەڕەیەک لە ستۆدیۆی دەقدا دەستکاری بکەیت.";
             if (totalSegments == 0) {
                 setStatus("⚠ CBZەکە دروست کرا، بەڵام هیچ دەقێکی ڕوون نەدۆزرایەوە." + savedNote);
             } else if (totalSkipped > 0) {
@@ -1079,9 +1761,218 @@ public class MainActivity extends AppCompatActivity {
             }
         } finally {
             closeTranslator(translator);
-            deleteRecursive(inputDir);
+            // Keep inputDir: it is the editable project's permanent page
+            // store under files/projects/current/pages. Only rendered output
+            // pages in cache are temporary.
             deleteRecursive(outputDir);
         }
+    }
+
+    private void exportEditedProject() {
+        final TranslationProject project = TranslationProjectStore.load(this);
+        if (project == null || !project.completed || project.pages.isEmpty()) {
+            setStatus("⚠ پرۆژەی دەستکاریکراو نەدۆزرایەوە.");
+            updateButtons(false);
+            return;
+        }
+        setBusy(true);
+        setStatus("دەرکردنی وەشانی دەستکاریکراو…");
+        executor.execute(() -> {
+            JobRuntime.markThreadStarted();
+            File outputDir = null;
+            try {
+                throwIfJobStopped();
+                StyledTextRenderer.TypefaceResolver resolver = styledTypefaceResolver();
+                if (!project.cbz) {
+                    TranslationProject.Page page = project.pages.get(0);
+                    File source = page.sourceFile(project.projectDir);
+                    Bitmap sourceBitmap = source == null ? null : decodeBitmap(source);
+                    if (sourceBitmap == null) {
+                        throw new IOException("Could not decode the saved project page");
+                    }
+                    StyledTextRenderer.EditedResult result =
+                            StyledTextRenderer.renderEdited(
+                                    sourceBitmap, page.segments, resolver);
+                    sourceBitmap.recycle();
+                    final Bitmap rendered = result.bitmap;
+                    File cached = new File(getCacheDir(),
+                            "kurdman-edited-" + timestamp() + ".jpg");
+                    writeJpeg(cached, rendered);
+                    Uri savedUri = saveToPictures(rendered);
+                    String pairs = buildPairs(page.segments);
+                    File textFile = writeTextToCache(pairs,
+                            "kurdman-edited-" + timestamp() + ".txt");
+                    Uri downloadImageUri = saveFileToDownloads(cached, "image/jpeg");
+                    Uri downloadTextUri = saveFileToDownloads(textFile, "text/plain");
+                    copyToDownloadsLibrary(cached);
+                    copyToDownloadsLibrary(textFile);
+                    project.save();
+
+                    resultBitmap = rendered;
+                    resultFile = cached;
+                    resultTextFile = textFile;
+                    pairsText = pairs;
+                    runOnUiThread(() -> {
+                        previewImage.setImageBitmap(rendered);
+                        resultText.setText(pairs);
+                        updateButtons(false);
+                        refreshDownloadsList();
+                    });
+                    String savedNote = downloadImageUri != null || downloadTextUri != null
+                            ? " لە Download/KurdMan پاشەکەوت کرا."
+                            : (savedUri != null
+                                    ? " لە Pictures/KurdMan پاشەکەوت کرا."
+                                    : " لە کاشی ئەپەکەدا پاشەکەوت کرا.");
+                    setStatus("✅ وەشانی دەستکاریکراو ئامادەیە: "
+                            + result.rendered + "/" + page.segments.size()
+                            + " دەق لەسەر وێنەکە داندرا." + savedNote);
+                    return;
+                }
+
+                outputDir = new File(getCacheDir(),
+                        "cbz-edited-output-" + timestamp());
+                if (!outputDir.exists() && !outputDir.mkdirs()) {
+                    throw new IOException("Could not create edited CBZ output directory");
+                }
+                StringBuilder allPairs = new StringBuilder();
+                Bitmap firstRendered = null;
+                int totalSegments = 0;
+                int totalRendered = 0;
+                int totalSkipped = 0;
+                int partialPages = 0;
+                final int pageTotal = project.pages.size();
+
+                for (int i = 0; i < pageTotal; i++) {
+                    throwIfJobStopped();
+                    int pageNumber = i + 1;
+                    TranslationProject.Page page = project.pages.get(i);
+                    File source = page.sourceFile(project.projectDir);
+                    if (source == null || !source.exists()) {
+                        throw new IOException("Saved project page is missing: " + pageNumber);
+                    }
+                    if (allPairs.length() > 0) {
+                        allPairs.append("\n\n");
+                    }
+                    allPairs.append("=== لاپەڕە ").append(pageNumber)
+                            .append('/').append(pageTotal).append(" ===\n");
+
+                    if (page.unreadable) {
+                        File kept = new File(outputDir, String.format(Locale.ROOT,
+                                "%04d%s", pageNumber,
+                                extensionWithDot(source.getName(), ".jpg")));
+                        copyFile(source, kept);
+                        allPairs.append("(ئەم وێنەیە نەخوێنرایەوە؛ وەک خۆی هێڵدرايەوە.)");
+                        continue;
+                    }
+
+                    setStatus("لاپەڕە " + pageNumber + "/" + pageTotal
+                            + ": دەرکردنی دەستکارییەکان…");
+                    Bitmap pageBitmap = decodeBitmap(source);
+                    if (pageBitmap == null) {
+                        File kept = new File(outputDir, String.format(Locale.ROOT,
+                                "%04d%s", pageNumber,
+                                extensionWithDot(source.getName(), ".jpg")));
+                        copyFile(source, kept);
+                        totalSegments += page.segments.size();
+                        totalSkipped += page.segments.size();
+                        if (!page.segments.isEmpty()) {
+                            partialPages++;
+                        }
+                        allPairs.append(page.segments.isEmpty()
+                                ? "(هیچ دەقێکی ڕوون نەدۆزرایەوە)"
+                                : buildPairs(page.segments));
+                        continue;
+                    }
+
+                    StyledTextRenderer.EditedResult result =
+                            StyledTextRenderer.renderEdited(
+                                    pageBitmap, page.segments, resolver);
+                    Bitmap rendered = result.bitmap;
+                    File outPage = new File(outputDir,
+                            String.format(Locale.ROOT, "%04d.jpg", pageNumber));
+                    writeJpeg(outPage, rendered);
+                    if (firstRendered == null) {
+                        firstRendered = rendered;
+                    } else {
+                        rendered.recycle();
+                    }
+                    pageBitmap.recycle();
+
+                    totalSegments += page.segments.size();
+                    totalRendered += result.rendered;
+                    totalSkipped += result.skipped;
+                    if (!page.segments.isEmpty() && result.skipped > 0) {
+                        partialPages++;
+                    }
+                    allPairs.append(page.segments.isEmpty()
+                            ? "(هیچ دەقێکی ڕوون نەدۆزرایەوە)"
+                            : buildPairs(page.segments));
+                    if (!page.segments.isEmpty() && result.skipped > 0) {
+                        allPairs.append("\n[⚠ ").append(result.skipped)
+                                .append(" دەق لەسەر ئەم لاپەڕەیە پیشان نەدرا؛ ")
+                                .append("وەرگێڕانەکەی لە سەرەوە دیاری کراوە.]");
+                    }
+                }
+
+                project.save();
+                String base = sanitizeFileName(project.baseName);
+                if (base.isEmpty()) {
+                    base = "chapter";
+                }
+                File outCbz = new File(getCacheDir(), base + ".ckb.cbz");
+                zipDirectory(outputDir, outCbz);
+                String pairs = allPairs.toString().trim();
+                File textFile = writeTextToCache(pairs, base + ".ckb.txt");
+                Uri downloadCbzUri = saveFileToDownloads(outCbz, "application/zip");
+                saveFileToDownloads(textFile, "text/plain");
+                copyToDownloadsLibrary(outCbz);
+                copyToDownloadsLibrary(textFile);
+
+                final Bitmap preview = firstRendered;
+                String pairsForUi = pairs.length() > 60000
+                        ? pairs.substring(0, 60000)
+                                + "\n\n… (دەقی تەواو لە فایلی TXTی «داگرتنەکان»دایە)"
+                        : pairs;
+                resultBitmap = preview;
+                resultFile = outCbz;
+                resultTextFile = textFile;
+                pairsText = pairs;
+                runOnUiThread(() -> {
+                    if (preview != null) {
+                        previewImage.setImageBitmap(preview);
+                    }
+                    resultText.setText(pairsForUi);
+                    updateButtons(false);
+                    refreshDownloadsList();
+                });
+                String savedNote = downloadCbzUri != null
+                        ? " CBZە دەستکاریکراوەکە لە Download/KurdMan پاشەکەوت کرا."
+                        : " CBZە دەستکاریکراوەکە لە بەشی «داگرتنەکان» پاشەکەوت کرا.";
+                if (totalSegments == 0) {
+                    setStatus("⚠ CBZە دەستکاریکراوەکە دروست کرا، بەڵام هیچ دەقێک نییە." + savedNote);
+                } else if (totalSkipped > 0) {
+                    setStatus("⚠ CBZی دەستکاریکراو ئامادەیە: " + pageTotal + " لاپەڕە، "
+                            + totalRendered + "/" + totalSegments
+                            + " دەق لەسەر وێنەکان داندرا؛ " + totalSkipped
+                            + " دەق لە " + partialPages + " لاپەڕەدا پیشان نەدرا." + savedNote);
+                } else {
+                    setStatus("✅ CBZی دەستکاریکراو ئامادەیە: " + pageTotal + " لاپەڕە، "
+                            + totalRendered + "/" + totalSegments
+                            + " دەق لەسەر وێنەکان داندرا." + savedNote);
+                }
+            } catch (Throwable e) {
+                if (JobRuntime.wasStopped(e)) {
+                    setStatus("🛑 دەرکردنەکە بە داوای تۆ وەستێنرا.");
+                } else {
+                    setStatus("❌ " + friendlyTranslationError(e));
+                }
+            } finally {
+                if (outputDir != null) {
+                    deleteRecursive(outputDir);
+                }
+                setBusy(false);
+            }
+        });
     }
 
     private List<File> extractCbzImages(File cbz, File destDir) throws IOException {
@@ -1250,6 +2141,7 @@ public class MainActivity extends AppCompatActivity {
         setBusy(true);
         setStatus("ناردنی ئەنجامەکە بۆ تێلێگرام (" + formatMb(file.length()) + ")…");
         executor.execute(() -> {
+            JobRuntime.markThreadStarted();
             try {
                 TelegramApi api = new TelegramApi(token);
                 // Fail fast (and clearly) if the bot cannot reach this chat,
@@ -1293,84 +2185,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private Bitmap decodeBitmap(Uri uri) throws Exception {
-        ContentResolver resolver = getContentResolver();
-
-        BitmapFactory.Options bounds = new BitmapFactory.Options();
-        bounds.inJustDecodeBounds = true;
-        InputStream first = resolver.openInputStream(uri);
-        if (first == null) {
-            throw new IOException("Could not open selected image");
-        }
-        try {
-            BitmapFactory.decodeStream(first, null, bounds);
-        } finally {
-            first.close();
-        }
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
-            throw new IOException("Unsupported image");
-        }
-
-        int sample = 1;
-        long pixels = (long) bounds.outWidth * (long) bounds.outHeight;
-        while (pixels / ((long) sample * (long) sample) > 28_000_000L && sample < 16) {
-            sample *= 2;
-        }
-
-        BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inSampleSize = sample;
-        options.inPreferredConfig = Bitmap.Config.ARGB_8888;
-
-        InputStream second = resolver.openInputStream(uri);
-        if (second == null) {
-            throw new IOException("Could not reopen selected image");
-        }
-        Bitmap decoded;
-        try {
-            decoded = BitmapFactory.decodeStream(second, null, options);
-        } finally {
-            second.close();
-        }
-
-        if (decoded != null
-                && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
-                && decoded.getConfig() == Bitmap.Config.HARDWARE) {
-            Bitmap software = decoded.copy(Bitmap.Config.ARGB_8888, false);
-            if (software != null) {
-                decoded.recycle();
-                return software;
-            }
-        }
-        return decoded;
+        return BitmapIo.decodeUri(this, uri);
     }
 
-    private Bitmap decodeBitmap(File file) throws Exception {
-        BitmapFactory.Options bounds = new BitmapFactory.Options();
-        bounds.inJustDecodeBounds = true;
-        BitmapFactory.decodeFile(file.getAbsolutePath(), bounds);
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
-            return null;
-        }
-
-        int sample = 1;
-        long pixels = (long) bounds.outWidth * (long) bounds.outHeight;
-        while (pixels / ((long) sample * (long) sample) > 28_000_000L && sample < 16) {
-            sample *= 2;
-        }
-
-        BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inSampleSize = sample;
-        options.inPreferredConfig = Bitmap.Config.ARGB_8888;
-        Bitmap decoded = BitmapFactory.decodeFile(file.getAbsolutePath(), options);
-        if (decoded != null
-                && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
-                && decoded.getConfig() == Bitmap.Config.HARDWARE) {
-            Bitmap software = decoded.copy(Bitmap.Config.ARGB_8888, false);
-            if (software != null) {
-                decoded.recycle();
-                return software;
-            }
-        }
-        return decoded;
+    private Bitmap decodeBitmap(File file) {
+        return BitmapIo.decodeFile(file);
     }
 
     private File writeJpegToCache(Bitmap bitmap) throws IOException {
@@ -1595,6 +2414,9 @@ public class MainActivity extends AppCompatActivity {
         long total = 0;
         int read;
         while ((read = in.read(buffer)) != -1) {
+            if (JobRuntime.isRunning() && JobRuntime.isStopRequested()) {
+                throw new IOException(JobRuntime.STOPPED_MESSAGE);
+            }
             total += read;
             if (maxBytes > 0 && total > maxBytes) {
                 throw new IOException("File is too large");
@@ -1992,6 +2814,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String friendlyError(Throwable error) {
+        if (JobRuntime.wasStopped(error)) {
+            return "کارەکە بە داوای تۆ وەستێنرا.";
+        }
         String message = error.getMessage();
         if (message == null || message.trim().isEmpty()) {
             message = error.getClass().getSimpleName();
@@ -2004,6 +2829,9 @@ public class MainActivity extends AppCompatActivity {
 
     /** Maps translation/network failures to actionable Kurdish guidance. */
     private String friendlyTranslationError(Throwable error) {
+        if (JobRuntime.wasStopped(error)) {
+            return "کارەکە بە داوای تۆ وەستێنرا.";
+        }
         String raw = friendlyError(error);
         String lower = errorChainText(error);
         if (lower.contains("offline_") || lower.contains("offline ai")
@@ -2072,21 +2900,31 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setStatus(final String text) {
+        JobRuntime.setStatus(text);
         runOnUiThread(() -> statusText.setText(text));
+        if (KeepAliveService.isServiceRunning()) {
+            KeepAliveService.updateNotification(this);
+        }
     }
 
     private void setBusy(final boolean busy) {
+        if (busy) {
+            JobRuntime.beginJob();
+        }
         runOnUiThread(() -> {
+            currentBusy = busy;
             progress.setVisibility(busy ? View.VISIBLE : View.GONE);
-            // Long offline jobs can take minutes; keep the screen on so
-            // the system does not freeze/kill the work mid-translation.
             if (busy) {
-                getWindow().addFlags(
-                        WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                // Every long user-started job gets foreground-service and
+                // wake-lock protection until it ends or the user taps STOP.
+                KeepAliveService.startForJob(this);
+                requestNotificationPermissionIfNeeded();
             } else {
-                getWindow().clearFlags(
-                        WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                JobRuntime.endJob();
+                KeepAliveService.jobFinished(this);
             }
+            updateKeepScreenFlag();
+            refreshKeepAliveUi();
             updateButtons(busy);
         });
     }
@@ -2109,6 +2947,51 @@ public class MainActivity extends AppCompatActivity {
         if (translationModeSpinner != null) {
             translationModeSpinner.setEnabled(enabled);
         }
+        if (fontSpinner != null) {
+            fontSpinner.setEnabled(enabled);
+        }
+        if (stylePresetSpinner != null) {
+            stylePresetSpinner.setEnabled(enabled);
+        }
+        if (backgroundModeSpinner != null) {
+            backgroundModeSpinner.setEnabled(enabled);
+        }
+        if (styleSizeSeek != null) {
+            styleSizeSeek.setEnabled(enabled);
+        }
+        if (styleWeightSeek != null) {
+            styleWeightSeek.setEnabled(enabled);
+        }
+        if (importFontButton != null) {
+            importFontButton.setEnabled(enabled);
+        }
+        if (textColorButton != null) {
+            textColorButton.setEnabled(enabled && !globalTextStyle.autoTextColor);
+        }
+        if (backgroundColorButton != null) {
+            backgroundColorButton.setEnabled(enabled);
+        }
+        if (styleAutoColorCheck != null) {
+            styleAutoColorCheck.setEnabled(enabled);
+        }
+        if (styleOutlineCheck != null) {
+            styleOutlineCheck.setEnabled(enabled);
+        }
+        if (styleShadowCheck != null) {
+            styleShadowCheck.setEnabled(enabled);
+        }
+        if (styleItalicCheck != null) {
+            styleItalicCheck.setEnabled(enabled);
+        }
+        if (keepScreenCheck != null) {
+            keepScreenCheck.setEnabled(enabled);
+        }
+        if (batterySettingsButton != null) {
+            batterySettingsButton.setEnabled(true);
+        }
+        if (stopJobButton != null) {
+            stopJobButton.setEnabled(true);
+        }
         boolean modelReady = offlineModelManager != null
                 && offlineModelManager.isModelReady();
         boolean hasModelData = offlineModelManager != null
@@ -2120,5 +3003,13 @@ public class MainActivity extends AppCompatActivity {
             deleteOfflineButton.setEnabled(enabled && hasModelData);
         }
         sendResultButton.setEnabled(enabled && resultFile != null && resultFile.exists());
+        if (editResultButton != null) {
+            boolean hasProject = TranslationProjectStore.hasCompletedProject(this);
+            editResultButton.setEnabled(enabled && hasProject);
+            editResultButton.setAlpha(enabled && hasProject ? 1f : 0.55f);
+            editResultButton.setText(hasProject
+                    ? "✏  دەستکاری شوێن، فۆنت و ڕەنگی نووسینەکان"
+                    : "✏  دەستکاری نووسینەکان — سەرەتا وەربگێڕە");
+        }
     }
 }

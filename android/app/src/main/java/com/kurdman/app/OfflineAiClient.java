@@ -47,6 +47,7 @@ final class OfflineAiClient
     private CountDownLatch connectLatch;
     private int nextRequestId = 1;
     private Pending pending;
+    private volatile boolean cancelled;
 
     private static final class Pending {
         final int id;
@@ -115,8 +116,33 @@ final class OfflineAiClient
         this.context = context.getApplicationContext();
     }
 
+    /**
+     * Fails the in-flight request without waiting for {@link #ioLock}. The
+     * worker thread that owns this client will receive the stop error and
+     * then perform the normal close/unbind from its finally block.
+     */
+    void requestCancel() {
+        cancelled = true;
+        Pending p;
+        CountDownLatch latch;
+        synchronized (stateLock) {
+            p = pending;
+            latch = connectLatch;
+        }
+        if (p != null) {
+            if (p.error == null) {
+                p.error = JobRuntime.STOPPED_MESSAGE;
+            }
+            p.latch.countDown();
+        }
+        if (latch != null) {
+            latch.countDown();
+        }
+    }
+
     void initialize() throws Exception {
         synchronized (ioLock) {
+            throwIfCancelled();
             connect();
             sendRequest(OfflineAiProtocol.MSG_INIT, null, null,
                     INIT_TIMEOUT_MS);
@@ -129,9 +155,11 @@ final class OfflineAiClient
             return "";
         }
         synchronized (ioLock) {
+            throwIfCancelled();
             connect();
             StringBuilder joined = new StringBuilder();
             for (String piece : splitForBinder(text)) {
+                throwIfCancelled();
                 String result = sendRequest(
                         OfflineAiProtocol.MSG_TRANSLATE, piece,
                         sourceLanguage, TRANSLATE_TIMEOUT_MS);
@@ -148,6 +176,7 @@ final class OfflineAiClient
 
     @Override
     public void close() {
+        cancelled = true;
         synchronized (ioLock) {
             Messenger svc;
             boolean wasBound;
@@ -176,7 +205,14 @@ final class OfflineAiClient
         }
     }
 
+    private void throwIfCancelled() throws IOException {
+        if (cancelled || JobRuntime.isStopRequested()) {
+            throw new IOException(JobRuntime.STOPPED_MESSAGE);
+        }
+    }
+
     private void connect() throws Exception {
+        throwIfCancelled();
         CountDownLatch latch;
         boolean needBind;
         synchronized (stateLock) {
@@ -216,6 +252,7 @@ final class OfflineAiClient
             Thread.currentThread().interrupt();
             throw new IOException("Offline translation interrupted", e);
         }
+        throwIfCancelled();
         synchronized (stateLock) {
             if (!connected || service == null) {
                 throw new IOException(PROCESS_DIED + " (connect timeout)");
@@ -270,6 +307,7 @@ final class OfflineAiClient
                 }
             }
         }
+        throwIfCancelled();
         if (!done) {
             throw new IOException("OFFLINE_AI_TIMEOUT: "
                     + "The offline AI process did not respond in time");

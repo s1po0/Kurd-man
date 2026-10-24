@@ -35,6 +35,19 @@ approach were adapted from InstantVoiceTranslate by Iliya Brook.
 - Full license text in the APK:
   `android/app/src/main/assets/licenses/InstantVoiceTranslate-MIT.txt`
 
+## Bundled Sorani-capable fonts
+
+Kurd-man v1.6 bundles a small set of SIL Open Font License 1.1 fonts that
+were checked for Central Kurdish (Sorani) glyphs. Users can also import
+their own TTF/OTF files; imported files stay in the app's private files.
+
+- Vazirmatn — `assets/licenses/Vazirmatn-OFL.txt`
+- Noto Sans Arabic — `assets/licenses/NotoSansArabic-OFL.txt`
+- Noto Naskh Arabic — `assets/licenses/NotoNaskhArabic-OFL.txt`
+- Noto Kufi Arabic — `assets/licenses/NotoKufiArabic-OFL.txt`
+- IBM Plex Sans Arabic — `assets/licenses/IBMPlexSansArabic-OFL.txt`
+- Amiri — `assets/licenses/Amiri-OFL.txt`
+
 ## ONNX Runtime
 
 The Android app uses Microsoft ONNX Runtime (`onnxruntime-android`) to run
