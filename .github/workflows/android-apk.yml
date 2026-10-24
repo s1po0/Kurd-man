@@ -1,0 +1,75 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main", "arena/**"]
+    paths:
+      - "android/**"
+      - ".github/workflows/android-apk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0"
+
+      - name: Build debug APK
+        run: gradle --stacktrace -p android assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kurd-man-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Send APK to Telegram admin
+        env:
+          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          ADMIN: ${{ secrets.TELEGRAM_ADMIN_ID }}
+        run: |
+          if [ -z "$TOKEN" ] || [ -z "$ADMIN" ]; then
+            echo "::warning::TELEGRAM_BOT_TOKEN or TELEGRAM_ADMIN_ID is missing; skipping Telegram APK send."
+            exit 0
+          fi
+          APK=$(ls android/app/build/outputs/apk/debug/*.apk | head -n 1)
+          if [ -z "$APK" ]; then
+            echo "::warning::APK not found; skipping Telegram send."
+            exit 0
+          fi
+          SIZE=$(stat -c%s "$APK")
+          echo "::notice::APK=$APK bytes=$SIZE"
+          if [ "$SIZE" -gt 49000000 ]; then
+            echo "::warning::APK is too large for Telegram bot upload; download it from the Actions artifact instead."
+            exit 0
+          fi
+          RESP=$(curl -s -F chat_id="$ADMIN" -F caption="📱 Kurd-man Android APK (debug) — run ${{ github.run_id }}" -F document=@"$APK" "https://api.telegram.org/bot${TOKEN}/sendDocument")
+          if echo "$RESP" | grep -q '"ok":true'; then
+            echo "::notice::APK sent to Telegram admin"
+          else
+            echo "::warning::Telegram APK send did not return ok:true"
+          fi

@@ -8,3 +8,10 @@ manhwa/cache.sqlite
 manhwa/out/
 bot/state/
 bot/out/
+
+# Android build output (the APK is published as a GitHub Actions artifact)
+android/.gradle/
+android/**/build/
+android/local.properties
+*.apk
+*.aab
