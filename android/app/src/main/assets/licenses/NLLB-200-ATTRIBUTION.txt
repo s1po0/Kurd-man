@@ -1,0 +1,18 @@
+Offline translation model attribution
+
+Kurd-man's optional offline mode downloads the INT8 ONNX export of Meta AI's
+NLLB-200 distilled 600M model from:
+https://huggingface.co/Xenova/nllb-200-distilled-600M
+
+Pinned revision: 261c31d1a5732c67cdd16d80e8d6088507c7ccea
+Base model: https://huggingface.co/facebook/nllb-200-distilled-600M
+
+The NLLB-200 model weights are licensed by Meta AI under the Creative Commons
+Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0):
+https://creativecommons.org/licenses/by-nc/4.0/
+
+The model files are not bundled inside the Kurd-man APK. They are downloaded
+only when the user enables the offline model download and are stored in the
+app's private storage on the user's phone. Do not use the model weights for
+commercial purposes unless you have separate permission from the rights
+holder.

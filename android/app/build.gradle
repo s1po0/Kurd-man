@@ -10,8 +10,8 @@ android {
         applicationId 'com.kurdman.app'
         minSdk 26
         targetSdk 35
-        versionCode 7
-        versionName '1.4.0'
+        versionCode 8
+        versionName '1.5.0'
         ndk {
             // Most modern phones are arm64; this keeps the ML Kit APK small
             // enough to send through Telegram and GitHub artifacts easily.
@@ -52,4 +52,7 @@ dependencies {
     implementation 'com.google.mlkit:text-recognition-korean:16.0.1'
     implementation 'com.google.mlkit:text-recognition-japanese:16.0.1'
     implementation 'com.google.mlkit:text-recognition-chinese:16.0.1'
+    // Runtime for the downloadable NLLB-200 offline translation model.
+    // The 1.34 GB model itself is intentionally not bundled in the APK.
+    implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.31.0'
 }

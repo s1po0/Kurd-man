@@ -25,14 +25,23 @@ import java.util.regex.Pattern;
 /**
  * Free, no-API-key translation to Kurdish Sorani (ckb).
  *
- * <p>The first route is the same translate.googleapis.com endpoint used by
- * the Python pipeline. Some carriers/routers fail to resolve that one host
- * ("Unable to resolve host ... No address associated with hostname"), so the
- * translator automatically falls back to other Google hosts and finally to
- * MyMemory's anonymous API. The route that works is remembered for the rest
- * of the current translation job, which is especially useful for CBZs.</p>
+ * <p>In online mode, the first route is the same translate.googleapis.com
+ * endpoint used by the Python pipeline. Some carriers/routers fail to resolve
+ * that one host ("Unable to resolve host ... No address associated with
+ * hostname"), so the translator automatically falls back to other Google
+ * hosts and finally to MyMemory's anonymous API. The route that works is
+ * remembered for the rest of the current translation job, which is especially
+ * useful for CBZs.</p>
+ *
+ * <p>An optional {@link OfflineEngine} can be supplied instead. In that mode
+ * translation is strictly on-device: this class does not silently fall back
+ * to the network.</p>
  */
-public class SoraniTranslator {
+public class SoraniTranslator implements AutoCloseable {
+    /** A fully on-device translation backend. */
+    public interface OfflineEngine {
+        String translate(String text, String sourceLanguage) throws Exception;
+    }
     private static final int ROUTE_GOOGLEAPIS = 0;
     private static final int ROUTE_GOOGLE_WEB = 1;
     private static final int ROUTE_GOOGLE_CLIENTS5 = 2;
@@ -65,7 +74,32 @@ public class SoraniTranslator {
     }
 
     private final Map<String, String> cache = new HashMap<>();
+    private final OfflineEngine offlineEngine;
     private int preferredRoute = ROUTE_GOOGLEAPIS;
+
+    public SoraniTranslator() {
+        this(null);
+    }
+
+    public SoraniTranslator(OfflineEngine offlineEngine) {
+        this.offlineEngine = offlineEngine;
+    }
+
+    public boolean isOffline() {
+        return offlineEngine != null;
+    }
+
+    @Override
+    public void close() {
+        if (offlineEngine instanceof AutoCloseable) {
+            try {
+                ((AutoCloseable) offlineEngine).close();
+            } catch (Exception ignored) {
+                // Closing a job-local model is best-effort; Android will
+                // reclaim the process resources if native cleanup fails.
+            }
+        }
+    }
 
     public String translate(String text, String sourceLanguage) throws Exception {
         String normalized = normalize(text);
@@ -78,15 +112,22 @@ public class SoraniTranslator {
             return glossaryHit;
         }
 
-        String preparedSource = prepareSourceText(normalized, sourceLanguage);
-        String key = sourceLanguage + "\n" + preparedSource;
+        boolean offline = offlineEngine != null;
+        String preparedSource = offline
+                ? prepareOfflineSourceText(normalized, sourceLanguage)
+                : prepareSourceText(normalized, sourceLanguage);
+        String key = (offline ? "offline" : "online")
+                + "\n" + sourceLanguage + "\n" + preparedSource;
         String cached = cache.get(key);
         if (cached != null) {
             return cached;
         }
 
         String translated;
-        if (preparedSource.length() <= 1200) {
+        if (offline) {
+            // The NLLB engine performs model-safe sentence/token chunking.
+            translated = offlineEngine.translate(preparedSource, sourceLanguage);
+        } else if (preparedSource.length() <= 1200) {
             translated = translateChunk(preparedSource, sourceLanguage);
         } else {
             StringBuilder joined = new StringBuilder();
@@ -101,9 +142,13 @@ public class SoraniTranslator {
         }
 
         translated = transliteratePreservedNames(normalized, translated);
-        translated = normalize(translated);
+        translated = normalizeSoraniScript(normalize(translated));
         if (translated.isEmpty()) {
             throw new IOException("Empty translation response");
+        }
+        if (offline && looksUntranslated(preparedSource, translated)) {
+            throw new IOException(
+                    "Offline AI returned untranslated text for this segment");
         }
         cache.put(key, translated);
         return translated;
@@ -116,21 +161,7 @@ public class SoraniTranslator {
      * Normalize only mostly-uppercase English blocks before translation.
      */
     private String prepareSourceText(String text, String sourceLanguage) {
-        if (!"en".equals(sourceLanguage) || text == null) {
-            return text;
-        }
-        int upper = 0;
-        int lower = 0;
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            if (Character.isUpperCase(c)) {
-                upper++;
-            } else if (Character.isLowerCase(c)) {
-                lower++;
-            }
-        }
-        int cased = upper + lower;
-        if (cased < 4 || (upper / (double) cased) < 0.68) {
+        if (!isMostlyUppercaseEnglish(text, sourceLanguage)) {
             return text;
         }
 
@@ -149,6 +180,78 @@ public class SoraniTranslator {
             }
         }
         return out.toString();
+    }
+
+    private boolean isMostlyUppercaseEnglish(String text, String sourceLanguage) {
+        if (!"en".equals(sourceLanguage) || text == null) {
+            return false;
+        }
+        int upper = 0;
+        int lower = 0;
+        for (int offset = 0; offset < text.length();) {
+            int codePoint = text.codePointAt(offset);
+            if (Character.isUpperCase(codePoint)) {
+                upper++;
+            } else if (Character.isLowerCase(codePoint)) {
+                lower++;
+            }
+            offset += Character.charCount(codePoint);
+        }
+        int cased = upper + lower;
+        return cased >= 4 && (upper / (double) cased) >= 0.68;
+    }
+
+    /**
+     * NLLB was trained mostly on ordinary sentence-case text. For an
+     * ALL-CAPS manhwa block, sentence case is safer than Google-oriented
+     * title case, which can make every noun look like a proper name.
+     */
+    private String prepareOfflineSourceText(String text, String sourceLanguage) {
+        if (!isMostlyUppercaseEnglish(text, sourceLanguage)) {
+            return text;
+        }
+        StringBuilder out = new StringBuilder(text.length());
+        boolean capitalizeNext = true;
+        for (int offset = 0; offset < text.length();) {
+            int codePoint = text.codePointAt(offset);
+            int charCount = Character.charCount(codePoint);
+            if (Character.isLetter(codePoint)) {
+                int converted = capitalizeNext
+                        ? Character.toUpperCase(codePoint)
+                        : Character.toLowerCase(codePoint);
+                out.appendCodePoint(converted);
+                capitalizeNext = false;
+            } else {
+                out.appendCodePoint(codePoint);
+                if (codePoint == '.' || codePoint == '!' || codePoint == '?'
+                        || codePoint == '\n' || codePoint == '…' ) {
+                    capitalizeNext = true;
+                }
+            }
+            offset += charCount;
+        }
+        // Preserve the English first-person pronoun after sentence casing.
+        return out.toString()
+                .replace(" i ", " I ")
+                .replace(" i'", " I'")
+                .replace(" i’", " I’");
+    }
+
+    /**
+     * Normalizes common Arabic/Persian letter variants occasionally emitted
+     * by multilingual models to the letters normally used for Sorani.
+     */
+    private String normalizeSoraniScript(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value
+                .replace('\u0643', '\u06A9') // Arabic kaf -> Kurdish kaf
+                .replace('\u064A', '\u06CC') // Arabic yeh -> Kurdish yeh
+                .replace('\u0649', '\u06CC') // alef maksura -> Kurdish yeh
+                .replace('\u0629', '\u06D5') // teh marbuta -> Sorani ae
+                .replace('\u06BE', '\u0647') // heh doachashmee -> heh
+                .replace('\u06C1', '\u0647'); // heh goal -> heh
     }
 
     /**
@@ -812,7 +915,7 @@ public class SoraniTranslator {
             conn.setReadTimeout(25000);
             conn.setInstanceFollowRedirects(true);
             conn.setRequestProperty("User-Agent",
-                    "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 KurdMan/1.4");
+                    "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 KurdMan/1.5");
             conn.setRequestProperty("Accept", "application/json, text/plain, */*");
 
             int code = conn.getResponseCode();

@@ -36,6 +36,7 @@ import android.widget.TextView;
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
 
@@ -79,6 +80,10 @@ public class MainActivity extends AppCompatActivity {
     private static final String[] SOURCE_CODES = {
             "en", "ko", "ja", "zh-CN", "zh-TW"
     };
+    private static final String[] TRANSLATION_MODE_LABELS = {
+            "🌐 ئۆنلاین — خێراتر (Google)",
+            "🤖 ئۆفلاین AI — Meta NLLB-200"
+    };
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
@@ -87,6 +92,11 @@ public class MainActivity extends AppCompatActivity {
     private EditText chatInput;
     private EditText messageInput;
     private Spinner sourceSpinner;
+    private Spinner translationModeSpinner;
+    private TextView offlineModelStatus;
+    private Button downloadOfflineButton;
+    private Button deleteOfflineButton;
+    private OfflineModelManager offlineModelManager;
     private Button pasteTokenButton;
     private Button pasteChatButton;
     private CheckBox showTokenCheck;
@@ -137,6 +147,11 @@ public class MainActivity extends AppCompatActivity {
         showTokenCheck = findViewById(R.id.showTokenCheck);
         messageInput = findViewById(R.id.messageInput);
         sourceSpinner = findViewById(R.id.sourceSpinner);
+        translationModeSpinner = findViewById(R.id.translationModeSpinner);
+        offlineModelStatus = findViewById(R.id.offlineModelStatus);
+        downloadOfflineButton = findViewById(R.id.downloadOfflineButton);
+        deleteOfflineButton = findViewById(R.id.deleteOfflineButton);
+        offlineModelManager = new OfflineModelManager(this);
         saveButton = findViewById(R.id.saveButton);
         verifyButton = findViewById(R.id.verifyButton);
         sendTextButton = findViewById(R.id.sendTextButton);
@@ -178,6 +193,34 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        ArrayAdapter<String> modeAdapter = new ArrayAdapter<>(
+                this,
+                R.layout.spinner_item,
+                TRANSLATION_MODE_LABELS);
+        modeAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
+        translationModeSpinner.setAdapter(modeAdapter);
+        int savedModeIndex = prefs.getInt("translation_mode_index", 0);
+        if (savedModeIndex >= 0
+                && savedModeIndex < TRANSLATION_MODE_LABELS.length) {
+            translationModeSpinner.setSelection(savedModeIndex);
+        }
+        translationModeSpinner.setOnItemSelectedListener(
+                new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> parent, View view,
+                                               int position, long id) {
+                        prefs.edit()
+                                .putInt("translation_mode_index", position)
+                                .apply();
+                        refreshOfflineModelUi();
+                    }
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> parent) {
+                        // Keep the last saved translation mode.
+                    }
+                });
+
         pickLauncher = registerForActivityResult(
                 new ActivityResultContracts.OpenDocument(),
                 new ActivityResultCallback<Uri>() {
@@ -208,11 +251,14 @@ public class MainActivity extends AppCompatActivity {
                 "application/x-comicbook",
                 "application/octet-stream"
         }));
+        downloadOfflineButton.setOnClickListener(v -> downloadOfflineModel());
+        deleteOfflineButton.setOnClickListener(v -> confirmDeleteOfflineModel());
         translateButton.setOnClickListener(v -> translateSelected());
         sendResultButton.setOnClickListener(v -> sendResultToTelegram());
         refreshDownloadsButton.setOnClickListener(v -> refreshDownloadsList());
         openDownloadsButton.setOnClickListener(v -> openSystemDownloads());
 
+        refreshOfflineModelUi();
         updateButtons(false);
         refreshDownloadsList();
     }
@@ -221,6 +267,235 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         executor.shutdownNow();
         super.onDestroy();
+    }
+
+    private boolean selectedOfflineMode() {
+        return translationModeSpinner != null
+                && translationModeSpinner.getSelectedItemPosition() == 1;
+    }
+
+    private SoraniTranslator createTranslator(boolean offlineMode) throws Exception {
+        if (!offlineMode) {
+            return new SoraniTranslator();
+        }
+        setStatus("🤖 بارکردنی مۆدێلی زیرەکیی دەستکردی ئۆفلاین… "
+                + "یەکەمجار لەوانەیە چەند چرکەیەک بخایەنێت.");
+        OfflineNllbTranslator engine =
+                new OfflineNllbTranslator(offlineModelManager);
+        try {
+            engine.initialize();
+            return new SoraniTranslator(engine);
+        } catch (Exception e) {
+            engine.close();
+            throw e;
+        }
+    }
+
+    private void closeTranslator(SoraniTranslator translator) {
+        if (translator != null) {
+            try {
+                translator.close();
+            } catch (Exception ignored) {
+                // The translator implementation already treats model
+                // cleanup as best-effort; this is a final safety net.
+            }
+        }
+    }
+
+    private void refreshOfflineModelUi() {
+        if (offlineModelManager == null || offlineModelStatus == null
+                || downloadOfflineButton == null) {
+            return;
+        }
+        boolean ready = offlineModelManager.isModelReady();
+        long downloaded = offlineModelManager.downloadedBytes();
+        long total = OfflineModelManager.totalBytes();
+        if (ready) {
+            String text = "✅ ئامادەیە بۆ وەرگێڕانی بێ ئینتەرنێت • "
+                    + formatStorage(total);
+            if (!selectedOfflineMode()) {
+                text += " — «ئۆفلاین AI» هەڵبژێرە بۆ بەکارهێنان";
+            }
+            offlineModelStatus.setText(text);
+            downloadOfflineButton.setText("✓ مۆدێلی AI ئامادەیە");
+        } else if (downloaded > 0) {
+            offlineModelStatus.setText("⬇ بەشێک دابەزیوە: "
+                    + formatStorage(downloaded) + " / " + formatStorage(total)
+                    + " — دەتوانیت درێژە بدەیت");
+            downloadOfflineButton.setText("↻ درێژەدان بە دابەزاندن");
+        } else {
+            offlineModelStatus.setText("هێشتا دانەبەزیوە • "
+                    + formatStorage(total));
+            downloadOfflineButton.setText("⬇  دابەزاندنی مۆدێلی AI");
+        }
+    }
+
+    private void downloadOfflineModel() {
+        if (offlineModelManager.isModelReady()) {
+            refreshOfflineModelUi();
+            setStatus("✅ مۆدێلی ئۆفلاین لەم مۆبایلەدا ئامادەیە.");
+            return;
+        }
+        setBusy(true);
+        setStatus("⬇ دەستپێکردنی دابەزاندنی مۆدێلی ئۆفلاین ("
+                + formatStorage(OfflineModelManager.totalBytes()) + ")…");
+        executor.execute(() -> {
+            final int[] lastPercent = {-1};
+            final boolean[] lastVerifying = {false};
+            try {
+                offlineModelManager.downloadModel(
+                        (downloadedBytes, totalBytes, currentFile, verifying) -> {
+                            int percent = totalBytes == 0 ? 0
+                                    : (int) ((downloadedBytes * 100L) / totalBytes);
+                            if (percent == lastPercent[0]
+                                    && verifying == lastVerifying[0]
+                                    && percent < 100) {
+                                return;
+                            }
+                            lastPercent[0] = percent;
+                            lastVerifying[0] = verifying;
+                            String status = (verifying
+                                    ? "🔎 پشکنینی دروستیی مۆدێلی ئۆفلاین: "
+                                    : "⬇ دابەزاندنی مۆدێلی ئۆفلاین: ")
+                                    + percent + "% ("
+                                    + formatStorage(downloadedBytes) + " / "
+                                    + formatStorage(totalBytes) + ")"
+                                    + (currentFile == null || currentFile.isEmpty()
+                                            ? "" : " — " + currentFile);
+                            setStatus(status);
+                            runOnUiThread(() -> {
+                                if (offlineModelStatus != null) {
+                                    offlineModelStatus.setText(status);
+                                }
+                            });
+                        });
+                runOnUiThread(this::refreshOfflineModelUi);
+                setStatus("✅ مۆدێلی ئۆفلاین ئامادەیە. ئێستا دەتوانیت "
+                        + "ئینتەرنێت بکوژێنیتەوە و «ئۆفلاین AI» بەکاربهێنیت.");
+            } catch (Exception e) {
+                runOnUiThread(this::refreshOfflineModelUi);
+                setStatus("❌ دابەزاندنی مۆدێلی ئۆفلاین سەرکەوتوو نەبوو: "
+                        + friendlyOfflineError(e));
+            } finally {
+                setBusy(false);
+            }
+        });
+    }
+
+    private void confirmDeleteOfflineModel() {
+        long downloaded = offlineModelManager.downloadedBytes();
+        if (downloaded <= 0 && !offlineModelManager.isModelReady()) {
+            refreshOfflineModelUi();
+            setStatus("⚠ هیچ مۆدێلێکی ئۆفلاین لەم مۆبایلەدا نییە بۆ سڕینەوە.");
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("سڕینەوەی مۆدێلی ئۆفلاین؟")
+                .setMessage("نزیکەی " + formatStorage(downloaded)
+                        + " دەسڕدرێتەوە. بۆ بەکارهێنانەوەی ئۆفلاین AI دەبێت "
+                        + "مۆدێلەکە دووبارە دابەزێنیت.")
+                .setNegativeButton("پاشگەزبوونەوە", null)
+                .setPositiveButton("بیسرەوە",
+                        (dialog, which) -> deleteOfflineModel())
+                .show();
+    }
+
+    private void deleteOfflineModel() {
+        setBusy(true);
+        setStatus("سڕینەوەی مۆدێلی ئۆفلاین…");
+        executor.execute(() -> {
+            try {
+                boolean deleted = offlineModelManager.deleteModel();
+                runOnUiThread(this::refreshOfflineModelUi);
+                setStatus(deleted
+                        ? "✅ مۆدێلی ئۆفلاین سڕایەوە و شوێنەکە ئازاد کرا."
+                        : "⚠ هەندێک فایلی مۆدێلەکە نەسڕایەوە؛ دووبارە هەوڵبدە.");
+            } catch (Exception e) {
+                runOnUiThread(this::refreshOfflineModelUi);
+                setStatus("❌ سڕینەوەی مۆدێلەکە سەرکەوتوو نەبوو: "
+                        + friendlyError(e));
+            } finally {
+                setBusy(false);
+            }
+        });
+    }
+
+    private String formatStorage(long bytes) {
+        if (bytes >= 1000000000L) {
+            return String.format(Locale.ROOT, "%.2f GB",
+                    bytes / 1000000000f);
+        }
+        if (bytes >= 1000000L) {
+            return String.format(Locale.ROOT, "%.1f MB",
+                    bytes / 1000000f);
+        }
+        if (bytes >= 1000L) {
+            return String.format(Locale.ROOT, "%.1f KB", bytes / 1000f);
+        }
+        return bytes + " B";
+    }
+
+    private String errorChainText(Throwable error) {
+        StringBuilder chain = new StringBuilder();
+        Throwable current = error;
+        int depth = 0;
+        while (current != null && depth < 5) {
+            chain.append(current.getClass().getName()).append(':')
+                    .append(current.getMessage()).append('\n');
+            current = current.getCause();
+            depth++;
+        }
+        return chain.toString().toLowerCase(Locale.ROOT);
+    }
+
+    private String friendlyOfflineError(Exception error) {
+        String raw = friendlyError(error);
+        String lower = errorChainText(error);
+        if (lower.contains("not enough free storage")) {
+            return "شوێنی بەتاڵی مۆبایلەکە بەش ناکات؛ بۆ مۆدێلەکە نزیکەی "
+                    + formatStorage(OfflineModelManager.totalBytes())
+                    + " و کەمێک شوێنی زیادە پێویستە. (" + raw + ")";
+        }
+        if (lower.contains("checksum mismatch")
+                || lower.contains("sha-256 mismatch")) {
+            return "فایلێکی مۆدێلەکە تێکچووە یان گۆڕاوە و پشکنینی دروستییەکە "
+                    + "سەرکەوتوو نەبوو؛ دووبارە دایبەزێنە. (" + raw + ")";
+        }
+        if (lower.contains("offline_ai_out_of_memory")
+                || lower.contains("outofmemoryerror")
+                || lower.contains("failed to allocate")) {
+            return "بیرگەی ئازادی مۆبایلەکە بەش ناکات بۆ بارکردنی مۆدێلەکە؛ "
+                    + "ئەپەکانی تر دابخە و دووبارە هەوڵبدە. (" + raw + ")";
+        }
+        if (lower.contains("offline_model_not_ready")) {
+            return "سەرەتا «دابەزاندنی مۆدێلی AI» دابگرە و چاوەڕوان بکە تا "
+                    + "دابەزاندن و پشکنینەکە تەواو بێت. (" + raw + ")";
+        }
+        if (lower.contains("offline_ai_returned_untranslated")
+                || lower.contains("offline ai returned untranslated")) {
+            return "مۆدێلە ئۆفلاینەکە بۆ ئەم دەقە وەرگێڕانێکی کوردی بەرهەم "
+                    + "نەهێنا؛ وێنەیەکی ڕوونتر یان دۆخی ئۆنلاین تاقیبکەرەوە. ("
+                    + raw + ")";
+        }
+        if (lower.contains("offline_ai_runtime_error")
+                || lower.contains("offline_ai_model_mismatch")
+                || lower.contains("onnx")
+                || lower.contains("ortexception")) {
+            return "مۆدێلی ئۆفلاین نەتوانرا لەسەر ئەم مۆبایلە کاربکات؛ "
+                    + "ئەگەر دووبارە بووەوە مۆدێلەکە بسرەوە و دووبارە دایبەزێنە. ("
+                    + raw + ")";
+        }
+        if (lower.contains("unable to resolve host")
+                || lower.contains("unknownhostexception")
+                || lower.contains("failed to connect")
+                || lower.contains("timed out") || lower.contains("timeout")
+                || lower.contains("connection reset")
+                || lower.contains("network is unreachable")) {
+            return "پەیوەندی بە سێرفەری دابەزاندنی مۆدێلەکەوە نەبەسترا؛ "
+                    + "ئینتەرنێتەکە بپشکنە و درێژە بە دابەزاندن بدە. ("
+                    + raw + ")";
+        }
+        return raw;
     }
 
     private void verifyBot() {
@@ -460,13 +735,23 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         final String sourceLanguage = selectedSourceLanguage();
+        final boolean offlineMode = selectedOfflineMode();
+        if (offlineMode && !offlineModelManager.isModelReady()) {
+            refreshOfflineModelUi();
+            setStatus("⚠ بۆ وەرگێڕانی ئۆفلاین سەرەتا «دابەزاندنی مۆدێلی AI» "
+                    + "دابگرە؛ یەکەمجار پێویستی بە ئینتەرنێتە و دواتر بێ ئینتەرنێت کار دەکات.");
+            return;
+        }
 
         setBusy(true);
-        setStatus("دەستپێکردنی وەرگێڕان لەناو مۆبایلەکە…");
+        setStatus(offlineMode
+                ? "🤖 دەستپێکردنی وەرگێڕانی ئۆفلاین لەناو مۆبایلەکە…"
+                : "دەستپێکردنی وەرگێڕان لەناو مۆبایلەکە…");
         executor.execute(() -> {
+            SoraniTranslator translator = null;
             try {
                 if (cbzFile != null) {
-                    translateCbzJob(cbzFile, cbzName, sourceLanguage);
+                    translateCbzJob(cbzFile, cbzName, sourceLanguage, offlineMode);
                     return;
                 }
 
@@ -483,10 +768,13 @@ public class MainActivity extends AppCompatActivity {
                     throw new IllegalStateException("هیچ دەقێکی ڕوون نەدۆزرایەوە. وێنەیەکی ڕوونتر تاقیبکەرەوە.");
                 }
 
-                SoraniTranslator translator = new SoraniTranslator();
+                translator = createTranslator(offlineMode);
                 for (int i = 0; i < segments.size(); i++) {
                     Segment segment = segments.get(i);
-                    setStatus("وەرگێڕان بۆ سۆرانی " + (i + 1) + "/" + segments.size() + "…");
+                    setStatus((offlineMode
+                                    ? "🤖 وەرگێڕانی ئۆفلاین بۆ سۆرانی "
+                                    : "وەرگێڕان بۆ سۆرانی ")
+                            + (i + 1) + "/" + segments.size() + "…");
                     segment.ckb = translator.translate(segment.text, sourceLanguage);
                 }
 
@@ -534,13 +822,15 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception e) {
                 setStatus("❌ " + friendlyTranslationError(e));
             } finally {
+                closeTranslator(translator);
                 setBusy(false);
             }
         });
     }
 
     private void translateCbzJob(File cbz, String displayName,
-                                   String sourceLanguage) throws Exception {
+                                   String sourceLanguage,
+                                   boolean offlineMode) throws Exception {
         File jobDir = new File(getCacheDir(), "cbz-job-" + timestamp());
         File inputDir = new File(jobDir, "input");
         File outputDir = new File(jobDir, "output");
@@ -549,6 +839,7 @@ public class MainActivity extends AppCompatActivity {
             throw new IOException("Could not create CBZ work directory");
         }
 
+        SoraniTranslator translator = null;
         try {
             setStatus("دەرهێنانی وێنەکانی ناو CBZ…");
             List<File> pages = extractCbzImages(cbz, inputDir);
@@ -556,7 +847,7 @@ public class MainActivity extends AppCompatActivity {
                 throw new IOException("No images were found inside this CBZ");
             }
 
-            SoraniTranslator translator = new SoraniTranslator();
+            translator = createTranslator(offlineMode);
             StringBuilder allPairs = new StringBuilder();
             Bitmap firstRendered = null;
             int totalSegments = 0;
@@ -600,7 +891,8 @@ public class MainActivity extends AppCompatActivity {
                     for (int s = 0; s < segments.size(); s++) {
                         Segment segment = segments.get(s);
                         setStatus("لاپەڕە " + pageNumber + "/" + pageTotal
-                                + ": وەرگێڕان " + (s + 1) + "/" + segments.size() + "…");
+                                + (offlineMode ? ": 🤖 وەرگێڕانی ئۆفلاین " : ": وەرگێڕان ")
+                                + (s + 1) + "/" + segments.size() + "…");
                         segment.ckb = translator.translate(segment.text, sourceLanguage);
                     }
                 } catch (Exception e) {
@@ -692,6 +984,7 @@ public class MainActivity extends AppCompatActivity {
                         + " دەق لەسەر وێنەکان داندرا." + savedNote);
             }
         } finally {
+            closeTranslator(translator);
             deleteRecursive(inputDir);
             deleteRecursive(outputDir);
         }
@@ -1562,6 +1855,8 @@ public class MainActivity extends AppCompatActivity {
                 .putString("token", tokenValue())
                 .putString("chat_id", chatValue())
                 .putInt("source_index", sourceSpinner.getSelectedItemPosition())
+                .putInt("translation_mode_index",
+                        translationModeSpinner.getSelectedItemPosition())
                 .apply();
     }
 
@@ -1616,16 +1911,13 @@ public class MainActivity extends AppCompatActivity {
     /** Maps translation/network failures to actionable Kurdish guidance. */
     private String friendlyTranslationError(Exception error) {
         String raw = friendlyError(error);
-        StringBuilder chain = new StringBuilder();
-        Throwable current = error;
-        int depth = 0;
-        while (current != null && depth < 4) {
-            chain.append(current.getClass().getName()).append(':')
-                    .append(current.getMessage()).append('\n');
-            current = current.getCause();
-            depth++;
+        String lower = errorChainText(error);
+        if (lower.contains("offline_") || lower.contains("offline ai")
+                || lower.contains("onnx") || lower.contains("ortexception")
+                || lower.contains("checksum mismatch")
+                || lower.contains("not enough free storage")) {
+            return friendlyOfflineError(error);
         }
-        String lower = chain.toString().toLowerCase(Locale.ROOT);
         if (lower.contains("unable to resolve host")
                 || lower.contains("no address associated with hostname")
                 || lower.contains("unknownhostexception")) {
@@ -1708,6 +2000,22 @@ public class MainActivity extends AppCompatActivity {
         translateButton.setEnabled(enabled);
         refreshDownloadsButton.setEnabled(enabled);
         openDownloadsButton.setEnabled(enabled);
+        if (sourceSpinner != null) {
+            sourceSpinner.setEnabled(enabled);
+        }
+        if (translationModeSpinner != null) {
+            translationModeSpinner.setEnabled(enabled);
+        }
+        boolean modelReady = offlineModelManager != null
+                && offlineModelManager.isModelReady();
+        boolean hasModelData = offlineModelManager != null
+                && offlineModelManager.downloadedBytes() > 0;
+        if (downloadOfflineButton != null) {
+            downloadOfflineButton.setEnabled(enabled && !modelReady);
+        }
+        if (deleteOfflineButton != null) {
+            deleteOfflineButton.setEnabled(enabled && hasModelData);
+        }
         sendResultButton.setEnabled(enabled && resultFile != null && resultFile.exists());
     }
 }
