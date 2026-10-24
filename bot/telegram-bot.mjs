@@ -1,13 +1,18 @@
 #!/usr/bin/env node
 /**
- * Kurd-man / Iron & Crown — Telegram Bot
+ * Kurd-man — Telegram Bot (commands host)
  * ---------------------------------------
  * No dependencies. Node 18+ (uses global fetch).
  *
- * What to give the agent / put in .env:
+ * NOTE: manhwa image translation is done by bot/bot_inbox.py on GitHub
+ * Actions. Do NOT run this long-polling bot at the same time as bot_inbox:
+ * both read the same Telegram updates. This file is for an always-on host
+ * that only answers simple commands (/start, /help, /ping, /id, /status).
+ *
+ * What to put in .env:
  *   TELEGRAM_BOT_TOKEN=123456789:AAE...   <- from @BotFather  (/newbot)
  *   TELEGRAM_ADMIN_ID=123456789           <- your numeric ID  (@userinfobot)
- *   APP_URL=https://your-game-url         <- optional, opens game inside Telegram
+ *   TELEGRAM_ADMIN_ONLY=false             <- true = only admin may use it
  *
  * Run:    npm run bot
  * Check:  npm run bot:check     (validates .env format, no network)
@@ -35,9 +40,6 @@ loadEnv();
 
 const TOKEN = (process.env.TELEGRAM_BOT_TOKEN || '').trim();
 const ADMIN_ID = (process.env.TELEGRAM_ADMIN_ID || '').trim();
-const APP_URL = (process.env.TELEGRAM_WEBAPP_URL || process.env.APP_URL || '')
-  .trim()
-  .replace(/^MY_APP_URL$/, '');
 const ADMIN_ONLY = /^(1|true|yes)$/i.test(process.env.TELEGRAM_ADMIN_ONLY || '');
 const API = `https://api.telegram.org/bot${TOKEN}`;
 const startedAt = Date.now();
@@ -45,13 +47,6 @@ let botUsername = '';
 
 // ---------- command router (pure — testable without network) ----------
 const isAdmin = (userId) => ADMIN_ID !== '' && String(userId) === ADMIN_ID;
-
-function gameKeyboard() {
-  if (!/^https:\/\//i.test(APP_URL)) return undefined;
-  return {
-    inline_keyboard: [[{ text: '🎮 یاری بکە / Play Game', web_app: { url: APP_URL } }]],
-  };
-}
 
 export function buildReply(msg) {
   const chatId = msg?.chat?.id;
@@ -72,18 +67,17 @@ export function buildReply(msg) {
       return {
         chat_id: chatId,
         text:
-          '⚔️ بەخێربێیت بۆ Iron & Crown!\n' +
-          'یارییەکی ستراتیژی-ڕۆڵگێڕانی سەدەکانی ناوەڕاستە.\n\n' +
-          'Welcome to Iron & Crown — medieval sandbox strategy-RPG.\n' +
-          (APP_URL ? '👇 دوگمەکە دابگرە بۆ یاریکردن' : '🎮 /game بۆ زانیاری زیاتر'),
-        reply_markup: gameKeyboard(),
+          '📚 بەخێربێیت بۆ بۆتی وەرگێڕانی مانهوا!\n' +
+          'وێنەی مانهوا درێژەکە وەک File/Document بنێرە، بە کوردی سۆرانی وەریدەگێڕم.\n\n' +
+          'Welcome to the Manhwa -> Kurdish Sorani translator bot.\n' +
+          'Send a long manhwa image as File/Document (not compressed Photo).',
       };
     case '/help':
       return {
         chat_id: chatId,
         text:
           '📜 فەرمانەکان / Commands:\n' +
-          '/start — دەستپێبکە\n/game — دەربارەی یارییەکە\n/ping — تاقیکردنەوەی پەیوەندی\n' +
+          '/start — دەستپێبکە\n/ping — تاقیکردنەوەی پەیوەندی\n' +
           '/id — IDـی خۆت بزانە (بۆ ڕێکخستنی Admin)\n/status — دۆخی بۆت (تەنها Admin)',
       };
     case '/ping':
@@ -92,15 +86,6 @@ export function buildReply(msg) {
       return {
         chat_id: chatId,
         text: `🆔 Your User ID: ${userId}\n💬 Chat ID: ${chatId}\n\nئەم ژمارەیە بکە بە TELEGRAM_ADMIN_ID لە .env`,
-      };
-    case '/game':
-      return {
-        chat_id: chatId,
-        text:
-          '⚔️ Iron & Crown: Medieval Sandbox RPG\n' +
-          'بسووڕێوە لە شانشینێکدا، سەرباز کۆبکەرەوە، بازرگانی بکە و چارەنووسی خۆت دروست بکە.\n' +
-          (APP_URL ? `🎮 ${APP_URL}` : '🎮 لینکی یاری بەمزووانە...'),
-        reply_markup: gameKeyboard(),
       };
     case '/status':
       if (ADMIN_ID && !isAdmin(userId))
@@ -157,8 +142,8 @@ const mode = process.argv[2];
 if (mode === '--selftest') {
   const fake = (text, id = 111) => ({ chat: { id: 999 }, from: { id }, text });
   const cases = [
-    ['/start', 'بەخێربێیت'], ['/help', '/status'], ['/ping', 'pong'],
-    ['/id', '111'], ['/game', 'Iron & Crown'], ['/unknown', '/help'],
+    ['/start', 'مانهوا'], ['/help', '/status'], ['/ping', 'pong'],
+    ['/id', '111'], ['/status', 'Uptime'], ['/unknown', '/help'],
   ];
   let fail = 0;
   for (const [cmd, expect] of cases) {
@@ -172,7 +157,6 @@ if (mode === '--selftest') {
 if (mode === '--check') {
   console.log(`TELEGRAM_BOT_TOKEN : ${TOKEN ? (tokenLooksValid ? '✅ set, format OK' : '⚠️ set but format looks wrong') : '❌ MISSING — get it from @BotFather'}`);
   console.log(`TELEGRAM_ADMIN_ID  : ${ADMIN_ID ? '✅ ' + ADMIN_ID : '⚠️ not set — get it from @userinfobot, then /status is open to anyone'}`);
-  console.log(`APP_URL (WebApp)   : ${APP_URL || '— not set (optional)'}`);
   process.exit(TOKEN && tokenLooksValid ? 0 : 1);
 }
 
@@ -189,7 +173,6 @@ if (mode === '--send-test') {
         'من ئێستا کۆنترۆڵی ئەم بۆتەم هەیە 🤖\n\n' +
         'Hello! This is a test message from your Arena agent — I can control this bot.\n' +
         `⏰ ${new Date().toISOString()}`,
-      reply_markup: gameKeyboard(),
     });
     console.log(`✅ sendMessage OK: message_id=${sent.message_id} chat=${sent.chat.id}`);
   } catch (e) {

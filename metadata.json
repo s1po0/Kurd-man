@@ -1,6 +1,0 @@
-{
-  "name": "Iron & Crown: Medieval Sandbox RPG",
-  "description": "Mobile-first medieval sandbox strategy-RPG. Roam a procedural realm, recruit troops, trade across settlements, and forge your destiny.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
