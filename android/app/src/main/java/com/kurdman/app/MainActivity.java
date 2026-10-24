@@ -109,6 +109,7 @@ public class MainActivity extends AppCompatActivity {
     };
     private static final String PREF_GLOBAL_STYLE = "global_text_style_json";
     private static final String PREF_ACCURATE_OCR = "accurate_ocr_v170";
+    private static final String PREF_CREATE_PDF = "create_pdf_when_finished_v171";
     private static final String PREF_KEEP_SCREEN = "keep_screen_on_during_jobs";
     private static final String PREF_MAIN_PAGE = "main_page_index_v161";
     private static final int PAGE_TRANSLATE = 0;
@@ -134,6 +135,7 @@ public class MainActivity extends AppCompatActivity {
     private Button deleteOfflineButton;
     private OfflineModelManager offlineModelManager;
     private CheckBox accurateOcrCheck;
+    private CheckBox createPdfCheck;
     private TextView paddleOcrStatus;
     private Button downloadPaddleOcrButton;
     private Button deletePaddleOcrButton;
@@ -235,6 +237,7 @@ public class MainActivity extends AppCompatActivity {
         deleteOfflineButton = findViewById(R.id.deleteOfflineButton);
         offlineModelManager = new OfflineModelManager(this);
         accurateOcrCheck = findViewById(R.id.accurateOcrCheck);
+        createPdfCheck = findViewById(R.id.createPdfCheck);
         paddleOcrStatus = findViewById(R.id.paddleOcrStatus);
         downloadPaddleOcrButton = findViewById(R.id.downloadPaddleOcrButton);
         deletePaddleOcrButton = findViewById(R.id.deletePaddleOcrButton);
@@ -414,6 +417,14 @@ public class MainActivity extends AppCompatActivity {
         accurateOcrCheck.setOnCheckedChangeListener(
                 (buttonView, isChecked) -> prefs.edit()
                         .putBoolean(PREF_ACCURATE_OCR, isChecked).apply());
+        createPdfCheck.setChecked(prefs.getBoolean(PREF_CREATE_PDF, false));
+        createPdfCheck.setOnCheckedChangeListener(
+                (buttonView, isChecked) -> {
+                    prefs.edit().putBoolean(PREF_CREATE_PDF, isChecked).apply();
+                    setStatus(isChecked
+                            ? "✅ PDF چالاک کرا: لەمەودوا دوای تەواوبوون PDFیش دێتە «ئەنجامەکان» و Download/KurdMan."
+                            : "PDF کوژێنرایەوە؛ وێنە/CBZ و TXT وەک پێشوو دروست دەبن.");
+                });
         saveButton.setOnClickListener(v -> {
             saveSettings();
             setStatus("✅ تۆکن و Chat ID لەسەر ئەم مۆبایلە پاشەکەوت کرا.");
@@ -980,6 +991,13 @@ public class MainActivity extends AppCompatActivity {
     private boolean selectedOfflineMode() {
         return translationModeSpinner != null
                 && translationModeSpinner.getSelectedItemPosition() == 1;
+    }
+
+    private boolean selectedCreatePdf() {
+        if (createPdfCheck != null) {
+            return createPdfCheck.isChecked();
+        }
+        return prefs != null && prefs.getBoolean(PREF_CREATE_PDF, false);
     }
 
     private PaddleOcrClient startPaddleOcrIfAvailable(
@@ -1764,6 +1782,7 @@ public class MainActivity extends AppCompatActivity {
         final boolean offlineMode = selectedOfflineMode();
         final boolean accurateOcr = accurateOcrCheck == null
                 || accurateOcrCheck.isChecked();
+        final boolean createPdf = selectedCreatePdf();
         if (offlineMode && !offlineModelManager.isModelReady()) {
             refreshOfflineModelUi();
             setStatus("⚠ بۆ وەرگێڕانی ئۆفلاین سەرەتا «دابەزاندنی مۆدێلی AI» "
@@ -1786,7 +1805,7 @@ public class MainActivity extends AppCompatActivity {
                 throwIfJobStopped();
                 if (cbzFile != null) {
                     translateCbzJob(cbzFile, cbzName, sourceLanguage,
-                            offlineMode, accurateOcr, chosenStyle);
+                            offlineMode, accurateOcr, createPdf, chosenStyle);
                     return;
                 }
 
@@ -1879,6 +1898,8 @@ public class MainActivity extends AppCompatActivity {
                 Uri downloadTextUri = saveFileToDownloads(textFile, "text/plain");
                 copyToDownloadsLibrary(cached);
                 copyToDownloadsLibrary(textFile);
+                String pdfNote = createAndSavePdfCopy(
+                        createPdf, imageBase + ".ckb.pdf", rendered);
 
                 resultBitmap = rendered;
                 resultFile = cached;
@@ -1896,6 +1917,7 @@ public class MainActivity extends AppCompatActivity {
                         : (savedUri != null
                                 ? " لە Pictures/KurdMan پاشەکەوت کرا."
                                 : " لە کاشی ئەپەکەدا پاشەکەوت کرا.");
+                savedNote += pdfNote;
                 savedNote += " ئێستا دەتوانیت «دەستکاری شوێن، فۆنت و ڕەنگ» بکەیت.";
                 if (renderResult.rendered == 0) {
                     setStatus("⚠ دەقەکان وەرگێڕدران، بەڵام هیچ شوێنێکی سادە و پارێزراو "
@@ -1929,6 +1951,7 @@ public class MainActivity extends AppCompatActivity {
                                    String sourceLanguage,
                                    boolean offlineMode,
                                    boolean accurateOcr,
+                                   boolean createPdf,
                                    TextStyleSettings chosenStyle) throws Exception {
         String projectBase = sanitizeFileName(baseNameWithoutExtension(displayName));
         if (projectBase.isEmpty()) {
@@ -2145,6 +2168,8 @@ public class MainActivity extends AppCompatActivity {
             saveFileToDownloads(textFile, "text/plain");
             copyToDownloadsLibrary(outCbz);
             copyToDownloadsLibrary(textFile);
+            String pdfNote = createAndSavePdfCopy(
+                    createPdf, base + ".ckb.pdf", sortedOutputPageFiles(outputDir));
 
             final Bitmap preview = firstRendered;
             String pairsForUi = pairs.length() > 60000
@@ -2167,6 +2192,7 @@ public class MainActivity extends AppCompatActivity {
             String savedNote = downloadCbzUri != null
                     ? " CBZەکە لە Download/KurdMan پاشەکەوت کرا."
                     : " CBZەکە لە بەشی «داگرتنەکان» پاشەکەوت کرا.";
+            savedNote += pdfNote;
             savedNote += " ئێستا دەتوانیت هەر لاپەڕەیەک لە ستۆدیۆی دەقدا دەستکاری بکەیت.";
             if (totalSegments == 0) {
                 setStatus("⚠ CBZەکە دروست کرا، بەڵام هیچ دەقێکی ڕوون نەدۆزرایەوە." + savedNote);
@@ -2198,6 +2224,7 @@ public class MainActivity extends AppCompatActivity {
             updateButtons(false);
             return;
         }
+        final boolean createPdf = selectedCreatePdf();
         showMainPage(PAGE_RESULTS);
         setBusy(true);
         setStatus("دەرکردنی وەشانی دەستکاریکراو…");
@@ -2230,6 +2257,12 @@ public class MainActivity extends AppCompatActivity {
                     Uri downloadTextUri = saveFileToDownloads(textFile, "text/plain");
                     copyToDownloadsLibrary(cached);
                     copyToDownloadsLibrary(textFile);
+                    String pdfBase = sanitizeFileName(project.baseName);
+                    if (pdfBase.isEmpty()) {
+                        pdfBase = "kurdman-image";
+                    }
+                    String pdfNote = createAndSavePdfCopy(
+                            createPdf, pdfBase + ".ckb.pdf", rendered);
                     project.save();
 
                     resultBitmap = rendered;
@@ -2249,7 +2282,7 @@ public class MainActivity extends AppCompatActivity {
                                     : " لە کاشی ئەپەکەدا پاشەکەوت کرا.");
                     setStatus("✅ وەشانی دەستکاریکراو ئامادەیە: "
                             + result.rendered + "/" + page.segments.size()
-                            + " دەق لەسەر وێنەکە داندرا." + savedNote);
+                            + " دەق لەسەر وێنەکە داندرا." + savedNote + pdfNote);
                     return;
                 }
 
@@ -2351,6 +2384,8 @@ public class MainActivity extends AppCompatActivity {
                 saveFileToDownloads(textFile, "text/plain");
                 copyToDownloadsLibrary(outCbz);
                 copyToDownloadsLibrary(textFile);
+                String pdfNote = createAndSavePdfCopy(
+                        createPdf, base + ".ckb.pdf", sortedOutputPageFiles(outputDir));
 
                 final Bitmap preview = firstRendered;
                 String pairsForUi = pairs.length() > 60000
@@ -2372,6 +2407,7 @@ public class MainActivity extends AppCompatActivity {
                 String savedNote = downloadCbzUri != null
                         ? " CBZە دەستکاریکراوەکە لە Download/KurdMan پاشەکەوت کرا."
                         : " CBZە دەستکاریکراوەکە لە بەشی «داگرتنەکان» پاشەکەوت کرا.";
+                savedNote += pdfNote;
                 if (totalSegments == 0) {
                     setStatus("⚠ CBZە دەستکاریکراوەکە دروست کرا، بەڵام هیچ دەقێک نییە." + savedNote);
                 } else if (totalSkipped > 0) {
@@ -2647,6 +2683,111 @@ public class MainActivity extends AppCompatActivity {
             writer.close();
         }
         return file;
+    }
+
+    private String createAndSavePdfCopy(boolean enabled, String fileName,
+                                        Bitmap rendered)
+            throws InterruptedException {
+        if (!enabled) {
+            return "";
+        }
+        File pdfFile = new File(getCacheDir(), sanitizeFileName(fileName));
+        if (pdfFile.exists()) {
+            pdfFile.delete();
+        }
+        try {
+            throwIfJobStopped();
+            setStatus("📄 دروستکردنی PDF…");
+            int pdfPages = PdfExporter.writeBitmap(rendered, pdfFile,
+                    (completedSources, totalSources, completedPdfPages) -> {
+                        throwIfJobStopped();
+                        if (completedPdfPages == 1 || completedPdfPages % 10 == 0) {
+                            setStatus("📄 دروستکردنی PDF… "
+                                    + completedPdfPages + " لاپەڕە");
+                        }
+                    });
+            throwIfJobStopped();
+            return saveGeneratedPdfCopy(pdfFile, pdfPages);
+        } catch (Throwable e) {
+            if (pdfFile.exists()) {
+                pdfFile.delete();
+            }
+            if (JobRuntime.wasStopped(e)) {
+                throw new InterruptedException(JobRuntime.STOPPED_MESSAGE);
+            }
+            return " ⚠ PDF دروست نەکرا، بەڵام وێنە و TXTەکە پاشەکەوت کراون.";
+        }
+    }
+
+    private String createAndSavePdfCopy(boolean enabled, String fileName,
+                                        List<File> pageFiles)
+            throws InterruptedException {
+        if (!enabled) {
+            return "";
+        }
+        File pdfFile = new File(getCacheDir(), sanitizeFileName(fileName));
+        if (pdfFile.exists()) {
+            pdfFile.delete();
+        }
+        final int[] lastReportedSource = {-1};
+        try {
+            throwIfJobStopped();
+            setStatus("📄 دروستکردنی PDF لە لاپەڕەکان…");
+            int pdfPages = PdfExporter.writeImageFiles(pageFiles, pdfFile,
+                    (completedSources, totalSources, completedPdfPages) -> {
+                        throwIfJobStopped();
+                        if (completedSources != lastReportedSource[0]
+                                || completedPdfPages % 25 == 0) {
+                            lastReportedSource[0] = completedSources;
+                            setStatus("📄 دروستکردنی PDF: لاپەڕە "
+                                    + completedSources + "/" + totalSources + "…");
+                        }
+                    });
+            throwIfJobStopped();
+            return saveGeneratedPdfCopy(pdfFile, pdfPages);
+        } catch (Throwable e) {
+            if (pdfFile.exists()) {
+                pdfFile.delete();
+            }
+            if (JobRuntime.wasStopped(e)) {
+                throw new InterruptedException(JobRuntime.STOPPED_MESSAGE);
+            }
+            return " ⚠ PDF دروست نەکرا، بەڵام CBZ و TXTەکە پاشەکەوت کراون.";
+        }
+    }
+
+    private String saveGeneratedPdfCopy(File pdfFile, int pdfPages) {
+        Uri downloadUri = saveFileToDownloads(pdfFile, "application/pdf");
+        File libraryFile = copyToDownloadsLibrary(pdfFile);
+        if (libraryFile != null) {
+            return " PDFیش (" + pdfPages + " لاپەڕە) چووە ناو مۆبایلەکەت و لە "
+                    + "«ئەنجامەکان» دەردەکەوێت.";
+        }
+        if (downloadUri != null) {
+            return " PDFیش (" + pdfPages + " لاپەڕە) لە Download/KurdMan "
+                    + "پاشەکەوت کرا.";
+        }
+        return " ⚠ PDF دروست کرا بەڵام نەتوانرا بخرێتە داگرتنەکانەوە.";
+    }
+
+    private List<File> sortedOutputPageFiles(File outputDir) {
+        List<File> files = new ArrayList<>();
+        if (outputDir == null) {
+            return files;
+        }
+        File[] children = outputDir.listFiles();
+        if (children == null) {
+            return files;
+        }
+        for (File child : children) {
+            if (child.isFile()
+                    && isImageEntry(child.getName().toLowerCase(Locale.ROOT))) {
+                files.add(child);
+            }
+        }
+        Collections.sort(files,
+                (a, b) -> naturalCompare(a.getName(), b.getName()));
+        return files;
     }
 
     private Uri saveToPictures(Bitmap bitmap) {
@@ -3262,6 +3403,9 @@ public class MainActivity extends AppCompatActivity {
         if (lower.endsWith(".zip")) {
             return "application/zip";
         }
+        if (lower.endsWith(".pdf")) {
+            return "application/pdf";
+        }
         if (lower.endsWith(".png")) {
             return "image/png";
         }
@@ -3514,6 +3658,9 @@ public class MainActivity extends AppCompatActivity {
         }
         if (accurateOcrCheck != null) {
             accurateOcrCheck.setEnabled(enabled);
+        }
+        if (createPdfCheck != null) {
+            createPdfCheck.setEnabled(enabled);
         }
         if (fontSpinner != null) {
             fontSpinner.setEnabled(enabled);
