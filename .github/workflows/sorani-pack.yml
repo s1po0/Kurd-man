@@ -2,9 +2,14 @@ name: Sorani language pack
 
 # One-shot builder: converts Helsinki-NLP/opus-mt-en-ine (Apache-2.0)
 # into the small quantized ONNX pack the app downloads for offline
-# Sorani translation, and publishes it to the sorani-pack-v1 release.
+# Sorani translation, and publishes it to the sorani-pack-v2 release.
 on:
   workflow_dispatch:
+  push:
+    branches: ["main", "arena/**"]
+    paths:
+      - "tools/sorani-pack/convert.py"
+      - ".github/workflows/sorani-pack.yml"
 
 permissions:
   contents: write
@@ -33,6 +38,8 @@ jobs:
 
       - name: Convert + quantize
         shell: bash
+        env:
+          PYTHONHASHSEED: "0"
         run: |
           set -o pipefail
           python tools/sorani-pack/convert.py 2>&1 | tee convert.log
@@ -46,13 +53,13 @@ jobs:
             echo "::error title=CONVERTLOG::${esc:0:800}"
           done
 
-      - name: Publish to release sorani-pack-v1
+      - name: Publish to release sorani-pack-v2
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view sorani-pack-v1 >/dev/null 2>&1 || \
-            gh release create sorani-pack-v1 \
+          gh release view sorani-pack-v2 >/dev/null 2>&1 || \
+            gh release create sorani-pack-v2 \
               --title "Sorani offline language pack v1" \
               --notes "Quantized Helsinki-NLP/opus-mt-en-ine (Apache-2.0) ONNX pack used by Koorix/KurdMan for offline Sorani translation. Built by .github/workflows/sorani-pack.yml."
-          gh release upload sorani-pack-v1 pack-out/* --clobber
-          echo "::notice title=PACKRELEASE::https://github.com/${{ github.repository }}/releases/download/sorani-pack-v1/"
+          gh release upload sorani-pack-v2 pack-out/* --clobber
+          echo "::notice title=PACKRELEASE::https://github.com/${{ github.repository }}/releases/download/sorani-pack-v2/"
