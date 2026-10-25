@@ -43,22 +43,40 @@ def greedy_test(enc_path: Path, dec_path: Path) -> None:
 
     src = spm.SentencePieceProcessor(model_file=str(OUT / "source.spm"))
     tgt = spm.SentencePieceProcessor(model_file=str(OUT / "target.spm"))
-    tag = src.piece_to_id(">>kur_Arab<<")
-    notice("TESTTAG", f">>kur_Arab<< id={tag}")
+    from transformers import AutoTokenizer
+    tok = AutoTokenizer.from_pretrained(MODEL_ID)
+    tag = tok.convert_tokens_to_ids(">>kur_Arab<<")
+    notice("TESTTAG",
+           f"kur_tag_id={tag} src_spm_pieces={src.get_piece_size()} "
+           f"tgt_spm_pieces={tgt.get_piece_size()} "
+           f"hf_vocab={len(tok)} pad={tok.pad_token_id} eos={tok.eos_token_id}")
+    tag_ids = sorted(
+        i for t, i in tok.get_vocab().items()
+        if t.startswith(">>") and t.endswith("<<"))
+    for j in range(0, len(tag_ids), 40):
+        notice("TAGIDS", ",".join(str(x) for x in tag_ids[j:j + 40]))
 
     enc = ort.InferenceSession(str(enc_path),
                                providers=["CPUExecutionProvider"])
     dec = ort.InferenceSession(str(dec_path),
                                providers=["CPUExecutionProvider"])
     for sess, label in ((enc, "encoder"), (dec, "decoder")):
-        for i in sess.get_inputs():
-            notice("PACKIN", f"{label} {i.name} {i.type} {i.shape}")
-        for o in sess.get_outputs():
-            notice("PACKOUT", f"{label} {o.name} {o.type} {o.shape}")
+        ins = ",".join(i.name for i in sess.get_inputs())
+        outs = ",".join(o.name for o in sess.get_outputs())
+        for j in range(0, len(ins), 850):
+            notice("PACKIN", f"{label}: {ins[j:j + 850]}")
+        for j in range(0, len(outs), 850):
+            notice("PACKOUT", f"{label}: {outs[j:j + 850]}")
     dec_inputs = {i.name for i in dec.get_inputs()}
+    use_branch = "use_cache_branch" in dec_inputs
+    has_past = any(n.startswith("past_key_values") for n in dec_inputs)
+    notice("TESTMODE", f"use_cache_branch={use_branch} has_past={has_past}")
 
     text = "Where are you going? I will wait for you at the station."
     ids = [tag] + src.encode(text) + [EOS_ID]
+    ref = tok(f">>kur_Arab<< {text}", add_special_tokens=True)["input_ids"]
+    notice("TESTENC", f"mine={ids} hf={ref} match={ids == ref}")
+    ids = ref
     ids_np = np.array([ids], dtype=np.int64)
     mask_np = np.ones_like(ids_np)
     hidden = enc.run(None, {"input_ids": ids_np,
@@ -68,8 +86,9 @@ def greedy_test(enc_path: Path, dec_path: Path) -> None:
         vals = sess.run(None, feed)
         return {o.name: v for o, v in zip(sess.get_outputs(), vals)}
 
-    feed = {"input_ids": np.array([[PAD_ID]], dtype=np.int64),
-            "use_cache_branch": np.array(False)}
+    feed = {"input_ids": np.array([[PAD_ID]], dtype=np.int64)}
+    if use_branch:
+        feed["use_cache_branch"] = np.array(False)
     if "encoder_hidden_states" in dec_inputs:
         feed["encoder_hidden_states"] = hidden
     if "encoder_attention_mask" in dec_inputs:
@@ -87,8 +106,9 @@ def greedy_test(enc_path: Path, dec_path: Path) -> None:
         if tok == EOS_ID:
             break
         generated.append(tok)
-        feed = {"input_ids": np.array([[tok]], dtype=np.int64),
-                "use_cache_branch": np.array(True)}
+        feed = {"input_ids": np.array([[tok]], dtype=np.int64)}
+        if use_branch:
+            feed["use_cache_branch"] = np.array(True)
         feed.update(past)
         if "encoder_hidden_states" in dec_inputs:
             feed["encoder_hidden_states"] = hidden
@@ -138,7 +158,6 @@ def main() -> None:
     for p in sorted(FP32.rglob("*")):
         if p.is_file():
             print("  fp32:", p, p.stat().st_size, flush=True)
-            notice("FP32FILE", f"{p.name} {p.stat().st_size}")
 
     print("== Quantizing (dynamic int8) ==", flush=True)
     from onnxruntime.quantization import QuantType, quantize_dynamic
