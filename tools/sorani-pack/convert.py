@@ -1,10 +1,10 @@
 """Convert Helsinki-NLP/opus-mt-en-ine (Apache-2.0) to the Sorani
 offline language pack (v2).
 
-v2 uses STATIC QDQ quantization (calibrated) instead of dynamic
-quantization: the dynamic-int8 graphs produced good output on some
-CPUs and garbage on others (kernel-dependent), while QDQ graphs have
-fixed activation scales and behave the same everywhere. The pack is
+v2 uses QUInt8 dynamic quantization (the Xenova/mobile-standard
+unsigned-weight format): v1's signed-QInt8 graphs computed correct
+results on some CPU kernels and garbage on others, while QUInt8
+matches the fp32 top-token distribution. The pack is
 verified end-to-end with the exact app algorithm (SentencePiece +
 vocab.json, batched beam-4 + no-repeat-ngram + length cap) on five
 manhwa-style sentences before publishing.
@@ -210,91 +210,21 @@ def main() -> None:
     for name in ("source.spm", "vocab.json"):
         shutil.copyfile(FP32 / name, OUT / name)
 
-    print("== Building calibration data ==", flush=True)
-    import onnxruntime as ort
-    import sentencepiece as spm
-    from onnxruntime.quantization import (CalibrationDataReader,
-                                          QuantFormat, QuantType,
-                                          quantize_static)
-    try:
-        from onnxruntime.quantization.shape_inference import quant_pre_process
-    except Exception:
-        quant_pre_process = None
-
-    src = spm.SentencePieceProcessor(model_file=str(OUT / "source.spm"))
-    vocab = json.loads((OUT / "vocab.json").read_text(encoding="utf-8"))
-    tag = vocab[">>kur_Arab<<"]
-    banned = {i for p, i in vocab.items()
-              if p.startswith(">>") and p.endswith("<<")}
-    banned.add(PAD_ID)
-
-    def encode(text):
-        pieces = src.encode(text, out_type=str)
-        return [tag] + [vocab.get(p, 1) for p in pieces] + [EOS_ID]
-
-    enc_samples = []
-    for text in CALIBRATION_TEXTS:
-        ids = np.array([encode(text)], dtype=np.int64)
-        enc_samples.append({"input_ids": ids,
-                            "attention_mask": np.ones_like(ids)})
-
-    fp32_enc = ort.InferenceSession(str(FP32 / "encoder_model.onnx"),
-                                    providers=["CPUExecutionProvider"])
-    fp32_dec = ort.InferenceSession(str(FP32 / "decoder_model.onnx"),
-                                    providers=["CPUExecutionProvider"])
-    dec_samples = []
-    for sample in enc_samples[:40]:
-        hidden = fp32_enc.run(None, sample)[0]
-        gen = []
-        for step in range(13):
-            feed = {"input_ids": np.array([[PAD_ID] + gen], dtype=np.int64),
-                    "encoder_hidden_states": hidden,
-                    "encoder_attention_mask": sample["attention_mask"]}
-            if step in (0, 4, 8, 12):
-                dec_samples.append(feed)
-            logits = fp32_dec.run(None, feed)[0][0, -1].copy()
-            for b in banned:
-                logits[b] = -1e30
-            nxt = int(np.argmax(logits))
-            if nxt == EOS_ID:
-                break
-            gen.append(nxt)
-    notice("CALIB", f"enc_samples={len(enc_samples)} dec_samples={len(dec_samples)}")
-
-    class Reader(CalibrationDataReader):
-        def __init__(self, samples):
-            self.samples = samples
-            self.it = iter(samples)
-
-        def get_next(self):
-            return next(self.it, None)
-
-        def rewind(self):
-            self.it = iter(self.samples)
-
-    print("== Static QDQ quantization ==", flush=True)
-    jobs = [("encoder_model.onnx", "encoder_model_quantized.onnx", enc_samples),
-            ("decoder_model.onnx", "decoder_model_quantized.onnx", dec_samples)]
-    for src_name, dst_name, samples in jobs:
-        model_in = FP32 / src_name
-        if quant_pre_process is not None:
-            try:
-                pre = FP32 / (src_name.replace(".onnx", "_pre.onnx"))
-                quant_pre_process(str(model_in), str(pre))
-                model_in = pre
-                print("pre-processed", src_name, flush=True)
-            except Exception as e:
-                print("pre-process skipped:", e, flush=True)
-        quantize_static(
-            str(model_in), str(OUT / dst_name),
-            calibration_data_reader=Reader(samples),
-            quant_format=QuantFormat.QDQ,
-            per_channel=True,
-            weight_type=QuantType.QInt8,
-            activation_type=QuantType.QUInt8,
+    print("== Quantizing (dynamic QUInt8) ==", flush=True)
+    # QUInt8 (unsigned weights) is the battle-tested mobile path
+    # (Xenova/transformers.js). The signed QInt8 graphs of v1 computed
+    # garbage on some CPU kernels; QUInt8 matches fp32 top tokens.
+    from onnxruntime.quantization import QuantType, quantize_dynamic
+    for src_name, dst_name in (
+            ("encoder_model.onnx", "encoder_model_quantized.onnx"),
+            ("decoder_model.onnx", "decoder_model_quantized.onnx")):
+        quantize_dynamic(
+            str(FP32 / src_name), str(OUT / dst_name),
             op_types_to_quantize=["MatMul", "Gather"],
+            per_channel=True,
+            weight_type=QuantType.QUInt8,
         )
-        print("quantized (QDQ static):", dst_name, flush=True)
+        print("quantized (QUInt8 dynamic):", dst_name, flush=True)
 
     print("== Verifying quantized pack (app-parity beam) ==", flush=True)
     verify_pack()
@@ -307,7 +237,7 @@ def main() -> None:
             notice("PACKSPEC", f"{p.name} size={p.stat().st_size} "
                                f"sha256={specs[-1]['sha256']}")
     (OUT / "pack.json").write_text(json.dumps(
-        {"model": MODEL_ID, "revision": MODEL_REV, "quant": "qdq-static",
+        {"model": MODEL_ID, "revision": MODEL_REV, "quant": "quint8-dynamic",
          "files": specs}, indent=2))
     total = sum(s["size"] for s in specs)
     notice("PACKTOTAL", f"total_bytes={total}")
