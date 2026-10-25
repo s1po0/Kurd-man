@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Koorix</string>
+
+    <!-- Google Sign-In Web client ID (from Google Cloud Console → APIs
+         & Services → Credentials → OAuth 2.0 Client ID of type "Web").
+         Paste the real value here and in Supabase (Authentication →
+         Providers → Google) to activate the Google button. Until then
+         the button explains that email sign-in is available. -->
+    <string name="default_web_client_id">REPLACE_WITH_GOOGLE_WEB_CLIENT_ID</string>
+
+    <!-- Where users buy Premium activation codes (Telegram/WhatsApp/
+         Instagram/store link). Leave empty to hide the buy button. -->
+    <string name="koorix_buy_url"></string>
+
+    <string name="koorix_premium_pitch">بە Premium وەرگێڕانی بێسنوور بکە: مانگانە ٥٬٠٠٠ دینار • ساڵانە ٤٠٬٠٠٠ دینار. دوای کڕین کۆدێکت پێ دەدرێت — لێرە دایبنێ و دەستبەجێ چالاک دەبێت.</string>
+</resources>

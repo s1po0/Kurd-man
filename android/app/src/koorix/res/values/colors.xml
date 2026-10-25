@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Koorix brand: violet/indigo premium palette (flavour override
+         of the shared colour names, so every shared drawable and
+         layout rebrands automatically). -->
+    <color name="primary">#8B5CF6</color>
+    <color name="primary_dark">#6D28D9</color>
+    <color name="primary_mid">#4F46E5</color>
+    <color name="primary_violet">#C026D3</color>
+    <color name="primary_light">#2E1065</color>
+    <color name="accent">#FACC15</color>
+    <color name="accent_soft">#2A2410</color>
+
+    <color name="page">#0B0618</color>
+    <color name="page_end">#160B2E</color>
+    <color name="card">#17102B</color>
+    <color name="card_elevated">#1E1538</color>
+    <color name="card_soft">#241A45</color>
+    <color name="input_bg">#120B26</color>
+    <color name="input_focus_bg">#1B1140</color>
+    <color name="border">#372A63</color>
+    <color name="border_dark">#524096</color>
+    <color name="preview_bg">#0E0820</color>
+    <color name="surface">#17102B</color>
+
+    <color name="text_secondary">#BDB2DA</color>
+    <color name="text_muted">#8E82B8</color>
+    <color name="text_on_primary_muted">#EDE9FE</color>
+
+    <color name="ic_launcher_background">#2E1065</color>
+</resources>

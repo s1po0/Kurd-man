@@ -16,12 +16,60 @@ android {
         applicationId 'com.kurdman.app'
         minSdk 26
         targetSdk 35
-        versionCode 27 // 1.8.2: connected double balloons translated per lobe
-        versionName '1.8.2'
+        versionCode 28 // KurdMan 1.8.3: edition flavours (personal build unchanged)
+        versionName '1.8.3'
         ndk {
             // Most modern phones are arm64; this keeps the ML Kit APK small
             // enough to send through Telegram and GitHub artifacts easily.
             abiFilters 'arm64-v8a'
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    // Two editions share one codebase:
+    //  - kurdman: the developer's personal build (Telegram tools,
+    //    optional Unlimited-OCR server mode, no account, no limits).
+    //  - koorix: the public/commercial build for other people — no
+    //    Telegram section, no Baidu/Unlimited-OCR, account sign-in
+    //    (email/Google via Supabase), a small free daily allowance and
+    //    Premium unlocked with activation codes.
+    flavorDimensions "edition"
+    productFlavors {
+        kurdman {
+            dimension "edition"
+            buildConfigField "boolean", "PUBLIC_EDITION", "false"
+            buildConfigField "boolean", "SHOW_TELEGRAM", "true"
+            buildConfigField "boolean", "SHOW_UNLIMITED_OCR", "true"
+            buildConfigField "boolean", "REQUIRE_ACCOUNT", "false"
+            buildConfigField "int", "FREE_DAILY_JOBS", "0"
+            buildConfigField "int", "FREE_DAILY_PAGES", "0"
+            buildConfigField "String", "SUPABASE_URL", '""'
+            buildConfigField "String", "SUPABASE_KEY", '""'
+        }
+        koorix {
+            dimension "edition"
+            applicationId "com.koorix.app"
+            versionCode 1
+            // Double quotes on purpose: the KurdMan release job greps the
+            // first single-quoted versionName in this file.
+            versionName "1.0.0"
+            buildConfigField "boolean", "PUBLIC_EDITION", "true"
+            buildConfigField "boolean", "SHOW_TELEGRAM", "false"
+            buildConfigField "boolean", "SHOW_UNLIMITED_OCR", "false"
+            buildConfigField "boolean", "REQUIRE_ACCOUNT", "true"
+            // Display mirror of the server-side limits in Supabase
+            // (koorix_consume_job); the server value is authoritative.
+            buildConfigField "int", "FREE_DAILY_JOBS", "3"
+            buildConfigField "int", "FREE_DAILY_PAGES", "60"
+            buildConfigField "String", "SUPABASE_URL",
+                    '"https://cbkddsztcivllpwzflkx.supabase.co"'
+            // Publishable (public) key; all data access is protected by
+            // Row Level Security + SECURITY DEFINER RPCs server-side.
+            buildConfigField "String", "SUPABASE_KEY",
+                    '"sb_publishable_vVtVNjubYllxuSnfyzcolA_qk034IwO"'
         }
     }
 
@@ -87,4 +135,7 @@ dependencies {
     // Runtime for the downloadable NLLB-200 offline translation model.
     // The 1.34 GB model itself is intentionally not bundled in the APK.
     implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.31.0'
+    // Koorix public edition only: Google Sign-In (ID token is exchanged
+    // for a Supabase session). Not present in the personal KurdMan APK.
+    koorixImplementation 'com.google.android.gms:play-services-auth:21.3.0'
 }

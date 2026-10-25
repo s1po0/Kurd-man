@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- Koorix public edition: account sign-in / Premium screen. -->
+        <activity
+            android:name=".AccountActivity"
+            android:exported="false"
+            android:label="Koorix"
+            android:theme="@style/AppTheme" />
+    </application>
+</manifest>

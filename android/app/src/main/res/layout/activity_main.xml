@@ -123,6 +123,7 @@
                         android:layout_weight="1" />
 
                     <TextView
+                        android:id="@+id/heroVersionChip"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:background="@drawable/bg_glass_chip"
@@ -131,13 +132,14 @@
                         android:paddingTop="6dp"
                         android:paddingEnd="11dp"
                         android:paddingBottom="6dp"
-                        android:text="v1.8.1  •  چەند وێنە پێکەوە + ڕاپۆرتی کێشەکان"
+                        android:text="v1.8.3  •  چەند وێنە پێکەوە + ڕاپۆرتی کێشەکان"
                         android:textColor="@color/white"
                         android:textSize="12sp"
                         android:textStyle="bold" />
                 </LinearLayout>
 
                 <TextView
+                    android:id="@+id/heroTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="15dp"
@@ -148,6 +150,7 @@
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/heroSubtitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
@@ -207,6 +210,7 @@
                         android:textStyle="bold" />
 
                     <TextView
+                        android:id="@+id/heroTelegramChip"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -222,6 +226,22 @@
                         android:textSize="12sp"
                         android:textStyle="bold" />
                 </LinearLayout>
+
+                <!-- Koorix public edition only (shown from code). -->
+                <Button
+                    android:id="@+id/accountButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_button_secondary"
+                    android:fontFamily="sans-serif-black"
+                    android:minHeight="50dp"
+                    android:stateListAnimator="@null"
+                    android:text="👤  هەژمارەکەم  •  💎 Premium"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
             </LinearLayout>
 
             <!-- Step 1: translate -->
@@ -1159,6 +1179,7 @@
                 android:textStyle="bold" />
 
             <TextView
+                android:id="@+id/settingsSubtitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
@@ -1365,6 +1386,7 @@
                     android:paddingStart="14dp"
                     android:paddingTop="14dp"
                     android:paddingEnd="14dp"
+                    android:id="@+id/unlimitedOcrSection"
                     android:paddingBottom="14dp">
 
                     <TextView
@@ -1657,6 +1679,7 @@
 
             <!-- Step 4: Telegram connection and message -->
             <LinearLayout
+                android:id="@+id/telegramSection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"

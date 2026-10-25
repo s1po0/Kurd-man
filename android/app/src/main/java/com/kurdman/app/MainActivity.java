@@ -573,9 +573,62 @@ public class MainActivity extends AppCompatActivity {
         updateButtons(currentBusy);
         refreshDownloadsList();
         refreshReportUi();
+        applyEditionUi();
         if (savedInstanceState == null) {
             handleIncomingShareIntent(getIntent());
         }
+    }
+
+    /**
+     * Applies the per-edition differences between the personal KurdMan
+     * build and the public Koorix build: branding, the account button,
+     * and hiding the Telegram / Unlimited-OCR tooling that only exists
+     * in the personal build.
+     */
+    private void applyEditionUi() {
+        TextView heroTitle = findViewById(R.id.heroTitle);
+        TextView heroSubtitle = findViewById(R.id.heroSubtitle);
+        TextView heroVersionChip = findViewById(R.id.heroVersionChip);
+        TextView heroTelegramChip = findViewById(R.id.heroTelegramChip);
+        if (BuildConfig.PUBLIC_EDITION) {
+            if (heroTitle != null) {
+                heroTitle.setText("Koorix");
+            }
+            if (heroVersionChip != null) {
+                heroVersionChip.setText("v" + BuildConfig.VERSION_NAME
+                        + "  •  وەرگێڕی مانهوا");
+            }
+            if (heroTelegramChip != null) {
+                heroTelegramChip.setText("💎 Premium");
+            }
+            TextView settingsSubtitle = findViewById(R.id.settingsSubtitle);
+            if (settingsSubtitle != null) {
+                settingsSubtitle.setText("جۆری فایلی کۆتایی، مۆدێلی ئۆفلاین، "
+                        + "پاکێجی OCRی بەهێز و پارێزگاری تا STOP لێرە کۆکراونەتەوە.");
+            }
+        } else if (heroVersionChip != null) {
+            heroVersionChip.setText("v" + BuildConfig.VERSION_NAME
+                    + "  •  چەند وێنە پێکەوە + ڕاپۆرتی کێشەکان + قسەهەڵگری دووانە");
+        }
+        Button accountButton = findViewById(R.id.accountButton);
+        if (accountButton != null) {
+            accountButton.setVisibility(BuildConfig.REQUIRE_ACCOUNT
+                    ? View.VISIBLE : View.GONE);
+            accountButton.setOnClickListener(
+                    v -> AccountGate.openAccount(this));
+        }
+        View unlimitedSection = findViewById(R.id.unlimitedOcrSection);
+        if (unlimitedSection != null && !BuildConfig.SHOW_UNLIMITED_OCR) {
+            unlimitedSection.setVisibility(View.GONE);
+        }
+        View telegramSection = findViewById(R.id.telegramSection);
+        if (telegramSection != null && !BuildConfig.SHOW_TELEGRAM) {
+            telegramSection.setVisibility(View.GONE);
+        }
+        if (sendResultButton != null && !BuildConfig.SHOW_TELEGRAM) {
+            sendResultButton.setVisibility(View.GONE);
+        }
+        AccountGate.enforceOnLaunch(this);
     }
 
     @Override
@@ -1368,6 +1421,10 @@ public class MainActivity extends AppCompatActivity {
      * the current widget values are persisted for next time either way.
      */
     private ManhwaRenderer.BlockOcr createUnlimitedOcrIfEnabled() {
+        if (!BuildConfig.SHOW_UNLIMITED_OCR) {
+            // The Koorix public edition has no Baidu/Unlimited-OCR mode.
+            return null;
+        }
         boolean enabled = unlimitedOcrCheck != null
                 ? unlimitedOcrCheck.isChecked()
                 : prefs.getBoolean(PREF_UNLIMITED_OCR_ENABLED, false);
@@ -2435,6 +2492,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void translateSelected() {
+        int jobPages = selectedCbzFile != null
+                ? Math.max(1, selectedCbzPages)
+                : (!selectedBatchFiles.isEmpty()
+                        ? selectedBatchFiles.size() : 1);
+        // Koorix public edition: jobs are gated behind the signed-in
+        // account's daily allowance (checked server-side). The
+        // personal KurdMan build runs the job immediately.
+        AccountGate.guardJobStart(this, jobPages,
+                this::performTranslateSelected);
+    }
+
+    private void performTranslateSelected() {
         final Bitmap sourceBitmap = originalBitmap;
         final File imageFile = selectedImageFile;
         final File cbzFile = selectedCbzFile;

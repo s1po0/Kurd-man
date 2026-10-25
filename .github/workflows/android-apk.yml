@@ -69,7 +69,7 @@ jobs:
         # "exit code 1" annotation is useless for debugging.
         run: |
           set +e
-          gradle --stacktrace -p android assembleDebug > /tmp/build.log 2>&1
+          gradle --stacktrace -p android assembleKurdmanDebug > /tmp/build.log 2>&1
           code=$?
           tail -n 80 /tmp/build.log
           if [ $code -ne 0 ]; then
@@ -81,7 +81,7 @@ jobs:
 
       - name: Report APK signer fingerprint
         run: |
-          APK=$(ls android/app/build/outputs/apk/debug/*.apk | head -n 1)
+          APK=$(ls android/app/build/outputs/apk/kurdman/debug/*.apk | head -n 1)
           if [ -n "$KURDMAN_DEBUG_KEYSTORE" ] && [ -f "$KURDMAN_DEBUG_KEYSTORE" ]; then
             echo "::notice::stable debug keystore present at $KURDMAN_DEBUG_KEYSTORE"
           else
@@ -99,7 +99,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kurd-man-debug-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          path: android/app/build/outputs/apk/kurdman/debug/*.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -112,7 +112,7 @@ jobs:
             echo "::warning::TELEGRAM_BOT_TOKEN or TELEGRAM_ADMIN_ID is missing; skipping Telegram APK send."
             exit 0
           fi
-          APK=$(ls android/app/build/outputs/apk/debug/*.apk | head -n 1)
+          APK=$(ls android/app/build/outputs/apk/kurdman/debug/*.apk | head -n 1)
           if [ -z "$APK" ]; then
             echo "::warning::APK not found; skipping Telegram send."
             exit 0
