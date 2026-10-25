@@ -438,7 +438,7 @@ final class OfflineModelManager {
             return;
         }
         if (available < required) {
-            throw new IOException("Not enough free storage for the offline AI model: "
+            throw new IOException("Not enough free storage for the Sorani language pack: "
                     + "required=" + required + ", available=" + available);
         }
     }
@@ -448,7 +448,7 @@ final class OfflineModelManager {
         OutputStream out = new FileOutputStream(marker);
         try {
             String text = "Koorix Sorani language pack verified\n"
-                    + "revision=" + MODEL_REVISION + "\n"
+                    + "pack=sorani-pack-v1 (Helsinki-NLP/opus-mt-en-ine)\n"
                     + "files=" + FILES.size() + "\n"
                     + "bytes=" + totalBytes() + "\n";
             out.write(text.getBytes(StandardCharsets.UTF_8));

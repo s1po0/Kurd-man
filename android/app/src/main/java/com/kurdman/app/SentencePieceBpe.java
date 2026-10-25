@@ -208,11 +208,6 @@ final class SentencePieceBpe implements AutoCloseable {
         return id >= 0 && id < types.length ? types[id] : -1;
     }
 
-    int vocabSize() {
-        ensureLoaded();
-        return pieces.length;
-    }
-
     @Override
     public void close() {
         pieces = new String[0];
