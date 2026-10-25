@@ -195,6 +195,19 @@ Twilio، MessageBird، Vonage یان TextLocal. دوای ئەوە هەر
 ## ٧) ماڵپەڕی Koorix لەسەر Vercel
 
 ماڵپەڕێکی جوان بە سێ زمان (کوردی / عەرەبی / ئینگلیزی) بۆ
-Koorix هەیە لەگەڵ لاپەڕەی تایبەتمەندی — پڕۆژەکە لە Vercel
-بە ناوی **koorix** دروست کرا. فایلەکانی ماڵپەڕەکە لە
-`koorix/site/`دان لەناو ڕیپۆکەدا.
+Koorix ئامادە کرا لەگەڵ لاپەڕەی تایبەتمەندی؛ پڕۆژەکە لە Vercel
+بە ناوی **koorix** دروست کرا (`prj_7fyHvk7ciYHNI3cHdtfuIiVkuELz`).
+فایلەکانی ماڵپەڕەکە لە `koorix/site/`دان لەناو ڕیپۆکەدا.
+
+بۆ بڵاوکردنەوەی (یەکجار، لەبەر سنووری پەیوەندیی APIیەکە):
+1. لە Vercel پڕۆژەی **koorix** بکەرەوە ← **Settings ← Git** ←
+   پەیوەستی بکە بە ڕیپۆی `s1po0/Kurd-man`، و Root Directory
+   بکە بە `koorix/site`. (یان فۆڵدەری `koorix/site` ڕابکێشە
+   ناو لاپەڕەی Deployments.)
+2. زۆر گرنگ: بچۆ بۆ **Settings ← Deployment Protection** و
+   بۆ Production بیکوژێنەوە (پارێزگاریی SSO)، ئەگینا تەنیا
+   تیمەکەت ماڵپەڕەکە دەبینێت و گشتی نابێت.
+3. ناونیشانی گشتی دەبێتە `https://koorix.vercel.app`
+   (و `privacy.html`ی لەسەرە بۆ تایبەتمەندی).
+دوای ئەمە دەتوانین لە Supabaseدا Site URL بکەین بەم
+ناونیشانە و بیخەینە لیستی ڕێگەپێدراوەکانەوە.
