@@ -2864,8 +2864,8 @@ public class MainActivity extends AppCompatActivity {
                 // reassigning: lambdas capture the variable.)
                 segments.clear();
                 segments.addAll(renderResult.segments);
-                projectPage.segments.clear();
-                projectPage.segments.addAll(segments);
+                project.pages.get(i).segments.clear();
+                project.pages.get(i).segments.addAll(segments);
                 Bitmap rendered = renderResult.bitmap;
                 File outPage = new File(outputDir,
                         String.format(Locale.ROOT, "%04d.jpg", pageNumber));
