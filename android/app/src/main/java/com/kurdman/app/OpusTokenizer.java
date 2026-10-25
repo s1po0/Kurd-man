@@ -47,7 +47,7 @@ final class OpusTokenizer implements AutoCloseable {
     void initialize(File sourceSpmFile, File vocabJsonFile) throws IOException {
         close();
         SentencePieceBpe src = new SentencePieceBpe();
-        src.load(sourceSpmFile);
+        src.loadModel(sourceSpmFile);
         JSONObject vocab;
         try {
             vocab = new JSONObject(readText(vocabJsonFile));
