@@ -36,115 +36,82 @@ def notice(title: str, msg: str) -> None:
 
 
 def greedy_test(enc_path: Path, dec_path: Path) -> None:
-    """Run the exact greedy loop the Android app runs, in Python."""
+    """Replicates the Android runner EXACTLY: SentencePiece segmentation
+    + vocab.json id mapping, full-sequence greedy decoding (the exported
+    decoder graph has no KV-cache inputs), piece-join decoding."""
     import numpy as np
     import onnxruntime as ort
     import sentencepiece as spm
 
     src = spm.SentencePieceProcessor(model_file=str(OUT / "source.spm"))
-    tgt = spm.SentencePieceProcessor(model_file=str(OUT / "target.spm"))
-    from transformers import AutoTokenizer
-    tok = AutoTokenizer.from_pretrained(MODEL_ID)
-    tag = tok.convert_tokens_to_ids(">>kur_Arab<<")
-    notice("TESTTAG",
-           f"kur_tag_id={tag} src_spm_pieces={src.get_piece_size()} "
-           f"tgt_spm_pieces={tgt.get_piece_size()} "
-           f"hf_vocab={len(tok)} pad={tok.pad_token_id} eos={tok.eos_token_id}")
-    inv = {i: t for t, i in tok.get_vocab().items()}
-    notice("VOCABHEAD", ",".join(f"{i}={inv.get(i)}" for i in range(6)))
-    tag_ids = sorted(
-        i for t, i in tok.get_vocab().items()
-        if t.startswith(">>") and t.endswith("<<"))
-    for j in range(0, len(tag_ids), 40):
-        notice("TAGIDS", ",".join(str(x) for x in tag_ids[j:j + 40]))
+    vocab = json.loads((OUT / "vocab.json").read_text(encoding="utf-8"))
+    inv = {i: piece for piece, i in vocab.items()}
+    tag = vocab[">>kur_Arab<<"]
+    banned = {i for piece, i in vocab.items()
+              if piece.startswith(">>") and piece.endswith("<<")}
+    banned.add(PAD_ID)
+    notice("TESTTAG", f"kur_tag_id={tag} vocab={len(vocab)} banned={len(banned)}")
 
     enc = ort.InferenceSession(str(enc_path),
                                providers=["CPUExecutionProvider"])
     dec = ort.InferenceSession(str(dec_path),
                                providers=["CPUExecutionProvider"])
-    for sess, label in ((enc, "encoder"), (dec, "decoder")):
-        ins = ",".join(i.name for i in sess.get_inputs())
-        outs = ",".join(o.name for o in sess.get_outputs())
-        for j in range(0, len(ins), 850):
-            notice("PACKIN", f"{label}: {ins[j:j + 850]}")
-        for j in range(0, len(outs), 850):
-            notice("PACKOUT", f"{label}: {outs[j:j + 850]}")
-    dec_inputs = {i.name for i in dec.get_inputs()}
-    use_branch = "use_cache_branch" in dec_inputs
-    has_past = any(n.startswith("past_key_values") for n in dec_inputs)
-    notice("TESTMODE", f"use_cache_branch={use_branch} has_past={has_past}")
+    notice("PACKIN", "encoder:" + ",".join(i.name for i in enc.get_inputs()))
+    notice("PACKIN", "decoder:" + ",".join(i.name for i in dec.get_inputs()))
 
-    text = "Where are you going? I will wait for you at the station."
-    ids = [tag] + src.encode(text) + [EOS_ID]
-    ref = tok(f">>kur_Arab<< {text}", add_special_tokens=True)["input_ids"]
-    notice("TESTENC", f"mine={ids} hf={ref} match={ids == ref}")
-    ids = ref
-    ids_np = np.array([ids], dtype=np.int64)
-    mask_np = np.ones_like(ids_np)
-    hidden = enc.run(None, {"input_ids": ids_np,
-                            "attention_mask": mask_np})[0]
+    def encode(text):
+        pieces = src.encode(text, out_type=str)
+        return [tag] + [vocab.get(piece, 1) for piece in pieces] + [EOS_ID]
 
-    def outputs_by_name(sess, feed):
-        vals = sess.run(None, feed)
-        return {o.name: v for o, v in zip(sess.get_outputs(), vals)}
+    def decode(ids):
+        out, pending = [], bytearray()
+        for i in ids:
+            piece = inv.get(i)
+            if piece is None or i in banned or i == EOS_ID:
+                continue
+            if len(piece) == 6 and piece.startswith("<0x") and piece.endswith(">"):
+                pending.append(int(piece[3:5], 16))
+                continue
+            if pending:
+                out.append(pending.decode("utf-8", "replace"))
+                pending = bytearray()
+            out.append(piece)
+        if pending:
+            out.append(pending.decode("utf-8", "replace"))
+        return "".join(out).replace("\u2581", " ").strip()
 
-    feed = {"input_ids": np.array([[PAD_ID]], dtype=np.int64)}
-    if use_branch:
-        feed["use_cache_branch"] = np.array(False)
-    if "encoder_hidden_states" in dec_inputs:
-        feed["encoder_hidden_states"] = hidden
-    if "encoder_attention_mask" in dec_inputs:
-        feed["encoder_attention_mask"] = mask_np
-    if "attention_mask" in dec_inputs:
-        feed["attention_mask"] = mask_np
-    out = outputs_by_name(dec, feed)
-    past = {k.replace("present", "past_key_values", 1): v
-            for k, v in out.items() if k.startswith("present")}
-    notice("TESTPAST", f"past tensors={len(past)}")
-
-    generated = []
-    next_id = int(np.argmax(out["logits"][0, -1]))
-    wpast = OUT / "decoder_with_past_model_quantized.onnx"
-    dec2 = dec
-    if wpast.exists():
-        dec2 = ort.InferenceSession(str(wpast),
-                                    providers=["CPUExecutionProvider"])
-        notice("TESTMODE2", "using decoder_with_past graph for steps; "
-               f"inputs={len(dec2.get_inputs())}")
-    dec2_inputs = {i.name for i in dec2.get_inputs()}
-    for _ in range(80):
-        if next_id == EOS_ID:
-            break
-        generated.append(next_id)
-        if dec2 is dec and not has_past and not use_branch:
-            # Plain decoder graph: re-feed the whole prefix each step.
-            feed = {"input_ids": np.array(
-                [[PAD_ID] + generated], dtype=np.int64)}
-        else:
-            feed = {"input_ids": np.array([[next_id]], dtype=np.int64)}
-            if use_branch:
-                feed["use_cache_branch"] = np.array(True)
-            feed.update(past)
-        if "encoder_hidden_states" in dec2_inputs:
-            feed["encoder_hidden_states"] = hidden
-        if "encoder_attention_mask" in dec2_inputs:
-            feed["encoder_attention_mask"] = mask_np
-        if "attention_mask" in dec2_inputs:
-            feed["attention_mask"] = mask_np
-        out = outputs_by_name(dec2, feed)
-        past = {k.replace("present", "past_key_values", 1): v
-                for k, v in out.items() if k.startswith("present")}
-        next_id = int(np.argmax(out["logits"][0, -1]))
-
-    decoded = tok.decode(generated, skip_special_tokens=True)
-    notice("TESTSRC", text)
-    notice("TESTOUT", decoded)
-    if not decoded.strip():
-        raise SystemExit("greedy test produced empty output")
-    arab = sum(1 for ch in decoded if "\u0600" <= ch <= "\u06ff")
-    notice("TESTARABIC", f"arabic_script_chars={arab}")
-    if arab < 3:
-        raise SystemExit("greedy test output is not Arabic-script Kurdish")
+    samples = [
+        "Where are you going? I will wait for you at the station.",
+        "I can't believe it... he is still alive!",
+        "Don't touch my sister, or I will kill you.",
+    ]
+    for idx, text in enumerate(samples, 1):
+        ids = encode(text)
+        ids_np = np.array([ids], dtype=np.int64)
+        mask_np = np.ones_like(ids_np)
+        hidden = enc.run(None, {"input_ids": ids_np,
+                                "attention_mask": mask_np})[0]
+        generated = []
+        for _ in range(96):
+            feed = {
+                "input_ids": np.array([[PAD_ID] + generated],
+                                      dtype=np.int64),
+                "encoder_hidden_states": hidden,
+                "encoder_attention_mask": mask_np,
+            }
+            logits = dec.run(None, feed)[0][0, -1]
+            for b in banned:
+                if b < logits.shape[0]:
+                    logits[b] = -1e9
+            nxt = int(np.argmax(logits))
+            if nxt == EOS_ID:
+                break
+            generated.append(nxt)
+        decoded = decode(generated)
+        notice(f"TESTOUT{idx}", f"EN: {text}  =>  CKB: {decoded}")
+        arab = sum(1 for ch in decoded if "\u0600" <= ch <= "\u06ff")
+        if not decoded or arab < 3:
+            raise SystemExit(f"sample {idx} failed: {decoded!r}")
 
 
 def main() -> None:
