@@ -50,6 +50,8 @@ def greedy_test(enc_path: Path, dec_path: Path) -> None:
            f"kur_tag_id={tag} src_spm_pieces={src.get_piece_size()} "
            f"tgt_spm_pieces={tgt.get_piece_size()} "
            f"hf_vocab={len(tok)} pad={tok.pad_token_id} eos={tok.eos_token_id}")
+    inv = {i: t for t, i in tok.get_vocab().items()}
+    notice("VOCABHEAD", ",".join(f"{i}={inv.get(i)}" for i in range(6)))
     tag_ids = sorted(
         i for t, i in tok.get_vocab().items()
         if t.startswith(">>") and t.endswith("<<"))
@@ -101,7 +103,7 @@ def greedy_test(enc_path: Path, dec_path: Path) -> None:
     notice("TESTPAST", f"past tensors={len(past)}")
 
     generated = []
-    tok = int(np.argmax(out["logits"][0, -1]))
+    next_id = int(np.argmax(out["logits"][0, -1]))
     wpast = OUT / "decoder_with_past_model_quantized.onnx"
     dec2 = dec
     if wpast.exists():
@@ -111,15 +113,15 @@ def greedy_test(enc_path: Path, dec_path: Path) -> None:
                f"inputs={len(dec2.get_inputs())}")
     dec2_inputs = {i.name for i in dec2.get_inputs()}
     for _ in range(80):
-        if tok == EOS_ID:
+        if next_id == EOS_ID:
             break
-        generated.append(tok)
+        generated.append(next_id)
         if dec2 is dec and not has_past and not use_branch:
             # Plain decoder graph: re-feed the whole prefix each step.
             feed = {"input_ids": np.array(
                 [[PAD_ID] + generated], dtype=np.int64)}
         else:
-            feed = {"input_ids": np.array([[tok]], dtype=np.int64)}
+            feed = {"input_ids": np.array([[next_id]], dtype=np.int64)}
             if use_branch:
                 feed["use_cache_branch"] = np.array(True)
             feed.update(past)
@@ -132,7 +134,7 @@ def greedy_test(enc_path: Path, dec_path: Path) -> None:
         out = outputs_by_name(dec2, feed)
         past = {k.replace("present", "past_key_values", 1): v
                 for k, v in out.items() if k.startswith("present")}
-        tok = int(np.argmax(out["logits"][0, -1]))
+        next_id = int(np.argmax(out["logits"][0, -1]))
 
     decoded = tok.decode(generated, skip_special_tokens=True)
     notice("TESTSRC", text)
