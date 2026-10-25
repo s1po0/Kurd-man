@@ -52,10 +52,10 @@ android {
         koorix {
             dimension "edition"
             applicationId "com.koorix.app"
-            versionCode 5
+            versionCode 6
             // Double quotes on purpose: the KurdMan release job greps the
             // first single-quoted versionName in this file.
-            versionName "1.2.2"
+            versionName "1.2.3"
             buildConfigField "boolean", "PUBLIC_EDITION", "true"
             buildConfigField "boolean", "SHOW_TELEGRAM", "false"
             buildConfigField "boolean", "SHOW_UNLIMITED_OCR", "false"

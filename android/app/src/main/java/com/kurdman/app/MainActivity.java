@@ -1784,9 +1784,10 @@ public class MainActivity extends AppCompatActivity {
         if (!offlineMode) {
             translator = new SoraniTranslator();
         } else if ("ckb".equals(targetLanguage)) {
-            // Sorani has no ML Kit pack, so it uses our own downloadable
-            // Sorani language pack (other sources pivot to English first).
-            translator = new SoraniTranslator(new SoraniPackEngine(this));
+            // Sorani has no ML Kit pack; it uses our own downloadable
+            // Sorani language pack in the :offline_ai process, which
+            // translates every source language directly.
+            translator = new SoraniTranslator(new OfflineAiClient(this));
         } else {
             translator = new SoraniTranslator(new MlKitOfflineEngine());
         }
@@ -1856,39 +1857,6 @@ public class MainActivity extends AppCompatActivity {
             downloadOfflineButton.setEnabled(!ready);
             if (deleteOfflineButton != null) {
                 deleteOfflineButton.setEnabled(downloaded > 0);
-            }
-            if (ready && !"en".equals(source)) {
-                // Non-English pages pivot through English offline.
-                offlinePackReady = false;
-                executor.execute(() -> {
-                    boolean pivotReady;
-                    try {
-                        pivotReady = MlKitOfflineEngine.isPackDownloaded(
-                                source, "en");
-                    } catch (Exception e) {
-                        pivotReady = false;
-                    }
-                    final boolean pivot = pivotReady;
-                    runOnUiThread(() -> {
-                        if (!("ckb".equals(selectedTargetLanguage())
-                                && source.equals(selectedSourceLanguage()))) {
-                            return; // selection changed meanwhile
-                        }
-                        offlinePackReady = pivot;
-                        offlinePackPair = pair;
-                        if (offlineModelStatus != null) {
-                            offlineModelStatus.setText(pivot
-                                    ? getString(R.string.ks_0720)
-                                    : getString(R.string.ks_0750));
-                        }
-                        if (downloadOfflineButton != null) {
-                            downloadOfflineButton.setText(pivot
-                                    ? getString(R.string.ks_0723)
-                                    : getString(R.string.ks_0722));
-                            downloadOfflineButton.setEnabled(!pivot);
-                        }
-                    });
-                });
             }
             return;
         }
@@ -2053,9 +2021,7 @@ public class MainActivity extends AppCompatActivity {
         final String source = selectedSourceLanguage();
         final String target = selectedTargetLanguage();
         if ("ckb".equals(target)) {
-            final boolean packReady = offlineModelManager.isModelReady();
-            final boolean needPivot = !"en".equals(source);
-            if (packReady && !needPivot) {
+            if (offlineModelManager.isModelReady()) {
                 refreshOfflineModelUi();
                 setStatus(getString(R.string.ks_0729));
                 return;
@@ -2068,7 +2034,6 @@ public class MainActivity extends AppCompatActivity {
                 final int[] lastPercent = {-1};
                 final boolean[] lastVerifying = {false};
                 try {
-                    if (!packReady) {
                     offlineModelManager.downloadModel(
                             (downloadedBytes, totalBytes, currentFile,
                              verifying) -> {
@@ -2099,11 +2064,6 @@ public class MainActivity extends AppCompatActivity {
                                     }
                                 });
                             });
-                    }
-                    if (needPivot) {
-                        setStatus(getString(R.string.ks_0749));
-                        MlKitOfflineEngine.downloadPack(source, "en");
-                    }
                     runOnUiThread(this::refreshOfflineModelUi);
                     setStatus(getString(R.string.ks_0727));
                 } catch (Throwable e) {
@@ -2885,11 +2845,8 @@ public class MainActivity extends AppCompatActivity {
         if (offlineMode) {
             refreshOfflineModelUi();
             if ("ckb".equals(targetLanguage)) {
-                String pair = sourceLanguage + ">" + targetLanguage;
                 if (offlineModelManager == null
-                        || !offlineModelManager.isModelReady()
-                        || !offlinePackReady
-                        || !pair.equals(offlinePackPair)) {
+                        || !offlineModelManager.isModelReady()) {
                     setStatus(getString(R.string.ks_0737));
                     return;
                 }

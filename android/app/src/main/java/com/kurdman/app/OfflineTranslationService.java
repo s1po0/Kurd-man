@@ -13,9 +13,9 @@ import android.os.RemoteException;
 import android.util.Log;
 
 /**
- * Runs the offline Sorani language pack in a separate {@code :offline_ai} process.
+ * Runs the offline NLLB engine in a separate {@code :offline_ai} process.
  *
- * <p>Loading and running the pack's ONNX sessions can abort in native
+ * <p>Loading and running three ~450 MB ONNX sessions can abort in native
  * code or get the process killed for memory on some phones. Keeping that
  * work in this process means such a failure ends only this process; the
  * main app process stays alive and can show a friendly error instead of
@@ -28,7 +28,7 @@ public class OfflineTranslationService extends Service {
     private Handler worker;
     private Messenger messenger;
     private OfflineModelManager modelManager;
-    private OpusMtTranslator engine;
+    private OfflineNllbTranslator engine;
 
     private final class IncomingHandler extends Handler {
         IncomingHandler(Looper looper) {
@@ -107,9 +107,9 @@ public class OfflineTranslationService extends Service {
         super.onDestroy();
     }
 
-    private OpusMtTranslator ensureEngine() {
+    private OfflineNllbTranslator ensureEngine() {
         if (engine == null) {
-            engine = new OpusMtTranslator(modelManager);
+            engine = new OfflineNllbTranslator(modelManager);
         }
         return engine;
     }

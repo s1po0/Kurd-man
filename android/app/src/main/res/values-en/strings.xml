@@ -221,7 +221,7 @@
     <string name="ks_0158">"To use it again you must download it again."</string>
     <string name="ks_0159">"For an imported font make sure it has ڕ، ڵ، ێ، ە and ۆ."</string>
     <string name="ks_0160">"E.g.: on which image/page and at which step did the problem happen?"</string>
-    <string name="ks_0161">"For each language a pack downloads once (other languages ~30 MB; Sorani — which Google\'s packs don\'t include — has its own ~143 MB pack); after that, translation is fully offline on the phone — like Online mode, but offline."</string>
+    <string name="ks_0161">"For each language a pack downloads once (other languages ~30 MB; Sorani — which Google\'s packs don\'t include — has its own big ~1.34 GB pack); after that, translation is fully offline on the phone — like Online mode, but offline."</string>
     <string name="ks_0162">"For this whole page"</string>
     <string name="ks_0163">"For this whole page?"</string>
     <string name="ks_0164">"For all pages"</string>
@@ -778,10 +778,10 @@
     <string name="ks_0715">" — imported"</string>
     <string name="ks_0716">"Imported font"</string>
     <string name="ks_0717">"📴 Offline translation — Sorani language pack"</string>
-    <string name="ks_0718">"Sorani isn\'t in Google\'s packs, so — like every other language — its own pack downloads once (~143 MB); after that, translation into Sorani runs fully offline on your phone. Note: the offline pack\'s quality is lower than Online mode — use Online for the best results."</string>
-    <string name="ks_0719">"Helsinki-NLP OPUS-MT • Apache-2.0"</string>
+    <string name="ks_0718">"Sorani isn\'t in Google\'s packs, so the dedicated Sorani pack downloads once (~1.34 GB — Wi-Fi recommended); after that, translation into Sorani runs fully offline on your phone at high quality, directly from every source language."</string>
+    <string name="ks_0719">"NLLB-200 (Meta) • CC BY-NC 4.0"</string>
     <string name="ks_0720">"✅ Sorani language pack ready — offline translation into Sorani"</string>
-    <string name="ks_0721">"Not downloaded yet • ~143 MB"</string>
+    <string name="ks_0721">"Not downloaded yet • 1.34 GB"</string>
     <string name="ks_0722">"⬇  Download Sorani pack"</string>
     <string name="ks_0723">"✓ Pack ready"</string>
     <string name="ks_0724">"⬇ Starting the language pack download ("</string>
