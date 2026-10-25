@@ -102,26 +102,39 @@ def greedy_test(enc_path: Path, dec_path: Path) -> None:
 
     generated = []
     tok = int(np.argmax(out["logits"][0, -1]))
+    wpast = OUT / "decoder_with_past_model_quantized.onnx"
+    dec2 = dec
+    if wpast.exists():
+        dec2 = ort.InferenceSession(str(wpast),
+                                    providers=["CPUExecutionProvider"])
+        notice("TESTMODE2", "using decoder_with_past graph for steps; "
+               f"inputs={len(dec2.get_inputs())}")
+    dec2_inputs = {i.name for i in dec2.get_inputs()}
     for _ in range(80):
         if tok == EOS_ID:
             break
         generated.append(tok)
-        feed = {"input_ids": np.array([[tok]], dtype=np.int64)}
-        if use_branch:
-            feed["use_cache_branch"] = np.array(True)
-        feed.update(past)
-        if "encoder_hidden_states" in dec_inputs:
+        if dec2 is dec and not has_past and not use_branch:
+            # Plain decoder graph: re-feed the whole prefix each step.
+            feed = {"input_ids": np.array(
+                [[PAD_ID] + generated], dtype=np.int64)}
+        else:
+            feed = {"input_ids": np.array([[tok]], dtype=np.int64)}
+            if use_branch:
+                feed["use_cache_branch"] = np.array(True)
+            feed.update(past)
+        if "encoder_hidden_states" in dec2_inputs:
             feed["encoder_hidden_states"] = hidden
-        if "encoder_attention_mask" in dec_inputs:
+        if "encoder_attention_mask" in dec2_inputs:
             feed["encoder_attention_mask"] = mask_np
-        if "attention_mask" in dec_inputs:
+        if "attention_mask" in dec2_inputs:
             feed["attention_mask"] = mask_np
-        out = outputs_by_name(dec, feed)
+        out = outputs_by_name(dec2, feed)
         past = {k.replace("present", "past_key_values", 1): v
                 for k, v in out.items() if k.startswith("present")}
         tok = int(np.argmax(out["logits"][0, -1]))
 
-    decoded = tgt.decode(generated)
+    decoded = tok.decode(generated, skip_special_tokens=True)
     notice("TESTSRC", text)
     notice("TESTOUT", decoded)
     if not decoded.strip():
@@ -166,6 +179,12 @@ def main() -> None:
         ("encoder_model.onnx", "encoder_model_quantized.onnx"),
         ("decoder_model.onnx", "decoder_model_quantized.onnx"),
     ]
+    if (FP32 / "decoder_with_past_model.onnx").exists():
+        jobs.append(("decoder_with_past_model.onnx",
+                     "decoder_with_past_model_quantized.onnx"))
+        notice("WPAST", "decoder_with_past_model.onnx exported")
+    else:
+        notice("WPAST", "NO decoder_with_past_model.onnx")
     for src_name, dst_name in jobs:
         src = FP32 / src_name
         if not src.exists():
@@ -189,7 +208,7 @@ def main() -> None:
             )
 
     # Tokenizer files (copied verbatim from the Helsinki repo export).
-    for name in ("source.spm", "target.spm"):
+    for name in ("source.spm", "target.spm", "vocab.json"):
         src = FP32 / name
         if not src.exists():
             from huggingface_hub import hf_hub_download
