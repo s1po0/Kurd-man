@@ -393,6 +393,20 @@
                 android:textDirection="firstStrongRtl"
                 android:textSize="13sp" />
 
+            <Button
+                android:id="@+id/signOutButton"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_button_danger"
+                android:fontFamily="sans-serif-black"
+                android:minHeight="52dp"
+                android:stateListAnimator="@null"
+                android:text="@string/kx_sign_out"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="13sp" />
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
@@ -492,19 +506,6 @@
                 android:textColor="@color/white"
                 android:textSize="15sp" />
 
-            <Button
-                android:id="@+id/signOutButton"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/bg_button_danger"
-                android:fontFamily="sans-serif-black"
-                android:minHeight="48dp"
-                android:stateListAnimator="@null"
-                android:text="@string/kx_sign_out"
-                android:textAllCaps="false"
-                android:textColor="@color/white"
-                android:textSize="13sp" />
         </LinearLayout>
     </LinearLayout>
 </ScrollView>

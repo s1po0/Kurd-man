@@ -92,6 +92,11 @@
         <!-- PP-OCR's ONNX inference is isolated for the same reason: a
              native abort or low-memory kill must not close the whole app. -->
         <service
+            android:name=".OfflineTranslationService"
+            android:exported="false"
+            android:process=":offline_ai" />
+
+        <service
             android:name=".PaddleOcrService"
             android:exported="false"
             android:process=":ocr_ai" />

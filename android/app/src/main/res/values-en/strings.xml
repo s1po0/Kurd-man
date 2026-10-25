@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="kx_hero_subtitle">The best app for translating manhwa into %1$s</string>
+    <string name="kx_hero_subtitle">"The best app for translating manhwa into every language"</string>
     <string name="kx_version_chip">v%1$s  •  Manhwa translator</string>
     <string name="kx_account_btn">👤  My account  •  💎 Premium</string>
     <string name="kx_settings_subtitle">Output format, the offline model, the stronger OCR pack and keep-alive until STOP are gathered here.</string>
@@ -516,7 +516,7 @@
     <string name="ks_0453">"Open"</string>
     <string name="ks_0454">"Koorix"</string>
     <string name="ks_0455">"Koorix — beautiful translation"</string>
-    <string name="ks_0456">"Translation"</string>
+    <string name="ks_0456">"Kurdish"</string>
     <string name="ks_0457">"End — left side for Sorani"</string>
     <string name="ks_0458">"Controls hidden — press «Controls» on the image to bring them back."</string>
     <string name="ks_0459">"a problem happens, its cause, time and stage appear here."</string>
@@ -783,4 +783,36 @@
     <string name="kx_phone_note">"Country code is added automatically (+964 Iraq) if you start with 0."</string>
     <string name="kx_err_phone">"Type the phone number correctly (e.g. 07501234567)."</string>
     <string name="kx_err_sms_off">"SMS sign-in is not enabled on the server yet — use email or Google."</string>
+    <string name="ks_0717">"🤖 Sorani offline — AI model (Meta NLLB-200)"</string>
+    <string name="ks_0718">"The only offline way for Kurdish Sorani: a big model (1.34 GB) downloads once; after that, translation into Sorani runs fully offline on your phone. Slower than online; 6 GB RAM or more recommended. (Other languages use the small 30 MB packs.)"</string>
+    <string name="ks_0719">"Meta NLLB-200 • CC BY-NC 4.0"</string>
+    <string name="ks_0720">"✅ Sorani offline model ready — offline translation into Sorani"</string>
+    <string name="ks_0721">"Not downloaded yet • 1.34 GB"</string>
+    <string name="ks_0722">"⬇  Download Sorani model"</string>
+    <string name="ks_0723">"✓ Model ready"</string>
+    <string name="ks_0724">"⬇ Starting the offline model download ("</string>
+    <string name="ks_0725">"🔎 Verifying the offline model: "</string>
+    <string name="ks_0726">"⬇ Downloading the offline model: "</string>
+    <string name="ks_0727">"✅ Offline model ready. Now you can turn the internet off and use Offline mode for Sorani."</string>
+    <string name="ks_0728">"❌ Offline model download failed: "</string>
+    <string name="ks_0729">"✅ The offline model is ready on this phone."</string>
+    <string name="ks_0730">"Delete the offline model?"</string>
+    <string name="ks_0731">"About "</string>
+    <string name="ks_0732">" will be deleted. To use Sorani offline again you must download the model again."</string>
+    <string name="ks_0733">"Deleting the offline model…"</string>
+    <string name="ks_0734">"✅ Offline model deleted and space freed."</string>
+    <string name="ks_0735">"⚠ Some model files were not deleted; try again."</string>
+    <string name="ks_0736">"❌ Deleting the model failed: "</string>
+    <string name="ks_0737">"⚠ For offline translation into Sorani, first download the Sorani model in Settings; internet is needed the first time, then it works offline."</string>
+    <string name="ks_0738">"The phone\'s free space is not enough; the model needs about "</string>
+    <string name="ks_0739">" plus a little extra space. ("</string>
+    <string name="ks_0740">"A model file is corrupted or changed and the integrity check failed; download it again. ("</string>
+    <string name="ks_0741">"The phone\'s free memory is not enough to load the model; close other apps and try again. ("</string>
+    <string name="ks_0742">"The AI process stopped (usually due to low available memory). Close other apps and try again; if it keeps stopping, use Online mode. ("</string>
+    <string name="ks_0743">"Offline translation took too long and was stopped; try a smaller image or Online mode. ("</string>
+    <string name="ks_0744">"First tap «Download Sorani model» and wait for the download and verification to finish. ("</string>
+    <string name="ks_0745">"The offline model produced no Kurdish translation for this text; try a clearer image or Online mode. ("</string>
+    <string name="ks_0746">"The offline model could not run on this phone; if it happens again, delete the model and download it again. ("</string>
+    <string name="ks_0747">"Couldn\'t connect to the model download server; check your internet and resume the download. ("</string>
+    <string name="ks_0748">"⚠ There is no offline model on this phone to delete."</string>
 </resources>

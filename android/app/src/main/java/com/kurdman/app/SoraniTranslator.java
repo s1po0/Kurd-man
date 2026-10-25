@@ -202,6 +202,8 @@ public class SoraniTranslator implements AutoCloseable {
     public void cancelOffline() {
         if (offlineEngine instanceof MlKitOfflineEngine) {
             ((MlKitOfflineEngine) offlineEngine).requestCancel();
+        } else if (offlineEngine instanceof OfflineAiClient) {
+            ((OfflineAiClient) offlineEngine).requestCancel();
         }
     }
 

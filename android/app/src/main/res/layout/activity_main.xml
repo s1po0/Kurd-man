@@ -228,6 +228,79 @@
                         android:textStyle="bold" />
                 </LinearLayout>
 
+            <!-- Koorix only (shown from code): app language picker. -->
+            <LinearLayout
+                android:id="@+id/languageRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_glass_chip"
+                android:orientation="vertical"
+                android:paddingStart="14dp"
+                android:paddingTop="14dp"
+                android:paddingEnd="14dp"
+                android:paddingBottom="14dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-black"
+                    android:text="@string/kx_language_title"
+                    android:textColor="@color/white"
+                    android:textDirection="firstStrongRtl"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/langKuButton"
+                        android:layout_width="0dp"
+                        android:layout_height="46dp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_button_secondary"
+                        android:minHeight="46dp"
+                        android:stateListAnimator="@null"
+                        android:text="کوردی سۆرانی"
+                        android:textAllCaps="false"
+                        android:textColor="@color/text_primary"
+                        android:textSize="13sp" />
+
+                    <Button
+                        android:id="@+id/langEnButton"
+                        android:layout_width="0dp"
+                        android:layout_height="46dp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_button_secondary"
+                        android:minHeight="46dp"
+                        android:stateListAnimator="@null"
+                        android:text="English"
+                        android:textAllCaps="false"
+                        android:textColor="@color/text_primary"
+                        android:textSize="13sp" />
+
+                    <Button
+                        android:id="@+id/langArButton"
+                        android:layout_width="0dp"
+                        android:layout_height="46dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_button_secondary"
+                        android:minHeight="46dp"
+                        android:stateListAnimator="@null"
+                        android:text="العربية"
+                        android:textAllCaps="false"
+                        android:textColor="@color/text_primary"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
+
                 <!-- Koorix public edition only (shown from code). -->
                 <Button
                     android:id="@+id/accountButton"
@@ -1226,78 +1299,6 @@
                 android:textDirection="firstStrongRtl"
                 android:textSize="13sp" />
 
-            <!-- Koorix only (shown from code): app language picker. -->
-            <LinearLayout
-                android:id="@+id/languageRow"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:background="@drawable/bg_feature_tile"
-                android:orientation="vertical"
-                android:paddingStart="14dp"
-                android:paddingTop="14dp"
-                android:paddingEnd="14dp"
-                android:paddingBottom="14dp"
-                android:visibility="gone">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-black"
-                    android:text="@string/kx_language_title"
-                    android:textColor="@color/text_primary"
-                    android:textDirection="firstStrongRtl"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:orientation="horizontal">
-
-                    <Button
-                        android:id="@+id/langKuButton"
-                        android:layout_width="0dp"
-                        android:layout_height="46dp"
-                        android:layout_marginEnd="8dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/bg_button_secondary"
-                        android:minHeight="46dp"
-                        android:stateListAnimator="@null"
-                        android:text="@string/ks_0456"
-                        android:textAllCaps="false"
-                        android:textColor="@color/text_primary"
-                        android:textSize="13sp" />
-
-                    <Button
-                        android:id="@+id/langEnButton"
-                        android:layout_width="0dp"
-                        android:layout_height="46dp"
-                        android:layout_marginEnd="8dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/bg_button_secondary"
-                        android:minHeight="46dp"
-                        android:stateListAnimator="@null"
-                        android:text="English"
-                        android:textAllCaps="false"
-                        android:textColor="@color/text_primary"
-                        android:textSize="13sp" />
-
-                    <Button
-                        android:id="@+id/langArButton"
-                        android:layout_width="0dp"
-                        android:layout_height="46dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/bg_button_secondary"
-                        android:minHeight="46dp"
-                        android:stateListAnimator="@null"
-                        android:text="@string/ks_0153"
-                        android:textAllCaps="false"
-                        android:textColor="@color/text_primary"
-                        android:textSize="13sp" />
-                </LinearLayout>
-            </LinearLayout>
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -1616,6 +1617,7 @@
                     android:paddingBottom="14dp">
 
                     <TextView
+                        android:id="@+id/offlineTileTitle"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="sans-serif-black"
@@ -1638,6 +1640,7 @@
                         android:textStyle="bold" />
 
                     <TextView
+                        android:id="@+id/offlineTileDesc"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
@@ -1687,6 +1690,7 @@
                     </LinearLayout>
 
                     <TextView
+                        android:id="@+id/offlineTileFooter"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="9dp"

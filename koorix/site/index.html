@@ -46,10 +46,10 @@
   </header>
 
   <section class="hero">
-    <h1 id="t-h1">باشترین بەرنامە بۆ وەرگێڕانی مانھوا بۆ <span id="t-lang">کوردی</span></h1>
+    <h1 id="t-h1">باشترین بەرنامە بۆ وەرگێڕانی مانھوا بۆ <span>هەموو زمانەکان</span></h1>
     <p id="t-sub"></p>
     <div class="cta">
-      <a class="btn main" id="t-download" href="https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.2.0/Koorix-v1.2.0.apk">⬇ دابەزاندنی Android</a>
+      <a class="btn main" id="t-download" href="https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.2.1/Koorix-v1.2.1.apk">⬇ دابەزاندنی Android</a>
       <a class="btn ghost" id="t-privacy" href="/privacy.html">تایبەتمەندی</a>
     </div>
   </section>
@@ -70,7 +70,7 @@
 
 <script>
 const T = {
-  ckb:{dir:'rtl',lang:'کوردی',
+  ckb:{dir:'rtl',h1:'باشترین بەرنامە بۆ وەرگێڕانی مانھوا بۆ <span>هەموو زمانەکان</span>',
     sub:'وێنەی مانھوا یان تەواوی بەشی CBZ بکە بە کوردی سۆرانی، عەرەبی، ئینگلیزی و زیاتر لە 70 زمان — ئۆنلاین بە خێرایی، یان بە تەواوی ئۆفلاین لەناو مۆبایلەکەتدا بە پاکێجی زمانی بچووک، بێ هیچ مۆدێلێکی گەورە.',
     download:'⬇ دابەزاندنی Android',privacy:'تایبەتمەندی',
     feats:[
@@ -85,7 +85,7 @@ const T = {
     prem:'بەخۆڕایی ڕۆژانە چەند بەشێک وەردەگێڕیت. بە Premium هەموو سنوورەکان لادەبرێن. کۆدی چالاککردن لەناو ئەپەکەدا دەخرێتە ژوورەوە.',
     plans:['1 مانگ','3 مانگ','6 مانگ','1 ساڵ'],
     foot:'Koorix — دروستکراوە بە خۆشەویستی بۆ خوێنەرانی مانھوا'},
-  ar:{dir:'rtl',lang:'العربية',
+  ar:{dir:'rtl',h1:'أفضل تطبيق لترجمة المانهوا إلى <span>جميع اللغات</span>',
     sub:'حوّل صفحات المانهوا أو فصول CBZ كاملة إلى العربية أو الكردية السورانية أو الإنجليزية وأكثر من 70 لغة — بسرعة عبر الإنترنت، أو دون اتصال بالكامل على هاتفك بحزم لغة صغيرة، دون أي نموذج ضخم.',
     download:'⬇ تنزيل Android',privacy:'الخصوصية',
     feats:[
@@ -100,7 +100,7 @@ const T = {
     prem:'مجانًا تترجم عدة فصول كل يوم. مع Premium تُرفع كل الحدود. يُدخَل رمز التفعيل داخل التطبيق.',
     plans:['شهر واحد','3 أشهر','6 أشهر','سنة واحدة'],
     foot:'Koorix — صُنع بحب لقارئي المانهوا'},
-  en:{dir:'ltr',lang:'English',
+  en:{dir:'ltr',h1:'The best app for translating manhwa into <span>every language</span>',
     sub:'Turn manhwa pages or whole CBZ chapters into English, Arabic, Kurdish Sorani and 70+ more languages — fast online, or fully offline on your phone with tiny language packs and no giant AI model.',
     download:'⬇ Download for Android',privacy:'Privacy',
     feats:[
@@ -120,7 +120,7 @@ const $=id=>document.getElementById(id);
 function apply(l){
   const t=T[l]; if(!t) return;
   document.documentElement.lang=l; document.documentElement.dir=t.dir;
-  $('t-lang').textContent=t.lang; $('t-sub').textContent=t.sub;
+  $('t-h1').innerHTML=t.h1; $('t-sub').textContent=t.sub;
   $('t-download').textContent=t.download; $('t-privacy').textContent=t.privacy;
   $('t-features').innerHTML=t.feats.map(f=>`<div class="card"><h3>${f[0]}</h3><p>${f[1]}</p></div>`).join('');
   $('t-premium-h').textContent=t.premHead; $('t-premium').textContent=t.prem;

@@ -173,6 +173,10 @@ public class MainActivity extends AppCompatActivity {
     private Button deleteOfflineButton;
     private volatile boolean offlinePackReady;
     private volatile String offlinePackPair = "";
+    private OfflineModelManager offlineModelManager;
+    private TextView offlineTileTitle;
+    private TextView offlineTileDesc;
+    private TextView offlineTileFooter;
     private CheckBox accurateOcrCheck;
     private CheckBox createPdfCheck;
     private CheckBox cleanEraseCheck;
@@ -310,6 +314,15 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (BuildConfig.PUBLIC_EDITION
+                && AppCompatDelegate.getApplicationLocales().isEmpty()) {
+            // First launch: default the UI to Sorani regardless of the
+            // device language (users thought Kurdish was "removed"
+            // when the app followed an English/Arabic phone locale).
+            // The hero picker can switch to English/Arabic any time.
+            AppCompatDelegate.setApplicationLocales(
+                    LocaleListCompat.forLanguageTags("ckb"));
+        }
         setContentView(R.layout.activity_main);
 
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
@@ -325,6 +338,10 @@ public class MainActivity extends AppCompatActivity {
         offlineModelStatus = findViewById(R.id.offlineModelStatus);
         downloadOfflineButton = findViewById(R.id.downloadOfflineButton);
         deleteOfflineButton = findViewById(R.id.deleteOfflineButton);
+        offlineTileTitle = findViewById(R.id.offlineTileTitle);
+        offlineTileDesc = findViewById(R.id.offlineTileDesc);
+        offlineTileFooter = findViewById(R.id.offlineTileFooter);
+        offlineModelManager = new OfflineModelManager(this);
         accurateOcrCheck = findViewById(R.id.accurateOcrCheck);
         createPdfCheck = findViewById(R.id.createPdfCheck);
         cleanEraseCheck = findViewById(R.id.cleanEraseCheck);
@@ -1763,9 +1780,16 @@ public class MainActivity extends AppCompatActivity {
 
     private SoraniTranslator createTranslator(boolean offlineMode,
                                               String targetLanguage) {
-        SoraniTranslator translator = offlineMode
-                ? new SoraniTranslator(new MlKitOfflineEngine())
-                : new SoraniTranslator();
+        SoraniTranslator translator;
+        if (!offlineMode) {
+            translator = new SoraniTranslator();
+        } else if ("ckb".equals(targetLanguage)) {
+            // Sorani has no ML Kit pack; its offline engine is the
+            // downloadable on-device model in the :offline_ai process.
+            translator = new SoraniTranslator(new OfflineAiClient(this));
+        } else {
+            translator = new SoraniTranslator(new MlKitOfflineEngine());
+        }
         translator.setTargetLanguage(targetLanguage);
         activeTranslator = translator;
         return translator;
@@ -1798,6 +1822,51 @@ public class MainActivity extends AppCompatActivity {
         final String source = selectedSourceLanguage();
         final String target = selectedTargetLanguage();
         final String pair = source + ">" + target;
+        if ("ckb".equals(target)) {
+            if (offlineTileTitle != null) {
+                offlineTileTitle.setText(R.string.ks_0717);
+            }
+            if (offlineTileDesc != null) {
+                offlineTileDesc.setText(R.string.ks_0718);
+            }
+            if (offlineTileFooter != null) {
+                offlineTileFooter.setText(R.string.ks_0719);
+            }
+            boolean ready = offlineModelManager != null
+                    && offlineModelManager.isModelReady();
+            long downloaded = offlineModelManager == null ? 0
+                    : offlineModelManager.downloadedBytes();
+            long total = OfflineModelManager.totalBytes();
+            offlinePackReady = ready;
+            offlinePackPair = pair;
+            if (ready) {
+                offlineModelStatus.setText(R.string.ks_0720);
+            } else if (downloaded > 0) {
+                offlineModelStatus.setText(getString(R.string.ks_0624)
+                        + formatStorage(downloaded) + " / "
+                        + formatStorage(total)
+                        + getString(R.string.ks_0063));
+            } else {
+                offlineModelStatus.setText(R.string.ks_0721);
+            }
+            downloadOfflineButton.setText(ready
+                    ? getString(R.string.ks_0723)
+                    : getString(R.string.ks_0722));
+            downloadOfflineButton.setEnabled(!ready);
+            if (deleteOfflineButton != null) {
+                deleteOfflineButton.setEnabled(downloaded > 0);
+            }
+            return;
+        }
+        if (offlineTileTitle != null) {
+            offlineTileTitle.setText(R.string.ks_0655);
+        }
+        if (offlineTileDesc != null) {
+            offlineTileDesc.setText(R.string.ks_0161);
+        }
+        if (offlineTileFooter != null) {
+            offlineTileFooter.setText(R.string.ks_0101);
+        }
         if (!MlKitOfflineEngine.isPairSupported(source, target)) {
             offlinePackReady = false;
             offlinePackPair = pair;
@@ -1949,6 +2018,62 @@ public class MainActivity extends AppCompatActivity {
     private void downloadOfflineModel() {
         final String source = selectedSourceLanguage();
         final String target = selectedTargetLanguage();
+        if ("ckb".equals(target)) {
+            if (offlineModelManager.isModelReady()) {
+                refreshOfflineModelUi();
+                setStatus(getString(R.string.ks_0729));
+                return;
+            }
+            setBusy(true);
+            setStatus(getString(R.string.ks_0724)
+                    + formatStorage(OfflineModelManager.totalBytes()) + ")…");
+            executor.execute(() -> {
+                JobRuntime.markThreadStarted();
+                final int[] lastPercent = {-1};
+                final boolean[] lastVerifying = {false};
+                try {
+                    offlineModelManager.downloadModel(
+                            (downloadedBytes, totalBytes, currentFile,
+                             verifying) -> {
+                                int percent = totalBytes == 0 ? 0
+                                        : (int) ((downloadedBytes * 100L)
+                                                / totalBytes);
+                                if (percent == lastPercent[0]
+                                        && verifying == lastVerifying[0]
+                                        && percent < 100) {
+                                    return;
+                                }
+                                lastPercent[0] = percent;
+                                lastVerifying[0] = verifying;
+                                String status = (verifying
+                                        ? getString(R.string.ks_0725)
+                                        : getString(R.string.ks_0726))
+                                        + percent + "% ("
+                                        + formatStorage(downloadedBytes)
+                                        + " / " + formatStorage(totalBytes)
+                                        + ")"
+                                        + (currentFile == null
+                                                || currentFile.isEmpty()
+                                                ? "" : " — " + currentFile);
+                                setStatus(status);
+                                runOnUiThread(() -> {
+                                    if (offlineModelStatus != null) {
+                                        offlineModelStatus.setText(status);
+                                    }
+                                });
+                            });
+                    runOnUiThread(this::refreshOfflineModelUi);
+                    setStatus(getString(R.string.ks_0727));
+                } catch (Throwable e) {
+                    runOnUiThread(this::refreshOfflineModelUi);
+                    setStatus(getString(R.string.ks_0728)
+                            + friendlyOfflineError(e));
+                } finally {
+                    setBusy(false);
+                }
+            });
+            return;
+        }
         if (!MlKitOfflineEngine.isPairSupported(source, target)) {
             refreshOfflineModelUi();
             return;
@@ -1973,6 +2098,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void confirmDeleteOfflineModel() {
+        if ("ckb".equals(selectedTargetLanguage())) {
+            long downloaded = offlineModelManager.downloadedBytes();
+            if (downloaded <= 0 && !offlineModelManager.isModelReady()) {
+                refreshOfflineModelUi();
+                setStatus(getString(R.string.ks_0748));
+                return;
+            }
+            new AlertDialog.Builder(this)
+                    .setTitle(getString(R.string.ks_0730))
+                    .setMessage(getString(R.string.ks_0731)
+                            + formatStorage(downloaded)
+                            + getString(R.string.ks_0732))
+                    .setNegativeButton(getString(R.string.ks_0401), null)
+                    .setPositiveButton(getString(R.string.ks_0174),
+                            (dialog, which) -> deleteOfflineModel())
+                    .show();
+            return;
+        }
         new AlertDialog.Builder(this)
                 .setTitle(getString(R.string.ks_0263))
                 .setMessage(getString(R.string.ks_0409)
@@ -1984,6 +2127,28 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void deleteOfflineModel() {
+        if ("ckb".equals(selectedTargetLanguage())) {
+            setBusy(true);
+            setStatus(getString(R.string.ks_0733));
+            executor.execute(() -> {
+                JobRuntime.markThreadStarted();
+                try {
+                    boolean deleted = offlineModelManager.deleteModel();
+                    offlinePackReady = false;
+                    runOnUiThread(this::refreshOfflineModelUi);
+                    setStatus(deleted
+                            ? getString(R.string.ks_0734)
+                            : getString(R.string.ks_0735));
+                } catch (Exception e) {
+                    runOnUiThread(this::refreshOfflineModelUi);
+                    setStatus(getString(R.string.ks_0736)
+                            + friendlyError(e));
+                } finally {
+                    setBusy(false);
+                }
+            });
+            return;
+        }
         final String source = selectedSourceLanguage();
         final String target = selectedTargetLanguage();
         setBusy(true);
@@ -2047,8 +2212,40 @@ public class MainActivity extends AppCompatActivity {
             return getString(R.string.ks_0271)
                     + getString(R.string.ks_0077) + raw + ")";
         }
-        if (lower.contains("not enough free storage")
-                || lower.contains("no space left")) {
+        if (lower.contains("not enough free storage")) {
+            return getString(R.string.ks_0738)
+                    + formatStorage(OfflineModelManager.totalBytes())
+                    + getString(R.string.ks_0739) + raw + ")";
+        }
+        if (lower.contains("checksum mismatch")
+                || lower.contains("sha-256 mismatch")) {
+            return getString(R.string.ks_0740) + raw + ")";
+        }
+        if (lower.contains("offline_ai_out_of_memory")
+                || lower.contains("outofmemoryerror")
+                || lower.contains("failed to allocate")) {
+            return getString(R.string.ks_0741) + raw + ")";
+        }
+        if (lower.contains("offline_ai_process_died")) {
+            return getString(R.string.ks_0742) + raw + ")";
+        }
+        if (lower.contains("offline_ai_timeout")) {
+            return getString(R.string.ks_0743) + raw + ")";
+        }
+        if (lower.contains("offline_model_not_ready")) {
+            return getString(R.string.ks_0744) + raw + ")";
+        }
+        if (lower.contains("offline_ai_returned_untranslated")
+                || lower.contains("offline ai returned untranslated")) {
+            return getString(R.string.ks_0745) + raw + ")";
+        }
+        if (lower.contains("offline_ai_runtime_error")
+                || lower.contains("offline_ai_model_mismatch")
+                || lower.contains("onnx")
+                || lower.contains("ortexception")) {
+            return getString(R.string.ks_0746) + raw + ")";
+        }
+        if (lower.contains("no space left")) {
             return getString(R.string.ks_0278)
                     + raw + ")";
         }
@@ -2598,13 +2795,7 @@ public class MainActivity extends AppCompatActivity {
         }
         TextView heroSubtitle = findViewById(R.id.heroSubtitle);
         if (heroSubtitle != null) {
-            int index = targetSpinner == null ? 0
-                    : targetSpinner.getSelectedItemPosition();
-            if (index < 0 || index >= TARGET_LABELS.length) {
-                index = 0;
-            }
-            heroSubtitle.setText(getString(
-                    R.string.kx_hero_subtitle, TARGET_LABELS[index]));
+            heroSubtitle.setText(R.string.kx_hero_subtitle);
         }
     }
 
@@ -2651,18 +2842,25 @@ public class MainActivity extends AppCompatActivity {
         final boolean createPdf = selectedCreatePdf();
         if (offlineMode) {
             refreshOfflineModelUi();
-            if (!MlKitOfflineEngine.isPairSupported(
+            if ("ckb".equals(targetLanguage)) {
+                if (offlineModelManager == null
+                        || !offlineModelManager.isModelReady()) {
+                    setStatus(getString(R.string.ks_0737));
+                    return;
+                }
+            } else if (!MlKitOfflineEngine.isPairSupported(
                     sourceLanguage, targetLanguage)) {
                 setStatus(getString(R.string.ks_0539)
                         + getString(R.string.ks_0075));
                 return;
-            }
-            String pair = sourceLanguage + ">" + targetLanguage;
-            if (!offlinePackReady || !pair.equals(offlinePackPair)) {
-                setStatus(getString(R.string.ks_0517)
-                        + getString(R.string.ks_0123)
-                        + getString(R.string.ks_0469));
-                return;
+            } else {
+                String pair = sourceLanguage + ">" + targetLanguage;
+                if (!offlinePackReady || !pair.equals(offlinePackPair)) {
+                    setStatus(getString(R.string.ks_0517)
+                            + getString(R.string.ks_0123)
+                            + getString(R.string.ks_0469));
+                    return;
+                }
             }
         }
 
@@ -4783,7 +4981,10 @@ public class MainActivity extends AppCompatActivity {
             stopJobButton.setEnabled(true);
         }
         boolean modelReady = offlinePackReady;
-        boolean hasModelData = offlinePackReady;
+        boolean hasModelData = offlinePackReady
+                || (offlineModelManager != null
+                        && "ckb".equals(selectedTargetLanguage())
+                        && offlineModelManager.downloadedBytes() > 0);
         if (downloadOfflineButton != null) {
             downloadOfflineButton.setEnabled(enabled && !modelReady);
         }
