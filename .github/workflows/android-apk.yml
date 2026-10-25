@@ -63,7 +63,21 @@ jobs:
           packages: "platform-tools platforms;android-35 build-tools;35.0.0"
 
       - name: Build debug APK
-        run: gradle --stacktrace -p android assembleDebug
+        # Capture the build output and, on failure, surface the actual
+        # compiler/Gradle error lines as annotations. CI log downloads
+        # are not always reachable from every environment, and a bare
+        # "exit code 1" annotation is useless for debugging.
+        run: |
+          set +e
+          gradle --stacktrace -p android assembleDebug > /tmp/build.log 2>&1
+          code=$?
+          tail -n 80 /tmp/build.log
+          if [ $code -ne 0 ]; then
+            grep -E "error:|FAILED|What went wrong|Execution failed|Caused by:" -A2 -B1 /tmp/build.log \
+              | head -50 \
+              | while IFS= read -r line; do echo "::error::$line"; done
+          fi
+          exit $code
 
       - name: Report APK signer fingerprint
         run: |

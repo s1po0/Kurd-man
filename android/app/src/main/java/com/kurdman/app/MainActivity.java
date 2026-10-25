@@ -2583,8 +2583,10 @@ public class MainActivity extends AppCompatActivity {
                                 chosenStyle, styledTypefaceResolver());
                 // A block split at a balloon waist during rendering is
                 // represented by its two halves from now on, so the
-                // saved project/editor matches the picture.
-                segments = renderResult.segments;
+                // saved project/editor matches the picture. (Mutate the
+                // list instead of reassigning: lambdas capture it.)
+                segments.clear();
+                segments.addAll(renderResult.segments);
                 projectPage.segments.clear();
                 projectPage.segments.addAll(segments);
                 project.completed = true;
@@ -2858,8 +2860,10 @@ public class MainActivity extends AppCompatActivity {
                         ManhwaRenderer.render(pageBitmap, segments,
                                 chosenStyle, styledTypefaceResolver());
                 // Keep the saved project in sync when rendering split
-                // a two-lobe block into its halves.
-                segments = renderResult.segments;
+                // a two-lobe block into its halves. (Mutate instead of
+                // reassigning: lambdas capture the variable.)
+                segments.clear();
+                segments.addAll(renderResult.segments);
                 projectPage.segments.clear();
                 projectPage.segments.addAll(segments);
                 Bitmap rendered = renderResult.bitmap;
