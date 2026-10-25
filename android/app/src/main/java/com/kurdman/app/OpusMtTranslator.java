@@ -20,21 +20,22 @@ import ai.onnxruntime.OrtException;
 import ai.onnxruntime.OrtSession;
 
 /**
- * Fully on-device Sorani translation with Meta NLLB-200 distilled 600M.
- *
- * <p>This uses the quantized encoder plus two separate decoder graphs. The
- * separate decoder/decoder-with-past pair is the Android-safe design proven
- * by the MIT-licensed InstantVoiceTranslate project; the single merged
- * decoder's ONNX If branch can produce empty encoder KV tensors on Android.
- * Sessions are owned by one translation job and closed by
- * {@link SoraniTranslator#close()} to release several hundred MB of RAM.</p>
+ * Offline Sorani translation with the downloadable OPUS-MT language
+ * pack (Helsinki-NLP/opus-mt-en-ine, quantized ONNX) — the same idea
+ * as the ~30 MB packs of the other languages, just our own pack for
+ * Sorani because Google's packs have no Sorani. Runs in the isolated
+ * {@code :offline_ai} process; input is always English (other source
+ * languages are pivoted to English by their normal packs first).
  */
-final class OfflineNllbTranslator
+final class OpusMtTranslator
         implements SoraniTranslator.OfflineEngine, AutoCloseable {
-    private static final String TAG = "OfflineNllbTranslator";
+    private static final String TAG = "SoraniPack";
     private static final int MAX_INPUT_TOKENS = 192;
     private static final int MAX_CHUNK_CHARS = 220;
     private static final int MAX_OUTPUT_TOKENS = 192;
+    private static final int BEAM_WIDTH = 4;
+    private static final double LENGTH_ALPHA = 0.6;
+    private static final int NO_REPEAT_NGRAM = 3;
     private static final int CACHE_SIZE = 256;
 
     private final OfflineModelManager modelManager;
@@ -51,10 +52,9 @@ final class OfflineNllbTranslator
     private OrtSession.SessionOptions sessionOptions;
     private OrtSession encoderSession;
     private OrtSession decoderSession;
-    private OrtSession decoderWithPastSession;
-    private NllbTokenizer tokenizer;
+    private OpusTokenizer tokenizer;
 
-    OfflineNllbTranslator(OfflineModelManager modelManager) {
+    OpusMtTranslator(OfflineModelManager modelManager) {
         this.modelManager = modelManager;
     }
 
@@ -64,14 +64,14 @@ final class OfflineNllbTranslator
         }
         if (!modelManager.isModelReady()) {
             throw new IOException("OFFLINE_MODEL_NOT_READY: "
-                    + "The NLLB model has not been downloaded and verified");
+                    + "The Sorani language pack has not been downloaded and verified");
         }
 
         try {
             environment = OrtEnvironment.getEnvironment();
             sessionOptions = new OrtSession.SessionOptions();
             // Phones with little RAM were lagging badly or being killed
-            // while the three ~450 MB sessions loaded/ran. On those, trade
+            // while the three sessions loaded/ran. On those, trade
             // some speed for a much lighter footprint: fewer compute
             // threads (less heat/CPU saturation), no CPU arena (ORT's
             // arena retains large blocks instead of returning them to the
@@ -103,24 +103,20 @@ final class OfflineNllbTranslator
 
             encoderSession = createSession(OfflineModelManager.ENCODER_FILE);
             decoderSession = createSession(OfflineModelManager.DECODER_FILE);
-            decoderWithPastSession = createSession(
-                    OfflineModelManager.DECODER_WITH_PAST_FILE);
 
             requireInputs(encoderSession, "encoder",
                     "input_ids", "attention_mask");
             requireInputs(decoderSession, "decoder",
                     "input_ids", "encoder_hidden_states", "encoder_attention_mask");
-            requireInputs(decoderWithPastSession, "decoder_with_past", "input_ids");
 
-            NllbTokenizer loadedTokenizer = new NllbTokenizer();
+            OpusTokenizer loadedTokenizer = new OpusTokenizer();
             loadedTokenizer.initialize(
-                    modelManager.modelFile(OfflineModelManager.TOKENIZER_FILE));
+                    modelManager.modelFile(OfflineModelManager.SOURCE_SPM_FILE),
+                    modelManager.modelFile(OfflineModelManager.VOCAB_FILE));
             tokenizer = loadedTokenizer;
 
-            Log.i(TAG, "Offline NLLB ready (threads=" + threads
-                    + ", totalRam=" + totalRam + ", lowRam=" + lowRam
-                    + ", decoderPastInputs="
-                    + decoderWithPastSession.getInputNames().size() + ")");
+            Log.i(TAG, "Sorani offline pack ready (threads=" + threads
+                    + ", totalRam=" + totalRam + ", lowRam=" + lowRam + ")");
         } catch (IOException e) {
             close();
             throw e;
@@ -196,8 +192,6 @@ final class OfflineNllbTranslator
         encoderSession = null;
         closeSession(decoderSession);
         decoderSession = null;
-        closeSession(decoderWithPastSession);
-        decoderWithPastSession = null;
         if (tokenizer != null) {
             tokenizer.close();
             tokenizer = null;
@@ -217,7 +211,6 @@ final class OfflineNllbTranslator
         return environment != null
                 && encoderSession != null
                 && decoderSession != null
-                && decoderWithPastSession != null
                 && tokenizer != null
                 && tokenizer.isInitialized();
     }
@@ -242,31 +235,24 @@ final class OfflineNllbTranslator
         OrtEnvironment env = environment;
         OrtSession encoder = encoderSession;
         OrtSession decoder = decoderSession;
-        OrtSession decoderWithPast = decoderWithPastSession;
-        NllbTokenizer tok = tokenizer;
-        if (env == null || encoder == null || decoder == null
-                || decoderWithPast == null || tok == null) {
+        OpusTokenizer tok = tokenizer;
+        if (env == null || encoder == null || decoder == null || tok == null) {
             throw new IOException("OFFLINE_AI_RUNTIME_ERROR: model is not initialized");
         }
 
-        long[] inputIds = tok.encode(text, sourceLanguage);
+        long[] inputIds = tok.encodeSource(text);
         if (inputIds.length > 512) {
             // splitForModel should prevent this; preserve the language token
             // and EOS if a tokenizer edge case still produces a huge chunk.
             long[] truncated = new long[512];
             System.arraycopy(inputIds, 0, truncated, 0, truncated.length - 1);
-            truncated[truncated.length - 1] = NllbTokenizer.EOS_TOKEN_ID;
+            truncated[truncated.length - 1] = OpusTokenizer.EOS_ID;
             inputIds = truncated;
         }
 
         OnnxTensor inputIdsTensor = null;
         OnnxTensor attentionMaskTensor = null;
-        OnnxTensor firstDecoderInput = null;
         OrtSession.Result encoderOutputs = null;
-        OrtSession.Result firstOutputs = null;
-        Map<String, OnnxTensor> encoderKvCache = new LinkedHashMap<>();
-        Map<String, OnnxTensor> decoderKvCache = new LinkedHashMap<>();
-
         try {
             long[] attentionMask = new long[inputIds.length];
             for (int i = 0; i < attentionMask.length; i++) {
@@ -285,116 +271,144 @@ final class OfflineNllbTranslator
             encoderOutputs = encoder.run(encoderInputs);
             OnnxTensor encoderHiddenStates = outputTensor(
                     encoderOutputs, "last_hidden_state");
-
-            long targetToken = tok.targetLanguageTokenId();
-            firstDecoderInput = OnnxTensor.createTensor(
-                    env, LongBuffer.wrap(new long[]{NllbTokenizer.EOS_TOKEN_ID}),
-                    new long[]{1L, 1L});
-            Map<String, OnnxTensor> firstInputs = new HashMap<>();
-            firstInputs.put("input_ids", firstDecoderInput);
-            firstInputs.put("encoder_hidden_states", encoderHiddenStates);
-            firstInputs.put("encoder_attention_mask", attentionMaskTensor);
-            firstOutputs = decoder.run(firstInputs);
-
-            Map<String, OnnxTensor> allKv = extractKvCache(
-                    firstOutputs, decoderWithPast.getInputNames(), false);
-            for (Map.Entry<String, OnnxTensor> entry : allKv.entrySet()) {
-                if (entry.getKey().contains(".encoder.")) {
-                    encoderKvCache.put(entry.getKey(), entry.getValue());
-                } else {
-                    decoderKvCache.put(entry.getKey(), entry.getValue());
-                }
-            }
-            if (decoderKvCache.isEmpty()) {
+            long[] hiddenShape = encoderHiddenStates.getInfo().getShape();
+            if (hiddenShape.length != 3 || hiddenShape[1] <= 0
+                    || hiddenShape[2] <= 0) {
                 throw new IOException("OFFLINE_AI_MODEL_MISMATCH: "
-                        + "decoder produced no KV cache");
+                        + "bad encoder output shape");
             }
+            int sourceLen = (int) hiddenShape[1];
+            int hiddenDim = (int) hiddenShape[2];
+            FloatBuffer hiddenBuffer = encoderHiddenStates.getFloatBuffer();
+            if (hiddenBuffer == null
+                    || hiddenBuffer.remaining() < sourceLen * hiddenDim) {
+                throw new IOException("OFFLINE_AI_MODEL_MISMATCH: "
+                        + "missing encoder states buffer");
+            }
+            float[] hiddenData = new float[sourceLen * hiddenDim];
+            hiddenBuffer.duplicate().get(hiddenData);
 
-            closeResult(firstOutputs);
-            firstOutputs = null;
-            closeTensor(firstDecoderInput);
-            firstDecoderInput = null;
-
-            ArrayList<Long> outputTokens = new ArrayList<>();
-            outputTokens.add(targetToken);
-            long nextDecoderInput = targetToken;
-            int maxOutput = Math.min(MAX_OUTPUT_TOKENS,
-                    Math.max(64, inputIds.length * 2 + 32));
-            long lastGenerated = -1;
-            int repeatedCount = 0;
-
-            for (int step = 0; step < maxOutput; step++) {
+            // Batched beam search over the plain decoder graph (it has no
+            // KV-cache inputs, so each step re-feeds [PAD] + generated).
+            // Same algorithm the pack CI verifies: beam-4, no-repeat
+            // trigram blocking, source-relative length cap, length-
+            // penalty (alpha 0.6) ranking.
+            int maxLen = Math.min(MAX_OUTPUT_TOKENS,
+                    Math.max(24, (int) (inputIds.length * 1.6) + 16));
+            ArrayList<Beam> beams = new ArrayList<>();
+            beams.add(new Beam());
+            for (int step = 0; step < maxLen; step++) {
                 checkInterrupted();
+                ArrayList<Beam> live = new ArrayList<>();
+                for (Beam beam : beams) {
+                    if (!beam.finished) {
+                        live.add(beam);
+                    }
+                }
+                if (live.isEmpty()) {
+                    break;
+                }
+                int rows = live.size();
+                int prefixLen = live.get(0).tokens.size() + 1;
+                long[] batchIds = new long[rows * prefixLen];
+                for (int r = 0; r < rows; r++) {
+                    batchIds[r * prefixLen] = OpusTokenizer.PAD_ID;
+                    ArrayList<Long> toks = live.get(r).tokens;
+                    for (int i = 0; i < toks.size(); i++) {
+                        batchIds[r * prefixLen + 1 + i] = toks.get(i);
+                    }
+                }
+                float[] tiledHidden = new float[rows * hiddenData.length];
+                for (int r = 0; r < rows; r++) {
+                    System.arraycopy(hiddenData, 0, tiledHidden,
+                            r * hiddenData.length, hiddenData.length);
+                }
+                long[] tiledMask = new long[rows * attentionMask.length];
+                for (int r = 0; r < rows; r++) {
+                    System.arraycopy(attentionMask, 0, tiledMask,
+                            r * attentionMask.length, attentionMask.length);
+                }
                 OnnxTensor stepInput = null;
+                OnnxTensor stepHidden = null;
+                OnnxTensor stepMask = null;
                 OrtSession.Result stepOutputs = null;
-                Map<String, OnnxTensor> nextDecoderKvCache = null;
+                ArrayList<Beam> candidates = new ArrayList<>();
                 try {
                     stepInput = OnnxTensor.createTensor(
-                            env, LongBuffer.wrap(new long[]{nextDecoderInput}),
-                            new long[]{1L, 1L});
+                            env, LongBuffer.wrap(batchIds),
+                            new long[]{rows, prefixLen});
+                    stepHidden = OnnxTensor.createTensor(
+                            env, FloatBuffer.wrap(tiledHidden),
+                            new long[]{rows, sourceLen, hiddenDim});
+                    stepMask = OnnxTensor.createTensor(
+                            env, LongBuffer.wrap(tiledMask),
+                            new long[]{rows, attentionMask.length});
                     Map<String, OnnxTensor> stepInputs = new HashMap<>();
                     stepInputs.put("input_ids", stepInput);
-                    Set<String> expected = decoderWithPast.getInputNames();
-                    if (expected.contains("encoder_hidden_states")) {
-                        stepInputs.put("encoder_hidden_states", encoderHiddenStates);
-                    }
-                    if (expected.contains("encoder_attention_mask")) {
-                        stepInputs.put("encoder_attention_mask", attentionMaskTensor);
-                    }
-                    stepInputs.putAll(decoderKvCache);
-                    stepInputs.putAll(encoderKvCache);
-
-                    stepOutputs = decoderWithPast.run(stepInputs);
+                    stepInputs.put("encoder_hidden_states", stepHidden);
+                    stepInputs.put("encoder_attention_mask", stepMask);
+                    stepOutputs = decoder.run(stepInputs);
                     OnnxTensor logits = outputTensor(stepOutputs, "logits");
-                    long nextToken = argmax(logits, tok);
-                    if (nextToken == NllbTokenizer.EOS_TOKEN_ID) {
-                        break;
-                    }
-
-                    outputTokens.add(nextToken);
-                    if (nextToken == lastGenerated) {
-                        repeatedCount++;
-                    } else {
-                        lastGenerated = nextToken;
-                        repeatedCount = 1;
-                    }
-                    if (repeatedCount >= 8) {
-                        break;
-                    }
-
-                    nextDecoderKvCache = extractKvCache(
-                            stepOutputs, expected, true);
-                    if (nextDecoderKvCache.isEmpty()) {
+                    long[] shape = logits.getInfo().getShape();
+                    if (shape.length != 3 || shape[2] <= 0
+                            || shape[2] > Integer.MAX_VALUE) {
                         throw new IOException("OFFLINE_AI_MODEL_MISMATCH: "
-                                + "decoder_with_past produced no KV cache");
+                                + "invalid logits shape");
                     }
-                    closeTensorMap(decoderKvCache);
-                    decoderKvCache = nextDecoderKvCache;
-                    nextDecoderKvCache = null;
-                    nextDecoderInput = nextToken;
+                    if (logits.getInfo().type != OnnxJavaType.FLOAT
+                            && logits.getInfo().type != OnnxJavaType.FLOAT16
+                            && logits.getInfo().type != OnnxJavaType.BFLOAT16) {
+                        throw new IOException("OFFLINE_AI_MODEL_MISMATCH: "
+                                + "unsupported logits type "
+                                + logits.getInfo().type);
+                    }
+                    FloatBuffer buffer = logits.getFloatBuffer();
+                    if (buffer == null) {
+                        throw new IOException("OFFLINE_AI_MODEL_MISMATCH: "
+                                + "missing logits buffer");
+                    }
+                    int vocab = (int) shape[2];
+                    int positions = (int) shape[1];
+                    for (int r = 0; r < rows; r++) {
+                        int base = (r * positions + (positions - 1)) * vocab;
+                        expandBeam(buffer, base, vocab, tok, live.get(r),
+                                candidates);
+                    }
                 } finally {
-                    if (nextDecoderKvCache != null) {
-                        closeTensorMap(nextDecoderKvCache);
-                    }
                     if (stepOutputs != null) {
                         closeResult(stepOutputs);
                     }
                     if (stepInput != null) {
                         closeTensor(stepInput);
                     }
+                    if (stepHidden != null) {
+                        closeTensor(stepHidden);
+                    }
+                    if (stepMask != null) {
+                        closeTensor(stepMask);
+                    }
+                }
+                if (candidates.isEmpty()) {
+                    break;
+                }
+                candidates.sort((x, y) -> Double.compare(y.score, x.score));
+                beams = new ArrayList<>(candidates.subList(
+                        0, Math.min(BEAM_WIDTH, candidates.size())));
+            }
+            Beam best = null;
+            double bestRank = Double.NEGATIVE_INFINITY;
+            for (Beam beam : beams) {
+                int len = Math.max(1, beam.tokens.size()
+                        + (beam.finished ? 1 : 0));
+                double rank = beam.score / Math.pow(len, LENGTH_ALPHA);
+                if (rank > bestRank) {
+                    bestRank = rank;
+                    best = beam;
                 }
             }
-
-            return tok.decode(toLongArray(outputTokens));
+            return tok.decodeTarget(best == null
+                    ? new long[0] : toLongArray(best.tokens));
         } finally {
-            closeTensorMap(decoderKvCache);
-            closeTensorMap(encoderKvCache);
-            if (firstOutputs != null) {
-                closeResult(firstOutputs);
-            }
-            if (firstDecoderInput != null) {
-                closeTensor(firstDecoderInput);
-            }
             if (encoderOutputs != null) {
                 closeResult(encoderOutputs);
             }
@@ -407,118 +421,132 @@ final class OfflineNllbTranslator
         }
     }
 
-    private Map<String, OnnxTensor> extractKvCache(
-            OrtSession.Result outputs,
-            Set<String> expectedInputNames,
-            boolean decoderOnly) throws IOException, OrtException {
-        Map<String, OnnxTensor> cache = new LinkedHashMap<>();
-        try {
-            for (Map.Entry<String, OnnxValue> entry : outputs) {
-                String outputName = entry.getKey();
-                if (!outputName.startsWith("present.")) {
-                    continue;
-                }
-                if (decoderOnly && outputName.contains(".encoder.")) {
-                    continue;
-                }
-                String inputName = "past_key_values"
-                        + outputName.substring("present".length());
-                if (!expectedInputNames.contains(inputName)) {
-                    continue;
-                }
-                OnnxValue value = entry.getValue();
-                if (!(value instanceof OnnxTensor)) {
-                    continue;
-                }
-                OnnxTensor tensor = (OnnxTensor) value;
-                long[] shape = tensor.getInfo().getShape();
-                for (long dimension : shape) {
-                    if (dimension <= 0) {
-                        throw new IOException("OFFLINE_AI_MODEL_MISMATCH: "
-                                + "empty KV tensor " + outputName);
-                    }
-                }
-                cache.put(inputName, cloneTensor(tensor));
+    /** One hypothesis in the beam search. */
+    private static final class Beam {
+        final ArrayList<Long> tokens = new ArrayList<>();
+        double score;
+        boolean finished;
+
+        Beam() {
+        }
+
+        Beam(Beam parent, long token, double newScore, boolean done) {
+            tokens.addAll(parent.tokens);
+            if (!done) {
+                tokens.add(token);
             }
-            return cache;
-        } catch (IOException | OrtException | RuntimeException e) {
-            closeTensorMap(cache);
-            throw e;
+            score = newScore;
+            finished = done;
         }
     }
 
-    private OnnxTensor cloneTensor(OnnxTensor tensor)
-            throws IOException, OrtException {
-        long[] shape = tensor.getInfo().getShape();
-        long count = 1;
-        for (long dimension : shape) {
-            if (dimension <= 0 || count > Integer.MAX_VALUE / dimension) {
-                throw new IOException("OFFLINE_AI_MODEL_MISMATCH: "
-                        + "invalid tensor shape");
+    /** Tokens that would repeat a trigram already in {@code tokens}. */
+    private static java.util.Set<Long> ngramBlocked(ArrayList<Long> tokens) {
+        java.util.Set<Long> blocked = new java.util.HashSet<>();
+        int size = tokens.size();
+        if (size < NO_REPEAT_NGRAM - 1) {
+            return blocked;
+        }
+        long p0 = tokens.get(size - 2);
+        long p1 = tokens.get(size - 1);
+        for (int i = 0; i + NO_REPEAT_NGRAM - 1 < size; i++) {
+            if (tokens.get(i) == p0 && tokens.get(i + 1) == p1) {
+                blocked.add(tokens.get(i + NO_REPEAT_NGRAM - 1));
             }
-            count *= dimension;
         }
-        FloatBuffer source = tensor.getFloatBuffer();
-        if (source == null) {
-            throw new IOException("OFFLINE_AI_MODEL_MISMATCH: "
-                    + "unsupported KV tensor type "
-                    + tensor.getInfo().type);
-        }
-        FloatBuffer copy = source.duplicate();
-        copy.rewind();
-        if (copy.remaining() < count) {
-            throw new IOException("OFFLINE_AI_MODEL_MISMATCH: "
-                    + "KV tensor buffer is shorter than its shape");
-        }
-        float[] data = new float[(int) count];
-        copy.get(data);
-        return OnnxTensor.createTensor(
-                environment, FloatBuffer.wrap(data), shape);
+        return blocked;
     }
 
-    private OnnxTensor outputTensor(OrtSession.Result outputs,
-                                    String preferredName) throws IOException {
-        OnnxValue value = outputs.get(preferredName).orElse(outputs.get(0));
-        if (!(value instanceof OnnxTensor)) {
-            throw new IOException("OFFLINE_AI_MODEL_MISMATCH: "
-                    + "expected tensor output " + preferredName);
-        }
-        return (OnnxTensor) value;
-    }
-
-    private long argmax(OnnxTensor logits, NllbTokenizer tok) throws IOException {
-        long[] shape = logits.getInfo().getShape();
-        if (shape.length == 0 || shape[shape.length - 1] <= 0
-                || shape[shape.length - 1] > Integer.MAX_VALUE) {
-            throw new IOException("OFFLINE_AI_MODEL_MISMATCH: invalid logits shape");
-        }
-        if (logits.getInfo().type != OnnxJavaType.FLOAT
-                && logits.getInfo().type != OnnxJavaType.FLOAT16
-                && logits.getInfo().type != OnnxJavaType.BFLOAT16) {
-            throw new IOException("OFFLINE_AI_MODEL_MISMATCH: "
-                    + "unsupported logits type " + logits.getInfo().type);
-        }
-        FloatBuffer buffer = logits.getFloatBuffer();
-        if (buffer == null) {
-            throw new IOException("OFFLINE_AI_MODEL_MISMATCH: missing logits buffer");
-        }
-        int vocabulary = (int) shape[shape.length - 1];
-        int count = Math.min(vocabulary, buffer.remaining());
-        long bestToken = NllbTokenizer.EOS_TOKEN_ID;
-        float bestValue = Float.NEGATIVE_INFINITY;
-        for (int i = 0; i < count; i++) {
-            // Never feed BOS/PAD or another language-control token back into
-            // the decoder. EOS (2) and UNK (3) remain possible outputs.
-            if (i == 0 || i == 1 || tok.isNonTextToken(i)) {
+    /**
+     * Adds up to BEAM_WIDTH expansions of {@code parent} to
+     * {@code candidates} from the last-position logits at {@code base}.
+     * Banned tokens are excluded before the log-softmax, trigram
+     * repeats are skipped (keeping one fallback candidate).
+     */
+    private static void expandBeam(FloatBuffer buffer, int base, int vocab,
+                                   OpusTokenizer tok, Beam parent,
+                                   ArrayList<Beam> candidates) {
+        float max = Float.NEGATIVE_INFINITY;
+        for (int i = 0; i < vocab; i++) {
+            if (tok.isBanned(i)) {
                 continue;
             }
-            float value = buffer.get(i);
-            if (!Float.isNaN(value) && value > bestValue) {
-                bestValue = value;
-                bestToken = i;
+            float v = buffer.get(base + i);
+            if (!Float.isNaN(v) && v > max) {
+                max = v;
             }
         }
-        return bestToken;
+        if (max == Float.NEGATIVE_INFINITY) {
+            return;
+        }
+        double sum = 0.0;
+        for (int i = 0; i < vocab; i++) {
+            if (tok.isBanned(i)) {
+                continue;
+            }
+            float v = buffer.get(base + i);
+            if (!Float.isNaN(v)) {
+                sum += Math.exp(v - max);
+            }
+        }
+        double logSum = max + Math.log(sum);
+        int keep = BEAM_WIDTH * 3;
+        long[] topTokens = new long[keep];
+        double[] topLogp = new double[keep];
+        int found = 0;
+        for (int i = 0; i < vocab; i++) {
+            if (tok.isBanned(i)) {
+                continue;
+            }
+            float v = buffer.get(base + i);
+            if (Float.isNaN(v)) {
+                continue;
+            }
+            double logp = v - logSum;
+            if (found < keep) {
+                topTokens[found] = i;
+                topLogp[found] = logp;
+                found++;
+                if (found == keep) {
+                    sortTop(topTokens, topLogp, found);
+                }
+            } else if (logp > topLogp[keep - 1]) {
+                topTokens[keep - 1] = i;
+                topLogp[keep - 1] = logp;
+                sortTop(topTokens, topLogp, found);
+            }
+        }
+        if (found < keep) {
+            sortTop(topTokens, topLogp, found);
+        }
+        java.util.Set<Long> blocked = ngramBlocked(parent.tokens);
+        int added = 0;
+        for (int i = 0; i < found && added < BEAM_WIDTH; i++) {
+            long token = topTokens[i];
+            if (blocked.contains(token) && added >= 1) {
+                continue;
+            }
+            boolean done = token == OpusTokenizer.EOS_ID;
+            candidates.add(new Beam(parent, token,
+                    parent.score + topLogp[i], done));
+            added++;
+        }
+    }
+
+    /** Insertion-sorts the top-K arrays in descending logp order. */
+    private static void sortTop(long[] tokens, double[] logp, int count) {
+        for (int i = 1; i < count; i++) {
+            long t = tokens[i];
+            double v = logp[i];
+            int j = i - 1;
+            while (j >= 0 && logp[j] < v) {
+                tokens[j + 1] = tokens[j];
+                logp[j + 1] = logp[j];
+                j--;
+            }
+            tokens[j + 1] = t;
+            logp[j + 1] = v;
+        }
     }
 
     private List<String> splitForModel(String text) {
@@ -589,7 +617,7 @@ final class OfflineNllbTranslator
         // Do not run the O(n^2) BPE token count over a pathological
         // whole-page segment; split it down by characters first.
         if (clean.length() <= 600
-                && tokenizer.tokenCount(clean) <= MAX_INPUT_TOKENS) {
+                && tokenizer.sourceTokenCount(clean) <= MAX_INPUT_TOKENS) {
             output.add(clean);
             return;
         }
@@ -674,16 +702,6 @@ final class OfflineNllbTranslator
             result[i] = values.get(i);
         }
         return result;
-    }
-
-    private static void closeTensorMap(Map<String, OnnxTensor> tensors) {
-        if (tensors == null) {
-            return;
-        }
-        for (OnnxTensor tensor : tensors.values()) {
-            closeTensor(tensor);
-        }
-        tensors.clear();
     }
 
     private static void closeTensor(OnnxTensor tensor) {
