@@ -28,8 +28,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /** On-device OCR (tiled for long webtoons) and conservative text rendering. */
 public class ManhwaRenderer {
@@ -68,14 +70,21 @@ public class ManhwaRenderer {
         public final int skippedBackground;
         public final int skippedFit;
         public final int skippedNoTranslation;
+        /** Segments actually used; a block that had to be split at a
+         * balloon waist appears as its two halves instead of the
+         * original entry, so callers should persist this list. */
+        public final List<Segment> segments;
 
         public RenderResult(Bitmap bitmap, int rendered, int skippedBackground,
-                            int skippedFit, int skippedNoTranslation) {
+                            int skippedFit, int skippedNoTranslation,
+                            List<Segment> segments) {
             this.bitmap = bitmap;
             this.rendered = rendered;
             this.skippedBackground = skippedBackground;
             this.skippedFit = skippedFit;
             this.skippedNoTranslation = skippedNoTranslation;
+            this.segments = segments == null
+                    ? new ArrayList<>() : new ArrayList<>(segments);
         }
 
         public int skipped() {
@@ -433,6 +442,23 @@ public class ManhwaRenderer {
         if (gap > Math.round(maxLh * 3.2f)) {
             return false;
         }
+        // Connected double balloons (two joined ovals carrying one
+        // speech) pass every background test below: the strip between
+        // the lobes is clean shared interior and no border line
+        // crosses the join. But the lobes sit diagonally — measured
+        // device case (v1.8.1 report): fragment centres 196 px apart
+        // on a 369 px block (0.53 × width), interior centre drifting
+        // x 253 → 449 through the waist. Merging them creates one
+        // block whose single centred column cannot stay inside both
+        // lobes, so the typesetter later skips BOTH balloons and the
+        // English survives. Fragments of one ordinary bubble or
+        // narration box keep roughly the same centre even across a
+        // blank-line gap, so a wide-gap merge additionally requires
+        // the centres to stay close. Each lobe then stays its own
+        // segment and is erased/typeset in its own oval.
+        if (centreDx > maxW * 0.38f) {
+            return false;
+        }
         // Anything wider than tight line spacing (a heading separated
         // from its body, a blank line) merges only when one continuous
         // background — the same bubble interior or narration box —
@@ -732,8 +758,15 @@ public class ManhwaRenderer {
         int skippedFit = 0;
         int skippedNoTranslation = 0;
         List<Placement> placements = new ArrayList<>();
+        // Work on a copy: a block that cannot be typeset because it
+        // spans two balloon lobes is replaced in-place by its halves
+        // (see splitAtWaist), and the caller persists result.segments.
+        List<Segment> work = new ArrayList<>(segments);
+        Set<Segment> splitHalves = Collections.newSetFromMap(
+                new IdentityHashMap<>());
 
-        for (Segment segment : segments) {
+        for (int workIndex = 0; workIndex < work.size(); workIndex++) {
+            Segment segment = work.get(workIndex);
             segment.rendered = false;
             segment.outsideText = false;
             segment.style = new TextStyleSettings(initialStyle);
@@ -790,7 +823,7 @@ public class ManhwaRenderer {
             // (the grown rectangle may include the tail or, for connected
             // double balloons, part of the sister balloon).
             Rect bubbleBody = segment.outsideText ? null
-                    : computeInteriorSpans(original, segment, segments);
+                    : computeInteriorSpans(original, segment, work);
             if (bubbleBody != null) {
                 segment.renderBox = bubbleBody;
             }
@@ -804,6 +837,22 @@ public class ManhwaRenderer {
                 fit = StyledTextRenderer.createFit(segment, resolver, false);
             }
             if (fit == null) {
+                // Last rescue before leaving the original language on
+                // the page: a block spanning two connected balloon
+                // lobes cannot fit one centred column inside both.
+                // Split it at the traced waist and typeset each half
+                // in its own lobe instead of skipping both balloons.
+                Segment[] halves = splitHalves.contains(segment)
+                        ? null : splitAtWaist(segment);
+                if (halves != null) {
+                    splitHalves.add(halves[0]);
+                    splitHalves.add(halves[1]);
+                    work.remove(workIndex);
+                    work.add(workIndex, halves[1]);
+                    work.add(workIndex, halves[0]);
+                    workIndex--;
+                    continue;
+                }
                 segment.outsideText = false;
                 segment.ensureStyle().visible = false;
                 skippedFit++;
@@ -836,7 +885,157 @@ public class ManhwaRenderer {
             rendered++;
         }
         return new RenderResult(output, rendered, skippedBackground,
-                skippedFit, skippedNoTranslation);
+                skippedFit, skippedNoTranslation, work);
+    }
+
+    /**
+     * Splits a segment whose traced bubble interior has two lobes —
+     * connected double balloons whose centres drift apart, or an
+     * interior that pinches at a waist — into an upper and a lower
+     * segment at the waist row, dividing the source and Kurdish text
+     * by words in proportion to the interior area above/below the
+     * waist. Returns null when the interior looks like one ordinary
+     * bubble. Only called after the normal fit already failed, so a
+     * wrong split can never make a previously-rendered block worse:
+     * the worst case is the previous behaviour (block skipped).
+     */
+    private static Segment[] splitAtWaist(Segment segment) {
+        int[] lefts = segment.interiorLeft;
+        int[] rights = segment.interiorRight;
+        if (lefts == null || rights == null || segment.lines < 2
+                || segment.interiorTop < 0) {
+            return null;
+        }
+        String ckb = segment.ckb == null ? "" : segment.ckb.trim();
+        String source = segment.text == null ? "" : segment.text.trim();
+        String[] ckbWords = ckb.isEmpty() ? new String[0] : ckb.split("\\s+");
+        String[] sourceWords = source.isEmpty()
+                ? new String[0] : source.split("\\s+");
+        if (ckbWords.length < 2 || sourceWords.length < 2) {
+            return null;
+        }
+        int row0 = Math.max(0, segment.box.top - segment.interiorTop);
+        int row1 = Math.min(lefts.length - 1,
+                segment.box.bottom - 1 - segment.interiorTop);
+        List<Integer> rows = new ArrayList<>();
+        for (int r = row0; r <= row1; r++) {
+            if (lefts[r] >= 0 && rights[r] > lefts[r]) {
+                rows.add(r);
+            }
+        }
+        if (rows.size() < 24) {
+            return null;
+        }
+        int n = rows.size();
+        int third = Math.max(1, n / 3);
+        float topCentre = medianCentre(lefts, rights, rows, 0, third);
+        float bottomCentre = medianCentre(lefts, rights, rows, n - third, n);
+        float medWidth = medianWidth(lefts, rights, rows, 0, n);
+        if (medWidth <= 0f) {
+            return null;
+        }
+        int waistIdx = -1;
+        int waistWidth = Integer.MAX_VALUE;
+        for (int i = n / 4; i < n - n / 4; i++) {
+            int r = rows.get(i);
+            int w = rights[r] - lefts[r];
+            if (w < waistWidth) {
+                waistWidth = w;
+                waistIdx = i;
+            }
+        }
+        boolean twoLobes = Math.abs(bottomCentre - topCentre) > medWidth * 0.30f
+                || waistWidth < medWidth * 0.55f;
+        if (!twoLobes || waistIdx < 0) {
+            return null;
+        }
+        int waistY = segment.interiorTop + rows.get(waistIdx);
+        if (waistY <= segment.box.top + 4 || waistY >= segment.box.bottom - 4) {
+            return null;
+        }
+        long areaAbove = 0;
+        long areaBelow = 0;
+        int waistRow = rows.get(waistIdx);
+        for (int i = 0; i < n; i++) {
+            int r = rows.get(i);
+            if (r < waistRow) {
+                areaAbove += rights[r] - lefts[r];
+            } else {
+                areaBelow += rights[r] - lefts[r];
+            }
+        }
+        if (areaAbove <= 0 || areaBelow <= 0) {
+            return null;
+        }
+        float frac = areaAbove / (float) (areaAbove + areaBelow);
+        int kCkb = splitIndex(ckbWords.length, frac);
+        int kSource = splitIndex(sourceWords.length, frac);
+        int upperLines = Math.max(1, Math.min(segment.lines - 1,
+                Math.round(segment.lines * frac)));
+        Segment upper = new Segment(joinWords(sourceWords, 0, kSource),
+                new Rect(segment.box.left, segment.box.top,
+                        segment.box.right, waistY), upperLines);
+        Segment lower = new Segment(
+                joinWords(sourceWords, kSource, sourceWords.length),
+                new Rect(segment.box.left, waistY,
+                        segment.box.right, segment.box.bottom),
+                segment.lines - upperLines);
+        upper.ckb = joinWords(ckbWords, 0, kCkb);
+        lower.ckb = joinWords(ckbWords, kCkb, ckbWords.length);
+        upper.originalCkb = upper.ckb;
+        lower.originalCkb = lower.ckb;
+        upper.ocrConfidence = segment.ocrConfidence;
+        lower.ocrConfidence = segment.ocrConfidence;
+        upper.sourceLineHeight = segment.sourceLineHeight;
+        lower.sourceLineHeight = segment.sourceLineHeight;
+        return new Segment[]{upper, lower};
+    }
+
+    private static float medianCentre(int[] lefts, int[] rights,
+                                      List<Integer> rows, int from, int to) {
+        List<Float> values = new ArrayList<>();
+        for (int i = from; i < to; i++) {
+            int r = rows.get(i);
+            values.add((lefts[r] + rights[r]) / 2f);
+        }
+        return median(values);
+    }
+
+    private static float medianWidth(int[] lefts, int[] rights,
+                                     List<Integer> rows, int from, int to) {
+        List<Float> values = new ArrayList<>();
+        for (int i = from; i < to; i++) {
+            int r = rows.get(i);
+            values.add((float) (rights[r] - lefts[r]));
+        }
+        return median(values);
+    }
+
+    private static float median(List<Float> values) {
+        if (values.isEmpty()) {
+            return 0f;
+        }
+        Collections.sort(values);
+        int mid = values.size() / 2;
+        if (values.size() % 2 == 1) {
+            return values.get(mid);
+        }
+        return (values.get(mid - 1) + values.get(mid)) / 2f;
+    }
+
+    private static int splitIndex(int count, float frac) {
+        return Math.max(1, Math.min(count - 1, Math.round(count * frac)));
+    }
+
+    private static String joinWords(String[] words, int from, int to) {
+        StringBuilder out = new StringBuilder();
+        for (int i = from; i < to; i++) {
+            if (out.length() > 0) {
+                out.append(' ');
+            }
+            out.append(words[i]);
+        }
+        return out.toString();
     }
 
     /**

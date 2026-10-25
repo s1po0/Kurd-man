@@ -2581,6 +2581,12 @@ public class MainActivity extends AppCompatActivity {
                 ManhwaRenderer.RenderResult renderResult =
                         ManhwaRenderer.render(sourceBitmap, segments,
                                 chosenStyle, styledTypefaceResolver());
+                // A block split at a balloon waist during rendering is
+                // represented by its two halves from now on, so the
+                // saved project/editor matches the picture.
+                segments = renderResult.segments;
+                projectPage.segments.clear();
+                projectPage.segments.addAll(segments);
                 project.completed = true;
                 project.save();
                 final Bitmap rendered = renderResult.bitmap;
@@ -2851,6 +2857,11 @@ public class MainActivity extends AppCompatActivity {
                 ManhwaRenderer.RenderResult renderResult =
                         ManhwaRenderer.render(pageBitmap, segments,
                                 chosenStyle, styledTypefaceResolver());
+                // Keep the saved project in sync when rendering split
+                // a two-lobe block into its halves.
+                segments = renderResult.segments;
+                projectPage.segments.clear();
+                projectPage.segments.addAll(segments);
                 Bitmap rendered = renderResult.bitmap;
                 File outPage = new File(outputDir,
                         String.format(Locale.ROOT, "%04d.jpg", pageNumber));
