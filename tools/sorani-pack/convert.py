@@ -56,6 +56,7 @@ def main() -> None:
     for p in sorted(FP32.rglob("*")):
         if p.is_file():
             print("  fp32:", p, p.stat().st_size, flush=True)
+            notice("FP32FILE", f"{p.name} {p.stat().st_size}")
 
     print("== Quantizing (dynamic int8) ==", flush=True)
     from onnxruntime.quantization import QuantType, quantize_dynamic
