@@ -28,9 +28,10 @@ Telegram و Unlimited-OCRەوە). هەردووکیان لەسەر یەک مۆب�
    ناوی ئەپەکە بنووسە Koorix، ئیمەیڵی پشتگیری دابنێ، پاشەکەوت بکە.
 3. **APIs & Services ← Credentials ← Create Credentials ← OAuth client ID**:
    - یەکێک لە جۆری **Android**: Package name = `com.koorix.app`،
-     و SHA-1ی واژۆی ئەپەکە دابنێ (لە دوایین بیلدی Koorix لە
-     GitHub Actionsدا لە annotationەکاندا بە
-     `APK signer SHA-1=...` دەردەکەوێت).
+     و SHA-1ی واژۆی ئەپەکە دابنێ:
+     `4F:65:A0:57:F8:8D:50:8C:69:35:63:9E:18:F2:75:DF:E8:18:59:39`
+     (هەمان واژۆی هەمیشەیی بیلدەکانە؛ لە هەر بیلدێکی Koorix لە
+     GitHub Actionsدا بە `APK signer SHA-1=...` دەردەکەوێت).
    - یەکێکی تر لە جۆری **Web application** (ئەمەیان بۆ Supabase و
      ناو ئەپەکە پێویستە)؛ Client ID و Client Secretەکەی هەڵبگرە.
 4. لە [Supabase Dashboard](https://supabase.com/dashboard/project/cbkddsztcivllpwzflkx/auth/providers):
