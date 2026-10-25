@@ -2,11 +2,24 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application>
-        <!-- Koorix public edition: account sign-in / Premium screen. -->
+        <!-- Koorix public edition: account sign-in / Premium screen.
+             Also the target of the magic-link deep link
+             (com.koorix.app://auth/callback) sent in sign-in emails. -->
         <activity
             android:name=".AccountActivity"
-            android:exported="false"
+            android:exported="true"
             android:label="Koorix"
-            android:theme="@style/AppTheme" />
+            android:launchMode="singleTop"
+            android:theme="@style/AppTheme">
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="auth"
+                    android:path="/callback"
+                    android:scheme="com.koorix.app" />
+            </intent-filter>
+        </activity>
     </application>
 </manifest>

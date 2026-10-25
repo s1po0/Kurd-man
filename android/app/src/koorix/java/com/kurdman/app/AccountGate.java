@@ -30,17 +30,31 @@ public final class AccountGate {
         }
     }
 
+    /** Magic-link sign-in deep link (com.koorix.app://auth/callback#...). */
+    public static boolean handleAuthDeepLink(Activity activity, Intent intent) {
+        if (intent == null || intent.getData() == null) {
+            return false;
+        }
+        boolean ok = SupabaseAuth.handleAuthDeepLink(activity, intent.getData());
+        if (ok) {
+            Toast.makeText(activity, R.string.kx_welcome_toast,
+                    Toast.LENGTH_SHORT).show();
+            SupabaseAuth.fetchStatus(activity, (result, error) -> {
+            });
+        }
+        return ok;
+    }
+
     public static void guardJobStart(Activity activity, int pages,
                                      Runnable onAllowed) {
         if (!SupabaseAuth.isSignedIn(activity)) {
-            Toast.makeText(activity,
-                    "بۆ وەرگێڕان سەرەتا بچۆرە ژوورەوە بە هەژمارەکەت.",
+            Toast.makeText(activity, R.string.kx_login_required,
                     Toast.LENGTH_LONG).show();
             openAccount(activity);
             return;
         }
         ProgressDialog dialog = new ProgressDialog(activity);
-        dialog.setMessage("پشکنینی هەژمار…");
+        dialog.setMessage(activity.getString(R.string.kx_checking_account));
         dialog.setCancelable(false);
         dialog.show();
         SupabaseAuth.consumeJob(activity, pages, (result, error) -> {
@@ -51,12 +65,11 @@ public final class AccountGate {
             if (result != null) {
                 if (result.optBoolean("allowed", false)) {
                     if (!result.optBoolean("premium", false)) {
-                        int remaining = result.optInt("remaining_jobs", 0);
                         Toast.makeText(activity,
-                                "وەرگێڕانی خۆڕایی ئەمڕۆ: " + remaining
-                                        + " جار ماوە لە "
-                                        + result.optInt("free_job_limit",
-                                        BuildConfig.FREE_DAILY_JOBS),
+                                activity.getString(R.string.kx_free_remaining,
+                                        result.optInt("remaining_jobs", 0),
+                                        result.optInt("free_job_limit",
+                                                BuildConfig.FREE_DAILY_JOBS)),
                                 Toast.LENGTH_SHORT).show();
                     }
                     if (onAllowed != null) {
@@ -70,16 +83,14 @@ public final class AccountGate {
             // Server unreachable (or session problem): offline fallback.
             if ("session_expired".equals(error)
                     || !SupabaseAuth.isSignedIn(activity)) {
-                Toast.makeText(activity,
-                        "هەژمارەکەت پێویستی بە چوونەژوورەوەیەکی نوێیە.",
+                Toast.makeText(activity, R.string.kx_session_expired,
                         Toast.LENGTH_LONG).show();
                 openAccount(activity);
                 return;
             }
             if (SupabaseAuth.cachedPremium(activity)
                     || SupabaseAuth.localConsume(activity, pages)) {
-                Toast.makeText(activity,
-                        "سێرڤەر بەردەست نییە — بە شێوازی ئۆفلاین بەردەوام دەبێت.",
+                Toast.makeText(activity, R.string.kx_offline_mode,
                         Toast.LENGTH_SHORT).show();
                 if (onAllowed != null) {
                     onAllowed.run();
@@ -98,13 +109,12 @@ public final class AccountGate {
                 ? status.optInt("free_page_limit", BuildConfig.FREE_DAILY_PAGES)
                 : BuildConfig.FREE_DAILY_PAGES;
         new AlertDialog.Builder(activity)
-                .setTitle("سنووری خۆڕایی ئەمڕۆ تەواو بوو 💎")
-                .setMessage("ئەمڕۆ " + limit + " وەرگێڕانی خۆڕایی و تا "
-                        + pageLimit + " لاپەڕەت بەکار هێنا.\n\n"
-                        + "بە Premium دەتوانیت بەبێ سنوور وەرگێڕان بکەیت. "
-                        + "کۆدی چالاککردن لە بەشی «هەژمارەکەم» دابنێ.")
-                .setPositiveButton("💎 Premium", (d, w) -> openAccount(activity))
-                .setNegativeButton("دواتر", null)
+                .setTitle(R.string.kx_limit_title)
+                .setMessage(activity.getString(R.string.kx_limit_body,
+                        limit, pageLimit))
+                .setPositiveButton(R.string.kx_premium_btn,
+                        (d, w) -> openAccount(activity))
+                .setNegativeButton(R.string.kx_later, null)
                 .show();
     }
 

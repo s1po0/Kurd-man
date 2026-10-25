@@ -20,12 +20,12 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
 
-import org.json.JSONObject;
-
 /**
- * Koorix account screen: email/Google sign-in, plan + daily-usage
- * status, Premium activation-code redemption. All account rules are
- * enforced server-side (Supabase); this screen only displays them.
+ * Koorix account screen: passwordless sign-in (Google account on the
+ * phone, or a numeric code / magic link emailed to the user's Gmail),
+ * plan + daily-usage status, and Premium activation-code redemption.
+ * All account rules are enforced server-side (Supabase); this screen
+ * only displays them.
  */
 public class AccountActivity extends AppCompatActivity {
 
@@ -34,16 +34,17 @@ public class AccountActivity extends AppCompatActivity {
     private ProgressBar progress;
     private View loginCard;
     private View accountCard;
+    private View otpBox;
     private EditText emailInput;
-    private EditText passwordInput;
+    private EditText codeOtpInput;
     private TextView authMessage;
     private TextView accountEmail;
     private TextView planStatus;
     private TextView usageStatus;
     private TextView accountMessage;
     private EditText codeInput;
-    private Button signInButton;
-    private Button signUpButton;
+    private Button sendCodeButton;
+    private Button verifyCodeButton;
     private Button googleButton;
     private Button redeemButton;
     private Button buyButton;
@@ -56,31 +57,45 @@ public class AccountActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_account);
 
+        // English is LTR; Sorani/Arabic are RTL.
+        View root = findViewById(R.id.accountRoot);
+        String lang = getResources().getConfiguration()
+                .getLocales().get(0).getLanguage();
+        root.setLayoutDirection("en".equals(lang)
+                ? View.LAYOUT_DIRECTION_LTR : View.LAYOUT_DIRECTION_RTL);
+
         progress = findViewById(R.id.accountProgress);
         loginCard = findViewById(R.id.loginCard);
         accountCard = findViewById(R.id.accountCard);
+        otpBox = findViewById(R.id.otpBox);
         emailInput = findViewById(R.id.emailInput);
-        passwordInput = findViewById(R.id.passwordInput);
+        codeOtpInput = findViewById(R.id.codeOtpInput);
         authMessage = findViewById(R.id.authMessage);
         accountEmail = findViewById(R.id.accountEmail);
         planStatus = findViewById(R.id.planStatus);
         usageStatus = findViewById(R.id.usageStatus);
         accountMessage = findViewById(R.id.accountMessage);
         codeInput = findViewById(R.id.codeInput);
-        signInButton = findViewById(R.id.signInButton);
-        signUpButton = findViewById(R.id.signUpButton);
+        sendCodeButton = findViewById(R.id.sendCodeButton);
+        verifyCodeButton = findViewById(R.id.verifyCodeButton);
         googleButton = findViewById(R.id.googleButton);
         redeemButton = findViewById(R.id.redeemButton);
         buyButton = findViewById(R.id.buyButton);
         signOutButton = findViewById(R.id.signOutButton);
 
-        signInButton.setOnClickListener(v -> doEmailAuth(false));
-        signUpButton.setOnClickListener(v -> doEmailAuth(true));
+        sendCodeButton.setOnClickListener(v -> doSendCode());
+        verifyCodeButton.setOnClickListener(v -> doVerifyCode());
         googleButton.setOnClickListener(v -> doGoogleSignIn());
         redeemButton.setOnClickListener(v -> doRedeem());
         signOutButton.setOnClickListener(v -> doSignOut());
         findViewById(R.id.backToAppButton)
                 .setOnClickListener(v -> finish());
+
+        String saved = SupabaseAuth.pendingEmail(this);
+        if (!saved.isEmpty() && !SupabaseAuth.isSignedIn(this)) {
+            emailInput.setText(saved);
+            otpBox.setVisibility(View.VISIBLE);
+        }
 
         String buyUrl = getString(R.string.koorix_buy_url).trim();
         if (buyUrl.isEmpty()) {
@@ -96,7 +111,41 @@ public class AccountActivity extends AppCompatActivity {
             });
         }
 
+        if (handleDeepLink(getIntent())) {
+            goToMain();
+            return;
+        }
         renderState();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        if (handleDeepLink(intent)) {
+            goToMain();
+        }
+    }
+
+    private boolean handleDeepLink(@Nullable Intent intent) {
+        if (intent == null || intent.getData() == null) {
+            return false;
+        }
+        boolean ok = SupabaseAuth.handleAuthDeepLink(this, intent.getData());
+        if (ok) {
+            Toast.makeText(this, R.string.kx_welcome_toast,
+                    Toast.LENGTH_SHORT).show();
+            SupabaseAuth.fetchStatus(this, (result, error) -> {
+            });
+        }
+        return ok;
+    }
+
+    private void goToMain() {
+        Intent main = new Intent(this, MainActivity.class);
+        main.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        startActivity(main);
+        finish();
     }
 
     // ---------- state rendering ----------
@@ -108,8 +157,9 @@ public class AccountActivity extends AppCompatActivity {
         if (signedIn) {
             accountEmail.setText(SupabaseAuth.email(this));
             planStatus.setText(SupabaseAuth.cachedPremium(this)
-                    ? "💎 Premium چالاکە" : "پلانی خۆڕایی");
-            usageStatus.setText("پشکنینی دۆخی ئەمڕۆ…");
+                    ? getString(R.string.kx_premium_active)
+                    : getString(R.string.kx_free_plan));
+            usageStatus.setText(R.string.kx_checking_status);
             refreshStatus();
         }
     }
@@ -122,74 +172,79 @@ public class AccountActivity extends AppCompatActivity {
                 if ("session_expired".equals(error)
                         || !SupabaseAuth.isSignedIn(this)) {
                     renderState();
-                    showAuthMessage("تکایە دووبارە بچۆرە ژوورەوە.");
+                    showAuthMessage(getString(R.string.kx_session_expired));
                 } else {
-                    usageStatus.setText("⚠ سێرڤەر بەردەست نییە؛ "
-                            + "دۆخی دوایین پشکنین پیشان دەدرێت.");
+                    usageStatus.setText(R.string.kx_status_unavailable);
                 }
                 return;
             }
-            boolean premium = result.optBoolean("premium", false);
-            if (premium) {
+            if (result.optBoolean("premium", false)) {
                 String until = result.isNull("premium_until") ? ""
                         : result.optString("premium_until", "");
-                planStatus.setText("💎 Premium چالاکە"
-                        + (until.length() >= 10
-                        ? "\nتا بەرواری " + until.substring(0, 10) : ""));
-                usageStatus.setText("وەرگێڕانی بێسنوور — سوپاس بۆ پشتگیریت! 🎉");
+                planStatus.setText(until.length() >= 10
+                        ? getString(R.string.kx_premium_until,
+                        until.substring(0, 10))
+                        : getString(R.string.kx_premium_active));
+                usageStatus.setText(R.string.kx_unlimited_thanks);
             } else {
-                planStatus.setText("پلانی خۆڕایی");
-                usageStatus.setText("ئەمڕۆ: "
-                        + result.optInt("jobs_today", 0) + "/"
-                        + result.optInt("free_job_limit",
-                        BuildConfig.FREE_DAILY_JOBS)
-                        + " وەرگێڕان • "
-                        + result.optInt("pages_today", 0) + "/"
-                        + result.optInt("free_page_limit",
-                        BuildConfig.FREE_DAILY_PAGES)
-                        + " لاپەڕە بەکار هاتووە\n"
-                        + result.optInt("remaining_jobs", 0)
-                        + " وەرگێڕانی خۆڕایی ماوە بۆ ئەمڕۆ.");
+                planStatus.setText(R.string.kx_free_plan);
+                usageStatus.setText(getString(R.string.kx_usage_today,
+                        result.optInt("jobs_today", 0),
+                        result.optInt("free_job_limit",
+                                BuildConfig.FREE_DAILY_JOBS),
+                        result.optInt("pages_today", 0),
+                        result.optInt("free_page_limit",
+                                BuildConfig.FREE_DAILY_PAGES),
+                        result.optInt("remaining_jobs", 0)));
             }
         });
     }
 
     // ---------- actions ----------
 
-    private void doEmailAuth(boolean signUp) {
+    private void doSendCode() {
         String email = emailInput.getText().toString().trim();
-        String password = passwordInput.getText().toString();
         if (!email.contains("@") || email.length() < 5) {
-            showAuthMessage("تکایە ئیمەیڵێکی دروست بنووسە.");
-            return;
-        }
-        if (password.length() < 6) {
-            showAuthMessage("وشەی نهێنی دەبێت لانی کەم ٦ پیت بێت.");
+            showAuthMessage(getString(R.string.kx_err_email));
             return;
         }
         setBusy(true);
-        SupabaseAuth.Callback cb = (result, error) -> {
+        SupabaseAuth.sendEmailOtp(this, email, (result, error) -> {
             setBusy(false);
             if (result != null) {
-                if (SupabaseAuth.isSignedIn(this)) {
-                    Toast.makeText(this, "بەخێر بێیت بۆ Koorix 🎉",
-                            Toast.LENGTH_SHORT).show();
-                    renderState();
-                } else if (signUp) {
-                    showAuthMessage("هەژمارەکە ئامادەیە — "
-                            + "ئێستا «چوونەژوورەوە» دابگرە.");
-                } else {
-                    showAuthMessage(friendly(error));
-                }
+                otpBox.setVisibility(View.VISIBLE);
+                codeOtpInput.requestFocus();
+                showAuthMessage(getString(R.string.kx_code_sent, email));
             } else {
                 showAuthMessage(friendly(error));
             }
-        };
-        if (signUp) {
-            SupabaseAuth.signUp(this, email, password, cb);
-        } else {
-            SupabaseAuth.signIn(this, email, password, cb);
+        });
+    }
+
+    private void doVerifyCode() {
+        String email = emailInput.getText().toString().trim();
+        String token = codeOtpInput.getText().toString().trim();
+        if (!email.contains("@")) {
+            showAuthMessage(getString(R.string.kx_err_email));
+            return;
         }
+        if (token.length() < 6) {
+            showAuthMessage(getString(R.string.kx_err_code_short));
+            return;
+        }
+        setBusy(true);
+        SupabaseAuth.verifyEmailOtp(this, email, token, (result, error) -> {
+            setBusy(false);
+            if (result != null && SupabaseAuth.isSignedIn(this)) {
+                Toast.makeText(this, R.string.kx_welcome_toast,
+                        Toast.LENGTH_SHORT).show();
+                renderState();
+            } else {
+                showAuthMessage(error != null && error.startsWith("network")
+                        ? getString(R.string.kx_err_network)
+                        : getString(R.string.kx_err_otp_invalid));
+            }
+        });
     }
 
     private void doGoogleSignIn() {
@@ -200,8 +255,7 @@ public class AccountActivity extends AppCompatActivity {
             webClientId = "";
         }
         if (webClientId.isEmpty() || webClientId.startsWith("REPLACE")) {
-            showAuthMessage("چوونەژوورەوە بە Google بەم زوانە دێت — "
-                    + "تکایە ئێستا بە ئیمەیڵ و وشەی نهێنی بچۆرە ژوورەوە.");
+            showAuthMessage(getString(R.string.kx_google_soon));
             return;
         }
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(
@@ -227,7 +281,7 @@ public class AccountActivity extends AppCompatActivity {
             GoogleSignInAccount account = task.getResult(ApiException.class);
             String idToken = account != null ? account.getIdToken() : null;
             if (idToken == null || idToken.isEmpty()) {
-                showAuthMessage("Google هیچ ناسنامەیەکی نەگەڕاندەوە.");
+                showAuthMessage(getString(R.string.kx_err_google_no_token));
                 return;
             }
             setBusy(true);
@@ -236,7 +290,7 @@ public class AccountActivity extends AppCompatActivity {
                         setBusy(false);
                         if (result != null
                                 && SupabaseAuth.isSignedIn(this)) {
-                            Toast.makeText(this, "بەخێر بێیت بۆ Koorix 🎉",
+                            Toast.makeText(this, R.string.kx_welcome_toast,
                                     Toast.LENGTH_SHORT).show();
                             renderState();
                         } else {
@@ -244,15 +298,15 @@ public class AccountActivity extends AppCompatActivity {
                         }
                     });
         } catch (ApiException e) {
-            showAuthMessage("چوونەژوورەوەی Google هەڵکنرا/سەرنەکەوت ("
-                    + e.getStatusCode() + ").");
+            showAuthMessage(getString(R.string.kx_err_google_failed,
+                    e.getStatusCode()));
         }
     }
 
     private void doRedeem() {
         String code = codeInput.getText().toString().trim();
         if (code.length() < 6) {
-            showAccountMessage("تکایە کۆدی چالاککردن بنووسە.", false);
+            showAccountMessage(getString(R.string.kx_err_enter_code), false);
             return;
         }
         setBusy(true);
@@ -260,15 +314,16 @@ public class AccountActivity extends AppCompatActivity {
             setBusy(false);
             if (result != null && result.optBoolean("ok", false)) {
                 String until = result.optString("premium_until", "");
-                showAccountMessage("🎉 Premium چالاک کرا! "
-                        + result.optInt("days_added", 0) + " ڕۆژ زیاد کرا"
-                        + (until.length() >= 10
-                        ? " — تا " + until.substring(0, 10) : "") + ".", true);
+                String suffix = until.length() >= 10
+                        ? getString(R.string.kx_redeem_until,
+                        until.substring(0, 10)) : "";
+                showAccountMessage(getString(R.string.kx_redeem_ok,
+                        result.optInt("days_added", 0), suffix), true);
                 codeInput.setText("");
                 refreshStatus();
             } else {
-                showAccountMessage("ئەم کۆدە دروست نییە یان پێشتر بەکار هاتووە.",
-                        false);
+                showAccountMessage(
+                        getString(R.string.kx_err_invalid_code), false);
             }
         });
     }
@@ -288,8 +343,8 @@ public class AccountActivity extends AppCompatActivity {
 
     private void setBusy(boolean busy) {
         progress.setVisibility(busy ? View.VISIBLE : View.GONE);
-        signInButton.setEnabled(!busy);
-        signUpButton.setEnabled(!busy);
+        sendCodeButton.setEnabled(!busy);
+        verifyCodeButton.setEnabled(!busy);
         googleButton.setEnabled(!busy);
         redeemButton.setEnabled(!busy);
         signOutButton.setEnabled(!busy);
@@ -310,25 +365,17 @@ public class AccountActivity extends AppCompatActivity {
 
     private String friendly(String error) {
         if (error == null) {
-            return "هەڵەیەک ڕووی دا؛ تکایە دووبارە هەوڵ بدەرەوە.";
+            return getString(R.string.kx_err_generic);
         }
         String e = error.toLowerCase(java.util.Locale.US);
-        if (e.contains("invalid login credentials")
-                || e.contains("invalid_credentials")) {
-            return "ئیمەیڵ یان وشەی نهێنی هەڵەیە.";
-        }
-        if (e.contains("already registered") || e.contains("already exists")
-                || e.contains("user_already_exists")) {
-            return "ئەم ئیمەیڵە پێشتر هەژماری هەیە — «چوونەژوورەوە» دابگرە.";
-        }
-        if (e.contains("weak_password") || e.contains("password")) {
-            return "وشەی نهێنی زۆر کورتە/لاوازە — لانی کەم ٦ پیت.";
-        }
         if (e.startsWith("network")) {
-            return "پەیوەندی ئینتەرنێت نییە؛ تکایە هەوڵ بدەرەوە.";
+            return getString(R.string.kx_err_network);
         }
         if (e.contains("provider") && e.contains("not enabled")) {
-            return "چوونەژوورەوە بە Google هێشتا چالاک نەکراوە لەسەر سێرڤەر.";
+            return getString(R.string.kx_err_provider_disabled);
+        }
+        if (e.contains("rate") || e.contains("over_email_send")) {
+            return getString(R.string.kx_err_generic);
         }
         return error;
     }

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/accountRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_page_gradient"
@@ -56,7 +57,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:fontFamily="sans-serif-medium"
-                android:text="وەرگێڕی مانهوا بۆ کوردی سۆرانی"
+                android:text="@string/kx_hero_subtitle"
                 android:textColor="#E0F2FE"
                 android:textSize="15sp"
                 android:textStyle="bold" />
@@ -89,8 +90,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:fontFamily="sans-serif-black"
-                android:text="بەخێر بێیت 👋"
+                android:text="@string/kx_welcome"
                 android:textColor="@color/text_primary"
+                android:textDirection="firstStrongRtl"
                 android:textSize="19sp"
                 android:textStyle="bold" />
 
@@ -99,75 +101,23 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="5dp"
                 android:lineSpacingMultiplier="1.25"
-                android:text="بچۆرە ژوورەوە یان هەژمارێکی خۆڕایی دروست بکە بۆ دەستپێکردنی وەرگێڕان."
+                android:text="@string/kx_login_intro"
                 android:textColor="@color/text_secondary"
                 android:textDirection="firstStrongRtl"
                 android:textSize="13sp" />
 
-            <EditText
-                android:id="@+id/emailInput"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/bg_input"
-                android:hint="ئیمەیڵ (Gmail)"
-                android:imeOptions="actionNext"
-                android:inputType="textEmailAddress"
-                android:layoutDirection="ltr"
-                android:paddingStart="14dp"
-                android:paddingTop="13dp"
-                android:paddingEnd="14dp"
-                android:paddingBottom="13dp"
-                android:textColor="@color/text_primary"
-                android:textColorHint="@color/text_muted"
-                android:textDirection="ltr"
-                android:textSize="14sp" />
-
-            <EditText
-                android:id="@+id/passwordInput"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/bg_input"
-                android:hint="وشەی نهێنی (لانی کەم ٦ پیت)"
-                android:imeOptions="actionDone"
-                android:inputType="textPassword"
-                android:layoutDirection="ltr"
-                android:paddingStart="14dp"
-                android:paddingTop="13dp"
-                android:paddingEnd="14dp"
-                android:paddingBottom="13dp"
-                android:textColor="@color/text_primary"
-                android:textColorHint="@color/text_muted"
-                android:textDirection="ltr"
-                android:textSize="14sp" />
-
             <Button
-                android:id="@+id/signInButton"
+                android:id="@+id/googleButton"
                 android:layout_width="match_parent"
-                android:layout_height="54dp"
-                android:layout_marginTop="16dp"
+                android:layout_height="56dp"
+                android:layout_marginTop="18dp"
                 android:background="@drawable/bg_button_primary"
                 android:fontFamily="sans-serif-black"
-                android:minHeight="54dp"
+                android:minHeight="56dp"
                 android:stateListAnimator="@null"
-                android:text="چوونەژوورەوە"
+                android:text="@string/kx_google"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
-                android:textSize="15sp" />
-
-            <Button
-                android:id="@+id/signUpButton"
-                android:layout_width="match_parent"
-                android:layout_height="54dp"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/bg_button_secondary"
-                android:fontFamily="sans-serif-black"
-                android:minHeight="54dp"
-                android:stateListAnimator="@null"
-                android:text="دروستکردنی هەژماری نوێ"
-                android:textAllCaps="false"
-                android:textColor="@color/text_primary"
                 android:textSize="15sp" />
 
             <LinearLayout
@@ -188,7 +138,7 @@
                     android:layout_height="wrap_content"
                     android:paddingStart="10dp"
                     android:paddingEnd="10dp"
-                    android:text="یان"
+                    android:text="@string/kx_or"
                     android:textColor="@color/text_muted"
                     android:textSize="12sp" />
 
@@ -199,19 +149,82 @@
                     android:background="@color/border" />
             </LinearLayout>
 
+            <EditText
+                android:id="@+id/emailInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_input"
+                android:hint="@string/kx_email_hint"
+                android:imeOptions="actionNext"
+                android:inputType="textEmailAddress"
+                android:layoutDirection="ltr"
+                android:paddingStart="14dp"
+                android:paddingTop="13dp"
+                android:paddingEnd="14dp"
+                android:paddingBottom="13dp"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_muted"
+                android:textDirection="ltr"
+                android:textSize="14sp" />
+
             <Button
-                android:id="@+id/googleButton"
+                android:id="@+id/sendCodeButton"
                 android:layout_width="match_parent"
                 android:layout_height="54dp"
-                android:layout_marginTop="14dp"
-                android:background="@drawable/bg_button_secondary"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_button_primary"
                 android:fontFamily="sans-serif-black"
                 android:minHeight="54dp"
                 android:stateListAnimator="@null"
-                android:text="G  •  بەردەوامبوون بە Google"
+                android:text="@string/kx_send_code"
                 android:textAllCaps="false"
-                android:textColor="@color/text_primary"
+                android:textColor="@color/white"
                 android:textSize="15sp" />
+
+            <LinearLayout
+                android:id="@+id/otpBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <EditText
+                    android:id="@+id/codeOtpInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_input"
+                    android:gravity="center"
+                    android:hint="@string/kx_code_hint"
+                    android:imeOptions="actionDone"
+                    android:inputType="number"
+                    android:layoutDirection="ltr"
+                    android:letterSpacing="0.3"
+                    android:maxLength="8"
+                    android:paddingStart="14dp"
+                    android:paddingTop="13dp"
+                    android:paddingEnd="14dp"
+                    android:paddingBottom="13dp"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_muted"
+                    android:textDirection="ltr"
+                    android:textSize="18sp" />
+
+                <Button
+                    android:id="@+id/verifyCodeButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_button_secondary"
+                    android:fontFamily="sans-serif-black"
+                    android:minHeight="52dp"
+                    android:stateListAnimator="@null"
+                    android:text="@string/kx_verify_code"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/authMessage"
@@ -244,7 +257,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:fontFamily="sans-serif-black"
-                android:text="👤 هەژمارەکەم"
+                android:text="@string/kx_my_account"
                 android:textColor="@color/text_primary"
                 android:textDirection="firstStrongRtl"
                 android:textSize="19sp"
@@ -296,7 +309,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:fontFamily="sans-serif-black"
-                android:text="💎 Premium"
+                android:text="@string/kx_premium_title"
                 android:textColor="@color/text_primary"
                 android:textDirection="firstStrongRtl"
                 android:textSize="16sp"
@@ -322,7 +335,7 @@
                 android:fontFamily="sans-serif-black"
                 android:minHeight="54dp"
                 android:stateListAnimator="@null"
-                android:text="🛒 کڕینی Premium"
+                android:text="@string/kx_buy"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
                 android:textSize="15sp" />
@@ -354,7 +367,7 @@
                 android:fontFamily="sans-serif-black"
                 android:minHeight="50dp"
                 android:stateListAnimator="@null"
-                android:text="چالاککردنی کۆد"
+                android:text="@string/kx_redeem"
                 android:textAllCaps="false"
                 android:textColor="@color/text_primary"
                 android:textSize="14sp" />
@@ -379,7 +392,7 @@
                 android:fontFamily="sans-serif-black"
                 android:minHeight="54dp"
                 android:stateListAnimator="@null"
-                android:text="🚀 دەستپێکردنی وەرگێڕان"
+                android:text="@string/kx_start_translating"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
                 android:textSize="15sp" />
@@ -393,7 +406,7 @@
                 android:fontFamily="sans-serif-black"
                 android:minHeight="48dp"
                 android:stateListAnimator="@null"
-                android:text="چوونەدەرەوە"
+                android:text="@string/kx_sign_out"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
                 android:textSize="13sp" />

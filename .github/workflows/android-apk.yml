@@ -1,12 +1,10 @@
 name: Android APK
 
 on:
+  # Personal build: no longer auto-built/sent on every push (owner
+  # asked to receive only Koorix). Run manually from the Actions tab
+  # if a KurdMan APK is ever needed again.
   workflow_dispatch:
-  push:
-    branches: ["main", "arena/**"]
-    paths:
-      - "android/**"
-      - ".github/workflows/android-apk.yml"
 
 permissions:
   contents: read

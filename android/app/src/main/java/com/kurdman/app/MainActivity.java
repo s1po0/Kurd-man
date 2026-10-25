@@ -55,6 +55,8 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.os.LocaleListCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
@@ -573,6 +575,7 @@ public class MainActivity extends AppCompatActivity {
         updateButtons(currentBusy);
         refreshDownloadsList();
         refreshReportUi();
+        AccountGate.handleAuthDeepLink(this, getIntent());
         applyEditionUi();
         if (savedInstanceState == null) {
             handleIncomingShareIntent(getIntent());
@@ -582,8 +585,9 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Applies the per-edition differences between the personal KurdMan
      * build and the public Koorix build: branding, the account button,
-     * and hiding the Telegram / Unlimited-OCR tooling that only exists
-     * in the personal build.
+     * hiding the Telegram / Unlimited-OCR tooling that only exists in
+     * the personal build, and — Koorix only — localized main-screen
+     * texts (Sorani / English / Arabic) with a language picker.
      */
     private void applyEditionUi() {
         TextView heroTitle = findViewById(R.id.heroTitle);
@@ -591,20 +595,71 @@ public class MainActivity extends AppCompatActivity {
         TextView heroVersionChip = findViewById(R.id.heroVersionChip);
         TextView heroTelegramChip = findViewById(R.id.heroTelegramChip);
         if (BuildConfig.PUBLIC_EDITION) {
+            // Direction: English LTR, Sorani/Arabic RTL.
+            String lang = getResources().getConfiguration()
+                    .getLocales().get(0).getLanguage();
+            View root = findViewById(R.id.mainRoot);
+            if (root != null) {
+                root.setLayoutDirection("en".equals(lang)
+                        ? View.LAYOUT_DIRECTION_LTR
+                        : View.LAYOUT_DIRECTION_RTL);
+            }
             if (heroTitle != null) {
                 heroTitle.setText("Koorix");
             }
+            if (heroSubtitle != null) {
+                heroSubtitle.setText(R.string.kx_hero_subtitle);
+            }
             if (heroVersionChip != null) {
-                heroVersionChip.setText("v" + BuildConfig.VERSION_NAME
-                        + "  •  وەرگێڕی مانهوا");
+                heroVersionChip.setText(getString(R.string.kx_version_chip,
+                        BuildConfig.VERSION_NAME));
             }
             if (heroTelegramChip != null) {
-                heroTelegramChip.setText("💎 Premium");
+                heroTelegramChip.setText(R.string.kx_premium_btn);
             }
             TextView settingsSubtitle = findViewById(R.id.settingsSubtitle);
             if (settingsSubtitle != null) {
-                settingsSubtitle.setText("جۆری فایلی کۆتایی، مۆدێلی ئۆفلاین، "
-                        + "پاکێجی OCRی بەهێز و پارێزگاری تا STOP لێرە کۆکراونەتەوە.");
+                settingsSubtitle.setText(R.string.kx_settings_subtitle);
+            }
+            if (navTranslateButton != null) {
+                navTranslateButton.setText(R.string.kx_nav_translate);
+            }
+            Button navStyle = findViewById(R.id.navStyleButton);
+            if (navStyle != null) {
+                navStyle.setText(R.string.kx_nav_style);
+            }
+            if (navResultsButton != null) {
+                navResultsButton.setText(R.string.kx_nav_results);
+            }
+            if (navSettingsButton != null) {
+                navSettingsButton.setText(R.string.kx_nav_settings);
+            }
+            if (navReportsButton != null) {
+                navReportsButton.setText(R.string.kx_nav_reports);
+            }
+            Button pick = findViewById(R.id.pickButton);
+            if (pick != null) {
+                pick.setText(R.string.kx_pick_btn);
+            }
+            Button translate = findViewById(R.id.translateButton);
+            if (translate != null) {
+                translate.setText(R.string.kx_translate_btn);
+            }
+            View languageRow = findViewById(R.id.languageRow);
+            if (languageRow != null) {
+                languageRow.setVisibility(View.VISIBLE);
+            }
+            Button langKu = findViewById(R.id.langKuButton);
+            Button langEn = findViewById(R.id.langEnButton);
+            Button langAr = findViewById(R.id.langArButton);
+            if (langKu != null) {
+                langKu.setOnClickListener(v -> setAppLanguage("ckb"));
+            }
+            if (langEn != null) {
+                langEn.setOnClickListener(v -> setAppLanguage("en"));
+            }
+            if (langAr != null) {
+                langAr.setOnClickListener(v -> setAppLanguage("ar"));
             }
         } else if (heroVersionChip != null) {
             heroVersionChip.setText("v" + BuildConfig.VERSION_NAME
@@ -614,6 +669,9 @@ public class MainActivity extends AppCompatActivity {
         if (accountButton != null) {
             accountButton.setVisibility(BuildConfig.REQUIRE_ACCOUNT
                     ? View.VISIBLE : View.GONE);
+            if (BuildConfig.PUBLIC_EDITION) {
+                accountButton.setText(R.string.kx_account_btn);
+            }
             accountButton.setOnClickListener(
                     v -> AccountGate.openAccount(this));
         }
@@ -629,6 +687,14 @@ public class MainActivity extends AppCompatActivity {
             sendResultButton.setVisibility(View.GONE);
         }
         AccountGate.enforceOnLaunch(this);
+    }
+
+    /** Koorix language picker: ckb (Sorani), en, ar. Recreated by AppCompat. */
+    private void setAppLanguage(String tag) {
+        LocaleListCompat locales = LocaleListCompat.forLanguageTags(tag);
+        if (!locales.equals(AppCompatDelegate.getApplicationLocales())) {
+            AppCompatDelegate.setApplicationLocales(locales);
+        }
     }
 
     @Override
@@ -663,6 +729,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        AccountGate.handleAuthDeepLink(this, intent);
         handleIncomingShareIntent(intent);
     }
 

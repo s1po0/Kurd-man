@@ -1,6 +1,7 @@
 package com.kurdman.app;
 
 import android.app.Activity;
+import android.content.Intent;
 
 /**
  * Personal KurdMan build: there is no account system and no usage
@@ -26,5 +27,9 @@ public final class AccountGate {
 
     public static void openAccount(Activity activity) {
         // No account screen in the personal build.
+    }
+
+    public static boolean handleAuthDeepLink(Activity activity, Intent intent) {
+        return false;
     }
 }

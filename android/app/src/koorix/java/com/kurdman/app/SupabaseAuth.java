@@ -41,6 +41,7 @@ final class SupabaseAuth {
     private static final String K_REFRESH = "refresh_token";
     private static final String K_EXPIRES = "expires_at_ms";
     private static final String K_EMAIL = "email";
+    private static final String K_PENDING_EMAIL = "pending_email";
     private static final String K_PREMIUM_UNTIL = "premium_until_cache";
     private static final String K_LOCAL_DAY = "local_day";
     private static final String K_LOCAL_JOBS = "local_jobs";
@@ -136,37 +137,83 @@ final class SupabaseAuth {
 
     // ---------- auth + rpc calls ----------
 
-    static void signUp(Context ctx, String email, String password,
-                       Callback cb) {
+    /**
+     * Sends a sign-in email with both a magic link (deep-links back
+     * into the app) and — once the dashboard email template includes
+     * {{ .Token }} — a numeric code the user can type.
+     */
+    static void sendEmailOtp(Context ctx, String email, Callback cb) {
+        prefs(ctx).edit().putString(K_PENDING_EMAIL, email).apply();
         JSONObject body = new JSONObject();
         try {
             body.put("email", email);
-            body.put("password", password);
+            body.put("create_user", true);
         } catch (JSONException ignored) {
         }
-        post(ctx, "/auth/v1/signup", body, false, (result, error) -> {
-            if (result != null && result.has("access_token")) {
-                try {
-                    saveSession(ctx, result);
-                } catch (JSONException e) {
-                    cb.onResult(null, e.getMessage());
-                    return;
-                }
-            }
-            cb.onResult(result, error);
-        });
+        post(ctx, "/auth/v1/otp?redirect_to="
+                        + "com.koorix.app%3A%2F%2Fauth%2Fcallback",
+                body, false, cb);
     }
 
-    static void signIn(Context ctx, String email, String password,
-                       Callback cb) {
+    /** Verifies the numeric code from the sign-in email. */
+    static void verifyEmailOtp(Context ctx, String email, String token,
+                               Callback cb) {
         JSONObject body = new JSONObject();
         try {
+            body.put("type", "email");
             body.put("email", email);
-            body.put("password", password);
+            body.put("token", token.trim());
         } catch (JSONException ignored) {
         }
-        post(ctx, "/auth/v1/token?grant_type=password", body, false,
-                sessionSaver(ctx, cb));
+        post(ctx, "/auth/v1/verify", body, false, sessionSaver(ctx, cb));
+    }
+
+    /**
+     * Handles the magic-link deep link
+     * (com.koorix.app://auth/callback#access_token=...&amp;refresh_token=...).
+     * Returns true when a session was stored.
+     */
+    static boolean handleAuthDeepLink(Context ctx, android.net.Uri uri) {
+        if (uri == null || uri.getFragment() == null) {
+            return false;
+        }
+        String access = null;
+        String refresh = null;
+        long expiresIn = 3600L;
+        for (String part : uri.getFragment().split("&")) {
+            int eq = part.indexOf('=');
+            if (eq <= 0) {
+                continue;
+            }
+            String k = part.substring(0, eq);
+            String v = android.net.Uri.decode(part.substring(eq + 1));
+            if ("access_token".equals(k)) {
+                access = v;
+            } else if ("refresh_token".equals(k)) {
+                refresh = v;
+            } else if ("expires_in".equals(k)) {
+                try {
+                    expiresIn = Long.parseLong(v);
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        if (access == null || refresh == null) {
+            return false;
+        }
+        String pendingEmail = prefs(ctx).getString(K_PENDING_EMAIL, "");
+        prefs(ctx).edit()
+                .putString(K_ACCESS, access)
+                .putString(K_REFRESH, refresh)
+                .putLong(K_EXPIRES,
+                        System.currentTimeMillis() + expiresIn * 1000L)
+                .putString(K_EMAIL, pendingEmail)
+                .apply();
+        return true;
+    }
+
+    static String pendingEmail(Context ctx) {
+        return prefs(ctx).getString(K_PENDING_EMAIL, "");
     }
 
     static void signInWithGoogleIdToken(Context ctx, String idToken,
