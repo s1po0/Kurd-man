@@ -549,6 +549,16 @@ final class OpusMtTranslator
         }
     }
 
+    private OnnxTensor outputTensor(OrtSession.Result outputs,
+                                    String preferredName) throws IOException {
+        OnnxValue value = outputs.get(preferredName).orElse(outputs.get(0));
+        if (!(value instanceof OnnxTensor)) {
+            throw new IOException("OFFLINE_AI_MODEL_MISMATCH: "
+                    + "expected tensor output " + preferredName);
+        }
+        return (OnnxTensor) value;
+    }
+
     private List<String> splitForModel(String text) {
         List<String> sentences = splitSentences(text);
         List<String> combined = new ArrayList<>();
