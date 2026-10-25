@@ -150,7 +150,6 @@ final class OfflineAiClient
     }
 
     @Override
-    @Override
     public String translate(String text, String sourceLanguage,
                             String targetLanguage) throws Exception {
         // This engine always targets Sorani (ckb_Arab); the caller
