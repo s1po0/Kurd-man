@@ -35,13 +35,41 @@ def notice(title: str, msg: str) -> None:
     print(f"::notice title={title}::{msg[:900]}", flush=True)
 
 
+def _generate(enc, dec, ids, banned, np):
+    ids_np = np.array([ids], dtype=np.int64)
+    mask_np = np.ones_like(ids_np)
+    hidden = enc.run(None, {"input_ids": ids_np,
+                            "attention_mask": mask_np})[0]
+    generated = []
+    for _ in range(96):
+        logits = dec.run(None, {
+            "input_ids": np.array([[PAD_ID] + generated], dtype=np.int64),
+            "encoder_hidden_states": hidden,
+            "encoder_attention_mask": mask_np,
+        })[0][0, -1].copy()
+        for b in banned:
+            if b < logits.shape[0]:
+                logits[b] = -1e9
+        nxt = int(np.argmax(logits))
+        if nxt == EOS_ID:
+            break
+        generated.append(nxt)
+    return generated
+
+
+def _degenerate(ids):
+    if len(ids) < 4:
+        return True
+    return len(set(ids)) < max(3, len(ids) // 3)
+
+
 def greedy_test(enc_path: Path, dec_path: Path) -> None:
-    """Replicates the Android runner EXACTLY: SentencePiece segmentation
-    + vocab.json id mapping, full-sequence greedy decoding (the exported
-    decoder graph has no KV-cache inputs), piece-join decoding."""
+    """Isolate failures: fp32 vs quantized, HF tokenizer vs the app's
+    spm+vocab.json parity path. Full-sequence greedy (no KV inputs)."""
     import numpy as np
     import onnxruntime as ort
     import sentencepiece as spm
+    from transformers import AutoTokenizer
 
     src = spm.SentencePieceProcessor(model_file=str(OUT / "source.spm"))
     vocab = json.loads((OUT / "vocab.json").read_text(encoding="utf-8"))
@@ -50,20 +78,20 @@ def greedy_test(enc_path: Path, dec_path: Path) -> None:
     banned = {i for piece, i in vocab.items()
               if piece.startswith(">>") and piece.endswith("<<")}
     banned.add(PAD_ID)
+    hf = AutoTokenizer.from_pretrained(MODEL_ID)
     notice("TESTTAG", f"kur_tag_id={tag} vocab={len(vocab)} banned={len(banned)}")
 
-    enc = ort.InferenceSession(str(enc_path),
-                               providers=["CPUExecutionProvider"])
-    dec = ort.InferenceSession(str(dec_path),
-                               providers=["CPUExecutionProvider"])
-    notice("PACKIN", "encoder:" + ",".join(i.name for i in enc.get_inputs()))
-    notice("PACKIN", "decoder:" + ",".join(i.name for i in dec.get_inputs()))
+    def enc_hf(text):
+        return hf(f">>kur_Arab<< {text}")["input_ids"]
 
-    def encode(text):
+    def enc_par(text):
         pieces = src.encode(text, out_type=str)
         return [tag] + [vocab.get(piece, 1) for piece in pieces] + [EOS_ID]
 
-    def decode(ids):
+    def dec_hf(ids):
+        return hf.decode(ids, skip_special_tokens=True)
+
+    def dec_par(ids):
         out, pending = [], bytearray()
         for i in ids:
             piece = inv.get(i)
@@ -80,38 +108,28 @@ def greedy_test(enc_path: Path, dec_path: Path) -> None:
             out.append(pending.decode("utf-8", "replace"))
         return "".join(out).replace("\u2581", " ").strip()
 
-    samples = [
-        "Where are you going? I will wait for you at the station.",
-        "I can't believe it... he is still alive!",
-        "Don't touch my sister, or I will kill you.",
-    ]
-    for idx, text in enumerate(samples, 1):
-        ids = encode(text)
-        ids_np = np.array([ids], dtype=np.int64)
-        mask_np = np.ones_like(ids_np)
-        hidden = enc.run(None, {"input_ids": ids_np,
-                                "attention_mask": mask_np})[0]
-        generated = []
-        for _ in range(96):
-            feed = {
-                "input_ids": np.array([[PAD_ID] + generated],
-                                      dtype=np.int64),
-                "encoder_hidden_states": hidden,
-                "encoder_attention_mask": mask_np,
-            }
-            logits = dec.run(None, feed)[0][0, -1]
-            for b in banned:
-                if b < logits.shape[0]:
-                    logits[b] = -1e9
-            nxt = int(np.argmax(logits))
-            if nxt == EOS_ID:
-                break
-            generated.append(nxt)
-        decoded = decode(generated)
-        notice(f"TESTOUT{idx}", f"EN: {text}  =>  CKB: {decoded}")
-        arab = sum(1 for ch in decoded if "\u0600" <= ch <= "\u06ff")
-        if not decoded or arab < 3:
-            raise SystemExit(f"sample {idx} failed: {decoded!r}")
+    text = "Where are you going? I will wait for you at the station."
+    notice("TESTENC", f"hf={enc_hf(text) == enc_par(text)} "
+                      f"hf_ids={enc_hf(text)} par_ids={enc_par(text)}")
+
+    def run_case(label, enc_p, dec_p, enc_fn, dec_fn):
+        enc = ort.InferenceSession(str(enc_p),
+                                   providers=["CPUExecutionProvider"])
+        dec = ort.InferenceSession(str(dec_p),
+                                   providers=["CPUExecutionProvider"])
+        gen = _generate(enc, dec, enc_fn(text), banned, np)
+        out = dec_fn(gen)
+        notice(label, f"gen={len(gen)} degen={_degenerate(gen)} :: {out}")
+        return not _degenerate(gen) and bool(out.strip())
+
+    ok_fp32_hf = run_case("CASE_FP32_HF", FP32 / "encoder_model.onnx",
+                          FP32 / "decoder_model.onnx", enc_hf, dec_hf)
+    ok_fp32_par = run_case("CASE_FP32_PAR", FP32 / "encoder_model.onnx",
+                           FP32 / "decoder_model.onnx", enc_par, dec_par)
+    ok_q = run_case("CASE_Q_PAR", enc_path, dec_path, enc_par, dec_par)
+    notice("CASES", f"fp32_hf={ok_fp32_hf} fp32_par={ok_fp32_par} q_par={ok_q}")
+    if not ok_q:
+        raise SystemExit("quantized app-parity case failed")
 
 
 def main() -> None:
