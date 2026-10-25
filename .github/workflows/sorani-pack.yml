@@ -32,7 +32,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install --index-url https://download.pytorch.org/whl/cpu torch==2.4.1
-          pip install "transformers==4.44.2" "optimum[onnxruntime]==1.23.3" \
+          pip install "transformers==4.44.2" "optimum[onnxruntime]==1.23.3" accelerate \
             sentencepiece sacremoses protobuf onnx onnxruntime huggingface_hub
 
       - name: Convert + quantize

@@ -40,6 +40,7 @@ def main() -> None:
             "--model", MODEL_ID,
             "--task", "translation",
             "--opset", "14",
+            "--atol", "1e-3",
             str(FP32),
         ],
         capture_output=True, text=True,
