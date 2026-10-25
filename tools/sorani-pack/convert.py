@@ -41,6 +41,7 @@ def main() -> None:
             "--task", "translation",
             "--opset", "14",
             "--atol", "1e-3",
+            "--no-merge-decoder",
             str(FP32),
         ],
         capture_output=True, text=True,
