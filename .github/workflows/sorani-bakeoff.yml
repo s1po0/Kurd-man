@@ -1,0 +1,63 @@
+name: Sorani pack bake-off
+
+# Compares Sorani offline-pack candidates (current Helsinki pack vs a
+# dedicated en->ckb fine-tune) with beam search on manhwa sentences.
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main", "arena/**"]
+    paths:
+      - "tools/sorani-pack/bakeoff.py"
+      - ".github/workflows/sorani-bakeoff.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  bakeoff:
+    name: Compare Sorani pack candidates
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install toolchain
+        run: |
+          python -m pip install --upgrade pip
+          pip install --index-url https://download.pytorch.org/whl/cpu torch==2.2.1
+          pip install "transformers==4.37.2" "optimum[onnxruntime]==1.17.1" \
+            sentencepiece sacremoses protobuf "onnx==1.15.0" "onnxruntime==1.17.1" \
+            "huggingface_hub==0.20.3" "numpy<2"
+
+      - name: Download current pack (model A)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p a-pack
+          gh release download sorani-pack-v1 --dir a-pack \
+            --pattern "encoder_model_quantized.onnx" \
+            --pattern "decoder_model_quantized.onnx" \
+            --pattern "source.spm" \
+            --pattern "vocab.json"
+          ls -la a-pack
+
+      - name: Run bake-off
+        shell: bash
+        run: |
+          set -o pipefail
+          python tools/sorani-pack/bakeoff.py 2>&1 | tee bakeoff.log
+
+      - name: Surface log on failure
+        if: failure()
+        shell: bash
+        run: |
+          sed -e 's/\x1b\[[0-9;]*m//g' bakeoff.log | grep -v TracerWarning | grep -v FutureWarning | tail -n 9 | while IFS= read -r line; do
+            esc=$(printf '%s' "$line" | sed -e 's/%/%25/g')
+            echo "::error title=BAKELOG::${esc:0:800}"
+          done
