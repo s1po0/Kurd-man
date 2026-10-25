@@ -1194,8 +1194,8 @@ public class ManhwaRenderer {
             // Latin/other-script targets: keep the translation as-is;
             // the guard below exists only to stop un-translated Latin
             // OCR garbage leaking into Arabic-script output.
-            return segment.translation != null
-                    && !segment.translation.trim().isEmpty();
+            return segment.ckb != null
+                    && !segment.ckb.trim().isEmpty();
         }
         String ckb = segment.ckb == null ? "" : segment.ckb;
         String cleaned = ckb.replaceAll("[A-Za-z][A-Za-z'’\\-]*", " ")
