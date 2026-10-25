@@ -19,6 +19,18 @@ final class JobRuntime {
     private static final AtomicReference<String> STATUS =
             new AtomicReference<>("KurdMan ئامادەیە");
     private static volatile Thread jobThread;
+    private static volatile android.content.Context appContext;
+
+    static void init(android.content.Context context) {
+        if (context != null) {
+            appContext = context.getApplicationContext();
+        }
+    }
+
+    private static String s(int resId, String fallback) {
+        android.content.Context context = appContext;
+        return context == null ? fallback : context.getString(resId);
+    }
     private static volatile Runnable stopAction;
 
     private JobRuntime() {
@@ -62,7 +74,7 @@ final class JobRuntime {
 
     static void requestStop() {
         STOP_REQUESTED.set(true);
-        STATUS.set("🛑 وەستاندن داواکرا…");
+        STATUS.set(s(R.string.ks_0677, "🛑 وەستاندن داواکرا…"));
         Runnable action = stopAction;
         if (action != null) {
             try {

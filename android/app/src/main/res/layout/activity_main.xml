@@ -34,7 +34,7 @@
                 android:paddingTop="11dp"
                 android:paddingEnd="54dp"
                 android:paddingBottom="11dp"
-                android:text="✨ ئامادەیە — وێنە یان CBZ هەڵبژێرە و دەستپێبکە"
+                android:text="@string/ks_0604"
                 android:textColor="@color/text_primary"
                 android:textDirection="firstStrongRtl"
                 android:textSize="13sp" />
@@ -58,7 +58,7 @@
             android:fontFamily="sans-serif-black"
             android:minHeight="48dp"
             android:stateListAnimator="@null"
-            android:text="■  STOP — وەستاندنی کار و پارێزگاری"
+            android:text="@string/ks_0486"
             android:textAllCaps="false"
             android:textColor="@color/white"
             android:textSize="14sp"
@@ -133,7 +133,7 @@
                         android:paddingTop="6dp"
                         android:paddingEnd="11dp"
                         android:paddingBottom="6dp"
-                        android:text="v1.8.3  •  چەند وێنە پێکەوە + ڕاپۆرتی کێشەکان"
+                        android:text="@string/ks_0120"
                         android:textColor="@color/white"
                         android:textSize="12sp"
                         android:textStyle="bold" />
@@ -145,7 +145,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="15dp"
                     android:fontFamily="sans-serif-black"
-                    android:text="کورد مان"
+                    android:text="@string/ks_0454"
                     android:textColor="@color/white"
                     android:textSize="31sp"
                     android:textStyle="bold" />
@@ -156,7 +156,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:fontFamily="sans-serif-medium"
-                    android:text="وەرگێڕی مانھوا بۆ کوردی سۆرانی"
+                    android:text="@string/ks_0378"
                     android:textColor="#E0F2FE"
                     android:textSize="17sp"
                     android:textStyle="bold" />
@@ -166,7 +166,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:lineSpacingMultiplier="1.25"
-                    android:text="وێنە یان تەواوی بەشێکی CBZ بکە بە سۆرانی — ئۆنلاین یان بە زیرەکیی دەستکردی ئۆفلاین لەناو مۆبایلەکەدا. ناوەکانیش بە پیتی کوردی دەنووسرێن."
+                    android:text="@string/ks_0369"
                     android:textColor="@color/text_on_primary_muted"
                     android:textDirection="firstStrongRtl"
                     android:textSize="14sp" />
@@ -205,7 +205,7 @@
                         android:paddingTop="7dp"
                         android:paddingEnd="7dp"
                         android:paddingBottom="7dp"
-                        android:text="وێنە + CBZ"
+                        android:text="@string/ks_0367"
                         android:textColor="@color/white"
                         android:textSize="12sp"
                         android:textStyle="bold" />
@@ -238,7 +238,7 @@
                     android:fontFamily="sans-serif-black"
                     android:minHeight="50dp"
                     android:stateListAnimator="@null"
-                    android:text="👤  هەژمارەکەم  •  💎 Premium"
+                    android:text="@string/ks_0639"
                     android:textAllCaps="false"
                     android:textColor="@color/text_primary"
                     android:textSize="14sp"
@@ -269,7 +269,7 @@
                         android:layout_height="39dp"
                         android:background="@drawable/bg_step_badge"
                         android:gravity="center"
-                        android:text="١"
+                        android:text="@string/ks_0381"
                         android:textColor="@color/white"
                         android:textSize="17sp"
                         android:textStyle="bold" />
@@ -285,7 +285,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-black"
-                            android:text="وەرگێڕانی مانھوا"
+                            android:text="@string/ks_0373"
                             android:textColor="@color/text_primary"
                             android:textSize="19sp"
                             android:textStyle="bold" />
@@ -294,7 +294,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="3dp"
-                            android:text="زمان هەڵبژێرە، ئینجا فایلەکە باربکە"
+                            android:text="@string/ks_0241"
                             android:textColor="@color/text_secondary"
                             android:textSize="13sp" />
                     </LinearLayout>
@@ -314,7 +314,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="19dp"
-                    android:text="زمانی سەرچاوە"
+                    android:text="@string/ks_0243"
                     android:textColor="@color/text_primary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -351,10 +351,46 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:lineSpacingMultiplier="1.2"
-                    android:text="چینی سادەکراو و تەقلیدی هەردووکیان پشتگیری دەکرێن. دەقی ژاپۆنیی ستوونی لە هەندێک لاپەڕەدا ڕەنگە کەمتر ورد بێت."
+                    android:text="@string/ks_0429"
                     android:textColor="@color/text_muted"
                     android:textDirection="firstStrongRtl"
                     android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/ks_0242"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_input">
+
+                    <Spinner
+                        android:id="@+id/targetSpinner"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@null"
+                        android:popupBackground="@color/card_elevated"
+                        android:spinnerMode="dropdown" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical|end"
+                        android:layout_marginEnd="15dp"
+                        android:clickable="false"
+                        android:focusable="false"
+                        android:importantForAccessibility="no"
+                        android:text="▾"
+                        android:textColor="@color/primary"
+                        android:textSize="19sp" />
+                </FrameLayout>
 
                 <View
                     android:layout_width="match_parent"
@@ -366,7 +402,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:text="شێوازی وەرگێڕان"
+                    android:text="@string/ks_0281"
                     android:textColor="@color/text_primary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -405,7 +441,7 @@
                     android:layout_marginTop="10dp"
                     android:buttonTint="@color/primary"
                     android:checked="true"
-                    android:text="خوێندنەوەی زۆر ورد — OCR چەند جار و PP-OCR (کەمێک خاوترە)"
+                    android:text="@string/ks_0198"
                     android:textColor="@color/text_primary"
                     android:textDirection="firstStrongRtl"
                     android:textSize="13sp"
@@ -416,7 +452,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="3dp"
                     android:lineSpacingMultiplier="1.2"
-                    android:text="بۆ وشە قورسەکان و فۆنتە سەرنجڕاکێشەکان باشترە. ئەگەر خێرایی لە وردبینی گرنگترە، ئەم هەڵبژاردنە بکوژێنەوە."
+                    android:text="@string/ks_0166"
                     android:textColor="@color/text_muted"
                     android:textDirection="firstStrongRtl"
                     android:textSize="12sp" />
@@ -439,7 +475,7 @@
                         android:paddingTop="10dp"
                         android:paddingEnd="8dp"
                         android:paddingBottom="10dp"
-                        android:text="ناوەکان\nبە پیتی کوردی ✍"
+                        android:text="@string/ks_0321"
                         android:textColor="#99F6E4"
                         android:textDirection="firstStrongRtl"
                         android:textSize="12sp"
@@ -456,7 +492,7 @@
                         android:paddingTop="10dp"
                         android:paddingEnd="8dp"
                         android:paddingBottom="10dp"
-                        android:text="OCRی ورد\nML Kit + PP-OCRv6 🔎"
+                        android:text="@string/ks_0111"
                         android:textColor="#BFDBFE"
                         android:textDirection="firstStrongRtl"
                         android:textSize="12sp"
@@ -473,7 +509,7 @@
                     android:lineSpacingMultiplier="1.2"
                     android:minHeight="76dp"
                     android:stateListAnimator="@null"
-                    android:text="+  هەڵبژاردنی وێنەکان یان CBZ&#10;دەتوانیت چەند وێنەیەک پێکەوە هەڵبژێریت"
+                    android:text="@string/ks_0078"
                     android:textAllCaps="false"
                     android:textColor="#5EEAD4"
                     android:textDirection="firstStrongRtl"
@@ -489,7 +525,7 @@
                     android:fontFamily="sans-serif-black"
                     android:minHeight="58dp"
                     android:stateListAnimator="@null"
-                    android:text="✦  وەرگێڕان بۆ سۆرانی"
+                    android:text="@string/ks_0602"
                     android:textAllCaps="false"
                     android:textColor="@color/white"
                     android:textSize="16sp" />
@@ -499,7 +535,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:gravity="center"
-                    android:text="بۆ چەند وێنە، لە هەڵبژێرەکەدا دەست لەسەر یەکەم وێنە ڕابگرە و ئەوانی تریش هەڵبژێرە؛ بەپێی ژمارەی ناوەکانیان ڕیز دەکرێن، هەر وێنەیەک جیاواز و CBZێکی هاوبەشیش پاشەکەوت دەکرێت. CBZ دەبێت بە تەنیا هەڵبژێردرێت."
+                    android:text="@string/ks_0168"
                     android:textColor="@color/text_muted"
                     android:textDirection="firstStrongRtl"
                     android:textSize="12sp" />
@@ -519,7 +555,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
                 android:fontFamily="sans-serif-black"
-                android:text="🎨 ستایل و فۆنت"
+                android:text="@string/ks_0633"
                 android:textColor="@color/text_primary"
                 android:textDirection="firstStrongRtl"
                 android:textSize="22sp"
@@ -530,7 +566,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:lineSpacingMultiplier="1.25"
-                android:text="ئەم ستایلە بۆ وەرگێڕانی داهاتوو بەکاردێت. بۆ گۆڕینی هەر نووسینێک بەتەنیا، ستۆدیۆی دەق بکەرەوە."
+                android:text="@string/ks_0144"
                 android:textColor="@color/text_secondary"
                 android:textDirection="firstStrongRtl"
                 android:textSize="13sp" />
@@ -551,7 +587,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="sans-serif-black"
-                        android:text="🎨  ستایلی نووسین — فۆنت و ڕەنگ"
+                        android:text="@string/ks_0632"
                         android:textColor="#C4B5FD"
                         android:textDirection="firstStrongRtl"
                         android:textSize="15sp"
@@ -569,7 +605,7 @@
                         android:paddingTop="12dp"
                         android:paddingEnd="14dp"
                         android:paddingBottom="12dp"
-                        android:text="کورد مان — وەرگێڕانی جوان بۆ سۆرانی"
+                        android:text="@string/ks_0455"
                         android:textColor="@color/text_primary"
                         android:textDirection="firstStrongRtl"
                         android:textSize="18sp" />
@@ -578,7 +614,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:text="فۆنت"
+                        android:text="@string/ks_0284"
                         android:textColor="@color/text_primary"
                         android:textSize="13sp"
                         android:textStyle="bold" />
@@ -614,7 +650,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="11dp"
-                        android:text="ستایلی ئامادە"
+                        android:text="@string/ks_0247"
                         android:textColor="@color/text_primary"
                         android:textSize="13sp"
                         android:textStyle="bold" />
@@ -654,7 +690,7 @@
                         android:background="@drawable/bg_button_secondary"
                         android:minHeight="50dp"
                         android:stateListAnimator="@null"
-                        android:text="＋  هاوردەکردنی فۆنتی خۆم (TTF / OTF)"
+                        android:text="@string/ks_0628"
                         android:textAllCaps="false"
                         android:textColor="#C4B5FD"
                         android:textSize="13sp" />
@@ -664,7 +700,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:text="قەبارەی دەق: 100%"
+                        android:text="@string/ks_0296"
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
 
@@ -680,7 +716,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="7dp"
-                        android:text="ئەستووری فۆنت: 700"
+                        android:text="@string/ks_0141"
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
 
@@ -707,7 +743,7 @@
                             android:minHeight="50dp"
                             android:minWidth="0dp"
                             android:stateListAnimator="@null"
-                            android:text="A  ڕەنگی دەق"
+                            android:text="@string/ks_0088"
                             android:textAllCaps="false"
                             android:textColor="@color/white"
                             android:textSize="13sp" />
@@ -721,7 +757,7 @@
                             android:minHeight="50dp"
                             android:minWidth="0dp"
                             android:stateListAnimator="@null"
-                            android:text="▦  ڕەنگی پاشبنەما"
+                            android:text="@string/ks_0491"
                             android:textAllCaps="false"
                             android:textColor="@color/white"
                             android:textSize="13sp" />
@@ -731,7 +767,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="11dp"
-                        android:text="پاشبنەما"
+                        android:text="@string/ks_0398"
                         android:textColor="@color/text_primary"
                         android:textSize="13sp"
                         android:textStyle="bold" />
@@ -769,7 +805,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="9dp"
                         android:buttonTint="@color/primary"
-                        android:text="ڕەنگی دەقی خۆکار لە قسەهەڵگرەکە وەربگرە"
+                        android:text="@string/ks_0442"
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
 
@@ -784,7 +820,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:buttonTint="@color/primary"
-                            android:text="دەوروبەر"
+                            android:text="@string/ks_0238"
                             android:textColor="@color/text_secondary"
                             android:textSize="12sp" />
 
@@ -794,7 +830,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:buttonTint="@color/primary"
-                            android:text="سێبەر"
+                            android:text="@string/ks_0267"
                             android:textColor="@color/text_secondary"
                             android:textSize="12sp" />
 
@@ -804,7 +840,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:buttonTint="@color/primary"
-                            android:text="لارکردن"
+                            android:text="@string/ks_0298"
                             android:textColor="@color/text_secondary"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -814,7 +850,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="7dp"
                         android:lineSpacingMultiplier="1.2"
-                        android:text="دوای وەرگێڕان دەتوانیت هەر دەقێک جیا بجوڵێنیت، گەورە/بچووک بکەیت، بیسووڕێنیت و فۆنت و ڕەنگەکەی بگۆڕیت."
+                        android:text="@string/ks_0212"
                         android:textColor="@color/text_muted"
                         android:textDirection="firstStrongRtl"
                         android:textSize="11sp" />
@@ -836,7 +872,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-black"
-                    android:text="✏  دەستکاریکردنی نووسینەکان دوای وەرگێڕان"
+                    android:text="@string/ks_0589"
                     android:textColor="@color/text_primary"
                     android:textDirection="firstStrongRtl"
                     android:textSize="17sp"
@@ -847,7 +883,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="7dp"
                     android:lineSpacingMultiplier="1.35"
-                    android:text="١) دەقێک هەڵبژێرە  ·  ٢) ڕایبکێشە بۆ شوێنی نوێ  ·  ٣) فۆنت و ڕەنگ بگۆڕە  ·  ٤) دەرکردن دابگرە. دۆخی ئاسان بە بنەڕەتی کراوەیە؛ ئامرازە وردەکان لە «پێشکەوتوو»دان."
+                    android:text="@string/ks_0383"
                     android:textColor="@color/text_secondary"
                     android:textDirection="firstStrongRtl"
                     android:textSize="13sp" />
@@ -861,7 +897,7 @@
                     android:fontFamily="sans-serif-black"
                     android:minHeight="56dp"
                     android:stateListAnimator="@null"
-                    android:text="✏  کردنەوەی ستۆدیۆی دەق"
+                    android:text="@string/ks_0591"
                     android:textAllCaps="false"
                     android:textColor="@color/white"
                     android:textSize="15sp" />
@@ -881,7 +917,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
                 android:fontFamily="sans-serif-black"
-                android:text="⬇ ئەنجامەکان و داگرتنەکان"
+                android:text="@string/ks_0622"
                 android:textColor="@color/text_primary"
                 android:textDirection="firstStrongRtl"
                 android:textSize="22sp"
@@ -892,7 +928,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:lineSpacingMultiplier="1.25"
-                android:text="پێشبینی، دەقی وەرگێڕدراو و فایلە پاشەکەوتکراوەکان لێرەن."
+                android:text="@string/ks_0416"
                 android:textColor="@color/text_secondary"
                 android:textDirection="firstStrongRtl"
                 android:textSize="13sp" />
@@ -921,7 +957,7 @@
                         android:layout_height="39dp"
                         android:background="@drawable/bg_step_badge"
                         android:gravity="center"
-                        android:text="٢"
+                        android:text="@string/ks_0385"
                         android:textColor="@color/white"
                         android:textSize="17sp"
                         android:textStyle="bold" />
@@ -937,7 +973,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-black"
-                            android:text="پێشبینین و ئەنجام"
+                            android:text="@string/ks_0417"
                             android:textColor="@color/text_primary"
                             android:textSize="19sp"
                             android:textStyle="bold" />
@@ -946,7 +982,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="3dp"
-                            android:text="وێنە وەرگێڕدراوەکە و دەقەکان لێرە دەردەکەون"
+                            android:text="@string/ks_0368"
                             android:textColor="@color/text_secondary"
                             android:textSize="13sp" />
                     </LinearLayout>
@@ -967,7 +1003,7 @@
                     android:layout_height="360dp"
                     android:layout_marginTop="16dp"
                     android:background="@drawable/bg_preview"
-                    android:contentDescription="پێشبینینی وێنە"
+                    android:contentDescription="@string/ks_0418"
                     android:scaleType="fitCenter" />
 
                 <Button
@@ -979,7 +1015,7 @@
                     android:fontFamily="sans-serif-black"
                     android:minHeight="56dp"
                     android:stateListAnimator="@null"
-                    android:text="✏  دەستکاری شوێن، فۆنت و ڕەنگی نووسینەکان"
+                    android:text="@string/ks_0587"
                     android:textAllCaps="false"
                     android:textColor="@color/white"
                     android:textSize="14sp" />
@@ -993,7 +1029,7 @@
                     android:fontFamily="sans-serif-black"
                     android:minHeight="54dp"
                     android:stateListAnimator="@null"
-                    android:text="✈  ناردنی ئەنجام بۆ تێلێگرام"
+                    android:text="@string/ks_0583"
                     android:textAllCaps="false"
                     android:textColor="@color/white"
                     android:textSize="15sp" />
@@ -1008,7 +1044,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:text="دەقی وەرگێڕدراو"
+                    android:text="@string/ks_0228"
                     android:textColor="@color/text_primary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
@@ -1026,7 +1062,7 @@
                     android:paddingTop="14dp"
                     android:paddingEnd="15dp"
                     android:paddingBottom="14dp"
-                    android:text="دەقی وەرگێڕدراو لێرە دەردەکەوێت…"
+                    android:text="@string/ks_0229"
                     android:textColor="@color/text_primary"
                     android:textDirection="firstStrongRtl"
                     android:textIsSelectable="true"
@@ -1037,7 +1073,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="9dp"
                     android:lineSpacingMultiplier="1.2"
-                    android:text="ئەگەر بەشێک بە [نەخراوەتە سەر وێنەکە] دیاریکرابێت، دەقەکەی لێرە و لە TXTەکەدا هەیە بەڵام بە سەلامەتی نەخراوەتە سەر وێنەکە."
+                    android:text="@string/ks_0151"
                     android:textColor="@color/text_muted"
                     android:textDirection="firstStrongRtl"
                     android:textSize="12sp" />
@@ -1067,7 +1103,7 @@
                         android:layout_height="39dp"
                         android:background="@drawable/bg_step_badge"
                         android:gravity="center"
-                        android:text="٣"
+                        android:text="@string/ks_0388"
                         android:textColor="@color/white"
                         android:textSize="17sp"
                         android:textStyle="bold" />
@@ -1083,7 +1119,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-black"
-                            android:text="داگرتنەکان"
+                            android:text="@string/ks_0209"
                             android:textColor="@color/text_primary"
                             android:textSize="19sp"
                             android:textStyle="bold" />
@@ -1092,7 +1128,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="3dp"
-                            android:text="CBZ و TXTی وەرگێڕدراو لەسەر مۆبایلەکە"
+                            android:text="@string/ks_0094"
                             android:textColor="@color/text_secondary"
                             android:textSize="13sp" />
                     </LinearLayout>
@@ -1123,7 +1159,7 @@
                         android:minHeight="50dp"
                         android:minWidth="0dp"
                         android:stateListAnimator="@null"
-                        android:text="↻  نوێکردنەوە"
+                        android:text="@string/ks_0483"
                         android:textAllCaps="false"
                         android:textColor="#5EEAD4"
                         android:textSize="13sp" />
@@ -1137,7 +1173,7 @@
                         android:minHeight="50dp"
                         android:minWidth="0dp"
                         android:stateListAnimator="@null"
-                        android:text="📁  کردنەوەی فۆڵدەر"
+                        android:text="@string/ks_0643"
                         android:textAllCaps="false"
                         android:textColor="#5EEAD4"
                         android:textSize="13sp" />
@@ -1153,7 +1189,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
-                    android:text="لە Android 10+ فایلەکان لە فۆڵدەری Download/KurdManـیشدا دەردەکەون. بە «سڕینەوە» کۆپییە هاوشێوەکە لەوێش دەسڕدرێتەوە ئەگەر بدۆزرێتەوە."
+                    android:text="@string/ks_0309"
                     android:textColor="@color/text_muted"
                     android:textDirection="firstStrongRtl"
                     android:textSize="12sp" />
@@ -1173,7 +1209,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
                 android:fontFamily="sans-serif-black"
-                android:text="⚙ ڕێکخستنەکان"
+                android:text="@string/ks_0504"
                 android:textColor="@color/text_primary"
                 android:textDirection="firstStrongRtl"
                 android:textSize="22sp"
@@ -1185,7 +1221,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:lineSpacingMultiplier="1.25"
-                android:text="جۆری فایلی کۆتایی، مۆدێلی ئۆفلاین، پاکێجی OCRی بەهێز، پارێزگاری تا STOP و پەیوەندیی Telegram لێرە کۆکراونەتەوە."
+                android:text="@string/ks_0192"
                 android:textColor="@color/text_secondary"
                 android:textDirection="firstStrongRtl"
                 android:textSize="13sp" />
@@ -1229,7 +1265,7 @@
                         android:background="@drawable/bg_button_secondary"
                         android:minHeight="46dp"
                         android:stateListAnimator="@null"
-                        android:text="کوردی"
+                        android:text="@string/ks_0456"
                         android:textAllCaps="false"
                         android:textColor="@color/text_primary"
                         android:textSize="13sp" />
@@ -1256,7 +1292,7 @@
                         android:background="@drawable/bg_button_secondary"
                         android:minHeight="46dp"
                         android:stateListAnimator="@null"
-                        android:text="العربية"
+                        android:text="@string/ks_0153"
                         android:textAllCaps="false"
                         android:textColor="@color/text_primary"
                         android:textSize="13sp" />
@@ -1278,7 +1314,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="sans-serif-black"
-                        android:text="📄  دەرکردنی PDF"
+                        android:text="@string/ks_0644"
                         android:textColor="#FECACA"
                         android:textDirection="firstStrongRtl"
                         android:textSize="14sp"
@@ -1293,7 +1329,7 @@
                         android:checked="false"
                         android:lineSpacingMultiplier="1.2"
                         android:minHeight="48dp"
-                        android:text="دوای تەواوبوونی وەرگێڕان، PDFیش بێتە ناو مۆبایلەکەم"
+                        android:text="@string/ks_0210"
                         android:textColor="@color/text_primary"
                         android:textDirection="firstStrongRtl"
                         android:textSize="14sp"
@@ -1304,7 +1340,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:lineSpacingMultiplier="1.25"
-                        android:text="کاتێک ئەمە چالاکە، ئەنجامەکە وەک PDF لە Download/KurdMan و لە بەشی «⬇ ئەنجامەکان» پاشەکەوت دەبێت؛ لەوێ دەتوانیت بیکەیتەوە، هاوبەشی بکەیت یان بیسڕیتەوە. وێنە/CBZ و TXTەکەش هەر دەمێننەوە. وێنە زۆر درێژەکان بۆ چەند لاپەڕەیەکی A4 دابەش دەبن تاکوو خوێندنەوەیان ئاسان بێت."
+                        android:text="@string/ks_0448"
                         android:textColor="@color/text_secondary"
                         android:textDirection="firstStrongRtl"
                         android:textSize="12sp" />
@@ -1325,7 +1361,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="sans-serif-black"
-                        android:text="🧼  سڕینەوەی خاوێنی دەقی ڕەسەن"
+                        android:text="@string/ks_0687"
                         android:textColor="#A7F3D0"
                         android:textDirection="firstStrongRtl"
                         android:textSize="14sp"
@@ -1340,7 +1376,7 @@
                         android:checked="false"
                         android:lineSpacingMultiplier="1.2"
                         android:minHeight="48dp"
-                        android:text="دەقی ڕەسەن بە خاوێنی بسرەوە — بێ پاشبنەمای سپی"
+                        android:text="@string/ks_0232"
                         android:textColor="@color/text_primary"
                         android:textDirection="firstStrongRtl"
                         android:textSize="14sp"
@@ -1351,7 +1387,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:lineSpacingMultiplier="1.25"
-                        android:text="ئەمە بە شێوازی بنەڕەتی چالاکە: تەنها پیتەکانی دەقە ڕەسەنەکە دەسڕدرێنەوە و شوێنەکانیان بە ڕەنگی دەوروبەریان لە ناو هەڵۆکەکە پڕ دەکرێنەوە، هێڵی بازنەکە و وێنەکەی پشتەوە وەک خۆیان دەمێنن، ئینجا دەقە کوردییەکە بە پێی قاڵبی هەڵۆکەکە لە هەمان شوێن دادەنرێت تاکوو لە بازنەکە دەرنەکەوێت — هیچ چوارگۆشە سپییەک نامێنێت. ئەگەر ناتەوێت، بیکوژێنەوە و شێوازی کۆن دەگەڕێتەوە. هەمان هەڵبژاردە لە بەشی «🎨 ستایل» لە لیستی جۆری پاشبنەماشدا هەیە."
+                        android:text="@string/ks_0150"
                         android:textColor="@color/text_secondary"
                         android:textDirection="firstStrongRtl"
                         android:textSize="12sp" />
@@ -1372,7 +1408,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="sans-serif-black"
-                        android:text="🔎  OCRی بەهێز — PP-OCRv6 + ML Kit"
+                        android:text="@string/ks_0659"
                         android:textColor="#BFDBFE"
                         android:textDirection="firstStrongRtl"
                         android:textSize="14sp"
@@ -1384,7 +1420,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="7dp"
                         android:lineSpacingMultiplier="1.2"
-                        android:text="هێشتا دانەبەزیوە • 34.8 MB"
+                        android:text="@string/ks_0341"
                         android:textColor="@color/text_primary"
                         android:textDirection="firstStrongRtl"
                         android:textSize="13sp"
@@ -1395,7 +1431,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
                         android:lineSpacingMultiplier="1.25"
-                        android:text="یەکجار دایبەزێنە؛ دواتر PP-OCR لەناو مۆبایلەکەدا و بێ ئینتەرنێت وشە قورسەکان دووبارە دەخوێنێتەوە و تەنها کاتێک ئەنجامی ML Kit دەگۆڕێت کە دڵنیاترە."
+                        android:text="@string/ks_0468"
                         android:textColor="@color/text_secondary"
                         android:textDirection="firstStrongRtl"
                         android:textSize="12sp" />
@@ -1417,7 +1453,7 @@
                             android:minHeight="50dp"
                             android:minWidth="0dp"
                             android:stateListAnimator="@null"
-                            android:text="⬇  دابەزاندنی PP-OCR"
+                            android:text="@string/ks_0620"
                             android:textAllCaps="false"
                             android:textColor="@color/white"
                             android:textDirection="firstStrongRtl"
@@ -1432,7 +1468,7 @@
                             android:minHeight="50dp"
                             android:minWidth="0dp"
                             android:stateListAnimator="@null"
-                            android:text="🗑  سڕینەوەی OCR"
+                            android:text="@string/ks_0666"
                             android:textAllCaps="false"
                             android:textColor="#FCA5A5"
                             android:textDirection="firstStrongRtl"
@@ -1445,7 +1481,7 @@
                         android:layout_marginTop="9dp"
                         android:gravity="center"
                         android:lineSpacingMultiplier="1.2"
-                        android:text="PaddlePaddle PP-OCR • Apache-2.0 • ئینگلیزی، کۆری، ژاپۆنی و چینی"
+                        android:text="@string/ks_0114"
                         android:textColor="@color/text_muted"
                         android:textDirection="firstStrongRtl"
                         android:textSize="11sp" />
@@ -1467,7 +1503,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="sans-serif-black"
-                        android:text="🤖  Unlimited-OCR — مۆدێلی Baidu (ئیختياری)"
+                        android:text="@string/ks_0684"
                         android:textColor="#BFDBFE"
                         android:textDirection="firstStrongRtl"
                         android:textSize="14sp"
@@ -1478,7 +1514,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
                         android:lineSpacingMultiplier="1.25"
-                        android:text="ئەم مۆدێلە 3 ملیار پارامێتری هەیە و تەنیا لەسەر کۆمپیوتەری بەهێز بە کارتە شاشەی NVIDIA کار دەکات — ناتوانرێت لەناو مۆبایلدا هەڵبگیرێت. ئەگەر لەسەر کۆمپیوتەرەکەت داتنا (SGLang یان vLLM)، ناونیشانەکەی لێرە بنووسە: ئەپەکە هەر قسەهەڵگرێکی لاواز بەتەواوی بۆ ئەو دەنێرێت بۆ یەک خوێندنەوەی وردی هەموو بلۆکەکە. بەبێ ئەمە، OCRی ناو مۆبایل وەک خۆی کار دەکات."
+                        android:text="@string/ks_0147"
                         android:textColor="@color/text_secondary"
                         android:textDirection="firstStrongRtl"
                         android:textSize="12sp" />
@@ -1488,7 +1524,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
-                        android:text="چالاککردنی Unlimited-OCR بۆ بلۆکە لاوازەکان"
+                        android:text="@string/ks_0427"
                         android:textColor="@color/text_primary"
                         android:textDirection="firstStrongRtl"
                         android:textSize="13sp" />
@@ -1521,7 +1557,7 @@
                         android:layout_marginTop="8dp"
                         android:background="@drawable/bg_input"
                         android:gravity="start"
-                        android:hint="Unlimited-OCR (ناوی مۆدێل)"
+                        android:hint="@string/ks_0117"
                         android:importantForAutofill="no"
                         android:inputType="text|textNoSuggestions"
                         android:minHeight="52dp"
@@ -1542,7 +1578,7 @@
                         android:layout_marginTop="8dp"
                         android:background="@drawable/bg_input"
                         android:gravity="start"
-                        android:hint="API key (تەنیا ئەگەر سێرڤەرەکە بیخوازێت)"
+                        android:hint="@string/ks_0090"
                         android:importantForAutofill="no"
                         android:inputType="textPassword|textNoSuggestions"
                         android:minHeight="52dp"
@@ -1562,7 +1598,7 @@
                         android:layout_marginTop="9dp"
                         android:gravity="center"
                         android:lineSpacingMultiplier="1.2"
-                        android:text="Baidu Unlimited-OCR • MIT • پێویستی بە سێرڤەری خۆتە (GPU)"
+                        android:text="@string/ks_0091"
                         android:textColor="@color/text_muted"
                         android:textDirection="firstStrongRtl"
                         android:textSize="11sp" />
@@ -1583,7 +1619,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="sans-serif-black"
-                        android:text="🤖  زیرەکیی دەستکردی ئۆفلاین — Meta NLLB-200"
+                        android:text="@string/ks_0655"
                         android:textColor="#99F6E4"
                         android:textDirection="firstStrongRtl"
                         android:textSize="14sp"
@@ -1595,7 +1631,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="7dp"
                         android:lineSpacingMultiplier="1.2"
-                        android:text="هێشتا دانەبەزیوە • 1.34 GB"
+                        android:text="@string/ks_0415"
                         android:textColor="@color/text_primary"
                         android:textDirection="firstStrongRtl"
                         android:textSize="13sp"
@@ -1606,7 +1642,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
                         android:lineSpacingMultiplier="1.25"
-                        android:text="یەکەمجار پێویستی بە ئینتەرنێت و 1.34 GB شوێنی بەتاڵە؛ دواتر وەرگێڕان بە تەواوی بێ ئینتەرنێت لەناو مۆبایلەکەدا دەبێت. لەوانەیە لە دۆخی ئۆنلاین خاوتر بێت و پاتری زیاتر بەکاربهێنێت؛ بیرگەی 6 GB یان زیاتر پێشنیار دەکرێت."
+                        android:text="@string/ks_0161"
                         android:textColor="@color/text_secondary"
                         android:textDirection="firstStrongRtl"
                         android:textSize="12sp" />
@@ -1628,7 +1664,7 @@
                             android:minHeight="50dp"
                             android:minWidth="0dp"
                             android:stateListAnimator="@null"
-                            android:text="⬇  دابەزاندنی مۆدێلی AI"
+                            android:text="@string/ks_0621"
                             android:textAllCaps="false"
                             android:textColor="@color/white"
                             android:textDirection="firstStrongRtl"
@@ -1643,7 +1679,7 @@
                             android:minHeight="50dp"
                             android:minWidth="0dp"
                             android:stateListAnimator="@null"
-                            android:text="🗑  سڕینەوەی مۆدێل"
+                            android:text="@string/ks_0667"
                             android:textAllCaps="false"
                             android:textColor="#FCA5A5"
                             android:textDirection="firstStrongRtl"
@@ -1656,7 +1692,7 @@
                         android:layout_marginTop="9dp"
                         android:gravity="center"
                         android:lineSpacingMultiplier="1.2"
-                        android:text="Meta NLLB-200 • بۆ بەکارهێنانی کەسی/نابازرگانی (CC BY-NC 4.0)"
+                        android:text="@string/ks_0101"
                         android:textColor="@color/text_muted"
                         android:textDirection="firstStrongRtl"
                         android:textSize="11sp" />
@@ -1677,7 +1713,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="sans-serif-black"
-                        android:text="🛡  پارێزگاری لە کوژاندنەوە — تا STOP"
+                        android:text="@string/ks_0680"
                         android:textColor="#FDE68A"
                         android:textDirection="firstStrongRtl"
                         android:textSize="15sp"
@@ -1689,7 +1725,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="7dp"
                         android:lineSpacingMultiplier="1.25"
-                        android:text="لەکاتی کارکردندا خۆکار چالاک دەبێت؛ ئاگادارکردنەوەیەکی هەمیشەیی و CPU زیندوو دەهێڵێتەوە تەنانەت کاتێک شاشە دەکوژێتەوە."
+                        android:text="@string/ks_0313"
                         android:textColor="@color/text_secondary"
                         android:textDirection="firstStrongRtl"
                         android:textSize="12sp" />
@@ -1711,7 +1747,7 @@
                             android:minHeight="52dp"
                             android:minWidth="0dp"
                             android:stateListAnimator="@null"
-                            android:text="▶  پارێزگاری هەمیشەیی"
+                            android:text="@string/ks_0493"
                             android:textAllCaps="false"
                             android:textColor="@color/white"
                             android:textSize="13sp" />
@@ -1725,7 +1761,7 @@
                             android:minHeight="52dp"
                             android:minWidth="0dp"
                             android:stateListAnimator="@null"
-                            android:text="🔋  پاتری بەبێ سنوور"
+                            android:text="@string/ks_0656"
                             android:textAllCaps="false"
                             android:textColor="#FDE68A"
                             android:textSize="13sp" />
@@ -1737,7 +1773,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:buttonTint="@color/primary"
-                        android:text="لەکاتی کارکردندا شاشەکەش هەڵگیرسێنە (پاتری زیاتر بەکاردەهێنێت)"
+                        android:text="@string/ks_0314"
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
 
@@ -1745,7 +1781,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
-                        android:text="STOP لە سەرەوەی شاشە یان لە ئاگادارکردنەوەکەدا دەتوانێت هەمووی بووەستێنێت."
+                        android:text="@string/ks_0116"
                         android:textColor="@color/text_muted"
                         android:textDirection="firstStrongRtl"
                         android:textSize="11sp" />
@@ -1776,7 +1812,7 @@
                         android:layout_height="39dp"
                         android:background="@drawable/bg_step_badge"
                         android:gravity="center"
-                        android:text="٤"
+                        android:text="@string/ks_0391"
                         android:textColor="@color/white"
                         android:textSize="17sp"
                         android:textStyle="bold" />
@@ -1792,7 +1828,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-black"
-                            android:text="پەیوەندی تێلێگرام"
+                            android:text="@string/ks_0423"
                             android:textColor="@color/text_primary"
                             android:textSize="19sp"
                             android:textStyle="bold" />
@@ -1801,7 +1837,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="3dp"
-                            android:text="تۆکنەکە تەنها لەسەر ئەم مۆبایلە دەپارێزرێت"
+                            android:text="@string/ks_0184"
                             android:textColor="@color/text_secondary"
                             android:textSize="13sp" />
                     </LinearLayout>
@@ -1820,7 +1856,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="19dp"
-                    android:text="Bot Token — تۆکنی بۆتەکە"
+                    android:text="@string/ks_0092"
                     android:textColor="@color/text_primary"
                     android:textDirection="firstStrongRtl"
                     android:textSize="14sp"
@@ -1868,7 +1904,7 @@
                         android:minWidth="0dp"
                         android:padding="0dp"
                         android:stateListAnimator="@null"
-                        android:text="📋 لکاندن"
+                        android:text="@string/ks_0651"
                         android:textAllCaps="false"
                         android:textColor="#5EEAD4"
                         android:textSize="13sp" />
@@ -1880,7 +1916,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="7dp"
                     android:buttonTint="@color/primary"
-                    android:text="تۆکنەکە پیشان بدە"
+                    android:text="@string/ks_0186"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp" />
 
@@ -1888,7 +1924,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="17dp"
-                    android:text="Chat ID — ژمارەی تێلێگرامەکەت"
+                    android:text="@string/ks_0098"
                     android:textColor="@color/text_primary"
                     android:textDirection="firstStrongRtl"
                     android:textSize="14sp"
@@ -1933,7 +1969,7 @@
                         android:minWidth="0dp"
                         android:padding="0dp"
                         android:stateListAnimator="@null"
-                        android:text="📋 لکاندن"
+                        android:text="@string/ks_0651"
                         android:textAllCaps="false"
                         android:textColor="#5EEAD4"
                         android:textSize="13sp" />
@@ -1955,7 +1991,7 @@
                         android:minHeight="52dp"
                         android:minWidth="0dp"
                         android:stateListAnimator="@null"
-                        android:text="💾  پاشەکەوتکردن"
+                        android:text="@string/ks_0640"
                         android:textAllCaps="false"
                         android:textColor="#5EEAD4"
                         android:textSize="13sp" />
@@ -1969,7 +2005,7 @@
                         android:minHeight="52dp"
                         android:minWidth="0dp"
                         android:stateListAnimator="@null"
-                        android:text="✓  پشکنینی بۆت"
+                        android:text="@string/ks_0594"
                         android:textAllCaps="false"
                         android:textColor="@color/white"
                         android:textSize="13sp" />
@@ -1985,7 +2021,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="17dp"
-                    android:text="نامە بۆ بۆتەکە"
+                    android:text="@string/ks_0317"
                     android:textColor="@color/text_primary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
@@ -1997,7 +2033,7 @@
                     android:layout_marginTop="9dp"
                     android:background="@drawable/bg_input"
                     android:gravity="top|start"
-                    android:hint="نامەیەک بنووسە…"
+                    android:hint="@string/ks_0319"
                     android:inputType="textMultiLine"
                     android:minHeight="82dp"
                     android:minLines="2"
@@ -2017,7 +2053,7 @@
                     android:background="@drawable/bg_button_secondary"
                     android:minHeight="52dp"
                     android:stateListAnimator="@null"
-                    android:text="✉  نامە بنێرە"
+                    android:text="@string/ks_0584"
                     android:textAllCaps="false"
                     android:textColor="#5EEAD4"
                     android:textSize="14sp" />
@@ -2029,7 +2065,7 @@
                 android:layout_marginTop="17dp"
                 android:gravity="center"
                 android:lineSpacingMultiplier="1.25"
-                android:text="🔒 تۆکنەکەت تەنها لەسەر ئەم مۆبایلە دەپارێزرێت؛ هەرگیز لە چات یان ئیمەیڵدا مەینێرە."
+                android:text="@string/ks_0662"
                 android:textColor="@color/text_muted"
                 android:textDirection="firstStrongRtl"
                 android:textSize="12sp" />
@@ -2057,7 +2093,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
                     android:fontFamily="sans-serif-black"
-                    android:text="📋 ڕاپۆرتی کێشەکان"
+                    android:text="@string/ks_0652"
                     android:textColor="@color/text_primary"
                     android:textDirection="firstStrongRtl"
                     android:textSize="22sp"
@@ -2068,7 +2104,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:lineSpacingMultiplier="1.25"
-                    android:text="هەر هەڵەیەک لە خوێندنەوە، وەرگێڕان، دابەزاندن یان ناردندا لێرە بە کات و هۆکار و شوێنی تەکنیکییەوە تۆمار دەکرێت؛ تەنانەت دوای داخستنی ئەپەکەش دەمێنێتەوە."
+                    android:text="@string/ks_0350"
                     android:textColor="@color/text_secondary"
                     android:textDirection="firstStrongRtl"
                     android:textSize="13sp" />
@@ -2095,7 +2131,7 @@
                         android:paddingTop="13dp"
                         android:paddingEnd="14dp"
                         android:paddingBottom="13dp"
-                        android:text="✅ هیچ هەڵەیەک هێشتا تۆمار نەکراوە."
+                        android:text="@string/ks_0572"
                         android:textColor="@color/text_primary"
                         android:textDirection="firstStrongRtl"
                         android:textSize="14sp"
@@ -2105,7 +2141,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="18dp"
-                        android:text="تێبینیی خۆت زیاد بکە"
+                        android:text="@string/ks_0187"
                         android:textColor="@color/text_primary"
                         android:textDirection="firstStrongRtl"
                         android:textSize="15sp"
@@ -2118,7 +2154,7 @@
                         android:layout_marginTop="9dp"
                         android:background="@drawable/bg_input"
                         android:gravity="top|start"
-                        android:hint="بۆ نموونە: لە کام وێنە/لاپەڕە و لە کام گامدا کێشەکە ڕوویدا؟"
+                        android:hint="@string/ks_0160"
                         android:inputType="textMultiLine"
                         android:minHeight="76dp"
                         android:minLines="2"
@@ -2139,7 +2175,7 @@
                         android:background="@drawable/bg_button_secondary"
                         android:minHeight="52dp"
                         android:stateListAnimator="@null"
-                        android:text="✚  زیادکردنی تێبینی بۆ ڕاپۆرت"
+                        android:text="@string/ks_0600"
                         android:textAllCaps="false"
                         android:textColor="#5EEAD4"
                         android:textDirection="firstStrongRtl"
@@ -2162,7 +2198,7 @@
                             android:minHeight="54dp"
                             android:minWidth="0dp"
                             android:stateListAnimator="@null"
-                            android:text="📋  کۆپی ڕاپۆرت"
+                            android:text="@string/ks_0650"
                             android:textAllCaps="false"
                             android:textColor="@color/white"
                             android:textDirection="firstStrongRtl"
@@ -2178,7 +2214,7 @@
                             android:minHeight="54dp"
                             android:minWidth="0dp"
                             android:stateListAnimator="@null"
-                            android:text="↗  هاوبەشکردن"
+                            android:text="@string/ks_0477"
                             android:textAllCaps="false"
                             android:textColor="@color/white"
                             android:textDirection="firstStrongRtl"
@@ -2201,7 +2237,7 @@
                             android:minHeight="50dp"
                             android:minWidth="0dp"
                             android:stateListAnimator="@null"
-                            android:text="↻  نوێکردنەوە"
+                            android:text="@string/ks_0483"
                             android:textAllCaps="false"
                             android:textColor="#5EEAD4"
                             android:textDirection="firstStrongRtl"
@@ -2216,7 +2252,7 @@
                             android:minHeight="50dp"
                             android:minWidth="0dp"
                             android:stateListAnimator="@null"
-                            android:text="🗑  پاککردنەوە"
+                            android:text="@string/ks_0668"
                             android:textAllCaps="false"
                             android:textColor="#FCA5A5"
                             android:textDirection="firstStrongRtl"
@@ -2227,7 +2263,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="18dp"
-                        android:text="وردەکاریی تەکنیکی"
+                        android:text="@string/ks_0366"
                         android:textColor="@color/text_primary"
                         android:textDirection="firstStrongRtl"
                         android:textSize="15sp"
@@ -2247,7 +2283,7 @@
                         android:paddingTop="12dp"
                         android:paddingEnd="12dp"
                         android:paddingBottom="12dp"
-                        android:text="هیچ ڕاپۆرتێک نییە."
+                        android:text="@string/ks_0336"
                         android:textColor="@color/text_secondary"
                         android:textDirection="ltr"
                         android:textIsSelectable="true"
@@ -2259,7 +2295,7 @@
                         android:layout_marginTop="10dp"
                         android:gravity="center"
                         android:lineSpacingMultiplier="1.25"
-                        android:text="تۆکنی تێلێگرام، Chat ID و کلیلەکانی API بە ئەنقەست ناخرێنە ناو ڕاپۆرتەکەوە."
+                        android:text="@string/ks_0183"
                         android:textColor="@color/text_muted"
                         android:textDirection="firstStrongRtl"
                         android:textSize="11sp" />
@@ -2292,7 +2328,7 @@
             android:minWidth="0dp"
             android:padding="2dp"
             android:stateListAnimator="@null"
-            android:text="✦&#10;وەرگێڕان"
+            android:text="@string/ks_0601"
             android:textAllCaps="false"
             android:textColor="@color/text_primary"
             android:textSize="12sp" />
@@ -2309,7 +2345,7 @@
             android:minWidth="0dp"
             android:padding="2dp"
             android:stateListAnimator="@null"
-            android:text="🎨&#10;ستایل"
+            android:text="@string/ks_0631"
             android:textAllCaps="false"
             android:textColor="@color/text_primary"
             android:textSize="12sp" />
@@ -2326,7 +2362,7 @@
             android:minWidth="0dp"
             android:padding="2dp"
             android:stateListAnimator="@null"
-            android:text="⬇&#10;ئەنجامەکان"
+            android:text="@string/ks_0619"
             android:textAllCaps="false"
             android:textColor="@color/text_primary"
             android:textSize="12sp" />
@@ -2343,7 +2379,7 @@
             android:minWidth="0dp"
             android:padding="2dp"
             android:stateListAnimator="@null"
-            android:text="⚙&#10;ڕێکخستن"
+            android:text="@string/ks_0502"
             android:textAllCaps="false"
             android:textColor="@color/text_primary"
             android:textSize="11sp" />
@@ -2359,7 +2395,7 @@
             android:minWidth="0dp"
             android:padding="2dp"
             android:stateListAnimator="@null"
-            android:text="📋&#10;ڕاپۆرت"
+            android:text="@string/ks_0649"
             android:textAllCaps="false"
             android:textColor="@color/text_primary"
             android:textSize="11sp" />

@@ -1,5 +1,7 @@
 package com.kurdman.app;
 
+import android.content.Context;
+
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -35,6 +37,21 @@ import java.util.Set;
 
 /** On-device OCR (tiled for long webtoons) and conservative text rendering. */
 public class ManhwaRenderer {
+
+    /**
+     * Target language of the job currently rendering (set by the UI
+     * before a job starts). Outside-bubble sanitation is script-aware:
+     * the Latin-garbage guard only applies to Arabic-script targets.
+     */
+    public static volatile String activeTargetLanguage = "ckb";
+
+    /** Context used only to localize progress messages. */
+    public static volatile Context i18nContext;
+
+    private static String tr(int resId) {
+        Context context = i18nContext;
+        return context == null ? "" : context.getString(resId);
+    }
     public interface Progress {
         void onProgress(String message);
     }
@@ -226,8 +243,8 @@ public class ManhwaRenderer {
                 int y1 = Math.min(height, y0 + tileHeight);
                 if (progress != null) {
                     progress.onProgress((highAccuracy
-                            ? "خوێندنەوەی وردی دەق (OCR) "
-                            : "خوێندنەوەی دەق (OCR) ")
+                            ? tr(R.string.ks_0200)
+                            : tr(R.string.ks_0197))
                             + tileIndex + "/" + tileCount + "…");
                 }
 
@@ -1162,7 +1179,24 @@ public class ManhwaRenderer {
      * (Arabic script) to remain — otherwise accepting the block would
      * typeset garbage like "tsfustto" over the artwork.
      */
+    private static boolean isArabicScriptTarget() {
+        switch (activeTargetLanguage == null ? "ckb" : activeTargetLanguage) {
+            case "ckb": case "ar": case "fa": case "ur":
+            case "ps": case "sd": case "ug":
+                return true;
+            default:
+                return false;
+        }
+    }
+
     private static boolean sanitizeOutsideTranslation(Segment segment) {
+        if (!isArabicScriptTarget()) {
+            // Latin/other-script targets: keep the translation as-is;
+            // the guard below exists only to stop un-translated Latin
+            // OCR garbage leaking into Arabic-script output.
+            return segment.translation != null
+                    && !segment.translation.trim().isEmpty();
+        }
         String ckb = segment.ckb == null ? "" : segment.ckb;
         String cleaned = ckb.replaceAll("[A-Za-z][A-Za-z'’\\-]*", " ")
                 .replaceAll("\\s+", " ").trim();
@@ -2721,7 +2755,7 @@ public class ManhwaRenderer {
             }
             done++;
             if (progress != null) {
-                progress.onProgress("وردکردنەوەی OCR بۆ دەقە لاوازەکان "
+                progress.onProgress(tr(R.string.ks_0364)
                         + done + "/" + limit + "…");
             }
 
@@ -2913,7 +2947,7 @@ public class ManhwaRenderer {
             return;
         }
         if (progress != null) {
-            progress.onProgress("پشکنینی دووەمی ورد بە PP-OCR…");
+            progress.onProgress(tr(R.string.ks_0414));
         }
 
         List<LineText> results;
@@ -2924,7 +2958,7 @@ public class ManhwaRenderer {
                 throw e;
             }
             if (progress != null) {
-                progress.onProgress("PP-OCR بەردەست نەبوو؛ بە OCRی سەرەکی بەردەوام دەبین…");
+                progress.onProgress(tr(R.string.ks_0113));
             }
             return;
         }
@@ -2998,7 +3032,7 @@ public class ManhwaRenderer {
             JobRuntime.throwIfStopped();
             OcrCandidate candidate = targets.get(i);
             if (progress != null) {
-                progress.onProgress("Unlimited-OCR: خوێندنەوەی هەموو بلۆکەکە "
+                progress.onProgress(tr(R.string.ks_0118)
                         + (i + 1) + "/" + total + "…");
             }
             String read;

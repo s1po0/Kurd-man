@@ -223,10 +223,10 @@ public class KeepAliveService extends Service {
 
         boolean running = JobRuntime.isRunning();
         String title = running
-                ? "KurdMan کاردەکات — ناکوژرێتەوە تا STOP"
-                : "KurdMan چالاکە — پارێزگاری هەمیشەیی";
+                ? getString(R.string.ks_0108)
+                : getString(R.string.ks_0107);
         String text = running ? JobRuntime.status()
-                : "ئامادەیە و زیندوو دەمێنێتەوە تا دوگمەی STOP دابگریت";
+                : getString(R.string.ks_0129);
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.stat_sys_download_done)
@@ -250,10 +250,10 @@ public class KeepAliveService extends Service {
         }
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
-                "KurdMan — کارکردنی بەردەوام",
+                getString(R.string.ks_0109),
                 NotificationManager.IMPORTANCE_LOW);
         channel.setDescription(
-                "وەرگێڕان و ئیشە درێژەکان بەردەوام دەبن تا STOP دابگریت");
+                getString(R.string.ks_0372));
         channel.setShowBadge(false);
         manager.createNotificationChannel(channel);
     }

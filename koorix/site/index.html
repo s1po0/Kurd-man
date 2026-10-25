@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ckb" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Koorix — Manhwa Translator</title>
+<meta name="description" content="Koorix: translate manhwa/manga pages and whole CBZ chapters into Kurdish Sorani, Arabic, English and 70+ languages — online or fully offline.">
+<style>
+  :root{--violet:#7c3aed;--violet2:#a855f7;--bg:#0d0a1a;--card:#171230;--text:#f3f0ff;--muted:#b7aee0}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,'Segoe UI',Tahoma,sans-serif;background:radial-gradient(1200px 600px at 80% -10%,#2a1a5e 0%,var(--bg) 55%);color:var(--text)}
+  .wrap{max-width:960px;margin:0 auto;padding:24px}
+  header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  .logo{display:flex;align-items:center;gap:12px;font-size:26px;font-weight:900;letter-spacing:.5px}
+  .badge{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,var(--violet),var(--violet2));display:grid;place-items:center;font-size:24px;box-shadow:0 8px 24px rgba(124,58,237,.45)}
+  .langs button{background:#221947;color:var(--text);border:1px solid #3b2a7a;padding:8px 14px;border-radius:999px;cursor:pointer;font-size:14px}
+  .langs button.on{background:linear-gradient(135deg,var(--violet),var(--violet2));border-color:transparent}
+  .hero{text-align:center;padding:56px 10px 30px}
+  .hero h1{font-size:clamp(28px,5vw,46px);line-height:1.25;margin:0 0 14px}
+  .hero h1 span{background:linear-gradient(90deg,var(--violet2),#f0abfc);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p{color:var(--muted);font-size:18px;line-height:1.8;max-width:720px;margin:0 auto}
+  .cta{margin-top:28px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .btn{display:inline-block;text-decoration:none;padding:14px 26px;border-radius:14px;font-weight:800;font-size:16px}
+  .btn.main{background:linear-gradient(135deg,var(--violet),var(--violet2));color:#fff;box-shadow:0 10px 30px rgba(124,58,237,.5)}
+  .btn.ghost{border:1px solid #3b2a7a;color:var(--text)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin:44px 0}
+  .card{background:var(--card);border:1px solid #2a1d5c;border-radius:18px;padding:22px}
+  .card h3{margin:0 0 8px;font-size:19px}
+  .card p{margin:0;color:var(--muted);line-height:1.8;font-size:15px}
+  .price{background:linear-gradient(160deg,#1d1440,#120c2b);border:1px solid #3b2a7a;border-radius:22px;padding:28px;text-align:center}
+  .price .plans{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+  .plan{background:#221947;border:1px solid #3b2a7a;border-radius:14px;padding:14px 18px;font-weight:800}
+  footer{color:var(--muted);text-align:center;padding:34px 0 20px;font-size:14px}
+  footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo"><div class="badge">K</div> Koorix</div>
+    <div class="langs">
+      <button data-l="ckb" class="on">کوردی</button>
+      <button data-l="ar">العربية</button>
+      <button data-l="en">English</button>
+    </div>
+  </header>
+
+  <section class="hero">
+    <h1 id="t-h1">باشترین بەرنامە بۆ وەرگێڕانی مانھوا بۆ <span id="t-lang">کوردی</span></h1>
+    <p id="t-sub"></p>
+    <div class="cta">
+      <a class="btn main" id="t-download" href="https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.2.0/Koorix-v1.2.0.apk">⬇ دابەزاندنی Android</a>
+      <a class="btn ghost" id="t-privacy" href="/privacy.html">تایبەتمەندی</a>
+    </div>
+  </section>
+
+  <section class="grid" id="t-features"></section>
+
+  <section class="price">
+    <h2 id="t-premium-h">💎 Premium</h2>
+    <p id="t-premium" style="color:var(--muted);line-height:1.9;margin:0"></p>
+    <div class="plans" id="t-plans"></div>
+  </section>
+
+  <footer>
+    <span id="t-foot"></span><br>
+    <a href="/privacy.html">Privacy / الخصوصية / تایبەتمەندی</a>
+  </footer>
+</div>
+
+<script>
+const T = {
+  ckb:{dir:'rtl',lang:'کوردی',
+    sub:'وێنەی مانھوا یان تەواوی بەشی CBZ بکە بە کوردی سۆرانی، عەرەبی، ئینگلیزی و زیاتر لە 70 زمان — ئۆنلاین بە خێرایی، یان بە تەواوی ئۆفلاین لەناو مۆبایلەکەتدا بە پاکێجی زمانی بچووک، بێ هیچ مۆدێلێکی گەورە.',
+    download:'⬇ دابەزاندنی Android',privacy:'تایبەتمەندی',
+    feats:[
+      ['🌍 زیاتر لە 70 زمان','لە ئینگلیزی، کۆری، ژاپۆنی و چینییەوە بۆ کوردی، عەرەبی، ئینگلیزی، فارسی، تورکی و دەیان زمانی تر وەردەگێڕێت.'],
+      ['📴 ئۆفلاین بێ ئینتەرنێت','بۆ هەر زمانێک پاکێجێکی بچووکی 30 MB یەکجار دادەبەزێت؛ دواتر وەرگێڕان لەناو مۆبایلەکەتدا و بێ ئینتەرنێت دەبێت.'],
+      ['🎨 ستۆدیۆی دەق','دوای وەرگێڕان هەر دەقێک بجوڵێنە، قەبارە و فۆنت و ڕەنگی بگۆڕە، بیسووڕێنە — پاشان وەک وێنە، CBZ یان PDF دەریبکە.'],
+      ['🧼 سڕینەوەی خاوێن','دەقی ڕەسەن بە خاوێنی دەسڕدرێتەوە و وەرگێڕانەکە لەناو هەڵۆکەکە خۆیدا دادەنرێت، بێ چوارگۆشەی سپی.'],
+      ['🔎 خوێندنەوەی ورد (OCR)','خوێندنەوەی چەند جار + PP-OCR بۆ وشە قورسەکان و فۆنتە سەرنجڕاکێشەکان.'],
+      ['📱 چوونەژوورەوەی خێرا','بە Google، ئیمەیڵ بە کۆد، یان ژمارەی مۆبایل بە SMS — بێ وشەی نهێنی.']
+    ],
+    premHead:'💎 Premium — وەرگێڕانی بێسنوور',
+    prem:'بەخۆڕایی ڕۆژانە چەند بەشێک وەردەگێڕیت. بە Premium هەموو سنوورەکان لادەبرێن. کۆدی چالاککردن لەناو ئەپەکەدا دەخرێتە ژوورەوە.',
+    plans:['1 مانگ','3 مانگ','6 مانگ','1 ساڵ'],
+    foot:'Koorix — دروستکراوە بە خۆشەویستی بۆ خوێنەرانی مانھوا'},
+  ar:{dir:'rtl',lang:'العربية',
+    sub:'حوّل صفحات المانهوا أو فصول CBZ كاملة إلى العربية أو الكردية السورانية أو الإنجليزية وأكثر من 70 لغة — بسرعة عبر الإنترنت، أو دون اتصال بالكامل على هاتفك بحزم لغة صغيرة، دون أي نموذج ضخم.',
+    download:'⬇ تنزيل Android',privacy:'الخصوصية',
+    feats:[
+      ['🌍 أكثر من 70 لغة','يترجم من الإنجليزية والكورية واليابانية والصينية إلى العربية والكردية والإنجليزية والفارسية والتركية وعشرات اللغات الأخرى.'],
+      ['📴 دون اتصال بالإنترنت','حزمة صغيرة بحجم 30 MB لكل لغة تُنزَّل مرة واحدة؛ وبعدها تكون الترجمة على هاتفك بلا إنترنت.'],
+      ['🎨 استوديو النص','بعد الترجمة حرّك أي نص وغيّر حجمه وخطه ولونه ودوّره — ثم صدّره كصورة أو CBZ أو PDF.'],
+      ['🧼 مسح نظيف','يُمسح النص الأصلي بنظافة وتوضع الترجمة داخل الفقاعة نفسها، دون أي مستطيل أبيض.'],
+      ['🔎 قراءة دقيقة (OCR)','قراءة بعدة تمريرات + PP-OCR للكلمات الصعبة والخطوط المزخرفة.'],
+      ['📱 تسجيل دخول سريع','باستخدام Google أو البريد برمز أو رقم الهاتف عبر SMS — دون كلمة مرور.']
+    ],
+    premHead:'💎 Premium — ترجمة غير محدودة',
+    prem:'مجانًا تترجم عدة فصول كل يوم. مع Premium تُرفع كل الحدود. يُدخَل رمز التفعيل داخل التطبيق.',
+    plans:['شهر واحد','3 أشهر','6 أشهر','سنة واحدة'],
+    foot:'Koorix — صُنع بحب لقارئي المانهوا'},
+  en:{dir:'ltr',lang:'English',
+    sub:'Turn manhwa pages or whole CBZ chapters into English, Arabic, Kurdish Sorani and 70+ more languages — fast online, or fully offline on your phone with tiny language packs and no giant AI model.',
+    download:'⬇ Download for Android',privacy:'Privacy',
+    feats:[
+      ['🌍 70+ languages','Translates from English, Korean, Japanese and Chinese into English, Arabic, Kurdish, Persian, Turkish and dozens more.'],
+      ['📴 Fully offline','A small 30 MB pack per language downloads once; after that, translation happens on your phone with no internet.'],
+      ['🎨 Text Studio','After translating, move any text, change its size, font and colour, rotate it — then export as image, CBZ or PDF.'],
+      ['🧼 Clean erase','The original text is erased cleanly and the translation is typeset inside the original balloon — no white boxes.'],
+      ['🔎 Accurate OCR','Multi-pass reading + PP-OCR for hard words and fancy fonts.'],
+      ['📱 Fast sign-in','Google, email with a code, or phone number by SMS — no passwords.']
+    ],
+    premHead:'💎 Premium — unlimited translation',
+    prem:'Free users translate a few chapters every day. Premium removes all limits. Activation codes are redeemed inside the app.',
+    plans:['1 month','3 months','6 months','1 year'],
+    foot:'Koorix — made with love for manhwa readers'}
+};
+const $=id=>document.getElementById(id);
+function apply(l){
+  const t=T[l]; if(!t) return;
+  document.documentElement.lang=l; document.documentElement.dir=t.dir;
+  $('t-lang').textContent=t.lang; $('t-sub').textContent=t.sub;
+  $('t-download').textContent=t.download; $('t-privacy').textContent=t.privacy;
+  $('t-features').innerHTML=t.feats.map(f=>`<div class="card"><h3>${f[0]}</h3><p>${f[1]}</p></div>`).join('');
+  $('t-premium-h').textContent=t.premHead; $('t-premium').textContent=t.prem;
+  $('t-plans').innerHTML=t.plans.map(p=>`<div class="plan">${p}</div>`).join('');
+  $('t-foot').textContent=t.foot;
+  document.querySelectorAll('.langs button').forEach(b=>b.classList.toggle('on',b.dataset.l===l));
+  localStorage.setItem('koorix_site_lang',l);
+}
+document.querySelectorAll('.langs button').forEach(b=>b.addEventListener('click',()=>apply(b.dataset.l)));
+apply(localStorage.getItem('koorix_site_lang')||'ckb');
+</script>
+</body>
+</html>

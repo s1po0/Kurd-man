@@ -32,6 +32,7 @@ public class TranslationProject {
     public String displayName = "";
     public String baseName = "kurdman";
     public String sourceLanguage = "en";
+    public String targetLanguage = "ckb";
     public long createdAt = System.currentTimeMillis();
     public long updatedAt = System.currentTimeMillis();
     public final List<Page> pages = new ArrayList<>();
@@ -124,6 +125,7 @@ public class TranslationProject {
         root.put("displayName", displayName == null ? "" : displayName);
         root.put("baseName", baseName == null ? "kurdman" : baseName);
         root.put("sourceLanguage", sourceLanguage == null ? "en" : sourceLanguage);
+        root.put("targetLanguage", targetLanguage == null ? "ckb" : targetLanguage);
         root.put("createdAt", createdAt);
         root.put("updatedAt", updatedAt);
         JSONArray pageArray = new JSONArray();
@@ -143,6 +145,7 @@ public class TranslationProject {
         project.displayName = root.optString("displayName", "");
         project.baseName = root.optString("baseName", "kurdman");
         project.sourceLanguage = root.optString("sourceLanguage", "en");
+        project.targetLanguage = root.optString("targetLanguage", "ckb");
         project.createdAt = root.optLong("createdAt", System.currentTimeMillis());
         project.updatedAt = root.optLong("updatedAt", project.createdAt);
         project.projectDir = projectDir;
@@ -188,6 +191,7 @@ public class TranslationProject {
             displayName = restored.displayName;
             baseName = restored.baseName;
             sourceLanguage = restored.sourceLanguage;
+            targetLanguage = restored.targetLanguage;
             createdAt = restored.createdAt;
             updatedAt = restored.updatedAt;
             pages.clear();

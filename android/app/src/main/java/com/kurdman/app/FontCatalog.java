@@ -66,26 +66,26 @@ public final class FontCatalog {
     public static List<FontOption> getOptions(Context context) {
         List<FontOption> options = new ArrayList<>();
         options.add(new FontOption(FONT_VAZIRMATN,
-                "Vazirmatn — مۆدێرن و ڕوون",
+                context.getString(R.string.ks_0708),
                 "fonts/vazirmatn_vf.ttf", null, true, null));
         options.add(new FontOption(FONT_NOTO_SANS,
-                "Noto Sans Arabic — پاک و پیشەیی",
+                context.getString(R.string.ks_0709),
                 "fonts/noto_sans_arabic_vf.ttf", null, true, null));
         options.add(new FontOption(FONT_NOTO_NASKH,
-                "Noto Naskh Arabic — خوێندنەوەی درێژ",
+                context.getString(R.string.ks_0710),
                 "fonts/noto_naskh_arabic_vf.ttf", null, true, null));
         options.add(new FontOption(FONT_NOTO_KUFI,
-                "Noto Kufi Arabic — جوان و گۆشەدار",
+                context.getString(R.string.ks_0711),
                 "fonts/noto_kufi_arabic_vf.ttf", null, true, null));
         options.add(new FontOption(FONT_IBM_PLEX,
-                "IBM Plex Sans Arabic — پیشەیی",
+                context.getString(R.string.ks_0712),
                 "fonts/ibm_plex_sans_arabic_regular.ttf",
                 "fonts/ibm_plex_sans_arabic_bold.ttf", false, null));
         options.add(new FontOption(FONT_AMIRI,
-                "Amiri — کلاسیک و نەسخ",
+                context.getString(R.string.ks_0713),
                 "fonts/amiri_regular.ttf", "fonts/amiri_bold.ttf", false, null));
         options.add(new FontOption(FONT_SYSTEM,
-                "فۆنتی سیستەمی مۆبایلەکە", null, null, false, null));
+                context.getString(R.string.ks_0714), null, null, false, null));
 
         File dir = customFontsDir(context);
         File[] files = dir.listFiles();
@@ -104,7 +104,7 @@ public final class FontCatalog {
             });
             for (File file : sorted) {
                 options.add(new FontOption(CUSTOM_PREFIX + file.getName(),
-                        displayName(file.getName()) + " — هاوردەکراو",
+                        displayName(context, file.getName()) + context.getString(R.string.ks_0715),
                         null, null, true, file));
             }
         }
@@ -232,7 +232,7 @@ public final class FontCatalog {
         Context app = context.getApplicationContext();
         String originalName = queryDisplayName(app, uri);
         if (!isFontFile(originalName)) {
-            throw new IOException("FONT_UNSUPPORTED: تەنها فایلی TTF یان OTF هەڵبژێرە");
+            throw new IOException("FONT_UNSUPPORTED: choose a TTF or OTF file only");
         }
         File dir = customFontsDir(app);
         String clean = sanitizeFontFileName(originalName);
@@ -241,7 +241,7 @@ public final class FontCatalog {
         ContentResolver resolver = app.getContentResolver();
         InputStream input = resolver.openInputStream(uri);
         if (input == null) {
-            throw new IOException("FONT_OPEN_FAILED: نەتوانرا فۆنتەکە بکرێتەوە");
+            throw new IOException("FONT_OPEN_FAILED: could not open the font");
         }
         long total = 0;
         try (InputStream in = input; OutputStream out = new FileOutputStream(output)) {
@@ -250,7 +250,7 @@ public final class FontCatalog {
             while ((count = in.read(buffer)) != -1) {
                 total += count;
                 if (total > MAX_CUSTOM_FONT_BYTES) {
-                    throw new IOException("FONT_TOO_LARGE: فۆنتەکە لە 30 MB گەورەترە");
+                    throw new IOException("FONT_TOO_LARGE: the font is larger than 30 MB");
                 }
                 out.write(buffer, 0, count);
             }
@@ -262,12 +262,12 @@ public final class FontCatalog {
         try {
             Typeface test = Typeface.createFromFile(output);
             if (test == null) {
-                throw new IOException("FONT_INVALID: فۆنتەکە نەخوێنرایەوە");
+                throw new IOException("FONT_INVALID: the font could not be read");
             }
         } catch (RuntimeException e) {
             //noinspection ResultOfMethodCallIgnored
             output.delete();
-            throw new IOException("FONT_INVALID: فۆنتەکە نەخوێنرایەوە", e);
+            throw new IOException("FONT_INVALID: the font could not be read", e);
         }
         synchronized (CACHE) {
             CACHE.clear();
@@ -306,8 +306,9 @@ public final class FontCatalog {
         return lower.endsWith(".ttf") || lower.endsWith(".otf");
     }
 
-    private static String displayName(String fileName) {
-        String name = fileName == null ? "فۆنتی هاوردەکراو" : fileName;
+    private static String displayName(Context context, String fileName) {
+        String name = fileName == null
+                ? context.getString(R.string.ks_0716) : fileName;
         int dash = name.indexOf('-');
         if (dash > 0 && dash < name.length() - 1) {
             String prefix = name.substring(0, dash);

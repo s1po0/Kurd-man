@@ -64,9 +64,9 @@ final class ColorPicker {
         SeekBar red = slider(context, Color.red(selected[0]));
         SeekBar green = slider(context, Color.green(selected[0]));
         SeekBar blue = slider(context, Color.blue(selected[0]));
-        addSliderRow(context, root, "سوور R", red);
-        addSliderRow(context, root, "سەوز G", green);
-        addSliderRow(context, root, "شین B", blue);
+        addSliderRow(context, root, context.getString(R.string.ks_0252), red);
+        addSliderRow(context, root, context.getString(R.string.ks_0273), green);
+        addSliderRow(context, root, context.getString(R.string.ks_0279), blue);
 
         EditText hexInput = new EditText(context);
         hexInput.setSingleLine(true);
@@ -75,7 +75,7 @@ final class ColorPicker {
         root.addView(hexInput);
 
         TextView presetTitle = new TextView(context);
-        presetTitle.setText("ڕەنگە ئامادەکان");
+        presetTitle.setText(context.getString(R.string.ks_0447));
         presetTitle.setPadding(0, dp(context, 14), 0, dp(context, 8));
         root.addView(presetTitle);
 
@@ -149,8 +149,8 @@ final class ColorPicker {
         new AlertDialog.Builder(context)
                 .setTitle(title)
                 .setView(root)
-                .setNegativeButton("هەڵپەساردن", null)
-                .setPositiveButton("هەڵبژاردن", (dialog, which) -> {
+                .setNegativeButton(context.getString(R.string.ks_0358), null)
+                .setPositiveButton(context.getString(R.string.ks_0356), (dialog, which) -> {
                     int fromHex = parseHex(hexInput.getText().toString(), -1);
                     callback.onColorSelected(fromHex == -1 ? selected[0] : fromHex);
                 })

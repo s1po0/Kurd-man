@@ -90,27 +90,54 @@ import java.util.zip.ZipOutputStream;
 
 public class MainActivity extends AppCompatActivity {
     private static final String PREFS_NAME = "kurdman_settings";
-    private static final String[] SOURCE_LABELS = {
-            "English — ئینگلیزی (EN)",
-            "한국어 — کۆری (KO)",
-            "日本語 — ژاپۆنی (JA)",
-            "中文（简体）— چینی سادەکراو (ZH-CN)",
-            "中文（繁體）— چینی تەقلیدی (ZH-TW)"
-    };
+    private String[] sourceLabels() {
+        return new String[]{
+                getString(R.string.ks_0689), getString(R.string.ks_0690),
+                getString(R.string.ks_0691), getString(R.string.ks_0692),
+                getString(R.string.ks_0693)};
+    }
     private static final String[] SOURCE_CODES = {
             "en", "ko", "ja", "zh-CN", "zh-TW"
     };
-    private static final String[] TRANSLATION_MODE_LABELS = {
-            "🌐 ئۆنلاین — خێراتر (Google)",
-            "🤖 ئۆفلاین AI — Meta NLLB-200"
+    private String[] translationModeLabels() {
+        return new String[]{
+                getString(R.string.ks_0694), getString(R.string.ks_0695)};
+    }
+
+    /** Target languages (autonym labels; codes are Google/ML Kit tags). */
+    private static final String[] TARGET_CODES = {
+            "ckb", "ku", "ar", "en", "fa", "tr", "ru", "de", "fr", "es",
+            "pt", "it", "nl", "pl", "uk", "id", "ms", "hi", "ur", "bn",
+            "ta", "te", "mr", "gu", "kn", "ml", "pa", "th", "vi", "ko",
+            "ja", "zh-CN", "zh-TW", "el", "sv", "da", "fi", "no", "cs", "hu",
+            "ro", "bg", "sr", "hr", "uz", "kk", "az", "he", "ps", "sw",
+            "am", "my", "km", "ne", "si", "ka", "hy", "lt", "lv", "et",
+            "sk", "sl", "ga", "cy", "mt", "is", "mk", "sq", "be", "ca",
+            "gl", "eu", "af", "tl"
+    };
+    private static final String[] TARGET_LABELS = {
+            "کوردی سۆرانی", "Kurdî (Kurmanji)", "العربية", "English",
+            "فارسی", "Türkçe", "Русский", "Deutsch", "Français", "Español",
+            "Português", "Italiano", "Nederlands", "Polski", "Українська",
+            "Bahasa Indonesia", "Bahasa Melayu", "हिन्दी", "اردو", "বাংলা",
+            "தமிழ்", "తెలుగు", "मराठी", "ગુજરાતી", "ಕನ್ನಡ", "മലയാളം",
+            "ਪੰਜਾਬੀ", "ไทย", "Tiếng Việt", "한국어",
+            "日本語", "中文（简体）", "中文（繁體）", "Ελληνικά", "Svenska",
+            "Dansk", "Suomi", "Norsk", "Čeština", "Magyar",
+            "Română", "Български", "Српски", "Hrvatski", "O'zbek",
+            "Қазақша", "Azərbaycan", "עברית", "پښتو", "Kiswahili",
+            "አማርኛ", "မြန်မာ", "ខ្មែរ", "नेपाली", "සිංහල",
+            "ქართული", "Հայերեն", "Lietuvių", "Latviešu", "Eesti",
+            "Slovenčina", "Slovenščina", "Gaeilge", "Cymraeg", "Malti",
+            "Íslenska", "Македонски", "Shqip", "Беларуская", "Català",
+            "Galego", "Euskara", "Afrikaans", "Filipino"
     };
 
-    private static final String[] BACKGROUND_MODE_LABELS = {
-            "خۆکار — ڕەنگی قسەهەڵگری ڕەسەن",
-            "ڕەنگی دیاریکراو",
-            "بێ پاشبنەما",
-            "🧼 سڕینەوەی خاوێن — بێ پاشبنەمای سپی"
-    };
+    private String[] backgroundModeLabels() {
+        return new String[]{
+                getString(R.string.ks_0205), getString(R.string.ks_0439),
+                getString(R.string.ks_0176), getString(R.string.ks_0688)};
+    }
     private static final String PREF_GLOBAL_STYLE = "global_text_style_json";
     private static final String PREF_ACCURATE_OCR = "accurate_ocr_v170";
     private static final String PREF_UNLIMITED_OCR_ENABLED = "unlimited_ocr_enabled_v180";
@@ -139,11 +166,13 @@ public class MainActivity extends AppCompatActivity {
     private EditText chatInput;
     private EditText messageInput;
     private Spinner sourceSpinner;
+    private Spinner targetSpinner;
     private Spinner translationModeSpinner;
     private TextView offlineModelStatus;
     private Button downloadOfflineButton;
     private Button deleteOfflineButton;
-    private OfflineModelManager offlineModelManager;
+    private volatile boolean offlinePackReady;
+    private volatile String offlinePackPair = "";
     private CheckBox accurateOcrCheck;
     private CheckBox createPdfCheck;
     private CheckBox cleanEraseCheck;
@@ -263,6 +292,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void attachBaseContext(android.content.Context base) {
+        if (!BuildConfig.PUBLIC_EDITION) {
+            // The personal edition is pinned to Sorani regardless of
+            // the device language; Koorix uses the in-app picker.
+            android.content.res.Configuration config =
+                    new android.content.res.Configuration(
+                            base.getResources().getConfiguration());
+            java.util.Locale sorani = new java.util.Locale("ckb");
+            config.setLocale(sorani);
+            config.setLayoutDirection(sorani);
+            base = base.createConfigurationContext(config);
+        }
+        super.attachBaseContext(base);
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -275,11 +320,11 @@ public class MainActivity extends AppCompatActivity {
         showTokenCheck = findViewById(R.id.showTokenCheck);
         messageInput = findViewById(R.id.messageInput);
         sourceSpinner = findViewById(R.id.sourceSpinner);
+        targetSpinner = findViewById(R.id.targetSpinner);
         translationModeSpinner = findViewById(R.id.translationModeSpinner);
         offlineModelStatus = findViewById(R.id.offlineModelStatus);
         downloadOfflineButton = findViewById(R.id.downloadOfflineButton);
         deleteOfflineButton = findViewById(R.id.deleteOfflineButton);
-        offlineModelManager = new OfflineModelManager(this);
         accurateOcrCheck = findViewById(R.id.accurateOcrCheck);
         createPdfCheck = findViewById(R.id.createPdfCheck);
         cleanEraseCheck = findViewById(R.id.cleanEraseCheck);
@@ -354,7 +399,7 @@ public class MainActivity extends AppCompatActivity {
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 this,
                 R.layout.spinner_item,
-                SOURCE_LABELS);
+                sourceLabels());
         adapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
         sourceSpinner.setAdapter(adapter);
         int savedSourceIndex = prefs.getInt("source_index", 0);
@@ -365,6 +410,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 prefs.edit().putInt("source_index", position).apply();
+                refreshOfflineModelUi();
             }
 
             @Override
@@ -373,15 +419,39 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        ArrayAdapter<String> targetAdapter = new ArrayAdapter<>(
+                this,
+                R.layout.spinner_item,
+                TARGET_LABELS);
+        targetAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
+        targetSpinner.setAdapter(targetAdapter);
+        int savedTargetIndex = prefs.getInt("target_index", 0);
+        if (savedTargetIndex >= 0 && savedTargetIndex < TARGET_CODES.length) {
+            targetSpinner.setSelection(savedTargetIndex);
+        }
+        targetSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                prefs.edit().putInt("target_index", position).apply();
+                refreshOfflineModelUi();
+                updateHeroTagline();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // Keep the last saved target language.
+            }
+        });
+
         ArrayAdapter<String> modeAdapter = new ArrayAdapter<>(
                 this,
                 R.layout.spinner_item,
-                TRANSLATION_MODE_LABELS);
+                translationModeLabels());
         modeAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
         translationModeSpinner.setAdapter(modeAdapter);
         int savedModeIndex = prefs.getInt("translation_mode_index", 0);
         if (savedModeIndex >= 0
-                && savedModeIndex < TRANSLATION_MODE_LABELS.length) {
+                && savedModeIndex < 2) {
             translationModeSpinner.setSelection(savedModeIndex);
         }
         translationModeSpinner.setOnItemSelectedListener(
@@ -424,8 +494,8 @@ public class MainActivity extends AppCompatActivity {
                 granted -> {
                     refreshKeepAliveUi();
                     if (!granted) {
-                        setStatus("⚠ مۆڵەتی ئاگادارکردنەوە نەدرا؛ پارێزگارییەکە هەر کاردەکات، "
-                                + "بەڵام ڕەنگە ئاگادارکردنەوە و دوگمەی STOP لە دەرەوە نەبینیت.");
+                        setStatus(getString(R.string.ks_0529)
+                                + getString(R.string.ks_0182));
                     }
                 });
         editorLauncher = registerForActivityResult(
@@ -440,7 +510,7 @@ public class MainActivity extends AppCompatActivity {
                     } else {
                         updateButtons(currentBusy);
                         if (TranslationProjectStore.hasCompletedProject(this)) {
-                            setStatus("پرۆژەکە پاشەکەوت کراوە؛ دەتوانیت دواتر دەستکارییەکە تەواو بکەیت و دەری بکەیت.");
+                            setStatus(getString(R.string.ks_0413));
                         }
                     }
                 });
@@ -522,12 +592,12 @@ public class MainActivity extends AppCompatActivity {
                 (buttonView, isChecked) -> {
                     prefs.edit().putBoolean(PREF_CREATE_PDF, isChecked).apply();
                     setStatus(isChecked
-                            ? "✅ PDF چالاک کرا: لەمەودوا دوای تەواوبوون PDFیش دێتە «ئەنجامەکان» و Download/KurdMan."
-                            : "PDF کوژێنرایەوە؛ وێنە/CBZ و TXT وەک پێشوو دروست دەبن.");
+                            ? getString(R.string.ks_0551)
+                            : getString(R.string.ks_0112));
                 });
         saveButton.setOnClickListener(v -> {
             saveSettings();
-            setStatus("✅ تۆکن و Chat ID لەسەر ئەم مۆبایلە پاشەکەوت کرا.");
+            setStatus(getString(R.string.ks_0560));
         });
         verifyButton.setOnClickListener(v -> verifyBot());
         sendTextButton.setOnClickListener(v -> sendTextMessage());
@@ -608,7 +678,7 @@ public class MainActivity extends AppCompatActivity {
                 heroTitle.setText("Koorix");
             }
             if (heroSubtitle != null) {
-                heroSubtitle.setText(R.string.kx_hero_subtitle);
+                updateHeroTagline();
             }
             if (heroVersionChip != null) {
                 heroVersionChip.setText(getString(R.string.kx_version_chip,
@@ -663,7 +733,7 @@ public class MainActivity extends AppCompatActivity {
             }
         } else if (heroVersionChip != null) {
             heroVersionChip.setText("v" + BuildConfig.VERSION_NAME
-                    + "  •  چەند وێنە پێکەوە + ڕاپۆرتی کێشەکان + قسەهەڵگری دووانە");
+                    + getString(R.string.ks_0009));
         }
         Button accountButton = findViewById(R.id.accountButton);
         if (accountButton != null) {
@@ -787,14 +857,14 @@ public class MainActivity extends AppCompatActivity {
             DiagnosticLog.warning(getApplicationContext(), "share-intent",
                     "Share intent had no readable stream URI; action=" + action
                             + ", type=" + intent.getType());
-            setStatus("⚠ فایلە هاوبەشکراوەکە نەخوێنرایەوە؛ لە ناو KurdMan هەڵیبژێرە.");
+            setStatus(getString(R.string.ks_0527));
             return;
         }
         if (currentBusy || JobRuntime.isRunning()) {
             DiagnosticLog.warning(getApplicationContext(), "share-intent",
                     "Rejected shared selection while another job is running; count="
                             + uris.size());
-            setStatus("⚠ کارێک لە ئێستادا بەڕێوەیە؛ کاتێک تەواو بوو یان STOPت داگرت، وێنەکان دووبارە بنێرە.");
+            setStatus(getString(R.string.ks_0543));
             return;
         }
         DiagnosticLog.info(getApplicationContext(), "share-intent",
@@ -896,8 +966,8 @@ public class MainActivity extends AppCompatActivity {
     private String latestReportHeadline(String report) {
         if (report == null || report.trim().isEmpty()
                 || report.contains("No diagnostic problem has been recorded yet")) {
-            return "✅ هیچ هەڵەیەک هێشتا تۆمار نەکراوە. ئەگەر کێشەیەک ڕووبدات، "
-                    + "هۆکار و کات و قۆناغەکەی لێرە دەردەکەوێت.";
+            return getString(R.string.ks_0573)
+                    + getString(R.string.ks_0329);
         }
         String[] lines = report.split("\\n");
         int errorCount = 0;
@@ -920,29 +990,29 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         if (latest != null) {
-            return "❌ دوایین هەڵە (" + errorCount + " هەڵە تۆمارکراوە):\n"
+            return getString(R.string.ks_0607) + errorCount + getString(R.string.ks_0052)
                     + latest
-                    + "\n\nوردەکاریی تەکنیکی لە خوارەوەیە؛ «کۆپی ڕاپۆرت» دابگرە و بینێرە بۆ پشتیوانی.";
+                    + getString(R.string.ks_0000);
         }
         if (hasWarning) {
-            return "⚠ هەندێک ئاگادارکردنەوە تۆمارکراون، بەڵام هەڵەیەکی گەورە نییە. "
-                    + "وردەکاری لە خوارەوەیە.";
+            return getString(R.string.ks_0536)
+                    + getString(R.string.ks_0365);
         }
-        return "✅ هیچ هەڵە و ئاگادارکردنەوەیەک هێشتا تۆمار نەکراوە. ئەگەر "
-                + "کێشەیەک ڕووبدات، هۆکار و کات و قۆناغەکەی لێرە دەردەکەوێت.";
+        return getString(R.string.ks_0571)
+                + getString(R.string.ks_0459);
     }
 
     private void addReportNote() {
         String note = reportNoteInput == null
                 ? "" : reportNoteInput.getText().toString().trim();
         if (note.isEmpty()) {
-            setStatus("⚠ سەرەتا تێبینییەکت لەسەر کێشەکە بنووسە.");
+            setStatus(getString(R.string.ks_0521));
             return;
         }
         DiagnosticLog.note(getApplicationContext(), note);
         reportNoteInput.setText("");
         refreshReportUi();
-        setStatus("✅ تێبینییەکەت خرایە ناو ڕاپۆرتەکەوە.");
+        setStatus(getString(R.string.ks_0564));
     }
 
     private void copyReportToClipboard() {
@@ -954,11 +1024,11 @@ public class MainActivity extends AppCompatActivity {
         ClipboardManager manager =
                 (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         if (manager == null) {
-            setStatus("❌ کلیپبۆرد بەردەست نییە.");
+            setStatus(getString(R.string.ks_0614));
             return;
         }
         manager.setPrimaryClip(ClipData.newPlainText("KurdMan diagnostic report", report));
-        setStatus("✅ ڕاپۆرتەکە کۆپی کرا؛ دەتوانیت لێرە یان لە تێلێگرام بیلكێنیت.");
+        setStatus(getString(R.string.ks_0582));
     }
 
     private void shareReport() {
@@ -968,24 +1038,24 @@ public class MainActivity extends AppCompatActivity {
         intent.putExtra(Intent.EXTRA_SUBJECT, "KurdMan diagnostic report");
         intent.putExtra(Intent.EXTRA_TEXT, report);
         try {
-            startActivity(Intent.createChooser(intent, "هاوبەشکردنی ڕاپۆرت"));
+            startActivity(Intent.createChooser(intent, getString(R.string.ks_0327)));
         } catch (ActivityNotFoundException e) {
             DiagnosticLog.error(getApplicationContext(), "report-share", e,
                     "No activity can share text/plain");
-            setStatus("❌ هیچ ئەپێک نەدۆزرایەوە بۆ هاوبەشکردن؛ «کۆپی ڕاپۆرت» بەکاربهێنە.");
+            setStatus(getString(R.string.ks_0612));
         }
     }
 
     private void confirmClearReport() {
         new AlertDialog.Builder(this)
-                .setTitle("پاککردنەوەی ڕاپۆرت؟")
-                .setMessage("هەموو مێژووی هەڵە و ئاگادارکردنەوەکان دەسڕدرێنەوە. "
-                        + "ئەگەر دەتەوێت ڕاپۆرتەکە بنێریت، سەرەتا کۆپی بکە.")
-                .setNegativeButton("هەڵوەشاندنەوە", null)
-                .setPositiveButton("پاککردنەوە", (dialog, which) -> {
+                .setTitle(getString(R.string.ks_0408))
+                .setMessage(getString(R.string.ks_0351)
+                        + getString(R.string.ks_0152))
+                .setNegativeButton(getString(R.string.ks_0357), null)
+                .setPositiveButton(getString(R.string.ks_0407), (dialog, which) -> {
                     DiagnosticLog.clear(getApplicationContext());
                     refreshReportUi();
-                    setStatus("✅ ڕاپۆرتەکە پاککرایەوە.");
+                    setStatus(getString(R.string.ks_0581));
                 })
                 .show();
     }
@@ -1017,12 +1087,12 @@ public class MainActivity extends AppCompatActivity {
         }
 
         ArrayAdapter<String> presetAdapter = new ArrayAdapter<>(
-                this, R.layout.spinner_item, TextStyleSettings.PRESET_LABELS);
+                this, R.layout.spinner_item, TextStyleSettings.presetLabels(this));
         presetAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
         stylePresetSpinner.setAdapter(presetAdapter);
 
         ArrayAdapter<String> backgroundAdapter = new ArrayAdapter<>(
-                this, R.layout.spinner_item, BACKGROUND_MODE_LABELS);
+                this, R.layout.spinner_item, backgroundModeLabels());
         backgroundAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
         backgroundModeSpinner.setAdapter(backgroundAdapter);
 
@@ -1100,8 +1170,8 @@ public class MainActivity extends AppCompatActivity {
             saveGlobalTextStyle();
             refreshStyleControls();
             setStatus(isChecked
-                    ? "✅ سڕینەوەی خاوێن چالاک کرا: دەقی ڕەسەن دەسڕدرێتەوە و کوردییەکە بێ پاشبنەمای سپی لە شوێنەکەی دادەنرێت."
-                    : "سڕینەوەی خاوێن کوژێنرایەوە؛ پاشبنەمای ئاسایی وەک پێشوو دەمێنێتەوە.");
+                    ? getString(R.string.ks_0567)
+                    : getString(R.string.ks_0260));
         });
 
         styleSizeSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -1111,7 +1181,7 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
                 globalTextStyle.sizeScale = (progress + 50) / 100f;
-                styleSizeLabel.setText("قەبارەی دەق: " + (progress + 50) + "%");
+                styleSizeLabel.setText(getString(R.string.ks_0295) + (progress + 50) + "%");
                 updateStylePreview();
             }
 
@@ -1132,7 +1202,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 globalTextStyle.fontWeight = 100 + progress * 50;
                 styleWeightLabel.setText(
-                        "ئەستووری فۆنت: " + globalTextStyle.fontWeight);
+                        getString(R.string.ks_0140) + globalTextStyle.fontWeight);
                 updateStylePreview();
             }
 
@@ -1150,14 +1220,14 @@ public class MainActivity extends AppCompatActivity {
                 new String[]{"font/*", "application/x-font-ttf",
                         "application/octet-stream"}));
         textColorButton.setOnClickListener(v -> ColorPicker.show(
-                this, "ڕەنگی دەق", globalTextStyle.textColor, color -> {
+                this, getString(R.string.ks_0440), globalTextStyle.textColor, color -> {
                     globalTextStyle.textColor = color;
                     globalTextStyle.autoTextColor = false;
                     saveGlobalTextStyle();
                     refreshStyleControls();
                 }));
         backgroundColorButton.setOnClickListener(v -> ColorPicker.show(
-                this, "ڕەنگی پاشبنەما", globalTextStyle.backgroundColor, color -> {
+                this, getString(R.string.ks_0446), globalTextStyle.backgroundColor, color -> {
                     globalTextStyle.backgroundColor = color;
                     globalTextStyle.backgroundMode = TextStyleSettings.BG_CUSTOM;
                     saveGlobalTextStyle();
@@ -1256,17 +1326,17 @@ public class MainActivity extends AppCompatActivity {
                 Math.round(globalTextStyle.sizeScale * 100f) - 50)));
         styleWeightSeek.setProgress(Math.max(0, Math.min(16,
                 (globalTextStyle.fontWeight - 100) / 50)));
-        styleSizeLabel.setText("قەبارەی دەق: "
+        styleSizeLabel.setText(getString(R.string.ks_0295)
                 + Math.round(globalTextStyle.sizeScale * 100f) + "%");
-        styleWeightLabel.setText("ئەستووری فۆنت: " + globalTextStyle.fontWeight);
+        styleWeightLabel.setText(getString(R.string.ks_0140) + globalTextStyle.fontWeight);
         styleAutoColorCheck.setChecked(globalTextStyle.autoTextColor);
         styleOutlineCheck.setChecked(globalTextStyle.outline);
         styleShadowCheck.setChecked(globalTextStyle.shadow);
         styleItalicCheck.setChecked(globalTextStyle.italic);
         textColorButton.setEnabled(!globalTextStyle.autoTextColor);
-        textColorButton.setText("A  ڕەنگی دەق  "
+        textColorButton.setText(getString(R.string.ks_0089)
                 + TextStyleSettings.hex(globalTextStyle.textColor));
-        backgroundColorButton.setText("▦  ڕەنگی پاشبنەما  "
+        backgroundColorButton.setText(getString(R.string.ks_0492)
                 + TextStyleSettings.hex(globalTextStyle.backgroundColor));
         updateStylePreview();
         stylePreview.postDelayed(() -> bindingStyleControls = false, 450L);
@@ -1314,7 +1384,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void importCustomFont(Uri uri) {
-        setStatus("هاوردەکردنی فۆنتەکە…");
+        setStatus(getString(R.string.ks_0328));
         new Thread(() -> {
             try {
                 String fontId = FontCatalog.importFont(getApplicationContext(), uri);
@@ -1323,7 +1393,7 @@ public class MainActivity extends AppCompatActivity {
                     saveGlobalTextStyle();
                     refreshFontSpinnerOptions();
                     refreshStyleControls();
-                    setStatus("✅ فۆنتەکە هاوردەکرا و وەک فۆنتی ئێستا هەڵبژێردرا.");
+                    setStatus(getString(R.string.ks_0569));
                 });
             } catch (Throwable e) {
                 setStatus("❌ " + friendlyError(e));
@@ -1333,11 +1403,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void openTextStudio() {
         if (currentBusy || JobRuntime.isRunning()) {
-            setStatus("⚠ چاوەڕوان بکە تا کارەکەی ئێستا تەواو بێت.");
+            setStatus(getString(R.string.ks_0541));
             return;
         }
         if (!TranslationProjectStore.hasCompletedProject(this)) {
-            setStatus("⚠ سەرەتا وێنەیەک یان CBZێک وەربگێڕە؛ دواتر دەتوانیت شوێن و ستایلی دەقەکان بگۆڕیت.");
+            setStatus(getString(R.string.ks_0526));
             return;
         }
         editorLauncher.launch(new Intent(this, EditorActivity.class));
@@ -1351,31 +1421,31 @@ public class MainActivity extends AppCompatActivity {
         boolean running = JobRuntime.isRunning();
         boolean service = KeepAliveService.isServiceRunning();
         keepAliveToggleButton.setText(manual
-                ? "■  وەستاندنی پارێزگاری"
-                : "▶  پارێزگاری هەمیشەیی");
+                ? getString(R.string.ks_0487)
+                : getString(R.string.ks_0493));
         boolean batteryFree = isIgnoringBatteryOptimizations();
         batterySettingsButton.setText(batteryFree
-                ? "✓  پاتری بەبێ سنوورە"
-                : "🔋  پاتری بەبێ سنوور");
+                ? getString(R.string.ks_0592)
+                : getString(R.string.ks_0656));
         String text;
         if (running) {
-            text = "🟢 ئێستا کارەکە پارێزراوە: شاشە بکوژێتەوە یان لە ئەپەکە دەرچیت، "
-                    + "کارەکە بەردەوام دەبێت تا تەواو بێت یان STOP دابگریت.";
+            text = getString(R.string.ks_0682)
+                    + getString(R.string.ks_0452);
         } else if (manual || service) {
-            text = "🟢 پارێزگاری هەمیشەیی چالاکە: KurdMan زیندوو دەمێنێتەوە و "
-                    + "ئاگادارکردنەوەی STOP پیشان دەدات تا خۆت بیوەستێنیت.";
+            text = getString(R.string.ks_0683)
+                    + getString(R.string.ks_0132);
         } else {
-            text = "لەکاتی کارکردندا خۆکار چالاک دەبێت؛ ئاگادارکردنەوەیەکی هەمیشەیی "
-                    + "و CPU زیندوو دەهێڵێتەوە تەنانەت کاتێک شاشە دەکوژێتەوە.";
+            text = getString(R.string.ks_0312)
+                    + getString(R.string.ks_0363);
         }
         if (!batteryFree) {
-            text += "\nبۆ بەهێزترین پارێزگاری «پاتری بەبێ سنوور» چالاک بکە.";
+            text += getString(R.string.ks_0006);
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
                 && ContextCompat.checkSelfPermission(this,
                         Manifest.permission.POST_NOTIFICATIONS)
                         != PackageManager.PERMISSION_GRANTED) {
-            text += "\nمۆڵەتی ئاگادارکردنەوە بدە تاکوو دوگمەی STOP لە دەرەوەش ببینیت.";
+            text += getString(R.string.ks_0008);
         }
         keepAliveStatus.setText(text);
         if (stopJobButton != null) {
@@ -1390,18 +1460,18 @@ public class MainActivity extends AppCompatActivity {
             stopEverything();
             return;
         }
-        JobRuntime.setStatus("KurdMan چالاکە و پارێزراوە تا STOP");
+        JobRuntime.setStatus(getString(R.string.ks_0106));
         KeepAliveService.startManual(this);
         requestNotificationPermissionIfNeeded();
         refreshKeepAliveUi();
-        setStatus("🛡 پارێزگاری هەمیشەیی چالاک کرا — تا خۆت STOP دابگریت نامرێت/ناکوژرێتەوە.");
+        setStatus(getString(R.string.ks_0681));
     }
 
     private void stopEverything() {
         KeepAliveService.stopAll(this);
         setStatus(JobRuntime.isRunning()
-                ? "🛑 وەستاندن داواکرا؛ کارەکە لە یەکەم خاڵی سەلامەتدا دەوەستێت."
-                : "🛑 پارێزگاری و کارەکە وەستێنرا.");
+                ? getString(R.string.ks_0676)
+                : getString(R.string.ks_0678));
         if (!JobRuntime.isRunning()) {
             currentBusy = false;
             progress.setVisibility(View.GONE);
@@ -1432,7 +1502,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void openBatteryOptimizationSettings() {
         if (isIgnoringBatteryOptimizations()) {
-            setStatus("✅ پاتری بۆ KurdMan لەپێشوەختەوە بەبێ سنوورە.");
+            setStatus(getString(R.string.ks_0576));
             return;
         }
         try {
@@ -1440,13 +1510,13 @@ public class MainActivity extends AppCompatActivity {
                     Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
             intent.setData(Uri.parse("package:" + getPackageName()));
             startActivity(intent);
-            setStatus("🔋 «بەبێ سنوور / Unrestricted» هەڵبژێرە تاکوو سیستەم بەهێواشی KurdMan نەکۆژێت.");
+            setStatus(getString(R.string.ks_0657));
         } catch (ActivityNotFoundException | SecurityException e) {
             try {
                 startActivity(new Intent(
                         Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
             } catch (RuntimeException second) {
-                setStatus("⚠ لە ڕێکخستنەکانی مۆبایلەکەتدا بڕۆ بۆ Apps → KurdMan → Battery و «Unrestricted» هەڵبژێرە.");
+                setStatus(getString(R.string.ks_0528));
             }
         }
     }
@@ -1514,8 +1584,8 @@ public class MainActivity extends AppCompatActivity {
             return null;
         }
         if (!UnlimitedOcrClient.isConfigured(url)) {
-            setStatus("⚠ Unlimited-OCR چالاکە بەڵام ناونیشانی سێرڤەر دروست نییە؛ "
-                    + "OCRی ناو مۆبایل بەکاردەهێنرێت.");
+            setStatus(getString(R.string.ks_0509)
+                    + getString(R.string.ks_0110));
             return null;
         }
         return new UnlimitedOcrClient(url, key, model);
@@ -1527,20 +1597,20 @@ public class MainActivity extends AppCompatActivity {
             return null;
         }
         if (!paddleOcrModelManager.isReadyFor(sourceLanguage)) {
-            setStatus("خوێندنەوەی وردی ML Kit کار دەکات؛ بۆ PP-OCRی بەهێزتر "
-                    + "لە «ڕێکخستنەکان» پاکێجی PP-OCR دابەزێنە.");
+            setStatus(getString(R.string.ks_0199)
+                    + getString(R.string.ks_0310));
             return null;
         }
         PaddleOcrClient client = new PaddleOcrClient(this, sourceLanguage);
         activePaddleOcrClient = client;
         try {
-            setStatus("بارکردنی PP-OCR بۆ پشکنینی دووەمی وشە قورسەکان…");
+            setStatus(getString(R.string.ks_0154));
             client.initialize();
             return client;
         } catch (Throwable e) {
             closePaddleOcrClient(client);
             if (!JobRuntime.wasStopped(e)) {
-                setStatus("⚠ PP-OCR دەستی پێنەکرد؛ OCRی وردی ML Kit بەتەنیا بەکاردەهێنرێت.");
+                setStatus(getString(R.string.ks_0508));
             }
             return null;
         }
@@ -1691,36 +1761,14 @@ public class MainActivity extends AppCompatActivity {
                 + 0.114f * Color.blue(color));
     }
 
-    private SoraniTranslator createTranslator(boolean offlineMode) throws Exception {
-        if (!offlineMode) {
-            SoraniTranslator translator = new SoraniTranslator();
-            activeTranslator = translator;
-            return translator;
-        }
-        setStatus("🤖 بارکردنی مۆدێلی زیرەکیی دەستکردی ئۆفلاین… "
-                + "یەکەمجار لەوانەیە چەند چرکەیەک بخایەنێت.");
-        // The engine itself runs in the :offline_ai process (see
-        // OfflineTranslationService), so a native crash or low-memory
-        // kill inside ONNX Runtime cannot take this app process down.
-        OfflineAiClient engine = null;
-        try {
-            engine = new OfflineAiClient(this);
-            engine.initialize();
-            SoraniTranslator translator = new SoraniTranslator(engine);
-            activeTranslator = translator;
-            return translator;
-        } catch (Exception e) {
-            if (engine != null) {
-                engine.close();
-            }
-            throw e;
-        } catch (Error e) {
-            if (engine != null) {
-                engine.close();
-            }
-            throw new IOException(
-                    "OFFLINE_AI_RUNTIME_ERROR: " + e.getMessage(), e);
-        }
+    private SoraniTranslator createTranslator(boolean offlineMode,
+                                              String targetLanguage) {
+        SoraniTranslator translator = offlineMode
+                ? new SoraniTranslator(new MlKitOfflineEngine())
+                : new SoraniTranslator();
+        translator.setTargetLanguage(targetLanguage);
+        activeTranslator = translator;
+        return translator;
     }
 
     private void closeTranslator(SoraniTranslator translator) {
@@ -1737,32 +1785,62 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Refreshes the offline language-pack card for the currently
+     * selected source→target pair. ML Kit pack state is queried on the
+     * executor; the result is cached in {@link #offlinePackReady} so
+     * job start can gate synchronously.
+     */
     private void refreshOfflineModelUi() {
-        if (offlineModelManager == null || offlineModelStatus == null
-                || downloadOfflineButton == null) {
+        if (offlineModelStatus == null || downloadOfflineButton == null) {
             return;
         }
-        boolean ready = offlineModelManager.isModelReady();
-        long downloaded = offlineModelManager.downloadedBytes();
-        long total = OfflineModelManager.totalBytes();
-        if (ready) {
-            String text = "✅ ئامادەیە بۆ وەرگێڕانی بێ ئینتەرنێت • "
-                    + formatStorage(total);
-            if (!selectedOfflineMode()) {
-                text += " — «ئۆفلاین AI» هەڵبژێرە بۆ بەکارهێنان";
+        final String source = selectedSourceLanguage();
+        final String target = selectedTargetLanguage();
+        final String pair = source + ">" + target;
+        if (!MlKitOfflineEngine.isPairSupported(source, target)) {
+            offlinePackReady = false;
+            offlinePackPair = pair;
+            offlineModelStatus.setText(getString(R.string.ks_0515)
+                    + getString(R.string.ks_0074));
+            downloadOfflineButton.setText(getString(R.string.ks_0621));
+            downloadOfflineButton.setEnabled(false);
+            if (deleteOfflineButton != null) {
+                deleteOfflineButton.setEnabled(false);
             }
-            offlineModelStatus.setText(text);
-            downloadOfflineButton.setText("✓ مۆدێلی AI ئامادەیە");
-        } else if (downloaded > 0) {
-            offlineModelStatus.setText("⬇ بەشێک دابەزیوە: "
-                    + formatStorage(downloaded) + " / " + formatStorage(total)
-                    + " — دەتوانیت درێژە بدەیت");
-            downloadOfflineButton.setText("↻ درێژەدان بە دابەزاندن");
-        } else {
-            offlineModelStatus.setText("هێشتا دانەبەزیوە • "
-                    + formatStorage(total));
-            downloadOfflineButton.setText("⬇  دابەزاندنی مۆدێلی AI");
+            return;
         }
+        offlineModelStatus.setText(getString(R.string.ks_0415));
+        executor.execute(() -> {
+            boolean ready;
+            try {
+                ready = MlKitOfflineEngine.isPackDownloaded(source, target);
+            } catch (Exception e) {
+                ready = false;
+            }
+            final boolean packReady = ready;
+            runOnUiThread(() -> {
+                if (!pair.equals(selectedSourceLanguage() + ">"
+                        + selectedTargetLanguage())) {
+                    return; // selection changed meanwhile
+                }
+                offlinePackReady = packReady;
+                offlinePackPair = pair;
+                if (offlineModelStatus != null) {
+                    offlineModelStatus.setText(packReady
+                            ? getString(R.string.ks_0577)
+                            : getString(R.string.ks_0342));
+                }
+                if (downloadOfflineButton != null) {
+                    downloadOfflineButton.setText(packReady
+                            ? getString(R.string.ks_0598) : getString(R.string.ks_0621));
+                    downloadOfflineButton.setEnabled(!packReady);
+                }
+                if (deleteOfflineButton != null) {
+                    deleteOfflineButton.setEnabled(packReady);
+                }
+            });
+        });
     }
 
     private void refreshPaddleOcrUi() {
@@ -1774,28 +1852,28 @@ public class MainActivity extends AppCompatActivity {
         long downloaded = paddleOcrModelManager.downloadedBytes();
         long total = PaddleOcrModelManager.totalBytes();
         if (ready) {
-            paddleOcrStatus.setText("✅ PP-OCR ئامادەیە و لەناو مۆبایلەکەدا کار دەکات • "
+            paddleOcrStatus.setText(getString(R.string.ks_0552)
                     + formatStorage(total));
-            downloadPaddleOcrButton.setText("✓ PP-OCR ئامادەیە");
+            downloadPaddleOcrButton.setText(getString(R.string.ks_0595));
         } else if (downloaded > 0) {
-            paddleOcrStatus.setText("⬇ بەشێک دابەزیوە: "
+            paddleOcrStatus.setText(getString(R.string.ks_0624)
                     + formatStorage(downloaded) + " / " + formatStorage(total)
-                    + " — دەتوانیت درێژە بدەیت");
-            downloadPaddleOcrButton.setText("↻ درێژەدان بە PP-OCR");
+                    + getString(R.string.ks_0063));
+            downloadPaddleOcrButton.setText(getString(R.string.ks_0484));
         } else {
-            paddleOcrStatus.setText("هێشتا دانەبەزیوە • " + formatStorage(total));
-            downloadPaddleOcrButton.setText("⬇  دابەزاندنی PP-OCR");
+            paddleOcrStatus.setText(getString(R.string.ks_0340) + formatStorage(total));
+            downloadPaddleOcrButton.setText(getString(R.string.ks_0620));
         }
     }
 
     private void downloadPaddleOcrPack() {
         if (paddleOcrModelManager.isPackReady()) {
             refreshPaddleOcrUi();
-            setStatus("✅ PP-OCR لەم مۆبایلەدا ئامادەیە و بێ ئینتەرنێت کار دەکات.");
+            setStatus(getString(R.string.ks_0555));
             return;
         }
         setBusy(true);
-        setStatus("⬇ دابەزاندنی پاکێجی PP-OCR ("
+        setStatus(getString(R.string.ks_0626)
                 + formatStorage(PaddleOcrModelManager.totalBytes()) + ")…");
         executor.execute(() -> {
             JobRuntime.markThreadStarted();
@@ -1810,8 +1888,8 @@ public class MainActivity extends AppCompatActivity {
                             }
                             lastPercent[0] = percent;
                             String status = (verifying
-                                    ? "🔎 پشکنینی PP-OCR: "
-                                    : "⬇ دابەزاندنی PP-OCR: ")
+                                    ? getString(R.string.ks_0661)
+                                    : getString(R.string.ks_0625))
                                     + percent + "% ("
                                     + formatStorage(downloadedBytes) + " / "
                                     + formatStorage(totalBytes) + ")";
@@ -1823,13 +1901,13 @@ public class MainActivity extends AppCompatActivity {
                             });
                         });
                 runOnUiThread(this::refreshPaddleOcrUi);
-                setStatus("✅ PP-OCR ئامادەیە. لە بەشی وەرگێڕان «خوێندنەوەی زۆر ورد» "
-                        + "چالاک بکە و وێنەکە وەربگێڕە.");
+                setStatus(getString(R.string.ks_0553)
+                        + getString(R.string.ks_0426));
             } catch (Throwable e) {
                 runOnUiThread(this::refreshPaddleOcrUi);
                 setStatus(JobRuntime.wasStopped(e)
-                        ? "🛑 دابەزاندنی PP-OCR وەستێنرا."
-                        : "❌ دابەزاندنی PP-OCR سەرکەوتوو نەبوو: "
+                        ? getString(R.string.ks_0674)
+                        : getString(R.string.ks_0605)
                                 + friendlyError(e));
             } finally {
                 setBusy(false);
@@ -1841,16 +1919,16 @@ public class MainActivity extends AppCompatActivity {
         long downloaded = paddleOcrModelManager.downloadedBytes();
         if (downloaded <= 0 && !paddleOcrModelManager.isPackReady()) {
             refreshPaddleOcrUi();
-            setStatus("⚠ هیچ پاکێجێکی PP-OCR نییە بۆ سڕینەوە.");
+            setStatus(getString(R.string.ks_0533));
             return;
         }
         new AlertDialog.Builder(this)
-                .setTitle("سڕینەوەی PP-OCR؟")
-                .setMessage("نزیکەی " + formatStorage(downloaded)
-                        + " دەسڕدرێتەوە. OCRی ML Kit هەر دەمێنێتەوە، بەڵام بۆ "
-                        + "بەکارهێنانەوەی PP-OCR دەبێت پاکێجەکە دووبارە دابەزێنیت.")
-                .setNegativeButton("پاشگەزبوونەوە", null)
-                .setPositiveButton("بیسرەوە", (dialog, which) -> {
+                .setTitle(getString(R.string.ks_0258))
+                .setMessage(getString(R.string.ks_0322) + formatStorage(downloaded)
+                        + getString(R.string.ks_0022)
+                        + getString(R.string.ks_0181))
+                .setNegativeButton(getString(R.string.ks_0401), null)
+                .setPositiveButton(getString(R.string.ks_0174), (dialog, which) -> {
                     setBusy(true);
                     executor.execute(() -> {
                         JobRuntime.markThreadStarted();
@@ -1858,8 +1936,8 @@ public class MainActivity extends AppCompatActivity {
                             boolean deleted = paddleOcrModelManager.deletePack();
                             runOnUiThread(this::refreshPaddleOcrUi);
                             setStatus(deleted
-                                    ? "✅ PP-OCR سڕایەوە و شوێنەکە ئازاد کرا."
-                                    : "⚠ هەندێک فایلی PP-OCR نەسڕایەوە؛ دووبارە هەوڵبدە.");
+                                    ? getString(R.string.ks_0554)
+                                    : getString(R.string.ks_0537));
                         } finally {
                             setBusy(false);
                         }
@@ -1869,51 +1947,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void downloadOfflineModel() {
-        if (offlineModelManager.isModelReady()) {
+        final String source = selectedSourceLanguage();
+        final String target = selectedTargetLanguage();
+        if (!MlKitOfflineEngine.isPairSupported(source, target)) {
             refreshOfflineModelUi();
-            setStatus("✅ مۆدێلی ئۆفلاین لەم مۆبایلەدا ئامادەیە.");
             return;
         }
         setBusy(true);
-        setStatus("⬇ دەستپێکردنی دابەزاندنی مۆدێلی ئۆفلاین ("
-                + formatStorage(OfflineModelManager.totalBytes()) + ")…");
+        setStatus(getString(R.string.ks_0627));
         executor.execute(() -> {
             JobRuntime.markThreadStarted();
-            final int[] lastPercent = {-1};
-            final boolean[] lastVerifying = {false};
             try {
-                offlineModelManager.downloadModel(
-                        (downloadedBytes, totalBytes, currentFile, verifying) -> {
-                            int percent = totalBytes == 0 ? 0
-                                    : (int) ((downloadedBytes * 100L) / totalBytes);
-                            if (percent == lastPercent[0]
-                                    && verifying == lastVerifying[0]
-                                    && percent < 100) {
-                                return;
-                            }
-                            lastPercent[0] = percent;
-                            lastVerifying[0] = verifying;
-                            String status = (verifying
-                                    ? "🔎 پشکنینی دروستیی مۆدێلی ئۆفلاین: "
-                                    : "⬇ دابەزاندنی مۆدێلی ئۆفلاین: ")
-                                    + percent + "% ("
-                                    + formatStorage(downloadedBytes) + " / "
-                                    + formatStorage(totalBytes) + ")"
-                                    + (currentFile == null || currentFile.isEmpty()
-                                            ? "" : " — " + currentFile);
-                            setStatus(status);
-                            runOnUiThread(() -> {
-                                if (offlineModelStatus != null) {
-                                    offlineModelStatus.setText(status);
-                                }
-                            });
-                        });
+                MlKitOfflineEngine.downloadPack(source, target);
                 runOnUiThread(this::refreshOfflineModelUi);
-                setStatus("✅ مۆدێلی ئۆفلاین ئامادەیە. ئێستا دەتوانیت "
-                        + "ئینتەرنێت بکوژێنیتەوە و «ئۆفلاین AI» بەکاربهێنیت.");
+                setStatus(getString(R.string.ks_0578)
+                        + getString(R.string.ks_0133));
             } catch (Throwable e) {
                 runOnUiThread(this::refreshOfflineModelUi);
-                setStatus("❌ دابەزاندنی مۆدێلی ئۆفلاین سەرکەوتوو نەبوو: "
+                setStatus(getString(R.string.ks_0606)
                         + friendlyOfflineError(e));
             } finally {
                 setBusy(false);
@@ -1922,37 +1973,31 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void confirmDeleteOfflineModel() {
-        long downloaded = offlineModelManager.downloadedBytes();
-        if (downloaded <= 0 && !offlineModelManager.isModelReady()) {
-            refreshOfflineModelUi();
-            setStatus("⚠ هیچ مۆدێلێکی ئۆفلاین لەم مۆبایلەدا نییە بۆ سڕینەوە.");
-            return;
-        }
         new AlertDialog.Builder(this)
-                .setTitle("سڕینەوەی مۆدێلی ئۆفلاین؟")
-                .setMessage("نزیکەی " + formatStorage(downloaded)
-                        + " دەسڕدرێتەوە. بۆ بەکارهێنانەوەی ئۆفلاین AI دەبێت "
-                        + "مۆدێلەکە دووبارە دابەزێنیت.")
-                .setNegativeButton("پاشگەزبوونەوە", null)
-                .setPositiveButton("بیسرەوە",
+                .setTitle(getString(R.string.ks_0263))
+                .setMessage(getString(R.string.ks_0409)
+                        + getString(R.string.ks_0158))
+                .setNegativeButton(getString(R.string.ks_0401), null)
+                .setPositiveButton(getString(R.string.ks_0174),
                         (dialog, which) -> deleteOfflineModel())
                 .show();
     }
 
     private void deleteOfflineModel() {
+        final String source = selectedSourceLanguage();
+        final String target = selectedTargetLanguage();
         setBusy(true);
-        setStatus("سڕینەوەی مۆدێلی ئۆفلاین…");
+        setStatus(getString(R.string.ks_0264));
         executor.execute(() -> {
             JobRuntime.markThreadStarted();
             try {
-                boolean deleted = offlineModelManager.deleteModel();
+                MlKitOfflineEngine.deletePack(source, target);
+                offlinePackReady = false;
                 runOnUiThread(this::refreshOfflineModelUi);
-                setStatus(deleted
-                        ? "✅ مۆدێلی ئۆفلاین سڕایەوە و شوێنەکە ئازاد کرا."
-                        : "⚠ هەندێک فایلی مۆدێلەکە نەسڕایەوە؛ دووبارە هەوڵبدە.");
+                setStatus(getString(R.string.ks_0579));
             } catch (Exception e) {
                 runOnUiThread(this::refreshOfflineModelUi);
-                setStatus("❌ سڕینەوەی مۆدێلەکە سەرکەوتوو نەبوو: "
+                setStatus(getString(R.string.ks_0608)
                         + friendlyError(e));
             } finally {
                 setBusy(false);
@@ -1990,53 +2035,21 @@ public class MainActivity extends AppCompatActivity {
 
     private String friendlyOfflineError(Throwable error) {
         if (JobRuntime.wasStopped(error)) {
-            return "کارەکە بە داوای تۆ وەستێنرا.";
+            return getString(R.string.ks_0451);
         }
         String raw = friendlyError(error);
         String lower = errorChainText(error);
-        if (lower.contains("not enough free storage")) {
-            return "شوێنی بەتاڵی مۆبایلەکە بەش ناکات؛ بۆ مۆدێلەکە نزیکەی "
-                    + formatStorage(OfflineModelManager.totalBytes())
-                    + " و کەمێک شوێنی زیادە پێویستە. (" + raw + ")";
+        if (lower.contains("offline_pair_unsupported")) {
+            return getString(R.string.ks_0143)
+                    + getString(R.string.ks_0280) + raw + ")";
         }
-        if (lower.contains("checksum mismatch")
-                || lower.contains("sha-256 mismatch")) {
-            return "فایلێکی مۆدێلەکە تێکچووە یان گۆڕاوە و پشکنینی دروستییەکە "
-                    + "سەرکەوتوو نەبوو؛ دووبارە دایبەزێنە. (" + raw + ")";
+        if (lower.contains("offline_pack_missing")) {
+            return getString(R.string.ks_0271)
+                    + getString(R.string.ks_0077) + raw + ")";
         }
-        if (lower.contains("offline_ai_out_of_memory")
-                || lower.contains("outofmemoryerror")
-                || lower.contains("failed to allocate")) {
-            return "بیرگەی ئازادی مۆبایلەکە بەش ناکات بۆ بارکردنی مۆدێلەکە؛ "
-                    + "ئەپەکانی تر دابخە و دووبارە هەوڵبدە. (" + raw + ")";
-        }
-        if (lower.contains("offline_ai_process_died")) {
-            return "پرۆسەی زیرەکیی دەستکرد وەستا (زۆرجار لەبەر کەمی بیرگەی "
-                    + "بەردەستی مۆبایلەکە). ئەپەکانی تر دابخە، مۆبایلەکە "
-                    + "ڕیستارت بکە ئەگەر پێویست بوو، و دووبارە هەوڵبدە؛ "
-                    + "ئەگەر هەر وەستا دۆخی ئۆنلاین بەکاربهێنە. (" + raw + ")";
-        }
-        if (lower.contains("offline_ai_timeout")) {
-            return "وەرگێڕانی ئۆفلاین زۆر درێژی کێشا و وەستێنرا؛ "
-                    + "وێنەیەکی بچووکتر یان دۆخی ئۆنلاین تاقیبکەرەوە. ("
-                    + raw + ")";
-        }
-        if (lower.contains("offline_model_not_ready")) {
-            return "سەرەتا «دابەزاندنی مۆدێلی AI» دابگرە و چاوەڕوان بکە تا "
-                    + "دابەزاندن و پشکنینەکە تەواو بێت. (" + raw + ")";
-        }
-        if (lower.contains("offline_ai_returned_untranslated")
-                || lower.contains("offline ai returned untranslated")) {
-            return "مۆدێلە ئۆفلاینەکە بۆ ئەم دەقە وەرگێڕانێکی کوردی بەرهەم "
-                    + "نەهێنا؛ وێنەیەکی ڕوونتر یان دۆخی ئۆنلاین تاقیبکەرەوە. ("
-                    + raw + ")";
-        }
-        if (lower.contains("offline_ai_runtime_error")
-                || lower.contains("offline_ai_model_mismatch")
-                || lower.contains("onnx")
-                || lower.contains("ortexception")) {
-            return "مۆدێلی ئۆفلاین نەتوانرا لەسەر ئەم مۆبایلە کاربکات؛ "
-                    + "ئەگەر دووبارە بووەوە مۆدێلەکە بسرەوە و دووبارە دایبەزێنە. ("
+        if (lower.contains("not enough free storage")
+                || lower.contains("no space left")) {
+            return getString(R.string.ks_0278)
                     + raw + ")";
         }
         if (lower.contains("unable to resolve host")
@@ -2044,10 +2057,10 @@ public class MainActivity extends AppCompatActivity {
                 || lower.contains("failed to connect")
                 || lower.contains("timed out") || lower.contains("timeout")
                 || lower.contains("connection reset")
-                || lower.contains("network is unreachable")) {
-            return "پەیوەندی بە سێرفەری دابەزاندنی مۆدێلەکەوە نەبەسترا؛ "
-                    + "ئینتەرنێتەکە بپشکنە و درێژە بە دابەزاندن بدە. ("
-                    + raw + ")";
+                || lower.contains("network is unreachable")
+                || lower.contains("network_error")) {
+            return getString(R.string.ks_0421)
+                    + getString(R.string.ks_0134) + raw + ")";
         }
         return raw;
     }
@@ -2062,7 +2075,7 @@ public class MainActivity extends AppCompatActivity {
         }
         saveSettings();
         setBusy(true);
-        setStatus("پەیوەستبوون بە تێلێگرام…");
+        setStatus(getString(R.string.ks_0420));
         executor.execute(() -> {
             JobRuntime.markThreadStarted();
             try {
@@ -2070,13 +2083,13 @@ public class MainActivity extends AppCompatActivity {
                 JSONObject me = api.getMe();
                 String username = me.optString("username", "");
                 String status = username.isEmpty()
-                        ? "✅ تۆکنەکە پەیوەستە."
-                        : "✅ تۆکنەکە پەیوەستە: @" + username;
+                        ? getString(R.string.ks_0562)
+                        : getString(R.string.ks_0563) + username;
                 if (!chatId.isEmpty()) {
                     // Prove the bot can actually reach this chat; getMe alone
                     // does not validate the Chat ID at all.
                     api.sendChatAction(chatId, "typing");
-                    status += " — و Chat IDـەکەش وەڵامی دا ✅";
+                    status += getString(R.string.ks_0064);
                     try {
                         JSONObject chat = api.getChat(chatId);
                         String title = chat.optString("title",
@@ -2089,7 +2102,7 @@ public class MainActivity extends AppCompatActivity {
                         // sendChatAction already proved reachability.
                     }
                 } else {
-                    status += " (Chat ID هێشتا نەنووسراوە)";
+                    status += getString(R.string.ks_0010);
                 }
                 setStatus(status);
             } catch (Exception e) {
@@ -2119,16 +2132,16 @@ public class MainActivity extends AppCompatActivity {
                 ? tokenMatcher.group()
                 : raw.replaceAll("\\s+", "");
         if (clean.isEmpty()) {
-            setStatus("⚠ کلیپبۆردەکە بەتاڵە؛ سەرەتا تۆکنەکە لە @BotFather کۆپی بکە.");
+            setStatus(getString(R.string.ks_0544));
             return;
         }
         tokenInput.setText(clean);
         tokenInput.setSelection(clean.length());
         tokenInput.requestFocus();
         if (isValidToken(clean)) {
-            setStatus("✅ تۆکنەکە لکێنرا. ئێستا «پاشەکەوتکردن» پاشان «پشکنینی بۆت» دابگرە.");
+            setStatus(getString(R.string.ks_0561));
         } else {
-            setStatus("⚠ ئەوەی لکێنرا وەک تۆکن ناچێت؛ تۆکنەکە بە ژمارە و «:» دەستپێدەکات.");
+            setStatus(getString(R.string.ks_0513));
         }
     }
 
@@ -2136,13 +2149,13 @@ public class MainActivity extends AppCompatActivity {
         Matcher idMatcher = Pattern.compile("-?\\d{5,}").matcher(clipboardText());
         String clean = idMatcher.find() ? idMatcher.group() : "";
         if (clean.isEmpty() || clean.equals("-")) {
-            setStatus("⚠ کلیپبۆردەکە ژمارەیەکی تێدا نییە؛ سەرەتا IDـەکە لە @userinfobot کۆپی بکە.");
+            setStatus(getString(R.string.ks_0545));
             return;
         }
         chatInput.setText(clean);
         chatInput.setSelection(clean.length());
         chatInput.requestFocus();
-        setStatus("✅ Chat ID لکێنرا. ئێستا «پاشەکەوتکردن» پاشان «پشکنینی بۆت» دابگرە.");
+        setStatus(getString(R.string.ks_0550));
     }
 
     private String clipboardText() {
@@ -2169,12 +2182,12 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         if (text.isEmpty()) {
-            setStatus("⚠ نامەیەک بنووسە.");
+            setStatus(getString(R.string.ks_0530));
             return;
         }
         saveSettings();
         setBusy(true);
-        setStatus("ناردنی نامەکە بە تۆکنەکە…");
+        setStatus(getString(R.string.ks_0316));
         executor.execute(() -> {
             JobRuntime.markThreadStarted();
             try {
@@ -2183,7 +2196,7 @@ public class MainActivity extends AppCompatActivity {
                     api.sendMessage(chatId, chunk);
                 }
                 runOnUiThread(() -> messageInput.setText(""));
-                setStatus("✅ نامەکە نێردرا.");
+                setStatus(getString(R.string.ks_0570));
             } catch (Exception e) {
                 setStatus("❌ " + friendlyTelegramError(e));
             } finally {
@@ -2223,8 +2236,8 @@ public class MainActivity extends AppCompatActivity {
         }
         for (PickedInput input : picked) {
             if (input.cbz) {
-                String message = "بۆ چەند فایل پێکەوە تەنیا وێنەکان هەڵبژێرە؛ "
-                        + "CBZ دەبێت بە تەنیا هەڵبژێردرێت.";
+                String message = getString(R.string.ks_0167)
+                        + getString(R.string.ks_0093);
                 DiagnosticLog.warning(getApplicationContext(), "file-picker",
                         "Mixed multi-selection rejected: CBZ must be selected alone; count="
                                 + picked.size());
@@ -2246,7 +2259,7 @@ public class MainActivity extends AppCompatActivity {
         final List<PickedInput> finalPicked = picked;
 
         setBusy(true);
-        setStatus("خوێندنەوەی " + finalPicked.size() + " وێنە…");
+        setStatus(getString(R.string.ks_0195) + finalPicked.size() + getString(R.string.ks_0060));
         executor.execute(() -> {
             JobRuntime.markThreadStarted();
             try {
@@ -2267,7 +2280,7 @@ public class MainActivity extends AppCompatActivity {
                                         + input.displayName + " mime=" + input.mimeType);
                         continue;
                     }
-                    setStatus("خوێندنەوەی وێنەکان " + (i + 1) + "/"
+                    setStatus(getString(R.string.ks_0201) + (i + 1) + "/"
                             + finalPicked.size() + "…");
                     File copied = new File(getCacheDir(),
                             "selected-batch-" + batchStamp + "-"
@@ -2301,27 +2314,27 @@ public class MainActivity extends AppCompatActivity {
                 final Bitmap finalPreview = preview;
                 final String batchBase = batchBaseName(copiedNames);
                 final String batchLabel = batchBase + " — "
-                        + copiedFiles.size() + " وێنە";
+                        + copiedFiles.size() + getString(R.string.ks_0055);
                 StringBuilder summary = new StringBuilder();
                 summary.append("🖼 ").append(copiedFiles.size())
-                        .append(" وێنە هەڵبژێردراون و بە ڕیزبەندیی ژمارەیی ناوەکانیان ")
-                        .append("وەک لاپەڕەکانی یەک بەش وەردەگێڕدرێن.\n");
+                        .append(getString(R.string.ks_0057))
+                        .append(getString(R.string.ks_0379));
                 int shown = Math.min(12, copiedNames.size());
                 for (int i = 0; i < shown; i++) {
                     summary.append(i + 1).append(". ")
                             .append(copiedNames.get(i)).append('\n');
                 }
                 if (copiedNames.size() > shown) {
-                    summary.append("… و ").append(copiedNames.size() - shown)
-                            .append(" وێنەی تر\n");
+                    summary.append(getString(R.string.ks_0470)).append(copiedNames.size() - shown)
+                            .append(getString(R.string.ks_0058));
                 }
                 if (!skippedNames.isEmpty()) {
                     summary.append("⚠ ").append(skippedNames.size())
-                            .append(" فایل نەخوێنرانەوە/وێنە نەبوون.\n");
+                            .append(getString(R.string.ks_0037));
                 }
                 if (ignoredCount > 0) {
-                    summary.append("⚠ تەنیا 300 وێنەی یەکەم وەرگیران؛ ")
-                            .append(ignoredCount).append(" دانە پشتگوێ خران.\n");
+                    summary.append(getString(R.string.ks_0519))
+                            .append(ignoredCount).append(getString(R.string.ks_0020));
                 }
                 final String summaryText = summary.toString().trim();
                 DiagnosticLog.info(getApplicationContext(), "file-picker",
@@ -2353,20 +2366,20 @@ public class MainActivity extends AppCompatActivity {
                     updateButtons(false);
                 });
                 setStatus("✅ " + copiedFiles.size()
-                        + " وێنە ئامادەن بە ڕیزبەندیی ناوەکانیان."
+                        + getString(R.string.ks_0056)
                         + (ignoredCount > 0
-                                ? " (" + ignoredCount + " دانە لە دەرەوەی سنووری 300 پشتگوێ خران.)"
+                                ? " (" + ignoredCount + getString(R.string.ks_0019)
                                 : ""));
             } catch (Throwable e) {
                 if (JobRuntime.wasStopped(e)) {
-                    setStatus("🛑 خوێندنەوەی وێنەکان بە داوای تۆ وەستێنرا.");
+                    setStatus(getString(R.string.ks_0673));
                 } else {
                     DiagnosticLog.error(getApplicationContext(), "file-picker", e,
                             "Loading multi-image selection; requested="
                                     + requestedCount);
-                    setStatus("❌ نەتوانرا وێنەکان بخوێندرێنەوە: "
+                    setStatus(getString(R.string.ks_0611)
                             + friendlyError(e)
-                            + " وردەکاری لە بەشی «ڕاپۆرت»دا تۆمار کرا.");
+                            + getString(R.string.ks_0053));
                 }
             } finally {
                 setBusy(false);
@@ -2464,7 +2477,7 @@ public class MainActivity extends AppCompatActivity {
         final String mimeType = getContentResolver().getType(uri);
         final boolean cbz = isCbzSelection(displayName, mimeType);
         setBusy(true);
-        setStatus(cbz ? "خوێندنەوەی CBZ و دەرهێنانی وێنەکان…" : "خوێندنەوەی وێنەکە…");
+        setStatus(cbz ? getString(R.string.ks_0196) : getString(R.string.ks_0202));
         executor.execute(() -> {
             JobRuntime.markThreadStarted();
             try {
@@ -2509,12 +2522,12 @@ public class MainActivity extends AppCompatActivity {
                             previewImage.setImageBitmap(previewBitmap);
                         }
                         resultText.setText("📚 " + displayName
-                                + "\nلاپەڕەکان: " + finalPageCount
-                                + "\nئامادەیە بۆ وەرگێڕان.");
+                                + getString(R.string.ks_0007) + finalPageCount
+                                + getString(R.string.ks_0005));
                         updateButtons(false);
                     });
-                    setStatus("✅ CBZ ئامادەیە: " + displayName
-                            + " — " + finalPageCount + " لاپەڕە.");
+                    setStatus(getString(R.string.ks_0548) + displayName
+                            + " — " + finalPageCount + getString(R.string.ks_0043));
                 } else {
                     File copiedImage = new File(getCacheDir(),
                             "selected-image-" + timestamp()
@@ -2539,11 +2552,11 @@ public class MainActivity extends AppCompatActivity {
                         resultText.setText("");
                         updateButtons(false);
                     });
-                    setStatus("✅ وێنەکە ئامادەیە: "
+                    setStatus(getString(R.string.ks_0574)
                             + loaded.getWidth() + "×" + loaded.getHeight());
                 }
             } catch (Exception e) {
-                setStatus("❌ نەتوانرا فایلەکە بخوێندرێتەوە: " + friendlyError(e));
+                setStatus(getString(R.string.ks_0609) + friendlyError(e));
             } finally {
                 setBusy(false);
             }
@@ -2556,6 +2569,43 @@ public class MainActivity extends AppCompatActivity {
             index = 0;
         }
         return SOURCE_CODES[index];
+    }
+
+    private String selectedTargetLanguage() {
+        int index = targetSpinner == null ? 0 : targetSpinner.getSelectedItemPosition();
+        if (index < 0 || index >= TARGET_CODES.length) {
+            index = 0;
+        }
+        return TARGET_CODES[index];
+    }
+
+    /** File-name suffix per target language (ckb kept for old outputs). */
+    private static String outputSuffixFor(String target) {
+        if (target == null || target.isEmpty() || "ckb".equals(target)) {
+            return "ckb";
+        }
+        return target.toLowerCase(java.util.Locale.ROOT).replace("-", "");
+    }
+
+    private String outSuffix() {
+        return outputSuffixFor(ManhwaRenderer.activeTargetLanguage);
+    }
+
+    /** Hero tagline follows the chosen target language (Koorix only). */
+    private void updateHeroTagline() {
+        if (!BuildConfig.PUBLIC_EDITION) {
+            return;
+        }
+        TextView heroSubtitle = findViewById(R.id.heroSubtitle);
+        if (heroSubtitle != null) {
+            int index = targetSpinner == null ? 0
+                    : targetSpinner.getSelectedItemPosition();
+            if (index < 0 || index >= TARGET_LABELS.length) {
+                index = 0;
+            }
+            heroSubtitle.setText(getString(
+                    R.string.kx_hero_subtitle, TARGET_LABELS[index]));
+        }
     }
 
     private void translateSelected() {
@@ -2585,21 +2635,35 @@ public class MainActivity extends AppCompatActivity {
                 && (cbzFile == null || !cbzFile.exists())) {
             DiagnosticLog.warning(getApplicationContext(), "translation",
                     "Translate tapped with no selected image/CBZ.");
-            setStatus("⚠ سەرەتا وێنەی مانهوا یان فایلی CBZ هەڵبژێرە.");
+            setStatus(getString(R.string.ks_0524));
             return;
         }
         final String sourceLanguage = selectedSourceLanguage();
+        final String targetLanguage = selectedTargetLanguage();
+        ManhwaRenderer.activeTargetLanguage = targetLanguage;
+        ManhwaRenderer.i18nContext = getApplicationContext();
+        JobRuntime.init(getApplicationContext());
         final boolean offlineMode = selectedOfflineMode();
         final boolean accurateOcr = accurateOcrCheck == null
                 || accurateOcrCheck.isChecked();
         final ManhwaRenderer.BlockOcr unlimitedOcr =
                 createUnlimitedOcrIfEnabled();
         final boolean createPdf = selectedCreatePdf();
-        if (offlineMode && !offlineModelManager.isModelReady()) {
+        if (offlineMode) {
             refreshOfflineModelUi();
-            setStatus("⚠ بۆ وەرگێڕانی ئۆفلاین سەرەتا «دابەزاندنی مۆدێلی AI» "
-                    + "دابگرە؛ یەکەمجار پێویستی بە ئینتەرنێتە و دواتر بێ ئینتەرنێت کار دەکات.");
-            return;
+            if (!MlKitOfflineEngine.isPairSupported(
+                    sourceLanguage, targetLanguage)) {
+                setStatus(getString(R.string.ks_0539)
+                        + getString(R.string.ks_0075));
+                return;
+            }
+            String pair = sourceLanguage + ">" + targetLanguage;
+            if (!offlinePackReady || !pair.equals(offlinePackPair)) {
+                setStatus(getString(R.string.ks_0517)
+                        + getString(R.string.ks_0123)
+                        + getString(R.string.ks_0469));
+                return;
+            }
         }
 
         DiagnosticLog.info(getApplicationContext(), "translation",
@@ -2620,8 +2684,8 @@ public class MainActivity extends AppCompatActivity {
         showMainPage(PAGE_RESULTS);
         setBusy(true);
         setStatus(offlineMode
-                ? "🤖 دەستپێکردنی وەرگێڕانی ئۆفلاین لەناو مۆبایلەکە…"
-                : "دەستپێکردنی وەرگێڕان لەناو مۆبایلەکە…");
+                ? getString(R.string.ks_0685)
+                : getString(R.string.ks_0219));
         executor.execute(() -> {
             JobRuntime.markThreadStarted();
             SoraniTranslator translator = null;
@@ -2634,7 +2698,8 @@ public class MainActivity extends AppCompatActivity {
                             imageBatch ? batchNames : null,
                             imageBatch ? batchLabel : cbzName,
                             imageBatch ? batchBase : null,
-                            sourceLanguage, offlineMode, accurateOcr,
+                            sourceLanguage, targetLanguage, offlineMode,
+                            accurateOcr,
                             createPdf, chosenStyle, unlimitedOcr);
                     return;
                 }
@@ -2662,6 +2727,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 projectPage.width = sourceBitmap.getWidth();
                 projectPage.height = sourceBitmap.getHeight();
+                project.targetLanguage = targetLanguage;
                 project.pages.add(projectPage);
                 project.save();
 
@@ -2686,18 +2752,18 @@ public class MainActivity extends AppCompatActivity {
                     paddleOcrClient = null;
                 }
                 if (segments.isEmpty()) {
-                    throw new IllegalStateException("هیچ دەقێکی ڕوون نەدۆزرایەوە. وێنەیەکی ڕوونتر تاقیبکەرەوە.");
+                    throw new IllegalStateException(getString(R.string.ks_0334));
                 }
 
                 projectPage.segments.addAll(segments);
                 project.save();
-                translator = createTranslator(offlineMode);
+                translator = createTranslator(offlineMode, targetLanguage);
                 for (int i = 0; i < segments.size(); i++) {
                     throwIfJobStopped();
                     Segment segment = segments.get(i);
                     setStatus((offlineMode
-                                    ? "🤖 وەرگێڕانی ئۆفلاین بۆ سۆرانی "
-                                    : "وەرگێڕان بۆ سۆرانی ")
+                                    ? getString(R.string.ks_0686)
+                                    : getString(R.string.ks_0371))
                             + (i + 1) + "/" + segments.size() + "…");
                     segment.ckb = translator.translate(segment.text, sourceLanguage);
                     segment.originalCkb = segment.ckb;
@@ -2713,7 +2779,7 @@ public class MainActivity extends AppCompatActivity {
                 translator = null;
 
                 throwIfJobStopped();
-                setStatus("دانانی دەقە کوردییەکان لەسەر وێنەکە…");
+                setStatus(getString(R.string.ks_0208));
                 ManhwaRenderer.RenderResult renderResult =
                         ManhwaRenderer.render(sourceBitmap, segments,
                                 chosenStyle, styledTypefaceResolver());
@@ -2738,7 +2804,7 @@ public class MainActivity extends AppCompatActivity {
                 copyToDownloadsLibrary(cached);
                 copyToDownloadsLibrary(textFile);
                 String pdfNote = createAndSavePdfCopy(
-                        createPdf, imageBase + ".ckb.pdf", rendered);
+                        createPdf, imageBase + "." + outSuffix() + ".pdf", rendered);
 
                 resultBitmap = rendered;
                 resultFile = cached;
@@ -2752,29 +2818,29 @@ public class MainActivity extends AppCompatActivity {
                 });
 
                 String savedNote = downloadImageUri != null || downloadTextUri != null
-                        ? " لە Download/KurdMan پاشەکەوت کرا و لە بەشی «داگرتنەکان» دەردەکەوێت."
+                        ? getString(R.string.ks_0047)
                         : (savedUri != null
-                                ? " لە Pictures/KurdMan پاشەکەوت کرا."
-                                : " لە کاشی ئەپەکەدا پاشەکەوت کرا.");
+                                ? getString(R.string.ks_0049)
+                                : getString(R.string.ks_0051));
                 savedNote += pdfNote;
-                savedNote += " ئێستا دەتوانیت «دەستکاری شوێن، فۆنت و ڕەنگ» بکەیت.";
+                savedNote += getString(R.string.ks_0015);
                 if (renderResult.rendered == 0) {
-                    setStatus("⚠ دەقەکان وەرگێڕدران، بەڵام هیچ شوێنێکی سادە و پارێزراو "
-                            + "نەبوو بۆ نووسینیان لەسەر وێنەکە؛ وەرگێڕانەکان لە خوارەوەن." + savedNote);
+                    setStatus(getString(R.string.ks_0520)
+                            + getString(R.string.ks_0324) + savedNote);
                 } else if (renderResult.skipped() > 0) {
                     setStatus("⚠ " + renderResult.rendered + "/" + segments.size()
-                            + " دەق لەسەر وێنەکە داندرا؛ " + renderResult.skipped()
-                            + " دەق تەنیا لە لیستی دەقەکاندا هەیە." + savedNote);
+                            + getString(R.string.ks_0030) + renderResult.skipped()
+                            + getString(R.string.ks_0023) + savedNote);
                 } else {
                     setStatus("✅ " + renderResult.rendered + "/" + segments.size()
-                            + " دەق لەسەر وێنەکە داندرا." + savedNote);
+                            + getString(R.string.ks_0029) + savedNote);
                 }
             } catch (Throwable e) {
                 // Catch Errors too (OutOfMemoryError, LinkageError, ...):
                 // an uncaught failure in this background thread would
                 // otherwise kill the whole app process.
                 if (JobRuntime.wasStopped(e)) {
-                    setStatus("🛑 کارەکە بە داوای تۆ وەستێنرا.");
+                    setStatus(getString(R.string.ks_0679));
                 } else {
                     DiagnosticLog.error(getApplicationContext(), "translation", e,
                             "type=" + (cbzFile != null ? "CBZ"
@@ -2785,7 +2851,7 @@ public class MainActivity extends AppCompatActivity {
                                     + ", accurateOcr=" + accurateOcr
                                     + ", createPdf=" + createPdf);
                     setStatus("❌ " + friendlyTranslationError(e)
-                            + " وردەکاریی تەواو لە بەشی «ڕاپۆرت»دا تۆمار کرا.");
+                            + getString(R.string.ks_0054));
                 }
             } finally {
                 closePaddleOcrClient(paddleOcrClient);
@@ -2801,6 +2867,7 @@ public class MainActivity extends AppCompatActivity {
                                        String displayName,
                                        String projectBaseOverride,
                                        String sourceLanguage,
+                                       String targetLanguage,
                                        boolean offlineMode,
                                        boolean accurateOcr,
                                        boolean createPdf,
@@ -2820,6 +2887,7 @@ public class MainActivity extends AppCompatActivity {
         TranslationProject project = TranslationProjectStore.createNew(
                 getApplicationContext(), true, displayName,
                 projectBase, sourceLanguage);
+        project.targetLanguage = targetLanguage;
         File inputDir = new File(project.projectDir, "pages");
         File outputDir = new File(getCacheDir(), "cbz-output-" + timestamp());
         if ((!inputDir.exists() && !inputDir.mkdirs())
@@ -2833,13 +2901,13 @@ public class MainActivity extends AppCompatActivity {
             throwIfJobStopped();
             List<File> pages;
             if (cbz != null) {
-                setStatus("دەرهێنانی وێنەکانی ناو CBZ…");
+                setStatus(getString(R.string.ks_0217));
                 pages = extractCbzImages(cbz, inputDir);
                 if (pages.isEmpty()) {
                     throw new IOException("No images were found inside this CBZ");
                 }
             } else {
-                setStatus("ئامادەکردنی وێنە هەڵبژێردراوەکان…");
+                setStatus(getString(R.string.ks_0128));
                 pages = prepareSelectedImagePages(
                         selectedImagePages, selectedPageNames, inputDir);
                 if (pages.isEmpty()) {
@@ -2880,7 +2948,7 @@ public class MainActivity extends AppCompatActivity {
                 final int pageNumber = i + 1;
                 File pageFile = pages.get(i);
                 TranslationProject.Page projectPage = project.pages.get(i);
-                setStatus("لاپەڕە " + pageNumber + "/" + pageTotal + ": خوێندنەوە…");
+                setStatus(getString(R.string.ks_0301) + pageNumber + "/" + pageTotal + getString(R.string.ks_0080));
 
                 Bitmap pageBitmap = decodeBitmap(pageFile);
                 if (pageBitmap == null) {
@@ -2897,7 +2965,7 @@ public class MainActivity extends AppCompatActivity {
                             new ManhwaRenderer.Progress() {
                                 @Override
                                 public void onProgress(String message) {
-                                    setStatus("لاپەڕە " + pageNumber + "/"
+                                    setStatus(getString(R.string.ks_0301) + pageNumber + "/"
                                             + pageTotal + ": " + message);
                                 }
                             },
@@ -2916,7 +2984,7 @@ public class MainActivity extends AppCompatActivity {
 
             // Phase 2: translate everything with no page bitmaps in memory,
             // then free the model before any rendering happens.
-            translator = createTranslator(offlineMode);
+            translator = createTranslator(offlineMode, targetLanguage);
             for (int i = 0; i < pageTotal; i++) {
                 throwIfJobStopped();
                 List<Segment> segments = pageSegments.get(i);
@@ -2927,8 +2995,8 @@ public class MainActivity extends AppCompatActivity {
                 for (int s = 0; s < segments.size(); s++) {
                     throwIfJobStopped();
                     Segment segment = segments.get(s);
-                    setStatus("لاپەڕە " + pageNumber + "/" + pageTotal
-                            + (offlineMode ? ": 🤖 وەرگێڕانی ئۆفلاین " : ": وەرگێڕان ")
+                    setStatus(getString(R.string.ks_0301) + pageNumber + "/" + pageTotal
+                            + (offlineMode ? getString(R.string.ks_0084) : getString(R.string.ks_0083))
                             + (s + 1) + "/" + segments.size() + "…");
                     segment.ckb = translator.translate(segment.text, sourceLanguage);
                     segment.originalCkb = segment.ckb;
@@ -2954,14 +3022,14 @@ public class MainActivity extends AppCompatActivity {
                     if (allPairs.length() > 0) {
                         allPairs.append("\n\n");
                     }
-                    allPairs.append("=== لاپەڕە ").append(pageNumber)
+                    allPairs.append(getString(R.string.ks_0085)).append(pageNumber)
                             .append('/').append(pageTotal).append(" ===\n")
-                            .append("(ئەم وێنەیە نەخوێنرایەوە؛ وەک خۆی هێڵدرايەوە.)");
+                            .append(getString(R.string.ks_0071));
                     continue;
                 }
 
-                setStatus("لاپەڕە " + pageNumber + "/" + pageTotal
-                        + ": دانانی دەقە کوردییەکان…");
+                setStatus(getString(R.string.ks_0301) + pageNumber + "/" + pageTotal
+                        + getString(R.string.ks_0081));
                 Bitmap pageBitmap = decodeBitmap(pageFile);
                 if (pageBitmap == null) {
                     // Decoded fine in phase 1 but not now: keep the original
@@ -2979,15 +3047,15 @@ public class MainActivity extends AppCompatActivity {
                     if (allPairs.length() > 0) {
                         allPairs.append("\n\n");
                     }
-                    allPairs.append("=== لاپەڕە ").append(pageNumber)
+                    allPairs.append(getString(R.string.ks_0085)).append(pageNumber)
                             .append('/').append(pageTotal).append(" ===\n");
                     allPairs.append(segments.isEmpty()
-                            ? "(هیچ دەقێکی ڕوون نەدۆزرایەوە)"
+                            ? getString(R.string.ks_0076)
                             : buildPairs(segments));
                     if (pageSkipped > 0) {
                         allPairs.append("\n[⚠ ").append(pageSkipped)
-                                .append(" دەق لەسەر ئەم لاپەڕەیە دانەندرا و بە زمانی ڕەسەن مایەوە؛ ")
-                                .append("وەرگێڕانەکەی لە سەرەوە بە «لەسەر وێنەکە دانەندرا» دیاری کراوە.]");
+                                .append(getString(R.string.ks_0025))
+                                .append(getString(R.string.ks_0376));
                     }
                     continue;
                 }
@@ -3027,37 +3095,37 @@ public class MainActivity extends AppCompatActivity {
                 if (allPairs.length() > 0) {
                     allPairs.append("\n\n");
                 }
-                allPairs.append("=== لاپەڕە ").append(pageNumber)
+                allPairs.append(getString(R.string.ks_0085)).append(pageNumber)
                         .append('/').append(pageTotal).append(" ===\n");
                 allPairs.append(segments.isEmpty()
-                        ? "(هیچ دەقێکی ڕوون نەدۆزرایەوە)"
+                        ? getString(R.string.ks_0076)
                         : buildPairs(segments));
                 if (!segments.isEmpty() && pageSkipped > 0) {
                     allPairs.append("\n[⚠ ").append(pageSkipped)
-                            .append(" دەق لەسەر ئەم لاپەڕەیە دانەندرا و بە زمانی ڕەسەن مایەوە؛ ")
-                            .append("وەرگێڕانەکەی لە سەرەوە بە «لەسەر وێنەکە دانەندرا» دیاری کراوە.]");
+                            .append(getString(R.string.ks_0025))
+                            .append(getString(R.string.ks_0376));
                 }
             }
 
             String base = projectBase;
             project.completed = true;
             project.save();
-            File outCbz = new File(getCacheDir(), base + ".ckb.cbz");
+            File outCbz = new File(getCacheDir(), base + "." + outSuffix() + ".cbz");
             zipDirectory(outputDir, outCbz);
 
             String pairs = allPairs.toString().trim();
-            File textFile = writeTextToCache(pairs, base + ".ckb.txt");
+            File textFile = writeTextToCache(pairs, base + "." + outSuffix() + ".txt");
             Uri downloadCbzUri = saveFileToDownloads(outCbz, "application/zip");
             saveFileToDownloads(textFile, "text/plain");
             copyToDownloadsLibrary(outCbz);
             copyToDownloadsLibrary(textFile);
             String pdfNote = createAndSavePdfCopy(
-                    createPdf, base + ".ckb.pdf", sortedOutputPageFiles(outputDir));
+                    createPdf, base + "." + outSuffix() + ".pdf", sortedOutputPageFiles(outputDir));
 
             final Bitmap preview = firstRendered;
             String pairsForUi = pairs.length() > 60000
                     ? pairs.substring(0, 60000)
-                            + "\n\n… (دەقی تەواو لە فایلی TXTی «داگرتنەکان»دایە)"
+                            + getString(R.string.ks_0002)
                     : pairs;
             resultBitmap = preview;
             resultFile = outCbz;
@@ -3072,16 +3140,16 @@ public class MainActivity extends AppCompatActivity {
                 refreshDownloadsList();
             });
 
-            String archiveLabel = imageBatch ? "CBZی وێنەکان" : "CBZ";
+            String archiveLabel = imageBatch ? getString(R.string.ks_0095) : "CBZ";
             String savedNote = downloadCbzUri != null
-                    ? " " + archiveLabel + " لە Download/KurdMan پاشەکەوت کرا."
-                    : " " + archiveLabel + " لە بەشی «داگرتنەکان» پاشەکەوت کرا.";
+                    ? " " + archiveLabel + getString(R.string.ks_0048)
+                    : " " + archiveLabel + getString(R.string.ks_0050);
             if (saveIndividualPages) {
                 savedNote += " " + individualSaved
-                        + " وێنەی جیاوازیش لە Download/KurdMan پاشەکەوت کران.";
+                        + getString(R.string.ks_0059);
             }
             savedNote += pdfNote;
-            savedNote += " ئێستا دەتوانیت هەر لاپەڕەیەک لە ستۆدیۆی دەقدا دەستکاری بکەیت.";
+            savedNote += getString(R.string.ks_0016);
             DiagnosticLog.info(getApplicationContext(), "translation",
                     "Multi-page job finished: type="
                             + (imageBatch ? "IMAGE_BATCH" : "CBZ")
@@ -3093,17 +3161,17 @@ public class MainActivity extends AppCompatActivity {
                             + ", individualPagesSaved=" + individualSaved);
             if (totalSegments == 0) {
                 setStatus("⚠ " + archiveLabel
-                        + " دروست کرا، بەڵام هیچ دەقێکی ڕوون نەدۆزرایەوە." + savedNote);
+                        + getString(R.string.ks_0021) + savedNote);
             } else if (totalSkipped > 0) {
-                setStatus("⚠ " + archiveLabel + " ئامادەیە: " + pages.size() + " لاپەڕە، "
+                setStatus("⚠ " + archiveLabel + getString(R.string.ks_0014) + pages.size() + getString(R.string.ks_0044)
                         + totalRendered + "/" + totalSegments
-                        + " دەق لەسەر وێنەکان داندرا؛ " + totalSkipped
-                        + " دەق لە " + partialPages
-                        + " لاپەڕەدا تەنیا لە TXTەکەدایە." + savedNote);
+                        + getString(R.string.ks_0028) + totalSkipped
+                        + getString(R.string.ks_0024) + partialPages
+                        + getString(R.string.ks_0045) + savedNote);
             } else {
-                setStatus("✅ " + archiveLabel + " ئامادەیە: " + pages.size() + " لاپەڕە، "
+                setStatus("✅ " + archiveLabel + getString(R.string.ks_0014) + pages.size() + getString(R.string.ks_0044)
                         + totalRendered + "/" + totalSegments
-                        + " دەق لەسەر وێنەکان داندرا." + savedNote);
+                        + getString(R.string.ks_0027) + savedNote);
             }
         } finally {
             closePaddleOcrClient(paddleOcrClient);
@@ -3160,7 +3228,7 @@ public class MainActivity extends AppCompatActivity {
                 base = projectBase + "-"
                         + String.format(Locale.ROOT, "%04d", pageNumber);
             }
-            File individual = new File(getCacheDir(), base + ".ckb.jpg");
+            File individual = new File(getCacheDir(), base + "." + outSuffix() + ".jpg");
             copyFile(renderedPage, individual);
             Uri downloadUri = saveFileToDownloads(individual, "image/jpeg");
             File libraryFile = copyToDownloadsLibrary(individual);
@@ -3175,15 +3243,18 @@ public class MainActivity extends AppCompatActivity {
 
     private void exportEditedProject() {
         final TranslationProject project = TranslationProjectStore.load(this);
+                    ManhwaRenderer.activeTargetLanguage = project.targetLanguage;
+                    ManhwaRenderer.i18nContext = getApplicationContext();
+                    JobRuntime.init(getApplicationContext());
         if (project == null || !project.completed || project.pages.isEmpty()) {
-            setStatus("⚠ پرۆژەی دەستکاریکراو نەدۆزرایەوە.");
+            setStatus(getString(R.string.ks_0540));
             updateButtons(false);
             return;
         }
         final boolean createPdf = selectedCreatePdf();
         showMainPage(PAGE_RESULTS);
         setBusy(true);
-        setStatus("دەرکردنی وەشانی دەستکاریکراو…");
+        setStatus(getString(R.string.ks_0218));
         executor.execute(() -> {
             JobRuntime.markThreadStarted();
             File outputDir = null;
@@ -3218,7 +3289,7 @@ public class MainActivity extends AppCompatActivity {
                         pdfBase = "kurdman-image";
                     }
                     String pdfNote = createAndSavePdfCopy(
-                            createPdf, pdfBase + ".ckb.pdf", rendered);
+                            createPdf, pdfBase + "." + outSuffix() + ".pdf", rendered);
                     project.save();
 
                     resultBitmap = rendered;
@@ -3232,13 +3303,13 @@ public class MainActivity extends AppCompatActivity {
                         refreshDownloadsList();
                     });
                     String savedNote = downloadImageUri != null || downloadTextUri != null
-                            ? " لە Download/KurdMan پاشەکەوت کرا."
+                            ? getString(R.string.ks_0048)
                             : (savedUri != null
-                                    ? " لە Pictures/KurdMan پاشەکەوت کرا."
-                                    : " لە کاشی ئەپەکەدا پاشەکەوت کرا.");
-                    setStatus("✅ وەشانی دەستکاریکراو ئامادەیە: "
+                                    ? getString(R.string.ks_0049)
+                                    : getString(R.string.ks_0051));
+                    setStatus(getString(R.string.ks_0575)
                             + result.rendered + "/" + page.segments.size()
-                            + " دەق لەسەر وێنەکە داندرا." + savedNote + pdfNote);
+                            + getString(R.string.ks_0029) + savedNote + pdfNote);
                     return;
                 }
 
@@ -3266,7 +3337,7 @@ public class MainActivity extends AppCompatActivity {
                     if (allPairs.length() > 0) {
                         allPairs.append("\n\n");
                     }
-                    allPairs.append("=== لاپەڕە ").append(pageNumber)
+                    allPairs.append(getString(R.string.ks_0085)).append(pageNumber)
                             .append('/').append(pageTotal).append(" ===\n");
 
                     if (page.unreadable) {
@@ -3274,12 +3345,12 @@ public class MainActivity extends AppCompatActivity {
                                 "%04d%s", pageNumber,
                                 extensionWithDot(source.getName(), ".jpg")));
                         copyFile(source, kept);
-                        allPairs.append("(ئەم وێنەیە نەخوێنرایەوە؛ وەک خۆی هێڵدرايەوە.)");
+                        allPairs.append(getString(R.string.ks_0071));
                         continue;
                     }
 
-                    setStatus("لاپەڕە " + pageNumber + "/" + pageTotal
-                            + ": دەرکردنی دەستکارییەکان…");
+                    setStatus(getString(R.string.ks_0301) + pageNumber + "/" + pageTotal
+                            + getString(R.string.ks_0082));
                     Bitmap pageBitmap = decodeBitmap(source);
                     if (pageBitmap == null) {
                         File kept = new File(outputDir, String.format(Locale.ROOT,
@@ -3292,7 +3363,7 @@ public class MainActivity extends AppCompatActivity {
                             partialPages++;
                         }
                         allPairs.append(page.segments.isEmpty()
-                                ? "(هیچ دەقێکی ڕوون نەدۆزرایەوە)"
+                                ? getString(R.string.ks_0076)
                                 : buildPairs(page.segments));
                         continue;
                     }
@@ -3318,12 +3389,12 @@ public class MainActivity extends AppCompatActivity {
                         partialPages++;
                     }
                     allPairs.append(page.segments.isEmpty()
-                            ? "(هیچ دەقێکی ڕوون نەدۆزرایەوە)"
+                            ? getString(R.string.ks_0076)
                             : buildPairs(page.segments));
                     if (!page.segments.isEmpty() && result.skipped > 0) {
                         allPairs.append("\n[⚠ ").append(result.skipped)
-                                .append(" دەق لەسەر ئەم لاپەڕەیە پیشان نەدرا؛ ")
-                                .append("وەرگێڕانەکەی لە سەرەوە دیاری کراوە.]");
+                                .append(getString(R.string.ks_0026))
+                                .append(getString(R.string.ks_0377));
                     }
                 }
 
@@ -3332,21 +3403,21 @@ public class MainActivity extends AppCompatActivity {
                 if (base.isEmpty()) {
                     base = "chapter";
                 }
-                File outCbz = new File(getCacheDir(), base + ".ckb.cbz");
+                File outCbz = new File(getCacheDir(), base + "." + outSuffix() + ".cbz");
                 zipDirectory(outputDir, outCbz);
                 String pairs = allPairs.toString().trim();
-                File textFile = writeTextToCache(pairs, base + ".ckb.txt");
+                File textFile = writeTextToCache(pairs, base + "." + outSuffix() + ".txt");
                 Uri downloadCbzUri = saveFileToDownloads(outCbz, "application/zip");
                 saveFileToDownloads(textFile, "text/plain");
                 copyToDownloadsLibrary(outCbz);
                 copyToDownloadsLibrary(textFile);
                 String pdfNote = createAndSavePdfCopy(
-                        createPdf, base + ".ckb.pdf", sortedOutputPageFiles(outputDir));
+                        createPdf, base + "." + outSuffix() + ".pdf", sortedOutputPageFiles(outputDir));
 
                 final Bitmap preview = firstRendered;
                 String pairsForUi = pairs.length() > 60000
                         ? pairs.substring(0, 60000)
-                                + "\n\n… (دەقی تەواو لە فایلی TXTی «داگرتنەکان»دایە)"
+                                + getString(R.string.ks_0002)
                         : pairs;
                 resultBitmap = preview;
                 resultFile = outCbz;
@@ -3361,24 +3432,24 @@ public class MainActivity extends AppCompatActivity {
                     refreshDownloadsList();
                 });
                 String savedNote = downloadCbzUri != null
-                        ? " CBZە دەستکاریکراوەکە لە Download/KurdMan پاشەکەوت کرا."
-                        : " CBZە دەستکاریکراوەکە لە بەشی «داگرتنەکان» پاشەکەوت کرا.";
+                        ? getString(R.string.ks_0011)
+                        : getString(R.string.ks_0012);
                 savedNote += pdfNote;
                 if (totalSegments == 0) {
-                    setStatus("⚠ CBZە دەستکاریکراوەکە دروست کرا، بەڵام هیچ دەقێک نییە." + savedNote);
+                    setStatus(getString(R.string.ks_0506) + savedNote);
                 } else if (totalSkipped > 0) {
-                    setStatus("⚠ CBZی دەستکاریکراو ئامادەیە: " + pageTotal + " لاپەڕە، "
+                    setStatus(getString(R.string.ks_0505) + pageTotal + getString(R.string.ks_0044)
                             + totalRendered + "/" + totalSegments
-                            + " دەق لەسەر وێنەکان داندرا؛ " + totalSkipped
-                            + " دەق لە " + partialPages + " لاپەڕەدا پیشان نەدرا." + savedNote);
+                            + getString(R.string.ks_0028) + totalSkipped
+                            + getString(R.string.ks_0024) + partialPages + getString(R.string.ks_0046) + savedNote);
                 } else {
-                    setStatus("✅ CBZی دەستکاریکراو ئامادەیە: " + pageTotal + " لاپەڕە، "
+                    setStatus(getString(R.string.ks_0549) + pageTotal + getString(R.string.ks_0044)
                             + totalRendered + "/" + totalSegments
-                            + " دەق لەسەر وێنەکان داندرا." + savedNote);
+                            + getString(R.string.ks_0027) + savedNote);
                 }
             } catch (Throwable e) {
                 if (JobRuntime.wasStopped(e)) {
-                    setStatus("🛑 دەرکردنەکە بە داوای تۆ وەستێنرا.");
+                    setStatus(getString(R.string.ks_0675));
                 } else {
                     setStatus("❌ " + friendlyTranslationError(e));
                 }
@@ -3550,12 +3621,12 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         if (file == null || !file.exists() || file.length() <= 0) {
-            setStatus("⚠ سەرەتا وێنەیەک یان CBZێک وەربگێڕە.");
+            setStatus(getString(R.string.ks_0525));
             return;
         }
         saveSettings();
         setBusy(true);
-        setStatus("ناردنی ئەنجامەکە بۆ تێلێگرام (" + formatMb(file.length()) + ")…");
+        setStatus(getString(R.string.ks_0315) + formatMb(file.length()) + ")…");
         executor.execute(() -> {
             JobRuntime.markThreadStarted();
             try {
@@ -3564,11 +3635,11 @@ public class MainActivity extends AppCompatActivity {
                 // instead of uploading the whole file first.
                 api.sendChatAction(chatId, "upload_document");
                 JSONObject sent = api.sendDocument(
-                        chatId, file, "✅ ئەنجامی وەرگێڕانی مانهوا — Kurd-man");
+                        chatId, file, getString(R.string.ks_0557));
                 long messageId = sent.optLong("message_id", 0);
                 String doneNote = messageId > 0
-                        ? "✅ ئەنجامەکە نێردرا بۆ تێلێگرام (message_id=" + messageId + ")."
-                        : "✅ ئەنجامەکە نێردرا بۆ تێلێگرام.";
+                        ? getString(R.string.ks_0558) + messageId + ")."
+                        : getString(R.string.ks_0559);
                 setStatus(doneNote);
 
                 // The document is already delivered at this point; report a
@@ -3577,18 +3648,18 @@ public class MainActivity extends AppCompatActivity {
                     try {
                         if (pairs.length() > 12000 && textFile != null && textFile.exists()) {
                             api.sendDocument(chatId, textFile,
-                                    "📝 دەقەکانی ئەنجامەکە — Kurd-man");
-                            setStatus(doneNote + " دەقەکانیش وەک فایل نێردران ✅");
+                                    getString(R.string.ks_0654));
+                            setStatus(doneNote + getString(R.string.ks_0034));
                         } else {
                             List<String> chunks = splitText(pairs, 3300);
                             for (int i = 0; i < chunks.size(); i++) {
-                                String prefix = i == 0 ? "📝 دەقەکان:\n\n" : "";
+                                String prefix = i == 0 ? getString(R.string.ks_0653) : "";
                                 api.sendMessage(chatId, prefix + chunks.get(i));
                             }
-                            setStatus(doneNote + " دەقەکانیش نێردران ✅");
+                            setStatus(doneNote + getString(R.string.ks_0033));
                         }
                     } catch (Exception textError) {
-                        setStatus(doneNote + " بەڵام دەقەکان نەچوون: "
+                        setStatus(doneNote + getString(R.string.ks_0018)
                                 + friendlyTelegramError(textError));
                     }
                 }
@@ -3653,13 +3724,13 @@ public class MainActivity extends AppCompatActivity {
         }
         try {
             throwIfJobStopped();
-            setStatus("📄 دروستکردنی PDF…");
+            setStatus(getString(R.string.ks_0647));
             int pdfPages = PdfExporter.writeBitmap(rendered, pdfFile,
                     (completedSources, totalSources, completedPdfPages) -> {
                         throwIfJobStopped();
                         if (completedPdfPages == 1 || completedPdfPages % 10 == 0) {
-                            setStatus("📄 دروستکردنی PDF… "
-                                    + completedPdfPages + " لاپەڕە");
+                            setStatus(getString(R.string.ks_0648)
+                                    + completedPdfPages + getString(R.string.ks_0039));
                         }
                     });
             throwIfJobStopped();
@@ -3671,7 +3742,7 @@ public class MainActivity extends AppCompatActivity {
             if (JobRuntime.wasStopped(e)) {
                 throw new InterruptedException(JobRuntime.STOPPED_MESSAGE);
             }
-            return " ⚠ PDF دروست نەکرا، بەڵام وێنە و TXTەکە پاشەکەوت کراون.";
+            return getString(R.string.ks_0069);
         }
     }
 
@@ -3688,14 +3759,14 @@ public class MainActivity extends AppCompatActivity {
         final int[] lastReportedSource = {-1};
         try {
             throwIfJobStopped();
-            setStatus("📄 دروستکردنی PDF لە لاپەڕەکان…");
+            setStatus(getString(R.string.ks_0645));
             int pdfPages = PdfExporter.writeImageFiles(pageFiles, pdfFile,
                     (completedSources, totalSources, completedPdfPages) -> {
                         throwIfJobStopped();
                         if (completedSources != lastReportedSource[0]
                                 || completedPdfPages % 25 == 0) {
                             lastReportedSource[0] = completedSources;
-                            setStatus("📄 دروستکردنی PDF: لاپەڕە "
+                            setStatus(getString(R.string.ks_0646)
                                     + completedSources + "/" + totalSources + "…");
                         }
                     });
@@ -3708,7 +3779,7 @@ public class MainActivity extends AppCompatActivity {
             if (JobRuntime.wasStopped(e)) {
                 throw new InterruptedException(JobRuntime.STOPPED_MESSAGE);
             }
-            return " ⚠ PDF دروست نەکرا، بەڵام CBZ و TXTەکە پاشەکەوت کراون.";
+            return getString(R.string.ks_0068);
         }
     }
 
@@ -3716,14 +3787,14 @@ public class MainActivity extends AppCompatActivity {
         Uri downloadUri = saveFileToDownloads(pdfFile, "application/pdf");
         File libraryFile = copyToDownloadsLibrary(pdfFile);
         if (libraryFile != null) {
-            return " PDFیش (" + pdfPages + " لاپەڕە) چووە ناو مۆبایلەکەت و لە "
-                    + "«ئەنجامەکان» دەردەکەوێت.";
+            return getString(R.string.ks_0013) + pdfPages + getString(R.string.ks_0042)
+                    + getString(R.string.ks_0121);
         }
         if (downloadUri != null) {
-            return " PDFیش (" + pdfPages + " لاپەڕە) لە Download/KurdMan "
-                    + "پاشەکەوت کرا.";
+            return getString(R.string.ks_0013) + pdfPages + getString(R.string.ks_0041)
+                    + getString(R.string.ks_0402);
         }
-        return " ⚠ PDF دروست کرا بەڵام نەتوانرا بخرێتە داگرتنەکانەوە.";
+        return getString(R.string.ks_0070);
     }
 
     private List<File> sortedOutputPageFiles(File outputDir) {
@@ -4068,7 +4139,7 @@ public class MainActivity extends AppCompatActivity {
                     ViewGroup.LayoutParams.WRAP_CONTENT));
             empty.setBackgroundResource(R.drawable.bg_download_row);
             empty.setPadding(dp(16), dp(15), dp(16), dp(15));
-            empty.setText("هێشتا هیچ ئەنجامێک لە داگرتنەکاندا نییە؛ دوای یەکەم وەرگێڕان لێرە دەردەکەوێت.");
+            empty.setText(getString(R.string.ks_0343));
             empty.setTextColor(getColor(R.color.text_secondary));
             empty.setTextSize(13);
             downloadsContainer.addView(empty);
@@ -4086,7 +4157,7 @@ public class MainActivity extends AppCompatActivity {
         if (files.size() > shown) {
             TextView more = new TextView(this);
             more.setText("+ " + (files.size() - shown)
-                    + " فایلی تر لە Download/KurdMan");
+                    + getString(R.string.ks_0038));
             more.setTextColor(getColor(R.color.text_secondary));
             more.setTextSize(12);
             more.setPadding(dp(4), dp(2), dp(4), 0);
@@ -4136,14 +4207,14 @@ public class MainActivity extends AppCompatActivity {
         actionsParams.topMargin = dp(10);
         actions.setLayoutParams(actionsParams);
 
-        Button open = createSmallButton("کردنەوە", true);
+        Button open = createSmallButton(getString(R.string.ks_0453), true);
         LinearLayout.LayoutParams openParams = new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         open.setLayoutParams(openParams);
         open.setOnClickListener(v -> openDownloadedFile(file));
         actions.addView(open);
 
-        Button share = createSmallButton("هاوبەشکردن", false);
+        Button share = createSmallButton(getString(R.string.ks_0326), false);
         LinearLayout.LayoutParams shareParams = new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         shareParams.setMarginStart(dp(8));
@@ -4151,7 +4222,7 @@ public class MainActivity extends AppCompatActivity {
         share.setOnClickListener(v -> shareDownloadedFile(file));
         actions.addView(share);
 
-        Button delete = createSmallButton("🗑 سڕینەوە", false);
+        Button delete = createSmallButton(getString(R.string.ks_0669), false);
         delete.setBackgroundResource(R.drawable.bg_button_danger);
         delete.setTextColor(getColor(R.color.white));
         LinearLayout.LayoutParams deleteParams = new LinearLayout.LayoutParams(
@@ -4195,7 +4266,7 @@ public class MainActivity extends AppCompatActivity {
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(intent);
         } catch (ActivityNotFoundException e) {
-            setStatus("⚠ هیچ ئەپێک نەدۆزرایەوە بۆ کردنەوەی ئەم فایلە؛ «هاوبەشکردن» بەکاربهێنە.");
+            setStatus(getString(R.string.ks_0532));
         } catch (Exception e) {
             setStatus("❌ " + friendlyError(e));
         }
@@ -4218,11 +4289,11 @@ public class MainActivity extends AppCompatActivity {
     private void confirmDeleteDownloadedFile(File file) {
         if (file == null || !file.exists()) {
             refreshDownloadsList();
-            setStatus("⚠ ئەم فایلە پێشتر نەماوە.");
+            setStatus(getString(R.string.ks_0512));
             return;
         }
         if (currentBusy || JobRuntime.isRunning()) {
-            setStatus("⚠ چاوەڕوان بکە تا کارەکەی ئێستا تەواو بێت، ئینجا فایلەکە بسرەوە.");
+            setStatus(getString(R.string.ks_0542));
             return;
         }
         try {
@@ -4230,7 +4301,7 @@ public class MainActivity extends AppCompatActivity {
             File canonicalFile = file.getCanonicalFile();
             if (canonicalFile.getParentFile() == null
                     || !libraryDir.equals(canonicalFile.getParentFile())) {
-                setStatus("⚠ ئەم فایلە لە دەرەوەی کتێبخانەی داگرتنەکانی KurdManە و ناسڕدرێتەوە.");
+                setStatus(getString(R.string.ks_0511));
                 return;
             }
         } catch (IOException e) {
@@ -4239,13 +4310,13 @@ public class MainActivity extends AppCompatActivity {
         }
 
         new AlertDialog.Builder(this)
-                .setTitle("ئەم ئەنجامە بسرمەوە؟")
+                .setTitle(getString(R.string.ks_0142))
                 .setMessage(file.getName() + "\n" + formatStorage(file.length())
-                        + "\n\nکۆپییە هاوشێوەکە لە Download/KurdMan یان "
-                        + "Pictures/KurdManـیش دەسڕدرێتەوە ئەگەر بدۆزرێتەوە. "
-                        + "ئەم کارە ناگەڕێندرێتەوە.")
-                .setNegativeButton("پاشگەزبوونەوە", null)
-                .setPositiveButton("بیسرەوە",
+                        + getString(R.string.ks_0001)
+                        + getString(R.string.ks_0115)
+                        + getString(R.string.ks_0149))
+                .setNegativeButton(getString(R.string.ks_0401), null)
+                .setPositiveButton(getString(R.string.ks_0174),
                         (dialog, which) -> deleteDownloadedFile(file))
                 .show();
     }
@@ -4277,12 +4348,12 @@ public class MainActivity extends AppCompatActivity {
             }
             refreshDownloadsList();
             updateButtons(currentBusy);
-            setStatus("✅ " + name + " سڕایەوە."
+            setStatus("✅ " + name + getString(R.string.ks_0035)
                     + (publicDeleted > 0
-                            ? " کۆپییە گشتییەکەش سڕایەوە." : ""));
+                            ? getString(R.string.ks_0062) : ""));
         } else {
             refreshDownloadsList();
-            setStatus("⚠ نەتوانرا " + name + " بسرێتەوە؛ دووبارە هەوڵبدە.");
+            setStatus(getString(R.string.ks_0531) + name + getString(R.string.ks_0017));
         }
     }
 
@@ -4347,7 +4418,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             startActivity(new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS));
         } catch (Exception e) {
-            setStatus("⚠ ئەپی داگرتنەکانی سیستەم نەدۆزرایەوە؛ فایلەکان لە Download/KurdManن.");
+            setStatus(getString(R.string.ks_0514));
         }
     }
 
@@ -4398,10 +4469,10 @@ public class MainActivity extends AppCompatActivity {
             builder.append(segment.text.replace('\n', ' ')).append('\n');
             builder.append("→ ").append(segment.ckb);
             if (!segment.rendered) {
-                builder.append("\n[⚠ لەسەر وێنەکە دانەندرا]");
+                builder.append(getString(R.string.ks_0004));
             }
             if (segment.ocrConfidence >= 0f && segment.ocrConfidence < 0.78f) {
-                builder.append("\n[⚠ خوێندنەوەی OCR گوماناوییە — لە ستۆدیۆ وشەکانی بپشکنە]");
+                builder.append(getString(R.string.ks_0003));
             }
             builder.append("\n\n");
         }
@@ -4458,18 +4529,18 @@ public class MainActivity extends AppCompatActivity {
     /** Returns a Kurdish explanation when the Telegram settings cannot work. */
     private String settingsError(String token, String chatId, boolean requireChat) {
         if (!isValidToken(token)) {
-            return "سەرەتا تۆکنی دروست بنووسە (بە شێوەی ژمارە:پیت، لە @BotFather).";
+            return getString(R.string.ks_0270);
         }
         if (chatId == null || chatId.isEmpty()) {
-            return requireChat ? "Chat IDـی خۆت بنووسە (لە @userinfobot وەریبگرە)." : null;
+            return requireChat ? getString(R.string.ks_0099) : null;
         }
         if (!chatId.matches("-?\\d{5,}")) {
-            return "Chat ID دەبێت تەنها ژمارە بێت؛ ناوی بەکارهێنەر یان ناوی بۆتەکە مەنووسە.";
+            return getString(R.string.ks_0096);
         }
         String botId = token.substring(0, token.indexOf(':')).trim();
         if (chatId.equals(botId)) {
-            return "ئەم ژمارەیە IDـی بۆتەکەیە (بەشی پێش «:» لە تۆکندا)، نەک IDـی خۆت. "
-                    + "IDـی خۆت لە @userinfobot وەربگرە.";
+            return getString(R.string.ks_0148)
+                    + getString(R.string.ks_0103);
         }
         return null;
     }
@@ -4480,7 +4551,7 @@ public class MainActivity extends AppCompatActivity {
 
     private String friendlyError(Throwable error) {
         if (JobRuntime.wasStopped(error)) {
-            return "کارەکە بە داوای تۆ وەستێنرا.";
+            return getString(R.string.ks_0451);
         }
         // Every handled failure that reaches the user also leaves a full
         // stack trace in Reports; duplicate formatting of the same error
@@ -4500,7 +4571,7 @@ public class MainActivity extends AppCompatActivity {
     /** Maps translation/network failures to actionable Kurdish guidance. */
     private String friendlyTranslationError(Throwable error) {
         if (JobRuntime.wasStopped(error)) {
-            return "کارەکە بە داوای تۆ وەستێنرا.";
+            return getString(R.string.ks_0451);
         }
         String raw = friendlyError(error);
         String lower = errorChainText(error);
@@ -4513,10 +4584,10 @@ public class MainActivity extends AppCompatActivity {
         if (lower.contains("unable to resolve host")
                 || lower.contains("no address associated with hostname")
                 || lower.contains("unknownhostexception")) {
-            return "پەیوەندی بە سێرفەرەکانی وەرگێڕانەوە نەبەسترا (کێشەی DNS). "
-                    + "هێڵەکە بگۆڕە (Wi-Fi ↔ داتای مۆبایل)؛ ئەگەر VPN یان Private DNS "
-                    + "بەکاردەهێنیت، جارێک بیکوژێنەوە یان Private DNS بکە بە Automatic، "
-                    + "پاشان دووبارە هەوڵبدە. (" + raw + ")";
+            return getString(R.string.ks_0422)
+                    + getString(R.string.ks_0348)
+                    + getString(R.string.ks_0180)
+                    + getString(R.string.ks_0397) + raw + ")";
         }
         if (lower.contains("timed out") || lower.contains("timeout")
                 || lower.contains("failed to connect")
@@ -4524,20 +4595,20 @@ public class MainActivity extends AppCompatActivity {
                 || lower.contains("connection refused")
                 || lower.contains("network is unreachable")
                 || lower.contains("software caused connection abort")) {
-            return "پەیوەندییەکە بە سێرفەری وەرگێڕانەوە پچڕا یان کاتەکەی بەسەرچوو؛ "
-                    + "ئینتەرنێتەکە بپشکنە و دووبارە هەوڵبدە. (" + raw + ")";
+            return getString(R.string.ks_0425)
+                    + getString(R.string.ks_0134) + raw + ")";
         }
         if (lower.contains("translation http 403")
                 || lower.contains("translation http 429")
                 || lower.contains("quota")) {
-            return "سێرفەرەکانی وەرگێڕانی خۆڕایی بۆ ماوەیەک داواکارییەکەیان ڕەتکردەوە؛ "
-                    + "چەند خولەکێک بوەستە و دووبارە هەوڵبدە. (" + raw + ")";
+            return getString(R.string.ks_0269)
+                    + getString(R.string.ks_0430) + raw + ")";
         }
         if (lower.contains("arrayindexoutofboundsexception")
                 || lower.contains("indexoutofboundsexception")) {
-            return "هەڵەیەکی ناوخۆیی لە پرۆسێسکردنی دەق/دێڕەکانی ئەم لاپەڕەیە ڕوویدا. "
-                    + "هۆکاری تەواو و شوێنی هەڵەکە لە بەشی «ڕاپۆرت»دا تۆمار کراوە؛ "
-                    + "ڕاپۆرتەکە کۆپی بکە و بینێرە تاکوو لەسەر هەمان کێشە چاکبکرێت. ("
+            return getString(R.string.ks_0362)
+                    + getString(R.string.ks_0330)
+                    + getString(R.string.ks_0431)
                     + raw + ")";
         }
         return raw;
@@ -4549,25 +4620,25 @@ public class MainActivity extends AppCompatActivity {
         String lower = raw.toLowerCase(Locale.ROOT);
         String hint = null;
         if (lower.contains("unauthorized") || lower.contains("http 401")) {
-            hint = "تۆکنەکە هەڵەیە یان لە @BotFather هەڵوەشێنراوەتەوە. تۆکنەکە دووبارە کۆپی بکە.";
+            hint = getString(R.string.ks_0185);
         } else if (lower.contains("chat not found")) {
-            hint = "Chat ID هەڵەیە، یان بۆتەکەت لە تلگرام نەکراوەتەوە و /start نەدراوە. "
-                    + "IDـی خۆت لە @userinfobot بپشکنە.";
+            hint = getString(R.string.ks_0097)
+                    + getString(R.string.ks_0102);
         } else if (lower.contains("bot was blocked") || lower.contains("forbidden")) {
-            hint = "بۆتەکە بلۆک کراوە یان ناتوانێت نامە بنێرێت؛ لە تلگرام بیکەرەوە و /start دابگرە.";
+            hint = getString(R.string.ks_0169);
         } else if (lower.contains("file is too big") || lower.contains("too large")
                 || lower.contains("http 413")) {
-            hint = "فایلەکە زۆر گەورەیە بۆ سنووری بۆتەکانی تلگرام (50 MB). "
-                    + "وێنەکە بکە بە دوو بەش و هەر بەشێک جیا وەربگێڕە.";
+            hint = getString(R.string.ks_0283)
+                    + getString(R.string.ks_0370);
         } else if (lower.contains("timed out") || lower.contains("timeout")
                 || lower.contains("unable to resolve host")
                 || lower.contains("failed to connect")
                 || lower.contains("connection reset")
                 || lower.contains("network is unreachable")
                 || lower.contains("empty response")) {
-            hint = "پەیوەندییەکە بە تلگرامەوە نەبەسترا یان پچڕا؛ ئینتەرنێتەکە بپشکنە و دووبارە هەوڵبدە.";
+            hint = getString(R.string.ks_0424);
         } else if (lower.contains("message is too long")) {
-            hint = "نامەکە زۆر درێژ بوو بۆ تلگرام.";
+            hint = getString(R.string.ks_0318);
         }
         return hint == null ? raw : hint + " (" + raw + ")";
     }
@@ -4711,10 +4782,8 @@ public class MainActivity extends AppCompatActivity {
         if (stopJobButton != null) {
             stopJobButton.setEnabled(true);
         }
-        boolean modelReady = offlineModelManager != null
-                && offlineModelManager.isModelReady();
-        boolean hasModelData = offlineModelManager != null
-                && offlineModelManager.downloadedBytes() > 0;
+        boolean modelReady = offlinePackReady;
+        boolean hasModelData = offlinePackReady;
         if (downloadOfflineButton != null) {
             downloadOfflineButton.setEnabled(enabled && !modelReady);
         }
@@ -4737,15 +4806,15 @@ public class MainActivity extends AppCompatActivity {
             editResultButton.setEnabled(enabled && hasProject);
             editResultButton.setAlpha(enabled && hasProject ? 1f : 0.55f);
             editResultButton.setText(hasProject
-                    ? "✏  دەستکاری شوێن، فۆنت و ڕەنگی نووسینەکان"
-                    : "✏  دەستکاری نووسینەکان — سەرەتا وەربگێڕە");
+                    ? getString(R.string.ks_0587)
+                    : getString(R.string.ks_0588));
         }
         if (openStudioFromStyleButton != null) {
             openStudioFromStyleButton.setEnabled(enabled && hasProject);
             openStudioFromStyleButton.setAlpha(enabled && hasProject ? 1f : 0.55f);
             openStudioFromStyleButton.setText(hasProject
-                    ? "✏  کردنەوەی ستۆدیۆی دەق"
-                    : "✏  ستۆدیۆی دەق — سەرەتا وەربگێڕە");
+                    ? getString(R.string.ks_0591)
+                    : getString(R.string.ks_0590));
         }
     }
 }

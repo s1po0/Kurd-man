@@ -34,20 +34,25 @@ public class TextStyleSettings {
     public static final int GRADIENT_VERTICAL = 1;
     public static final int GRADIENT_DIAGONAL = 2;
 
-    public static final String[] PRESET_LABELS = {
-            "خۆکار — قسەهەڵگری ڕەسەن",
-            "سپی و ڕەش — کلاسیک",
-            "ڕەش و سپی — شەوانە",
-            "زەردی گەش",
-            "شینی دەریایی",
-            "سەوزی بەهاری",
-            "پەمەیی نەرم",
-            "سپی بێ پاشبنەما + دەوروبەر",
-            "ڕەش بێ پاشبنەما + دەوروبەر",
-            "ئاڵتوونی",
-            "نیۆن",
-            "کوردستان"
+    public static final int[] PRESET_LABEL_RES = {
+            R.string.ks_0696, R.string.ks_0697, R.string.ks_0698, R.string.ks_0699, R.string.ks_0700, R.string.ks_0701, R.string.ks_0702, R.string.ks_0703, R.string.ks_0704, R.string.ks_0705, R.string.ks_0706, R.string.ks_0707
     };
+
+    /** Legacy Sorani labels (kept as a stable fallback). */
+    public static final String[] PRESET_LABELS = {
+            "خۆکار — قسەهەڵگری ڕەسەن", "سپی و ڕەش — کلاسیک",
+            "ڕەش و سپی — شەوانە", "زەردی گەش", "شینی دەریایی",
+            "سەوزی بەهاری", "پەمەیی نەرم", "سپی بێ پاشبنەما + دەوروبەر",
+            "ڕەش بێ پاشبنەما + دەوروبەر", "ئاڵتوونی", "نیۆن", "کوردستان"
+    };
+
+    public static String[] presetLabels(android.content.Context context) {
+        String[] out = new String[PRESET_LABEL_RES.length];
+        for (int k = 0; k < out.length; k++) {
+            out[k] = context.getString(PRESET_LABEL_RES[k]);
+        }
+        return out;
+    }
 
     public String fontId = FontCatalog.FONT_VAZIRMATN;
     public int fontWeight = 700;

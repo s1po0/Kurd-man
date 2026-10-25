@@ -35,6 +35,11 @@ public class AccountActivity extends AppCompatActivity {
     private View loginCard;
     private View accountCard;
     private View otpBox;
+    private View phoneOtpBox;
+    private EditText phoneInput;
+    private EditText phoneCodeInput;
+    private Button sendSmsButton;
+    private Button verifyPhoneButton;
     private EditText emailInput;
     private EditText codeOtpInput;
     private TextView authMessage;
@@ -76,6 +81,11 @@ public class AccountActivity extends AppCompatActivity {
         usageStatus = findViewById(R.id.usageStatus);
         accountMessage = findViewById(R.id.accountMessage);
         codeInput = findViewById(R.id.codeInput);
+        phoneOtpBox = findViewById(R.id.phoneOtpBox);
+        phoneInput = findViewById(R.id.phoneInput);
+        phoneCodeInput = findViewById(R.id.phoneCodeInput);
+        sendSmsButton = findViewById(R.id.sendSmsButton);
+        verifyPhoneButton = findViewById(R.id.verifyPhoneButton);
         sendCodeButton = findViewById(R.id.sendCodeButton);
         verifyCodeButton = findViewById(R.id.verifyCodeButton);
         googleButton = findViewById(R.id.googleButton);
@@ -84,6 +94,12 @@ public class AccountActivity extends AppCompatActivity {
         signOutButton = findViewById(R.id.signOutButton);
 
         sendCodeButton.setOnClickListener(v -> doSendCode());
+        sendSmsButton.setOnClickListener(v -> doSendPhoneCode());
+        verifyPhoneButton.setOnClickListener(v -> doVerifyPhoneCode());
+        String savedPhone = SupabaseAuth.pendingPhone(this);
+        if (!savedPhone.isEmpty()) {
+            phoneInput.setText(savedPhone);
+        }
         verifyCodeButton.setOnClickListener(v -> doVerifyCode());
         googleButton.setOnClickListener(v -> doGoogleSignIn());
         redeemButton.setOnClickListener(v -> doRedeem());
@@ -247,6 +263,75 @@ public class AccountActivity extends AppCompatActivity {
         });
     }
 
+    /** Normalizes to E.164; numbers starting with 0 get +964 (Iraq). */
+    private static String normalizePhone(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String p = raw.trim().replace(" ", "").replace("-", "")
+                .replace("(", "").replace(")", "");
+        if (p.startsWith("00")) {
+            p = "+" + p.substring(2);
+        }
+        if (p.startsWith("+")) {
+            return p;
+        }
+        if (p.startsWith("964") && p.length() >= 13) {
+            return "+" + p;
+        }
+        if (p.startsWith("0")) {
+            return "+964" + p.substring(1);
+        }
+        return "+" + p;
+    }
+
+    private void doSendPhoneCode() {
+        String phone = normalizePhone(phoneInput.getText().toString());
+        String digits = phone.replace("+", "");
+        if (digits.length() < 10 || !digits.matches("[0-9]+")) {
+            showAuthMessage(getString(R.string.kx_err_phone));
+            return;
+        }
+        setBusy(true);
+        SupabaseAuth.sendPhoneOtp(this, phone, (result, error) -> {
+            setBusy(false);
+            if (result != null) {
+                phoneOtpBox.setVisibility(View.VISIBLE);
+                phoneCodeInput.requestFocus();
+                showAuthMessage(getString(
+                        R.string.kx_phone_code_sent, phone));
+            } else {
+                showAuthMessage(friendly(error));
+            }
+        });
+    }
+
+    private void doVerifyPhoneCode() {
+        String phone = normalizePhone(phoneInput.getText().toString());
+        String token = phoneCodeInput.getText().toString().trim();
+        if (phone.replace("+", "").length() < 10) {
+            showAuthMessage(getString(R.string.kx_err_phone));
+            return;
+        }
+        if (token.length() < 6) {
+            showAuthMessage(getString(R.string.kx_err_code_short));
+            return;
+        }
+        setBusy(true);
+        SupabaseAuth.verifyPhoneOtp(this, phone, token, (result, error) -> {
+            setBusy(false);
+            if (result != null && SupabaseAuth.isSignedIn(this)) {
+                Toast.makeText(this, R.string.kx_welcome_toast,
+                        Toast.LENGTH_SHORT).show();
+                renderState();
+            } else {
+                showAuthMessage(error != null && error.startsWith("network")
+                        ? getString(R.string.kx_err_network)
+                        : getString(R.string.kx_err_otp_invalid));
+            }
+        });
+    }
+
     private void doGoogleSignIn() {
         String webClientId;
         try {
@@ -344,6 +429,8 @@ public class AccountActivity extends AppCompatActivity {
     private void setBusy(boolean busy) {
         progress.setVisibility(busy ? View.VISIBLE : View.GONE);
         sendCodeButton.setEnabled(!busy);
+        sendSmsButton.setEnabled(!busy);
+        verifyPhoneButton.setEnabled(!busy);
         verifyCodeButton.setEnabled(!busy);
         googleButton.setEnabled(!busy);
         redeemButton.setEnabled(!busy);
@@ -370,6 +457,9 @@ public class AccountActivity extends AppCompatActivity {
         String e = error.toLowerCase(java.util.Locale.US);
         if (e.startsWith("network")) {
             return getString(R.string.kx_err_network);
+        }
+        if (e.contains("sms") || e.contains("phone")) {
+            return getString(R.string.kx_err_sms_off);
         }
         if (e.contains("provider") && e.contains("not enabled")) {
             return getString(R.string.kx_err_provider_disabled);

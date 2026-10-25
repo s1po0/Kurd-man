@@ -179,6 +179,20 @@ public class EditorActivity extends AppCompatActivity
     private final Runnable autosaveRunnable = () -> saveProjectAsync(null);
 
     @Override
+    protected void attachBaseContext(android.content.Context base) {
+        if (!BuildConfig.PUBLIC_EDITION) {
+            android.content.res.Configuration config =
+                    new android.content.res.Configuration(
+                            base.getResources().getConfiguration());
+            java.util.Locale sorani = new java.util.Locale("ckb");
+            config.setLocale(sorani);
+            config.setLayoutDirection(sorani);
+            base = base.createConfigurationContext(config);
+        }
+        super.attachBaseContext(base);
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
@@ -228,8 +242,12 @@ public class EditorActivity extends AppCompatActivity
                 });
 
         project = TranslationProjectStore.load(this);
+        if (project != null) {
+            ManhwaRenderer.activeTargetLanguage = project.targetLanguage;
+            ManhwaRenderer.i18nContext = getApplicationContext();
+        }
         if (project == null || project.pages.isEmpty()) {
-            setStatus("⚠ هیچ پرۆژەیەکی وەرگێڕدراو نەدۆزرایەوە. سەرەتا وێنەیەک یان CBZ وەربگێڕە.");
+            setStatus(getString(R.string.ks_0534));
             updateSelectedControlsEnabled();
             return;
         }
@@ -288,7 +306,7 @@ public class EditorActivity extends AppCompatActivity
                 ? (page.segments.isEmpty() ? -1 : 0)
                 : Math.max(-1, Math.min(remembered, page.segments.size() - 1));
         final int generation = ++loadGeneration;
-        setStatus("بارکردنی لاپەڕە " + (safeIndex + 1) + "/" + project.pages.size() + "…");
+        setStatus(getString(R.string.ks_0155) + (safeIndex + 1) + "/" + project.pages.size() + "…");
         updateNavigation();
 
         executor.execute(() -> {
@@ -316,11 +334,11 @@ public class EditorActivity extends AppCompatActivity
                     old.recycle();
                 }
                 if (decoded == null) {
-                    setStatus("⚠ وێنەی ئەم لاپەڕەیە نەخوێنرایەوە؛ دەقەکان لە TXTەکەدا دەپارێزرێن.");
+                    setStatus(getString(R.string.ks_0538));
                 } else if (page.segments.isEmpty()) {
-                    setStatus("ئەم لاپەڕەیە هیچ دەقێکی نییە — دەتوانیت «دەقی نوێ» زیاد بکەیت.");
+                    setStatus(getString(R.string.ks_0145));
                 } else {
-                    setStatus("ئامادەیە — لە خوارەوە: ١ دەقەکان، ٢ شوێن، ٣ ستایل، ٤ دەرکردن.");
+                    setStatus(getString(R.string.ks_0130));
                 }
                 bindSelectedControls();
                 updateNavigation();
@@ -401,7 +419,7 @@ public class EditorActivity extends AppCompatActivity
         Segment segment = selectedSegment();
         if (segment != null && rotationSeek != null) {
             bindingControls = true;
-            setSeek(rotationSeek, "سووڕان: "
+            setSeek(rotationSeek, getString(R.string.ks_0255)
                             + Math.round(segment.ensureStyle().rotationDegrees) + "°",
                     Math.round(segment.ensureStyle().rotationDegrees) + 180);
             mainHandler.post(() -> bindingControls = false);
@@ -424,7 +442,7 @@ public class EditorActivity extends AppCompatActivity
         samplerArmed = false;
         Segment segment = selectedSegment();
         if (segment == null || currentBitmap == null) {
-            setStatus("⚠ سەرەتا دەقێک هەڵبژێرە بۆ هەڵگرتنی ڕەنگ.");
+            setStatus(getString(R.string.ks_0522));
             return true;
         }
         int x = Math.max(0, Math.min(currentBitmap.getWidth() - 1, Math.round(imageX)));
@@ -435,11 +453,11 @@ public class EditorActivity extends AppCompatActivity
         if ("background".equals(samplerTarget)) {
             style.backgroundMode = TextStyleSettings.BG_CUSTOM;
             style.backgroundColor = color;
-            setStatus("🎨 ڕەنگی پاشبنەما لە وێنەکەوە: " + TextStyleSettings.hex(color));
+            setStatus(getString(R.string.ks_0635) + TextStyleSettings.hex(color));
         } else {
             style.autoTextColor = false;
             style.textColor = color;
-            setStatus("🎨 ڕەنگی دەق لە وێنەکەوە: " + TextStyleSettings.hex(color));
+            setStatus(getString(R.string.ks_0634) + TextStyleSettings.hex(color));
         }
         canvas.refreshStyles();
         bindSelectedControls();
@@ -550,7 +568,7 @@ public class EditorActivity extends AppCompatActivity
         buildBackgroundPanel();
         buildPositionPanel();
         buildProjectPanel();
-        String[] labels = {"دەق", "ستایل", "ڕەنگ", "پاشبنەما", "شوێن", "پرۆژە"};
+        String[] labels = {getString(R.string.ks_0221), getString(R.string.ks_0246), getString(R.string.ks_0436), getString(R.string.ks_0398), getString(R.string.ks_0275), getString(R.string.ks_0410)};
         for (int i = 0; i < labels.length; i++) {
             final int index = i;
             Button tab = new Button(this);
@@ -605,17 +623,17 @@ public class EditorActivity extends AppCompatActivity
         if (project != null && !advanced) {
             switch (index) {
                 case PANEL_POSITION:
-                    setStatus("ئامرازێک هەڵبژێرە؛ دوگمە گەورەکان یان ڕاکێشان بەکاربهێنە.");
+                    setStatus(getString(R.string.ks_0131));
                     break;
                 case PANEL_STYLE:
-                    setStatus("تەنها دەقە هەڵبژێردراوەکە دەگۆڕێت.");
+                    setStatus(getString(R.string.ks_0189));
                     break;
                 case PANEL_FINISH:
-                    setStatus("کاتێک تەواو بوویت «دەرکردن» دابگرە.");
+                    setStatus(getString(R.string.ks_0449));
                     break;
                 case PANEL_TEXTS:
                 default:
-                    setStatus("دەقێک هەڵبژێرە، ئینجا وشەکانی بگۆڕە.");
+                    setStatus(getString(R.string.ks_0234));
                     break;
             }
         }
@@ -675,7 +693,7 @@ public class EditorActivity extends AppCompatActivity
             canvas.post(canvas::focusSelected);
         }
         if (collapsed) {
-            setStatus("کۆنترۆڵەکان شاردرانەوە — بۆ گەڕاندنەوەیان «کۆنترۆڵەکان» لەسەر وێنەکە دابگرە.");
+            setStatus(getString(R.string.ks_0458));
         }
     }
 
@@ -736,17 +754,17 @@ public class EditorActivity extends AppCompatActivity
         }
         switch (tool) {
             case RESIZE:
-                toolHint.setText("قەبارە: دوگمەکانی خوارەوە بەکاربهێنە یان چوارگۆشە سەوزەکە ڕابکێشە.");
+                toolHint.setText(getString(R.string.ks_0291));
                 break;
             case ROTATE:
-                toolHint.setText("سووڕان: دوگمەکانی خوارەوە بەکاربهێنە یان بازنە زەردەکە ڕابکێشە.");
+                toolHint.setText(getString(R.string.ks_0256));
                 break;
             case VIEW:
-                toolHint.setText("بینین: وێنەکە ڕابکێشە یان بە دوو پەنجە زووم بکە؛ هیچ دەقێک ناجوڵێت.");
+                toolHint.setText(getString(R.string.ks_0175));
                 break;
             case MOVE:
             default:
-                toolHint.setText("جوڵاندن: تیرەکانی خوارەوە بەکاربهێنە یان دەقەکە بە یەک پەنجە ڕابکێشە.");
+                toolHint.setText(getString(R.string.ks_0190));
                 break;
         }
     }
@@ -763,36 +781,36 @@ public class EditorActivity extends AppCompatActivity
 
     private void buildSimpleTextsPanel() {
         LinearLayout panel = createPanel();
-        simpleSelectedText = textBox(panel, "هیچ دەقێک هەڵنەبژێردراوە");
+        simpleSelectedText = textBox(panel, getString(R.string.ks_0333));
         simpleSelectedText.setTextSize(12.5f);
         simpleSelectedText.setMinHeight(0);
         simpleSelectedText.setMaxLines(2);
         simpleSelectedText.setEllipsize(TextUtils.TruncateAt.END);
         simpleSelectedText.setPadding(dp(11), dp(7), dp(11), dp(7));
         LinearLayout selectRow = row(panel);
-        button(selectRow, "‹  پێشتر", false,
+        button(selectRow, getString(R.string.ks_0471), false,
                 v -> selectSegment(selectedSegmentIndex - 1, true));
-        button(selectRow, "›  دواتر", false,
+        button(selectRow, getString(R.string.ks_0472), false,
                 v -> selectSegment(selectedSegmentIndex + 1, true));
-        button(selectRow, "☰  لیستەکە", false, v -> showBlockList());
-        addSelected(button(panel, "✎  وشەکانی ئەم دەقە بگۆڕە", true,
+        button(selectRow, getString(R.string.ks_0499), false, v -> showBlockList());
+        addSelected(button(panel, getString(R.string.ks_0585), true,
                 v -> showEditTextDialog()));
     }
 
     private void buildSimplePositionPanel() {
         LinearLayout panel = createPanel();
         LinearLayout toolRow = row(panel);
-        toolMoveButton = button(toolRow, "↔ جوڵاندن", true, null);
-        toolResizeButton = button(toolRow, "⤢ قەبارە", false, null);
-        toolRotateButton = button(toolRow, "⟳ سووڕان", false, null);
-        toolViewButton = button(toolRow, "🔍 بینین", false, null);
+        toolMoveButton = button(toolRow, getString(R.string.ks_0473), true, null);
+        toolResizeButton = button(toolRow, getString(R.string.ks_0616), false, null);
+        toolRotateButton = button(toolRow, getString(R.string.ks_0615), false, null);
+        toolViewButton = button(toolRow, getString(R.string.ks_0658), false, null);
         toolMoveButton.setTextSize(12f);
         toolResizeButton.setTextSize(12f);
         toolRotateButton.setTextSize(12f);
         toolViewButton.setTextSize(12f);
 
         toolHint = label(panel,
-                "جوڵاندن: تیرەکانی خوارەوە بەکاربهێنە یان دەقەکە ڕابکێشە.");
+                getString(R.string.ks_0191));
         toolHint.setTextSize(12f);
         toolHint.setMaxLines(2);
         toolHint.setEllipsize(TextUtils.TruncateAt.END);
@@ -816,50 +834,50 @@ public class EditorActivity extends AppCompatActivity
                 v -> setEditorPanelCollapsed(true)).setTextSize(17f);
 
         simpleResizeActions = row(panel);
-        addSelected(button(simpleResizeActions, "پانی −", false,
+        addSelected(button(simpleResizeActions, getString(R.string.ks_0406), false,
                 v -> resizeSelectedBy(-simpleResizeStep(), 0)));
-        addSelected(button(simpleResizeActions, "پانی +", false,
+        addSelected(button(simpleResizeActions, getString(R.string.ks_0405), false,
                 v -> resizeSelectedBy(simpleResizeStep(), 0)));
-        addSelected(button(simpleResizeActions, "بەرزی −", false,
+        addSelected(button(simpleResizeActions, getString(R.string.ks_0178), false,
                 v -> resizeSelectedBy(0, -simpleResizeStep())));
-        addSelected(button(simpleResizeActions, "بەرزی +", false,
+        addSelected(button(simpleResizeActions, getString(R.string.ks_0177), false,
                 v -> resizeSelectedBy(0, simpleResizeStep())));
         button(simpleResizeActions, "⛶", true,
                 v -> setEditorPanelCollapsed(true)).setTextSize(17f);
         simpleResizeActions.setVisibility(View.GONE);
 
         simpleRotateActions = row(panel);
-        addSelected(button(simpleRotateActions, "−٢°", false,
+        addSelected(button(simpleRotateActions, getString(R.string.ks_0485), false,
                 v -> rotateSelectedBy(-2f)));
-        addSelected(button(simpleRotateActions, "٠°", false,
+        addSelected(button(simpleRotateActions, getString(R.string.ks_0380), false,
                 v -> rotateSelectedBy(0f)));
-        addSelected(button(simpleRotateActions, "+٢°", false,
+        addSelected(button(simpleRotateActions, getString(R.string.ks_0079), false,
                 v -> rotateSelectedBy(2f)));
-        button(simpleRotateActions, "⛶ گەورە", true,
+        button(simpleRotateActions, getString(R.string.ks_0547), true,
                 v -> setEditorPanelCollapsed(true));
         simpleRotateActions.setVisibility(View.GONE);
 
         simpleViewActions = row(panel);
-        button(simpleViewActions, "◎ دەقەکە", false,
+        button(simpleViewActions, getString(R.string.ks_0494), false,
                 v -> canvas.focusSelected());
-        button(simpleViewActions, "↔ پانایی", false,
+        button(simpleViewActions, getString(R.string.ks_0475), false,
                 v -> canvas.fitWidth());
-        button(simpleViewActions, "⛶ هەمووی", false,
+        button(simpleViewActions, getString(R.string.ks_0546), false,
                 v -> canvas.fitEntirePage());
-        button(simpleViewActions, "شاردنەوە", true,
+        button(simpleViewActions, getString(R.string.ks_0274), true,
                 v -> setEditorPanelCollapsed(true));
         simpleViewActions.setVisibility(View.GONE);
     }
 
     private void buildSimpleStylePanel() {
         LinearLayout panel = createPanel();
-        simpleFontButton = addSelected(button(panel, "A  فۆنت هەڵبژێرە", true,
+        simpleFontButton = addSelected(button(panel, getString(R.string.ks_0086), true,
                 v -> showSimpleFontPicker()));
         LinearLayout sizeRow = row(panel);
         addSelected(button(sizeRow, "A−", false,
                 v -> adjustSimpleTextSize(-0.10f))).setTextSize(16f);
         simpleSizeLabel = new TextView(this);
-        simpleSizeLabel.setText("قەبارە: ١٠٠٪");
+        simpleSizeLabel.setText(getString(R.string.ks_0292));
         simpleSizeLabel.setTextColor(Color.WHITE);
         simpleSizeLabel.setTextSize(13f);
         simpleSizeLabel.setGravity(android.view.Gravity.CENTER);
@@ -869,34 +887,34 @@ public class EditorActivity extends AppCompatActivity
         addSelected(button(sizeRow, "A+", false,
                 v -> adjustSimpleTextSize(0.10f))).setTextSize(16f);
         LinearLayout colorRow = row(panel);
-        addSelected(button(colorRow, "A  ڕەنگی دەق", false,
+        addSelected(button(colorRow, getString(R.string.ks_0088), false,
                 v -> openColorPicker("text")));
-        addSelected(button(colorRow, "▦  ڕەنگی پاشبنەما", false,
+        addSelected(button(colorRow, getString(R.string.ks_0491), false,
                 v -> openColorPicker("background")));
     }
 
     private void buildSimpleFinishPanel() {
         LinearLayout panel = createPanel();
-        button(panel, "✓  پاشەکەوتکردن و دەرکردنی نوێ", true,
+        button(panel, getString(R.string.ks_0593), true,
                 v -> saveAndExport());
         LinearLayout moreRow = row(panel);
-        button(moreRow, "؟  ڕێنمایی", false, v -> showSimpleHelp());
-        button(moreRow, "⚙  ئامرازی زیاتر", false,
+        button(moreRow, getString(R.string.ks_0125), false, v -> showSimpleHelp());
+        button(moreRow, getString(R.string.ks_0503), false,
                 v -> showPanel(PANEL_ADVANCED_TEXT));
-        button(panel, "✕  داخستن و دواتر بەردەوامبوون", false,
+        button(panel, getString(R.string.ks_0599), false,
                 v -> closeWithoutExport());
     }
 
     private void showSimpleHelp() {
         new AlertDialog.Builder(this)
-                .setTitle("چۆن دەقێک دەستکاری بکەم؟")
-                .setMessage("١) لە بەشی «دەقەکان» تەنها دەقێک هەڵبژێرە و ئەگەر پێویست بوو وشەکانی بگۆڕە.\n\n"
-                        + "٢) لە بەشی «شوێن» یەک ئامراز هەڵبژێرە. ئێستا دەتوانیت بە دوگمە گەورەکانیش بیجوڵێنیت، قەبارەکەی بگۆڕیت یان بیسووڕێنیت — پێویستت بە ڕاکێشانی دەستگیرە بچووکەکان نییە.\n\n"
-                        + "٣) دوگمەی ⛶ وێنەکە زۆر گەورە دەکات؛ «کۆنترۆڵەکان»ی سەر وێنەکە بەشەکە دەگەڕێنێتەوە.\n\n"
-                        + "٤) لە بەشی «ستایل» تەنها فۆنت، قەبارە و ڕەنگ هەیە.\n\n"
-                        + "٥) زیادکردن، کۆپی، شاردنەوە، سڕینەوە و ستایلە وردەکان لە «ئامرازی زیاتر»دان.\n\n"
-                        + "٦) لە بەشی «دەرکردن» کاری کۆتایی بکە. پرۆژەکە بە خۆکار پاشەکەوت دەبێت.")
-                .setPositiveButton("تێگەیشتم", null)
+                .setTitle(getString(R.string.ks_0428))
+                .setMessage(getString(R.string.ks_0384)
+                        + getString(R.string.ks_0387)
+                        + getString(R.string.ks_0390)
+                        + getString(R.string.ks_0393)
+                        + getString(R.string.ks_0394)
+                        + getString(R.string.ks_0395))
+                .setPositiveButton(getString(R.string.ks_0188), null)
                 .show();
     }
 
@@ -908,7 +926,7 @@ public class EditorActivity extends AppCompatActivity
         int current = FontCatalog.indexOfId(
                 fontOptions, segment.ensureStyle().fontId);
         new AlertDialog.Builder(this)
-                .setTitle("فۆنتێک هەڵبژێرە")
+                .setTitle(getString(R.string.ks_0287))
                 .setSingleChoiceItems(
                         new FontSpinnerAdapter(this, fontOptions),
                         current,
@@ -926,7 +944,7 @@ public class EditorActivity extends AppCompatActivity
                             }
                             dialog.dismiss();
                         })
-                .setNegativeButton("هەڵپەساردن", null)
+                .setNegativeButton(getString(R.string.ks_0358), null)
                 .show();
     }
 
@@ -935,15 +953,15 @@ public class EditorActivity extends AppCompatActivity
             return;
         }
         new AlertDialog.Builder(this)
-                .setTitle("ستایلێکی ئامادە هەڵبژێرە")
+                .setTitle(getString(R.string.ks_0248))
                 .setSingleChoiceItems(
-                        TextStyleSettings.PRESET_LABELS,
+                        TextStyleSettings.presetLabels(this),
                         lastPresetIndex,
                         (dialog, which) -> {
                             applyPreset(which);
                             dialog.dismiss();
                         })
-                .setNegativeButton("هەڵپەساردن", null)
+                .setNegativeButton(getString(R.string.ks_0358), null)
                 .show();
     }
 
@@ -959,8 +977,8 @@ public class EditorActivity extends AppCompatActivity
         canvas.refreshStyles();
         bindSelectedControls();
         scheduleAutosave();
-        setStatus("قەبارەی دەق: "
-                + Math.round(style.sizeScale * 100f) + "٪");
+        setStatus(getString(R.string.ks_0295)
+                + Math.round(style.sizeScale * 100f) + getString(R.string.ks_0396));
     }
 
     private void toggleSimpleVisibility() {
@@ -975,16 +993,16 @@ public class EditorActivity extends AppCompatActivity
         bindSelectedControls();
         scheduleAutosave();
         setStatus(style.visible
-                ? "👁 دەقەکە پیشان دەدرێت."
-                : "دەقەکە شاردرایەوە؛ لە فایلی TXTەکەدا هەر دەمێنێتەوە.");
+                ? getString(R.string.ks_0638)
+                : getString(R.string.ks_0237));
     }
 
     private void buildTextPanel() {
         LinearLayout panel = createPanel();
-        heading(panel, "دەق و دەستکاری");
-        label(panel, "دەقی ڕەسەن");
+        heading(panel, getString(R.string.ks_0223));
+        label(panel, getString(R.string.ks_0231));
         originalTextView = textBox(panel, "—");
-        label(panel, "وەرگێڕانی کوردی (دەتوانیت بیگۆڕیت)");
+        label(panel, getString(R.string.ks_0374));
         translatedEdit = new EditText(this);
         translatedEdit.setBackgroundResource(R.drawable.bg_input);
         translatedEdit.setTextColor(Color.WHITE);
@@ -996,8 +1014,8 @@ public class EditorActivity extends AppCompatActivity
         selectedControls.add(translatedEdit);
 
         LinearLayout row = row(panel);
-        addSelected(button(row, "✓ جێبەجێکردنی دەق", true, v -> applyEditedText()));
-        addSelected(button(row, "↺ وەرگێڕانی ڕەسەن", false, v -> {
+        addSelected(button(row, getString(R.string.ks_0596), true, v -> applyEditedText()));
+        addSelected(button(row, getString(R.string.ks_0481), false, v -> {
             Segment segment = selectedSegment();
             if (segment == null) {
                 return;
@@ -1009,125 +1027,125 @@ public class EditorActivity extends AppCompatActivity
             scheduleAutosave();
         }));
 
-        visibleCheck = check(panel, "نووسینەکە پیشان بدە لەسەر وێنەکە", "visible");
-        eraseCheck = check(panel, "دەقی ڕەسەن لە قسەهەڵگرەکەدا پاک بکەرەوە", "erase");
+        visibleCheck = check(panel, getString(R.string.ks_0323), "visible");
+        eraseCheck = check(panel, getString(R.string.ks_0233), "erase");
         forceEraseCheck = check(panel,
-                "بەزۆر پاککردنەوە تەنانەت ئەگەر پاشبنەما خۆکار دڵنیا نەبوو", "forceErase");
-        lockedCheck = check(panel, "قوفڵکردن — ڕێگری لە جوڵاندنی بەهەڵە", "locked");
+                getString(R.string.ks_0179), "forceErase");
+        lockedCheck = check(panel, getString(R.string.ks_0289), "locked");
 
         LinearLayout actions = row(panel);
-        button(actions, "＋ دەقی نوێ", true, v -> addSegment());
-        addSelected(button(actions, "⧉ دووبارەکردنەوە", false, v -> duplicateSegment()));
+        button(actions, getString(R.string.ks_0629), true, v -> addSegment());
+        addSelected(button(actions, getString(R.string.ks_0617), false, v -> duplicateSegment()));
         LinearLayout actions2 = row(panel);
-        addSelected(button(actions2, "✎ دەق بگۆڕە", false, v -> showEditTextDialog()));
-        addSelected(button(actions2, "🗑 سڕینەوە", false, v -> deleteSegment()));
-        hint(panel, "دووجار لەسەر دەقێک بکە بۆ کردنەوەی دەستکاری خێرا. "
-                + "دەقە شاردراوەکان لە TXTەکەدا دەمێننەوە.");
+        addSelected(button(actions2, getString(R.string.ks_0586), false, v -> showEditTextDialog()));
+        addSelected(button(actions2, getString(R.string.ks_0669), false, v -> deleteSegment()));
+        hint(panel, getString(R.string.ks_0214)
+                + getString(R.string.ks_0235));
     }
 
     private void buildStylePanel() {
         LinearLayout panel = createPanel();
-        heading(panel, "فۆنت و ستایل");
-        fontSpinner = spinner(panel, "فۆنت", "font", null);
+        heading(panel, getString(R.string.ks_0285));
+        fontSpinner = spinner(panel, getString(R.string.ks_0284), "font", null);
         LinearLayout fontRow = row(panel);
-        button(fontRow, "＋ هاوردەکردنی فۆنت", false, v -> importFontLauncher.launch(
+        button(fontRow, getString(R.string.ks_0630), false, v -> importFontLauncher.launch(
                 new String[]{"font/*", "application/x-font-ttf",
                         "application/octet-stream"}));
-        addSelected(button(fontRow, "🗑 سڕینەوەی فۆنتی هاوردەکراو", false,
+        addSelected(button(fontRow, getString(R.string.ks_0670), false,
                 v -> deleteCurrentCustomFont()));
 
-        ArrayAdapter<String> presetAdapter = simpleAdapter(TextStyleSettings.PRESET_LABELS);
-        presetSpinner = spinner(panel, "ستایلی ئامادە", "preset", presetAdapter);
+        ArrayAdapter<String> presetAdapter = simpleAdapter(TextStyleSettings.presetLabels(this));
+        presetSpinner = spinner(panel, getString(R.string.ks_0247), "preset", presetAdapter);
         presetSpinner.setOnTouchListener((view, event) -> {
             if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
                 presetUserTouched = true;
             }
             return false;
         });
-        addSelected(button(panel, "✦ جێبەجێکردنی ستایلە ئامادەکرابوو", false,
+        addSelected(button(panel, getString(R.string.ks_0603), false,
                 v -> applyPreset(lastPresetIndex)));
 
-        weightSeek = seek(panel, "ئەستووری فۆنت", "weight", 16);
-        sizeSeek = seek(panel, "قەبارەی دەق", "size", 195);
-        lineSeek = seek(panel, "بۆشایی نێوان هێڵەکان", "line", 105);
-        opacitySeek = seek(panel, "ڕوونی دەق", "opacity", 235);
-        alignmentSpinner = spinner(panel, "هێڵکاری", "alignment",
+        weightSeek = seek(panel, getString(R.string.ks_0139), "weight", 16);
+        sizeSeek = seek(panel, getString(R.string.ks_0294), "size", 195);
+        lineSeek = seek(panel, getString(R.string.ks_0172), "line", 105);
+        opacitySeek = seek(panel, getString(R.string.ks_0432), "opacity", 235);
+        alignmentSpinner = spinner(panel, getString(R.string.ks_0345), "alignment",
                 simpleAdapter(new String[]{
-                        "سەرەتا — بۆ سۆرانی لای ڕاست",
-                        "ناوەڕاست",
-                        "کۆتایی — بۆ سۆرانی لای چەپ"}));
-        italicCheck = check(panel, "لارکردنی دەق", "italic");
-        underlineCheck = check(panel, "هێڵی ژێرەوە", "underline");
-        strikeCheck = check(panel, "هێڵی ناوەڕاست", "strikethrough");
+                        getString(R.string.ks_0272),
+                        getString(R.string.ks_0320),
+                        getString(R.string.ks_0457)}));
+        italicCheck = check(panel, getString(R.string.ks_0299), "italic");
+        underlineCheck = check(panel, getString(R.string.ks_0347), "underline");
+        strikeCheck = check(panel, getString(R.string.ks_0346), "strikethrough");
 
         LinearLayout applyRow = row(panel);
-        addSelected(button(applyRow, "بۆ هەموو ئەم لاپەڕەیە", false,
+        addSelected(button(applyRow, getString(R.string.ks_0162), false,
                 v -> confirmApplyStyle(false)));
-        addSelected(button(applyRow, "بۆ هەموو لاپەڕەکان", false,
+        addSelected(button(applyRow, getString(R.string.ks_0164), false,
                 v -> confirmApplyStyle(true)));
-        addSelected(button(panel, "💾 ئەم ستایلە بکە بە بنەڕەتی داهاتوو", true,
+        addSelected(button(panel, getString(R.string.ks_0641), true,
                 v -> makeSelectedStyleDefault()));
-        hint(panel, "فۆنتە ناوەکییەکان پیتەکانی تایبەتی سۆرانیان تێدایە. "
-                + "بۆ فۆنتی هاوردەکراو دڵنیابە کە ڕ، ڵ، ێ، ە و ۆی تێدایە.");
+        hint(panel, getString(R.string.ks_0288)
+                + getString(R.string.ks_0159));
     }
 
     private void buildColorPanel() {
         LinearLayout panel = createPanel();
-        heading(panel, "ڕەنگ، دەوروبەر و سێبەر");
-        autoColorCheck = check(panel, "ڕەنگی دەقی خۆکار", "autoColor");
-        textColorButton = colorButton(panel, "A  ڕەنگی دەق", "text");
-        gradientCheck = check(panel, "گرادیانتی ڕەنگ بۆ دەق", "gradient");
-        gradientColorButton = colorButton(panel, "↘  ڕەنگی دووەمی گرادیانت", "gradient");
-        gradientDirectionSpinner = spinner(panel, "ئاراستەی گرادیانت", "gradientDirection",
-                simpleAdapter(new String[]{"ئاسۆیی", "ستوونی", "لار"}));
+        heading(panel, getString(R.string.ks_0437));
+        autoColorCheck = check(panel, getString(R.string.ks_0441), "autoColor");
+        textColorButton = colorButton(panel, getString(R.string.ks_0088), "text");
+        gradientCheck = check(panel, getString(R.string.ks_0461), "gradient");
+        gradientColorButton = colorButton(panel, getString(R.string.ks_0478), "gradient");
+        gradientDirectionSpinner = spinner(panel, getString(R.string.ks_0126), "gradientDirection",
+                simpleAdapter(new String[]{getString(R.string.ks_0127), getString(R.string.ks_0249), getString(R.string.ks_0297)}));
 
-        outlineCheck = check(panel, "دەوروبەری دەق (Outline)", "outline");
-        outlineColorButton = colorButton(panel, "◐  ڕەنگی دەوروبەر", "outline");
-        outlineSeek = seek(panel, "ئەستووری دەوروبەر", "outlineWidth", 38);
+        outlineCheck = check(panel, getString(R.string.ks_0239), "outline");
+        outlineColorButton = colorButton(panel, getString(R.string.ks_0496), "outline");
+        outlineSeek = seek(panel, getString(R.string.ks_0135), "outlineWidth", 38);
 
-        shadowCheck = check(panel, "سێبەری دەق", "shadow");
-        shadowColorButton = colorButton(panel, "☁  ڕەنگی سێبەر", "shadow");
-        shadowSeek = seek(panel, "هێزی سێبەر", "shadowStrength", 100);
+        shadowCheck = check(panel, getString(R.string.ks_0268), "shadow");
+        shadowColorButton = colorButton(panel, getString(R.string.ks_0498), "shadow");
+        shadowSeek = seek(panel, getString(R.string.ks_0338), "shadowStrength", 100);
 
-        heading(panel, "هەڵگرتنی ڕەنگ لە وێنەکە");
+        heading(panel, getString(R.string.ks_0359));
         LinearLayout row = row(panel);
-        addSelected(button(row, "🖍 بۆ دەق", false, v -> armSampler("text")));
-        addSelected(button(row, "🖍 بۆ پاشبنەما", false,
+        addSelected(button(row, getString(R.string.ks_0664), false, v -> armSampler("text")));
+        addSelected(button(row, getString(R.string.ks_0665), false,
                 v -> armSampler("background")));
-        hint(panel, "دوای هەڵبژاردنی ئامرازەکە، لەسەر هەر شوێنێکی وێنەکە بکە و ڕەنگەکەی وەردەگرێت.");
+        hint(panel, getString(R.string.ks_0211));
     }
 
     private void buildBackgroundPanel() {
         LinearLayout panel = createPanel();
-        heading(panel, "پاشبنەمای دەق / قسەهەڵگر");
-        backgroundModeSpinner = spinner(panel, "جۆری پاشبنەما", "backgroundMode",
+        heading(panel, getString(R.string.ks_0400));
+        backgroundModeSpinner = spinner(panel, getString(R.string.ks_0193), "backgroundMode",
                 simpleAdapter(new String[]{
-                        "خۆکار — ڕەنگی قسەهەڵگری ڕەسەن",
-                        "ڕەنگی دیاریکراو",
-                        "بێ پاشبنەما",
-                        "🧼 سڕینەوەی خاوێن — بێ پاشبنەمای سپی"}));
-        backgroundColorButton = colorButton(panel, "▦  ڕەنگی پاشبنەما", "background");
-        backgroundOpacitySeek = seek(panel, "ڕوونی پاشبنەما", "backgroundOpacity", 255);
-        backgroundShapeSpinner = spinner(panel, "شێوە", "backgroundShape",
+                        getString(R.string.ks_0205),
+                        getString(R.string.ks_0439),
+                        getString(R.string.ks_0176),
+                        getString(R.string.ks_0688)}));
+        backgroundColorButton = colorButton(panel, getString(R.string.ks_0491), "background");
+        backgroundOpacitySeek = seek(panel, getString(R.string.ks_0434), "backgroundOpacity", 255);
+        backgroundShapeSpinner = spinner(panel, getString(R.string.ks_0282), "backgroundShape",
                 simpleAdapter(new String[]{
-                        "گۆشەی خڕ", "لاکێشە", "کەپسوول", "هێلکەیی"}));
-        radiusSeek = seek(panel, "خڕی گۆشەکان", "radius", 50);
-        paddingSeek = seek(panel, "بۆشایی ناوەوە", "padding", 185);
-        borderCheck = check(panel, "سنووری دەوروبەری پاشبنەما", "border");
-        borderColorButton = colorButton(panel, "▣  ڕەنگی سنوور", "border");
-        borderSeek = seek(panel, "ئەستووری سنوور", "borderWidth", 40);
-        hint(panel, "«بێ پاشبنەما» لەگەڵ دەوروبەر یان سێبەر باشتر دەخوێنرێتەوە "
-                + "کاتێک دەقەکە لەسەر وێنەیەکی ئاڵۆزە.");
+                        getString(R.string.ks_0463), getString(R.string.ks_0306), getString(R.string.ks_0460), getString(R.string.ks_0344)}));
+        radiusSeek = seek(panel, getString(R.string.ks_0203), "radius", 50);
+        paddingSeek = seek(panel, getString(R.string.ks_0170), "padding", 185);
+        borderCheck = check(panel, getString(R.string.ks_0251), "border");
+        borderColorButton = colorButton(panel, getString(R.string.ks_0489), "border");
+        borderSeek = seek(panel, getString(R.string.ks_0137), "borderWidth", 40);
+        hint(panel, getString(R.string.ks_0122)
+                + getString(R.string.ks_0450));
     }
 
     private void buildPositionPanel() {
         LinearLayout panel = createPanel();
-        heading(panel, "شوێن، قەبارە و ڕیزبەندی");
+        heading(panel, getString(R.string.ks_0277));
         geometryLabel = textBox(panel, "—");
-        rotationSeek = seek(panel, "سووڕان", "rotation", 360);
-        nudgeStepSeek = seek(panel, "هەنگاوی جوڵاندن", "nudgeStep", 50);
+        rotationSeek = seek(panel, getString(R.string.ks_0253), "rotation", 360);
+        nudgeStepSeek = seek(panel, getString(R.string.ks_0353), "nudgeStep", 50);
         nudgeStepSeek.seek.setProgress(9);
-        nudgeStepSeek.label.setText("هەنگاوی جوڵاندن: 10px");
+        nudgeStepSeek.label.setText(getString(R.string.ks_0355));
 
         LinearLayout upRow = row(panel);
         button(upRow, "", false, null).setVisibility(View.INVISIBLE);
@@ -1143,12 +1161,12 @@ public class EditorActivity extends AppCompatActivity
         button(downRow, "", false, null).setVisibility(View.INVISIBLE);
 
         LinearLayout centerRow = row(panel);
-        addSelected(button(centerRow, "↔ ناوەندی لاپەڕە", false, v -> centerOnPage(true)));
-        addSelected(button(centerRow, "↕ ناوەندی لاپەڕە", false, v -> centerOnPage(false)));
+        addSelected(button(centerRow, getString(R.string.ks_0474), false, v -> centerOnPage(true)));
+        addSelected(button(centerRow, getString(R.string.ks_0476), false, v -> centerOnPage(false)));
         LinearLayout resetRow = row(panel);
-        addSelected(button(resetRow, "گەڕاندنەوە بۆ قسەهەڵگر", false,
+        addSelected(button(resetRow, getString(R.string.ks_0467), false,
                 v -> resetPosition()));
-        addSelected(button(resetRow, "سووڕان بکە بە 0°", false, v -> {
+        addSelected(button(resetRow, getString(R.string.ks_0254), false, v -> {
             Segment segment = selectedSegment();
             if (segment != null && !segment.ensureStyle().locked) {
                 pushHistory();
@@ -1159,10 +1177,10 @@ public class EditorActivity extends AppCompatActivity
             }
         }));
         LinearLayout layerRow = row(panel);
-        addSelected(button(layerRow, "⬆ بۆ پێشەوە", false, v -> moveLayer(1)));
-        addSelected(button(layerRow, "⬇ بۆ دواوە", false, v -> moveLayer(-1)));
+        addSelected(button(layerRow, getString(R.string.ks_0618), false, v -> moveLayer(1)));
+        addSelected(button(layerRow, getString(R.string.ks_0623), false, v -> moveLayer(-1)));
         snapCheck = new CheckBox(this);
-        snapCheck.setText("لکاندن بە ناوەندی لاپەڕە و قسەهەڵگری ڕەسەن");
+        snapCheck.setText(getString(R.string.ks_0307));
         snapCheck.setChecked(true);
         snapCheck.setTextColor(Color.rgb(203, 213, 225));
         snapCheck.setButtonTintList(android.content.res.ColorStateList.valueOf(
@@ -1171,15 +1189,15 @@ public class EditorActivity extends AppCompatActivity
         snapCheck.setOnCheckedChangeListener((buttonView, isChecked) ->
                 canvas.setSnapEnabled(isChecked));
         panel.addView(snapCheck);
-        hint(panel, "لەسەر وێنەکە: دەقەکە ڕابکێشە، گۆشەی سەوز بۆ قەبارە، "
-                + "بازنە زەردەکە بۆ سووڕاندن، دوو پەنجە بۆ زووم.");
+        hint(panel, getString(R.string.ks_0311)
+                + getString(R.string.ks_0157));
     }
 
     private void buildProjectPanel() {
         LinearLayout panel = createPanel();
-        heading(panel, "پرۆژە و ئامرازە گشتییەکان");
+        heading(panel, getString(R.string.ks_0411));
         projectStats = textBox(panel, "—");
-        addSelected(button(panel, "↺ گەڕاندنەوەی ستایلی ئەم دەقە بۆ بنەڕەتی", false,
+        addSelected(button(panel, getString(R.string.ks_0482), false,
                 v -> {
                     Segment segment = selectedSegment();
                     if (segment == null) {
@@ -1192,20 +1210,20 @@ public class EditorActivity extends AppCompatActivity
                     bindSelectedControls();
                     scheduleAutosave();
                 }));
-        button(panel, "🔎 دۆزینەوە و گۆڕین لە هەموو وەرگێڕانەکان", false,
+        button(panel, getString(R.string.ks_0660), false,
                 v -> showFindReplace());
-        button(panel, "☰ لیستی دەقەکانی ئەم لاپەڕەیە", false,
+        button(panel, getString(R.string.ks_0501), false,
                 v -> showBlockList());
-        button(panel, "💾 پاشەکەوتکردنی پرۆژەکە ئێستا", false,
-                v -> saveProjectAsync(() -> setStatus("✅ پرۆژەکە پاشەکەوت کرا.")));
-        button(panel, "✓ پاشەکەوتکردن و دەرکردنی نوێ", true,
+        button(panel, getString(R.string.ks_0642), false,
+                v -> saveProjectAsync(() -> setStatus(getString(R.string.ks_0580))));
+        button(panel, getString(R.string.ks_0597), true,
                 v -> saveAndExport());
-        button(panel, "⚠ هەموو دەستکارییەکانی ئەم دانیشتنە بسڕەوە", false,
+        button(panel, getString(R.string.ks_0535), false,
                 v -> confirmResetAllEdits());
-        button(panel, "🗑 سڕینەوەی پرۆژەی دەستکاری و ئازادکردنی شوێن", false,
+        button(panel, getString(R.string.ks_0671), false,
                 v -> confirmDeleteProject());
-        hint(panel, "پرۆژەکە بە خۆکار لەناو مۆبایلەکەدا پاشەکەوت دەبێت. "
-                + "«دەرکردن» وێنە یان CBZی نوێ دروست دەکات و لە Downloads دایدەنێت.");
+        hint(panel, getString(R.string.ks_0412)
+                + getString(R.string.ks_0124));
     }
 
     // ------------------------------------------------------------------
@@ -1227,7 +1245,7 @@ public class EditorActivity extends AppCompatActivity
         }
         TextStyleSettings style = segment.ensureStyle();
         originalTextView.setText(segment.text == null || segment.text.isEmpty()
-                ? "(دەقی نوێی دەستی)" : segment.text);
+                ? getString(R.string.ks_0072) : segment.text);
         if (!translatedEdit.hasFocus()) {
             translatedEdit.setText(segment.ckb == null ? "" : segment.ckb);
         }
@@ -1238,14 +1256,14 @@ public class EditorActivity extends AppCompatActivity
 
         fontSpinner.setSelection(FontCatalog.indexOfId(fontOptions, style.fontId), false);
         presetSpinner.setSelection(lastPresetIndex, false);
-        setSeek(weightSeek, "ئەستووری فۆنت: " + style.fontWeight,
+        setSeek(weightSeek, getString(R.string.ks_0140) + style.fontWeight,
                 (style.fontWeight - 100) / 50);
-        setSeek(sizeSeek, "قەبارەی دەق: " + Math.round(style.sizeScale * 100f) + "%",
+        setSeek(sizeSeek, getString(R.string.ks_0295) + Math.round(style.sizeScale * 100f) + "%",
                 Math.round(style.sizeScale * 100f) - 45);
-        setSeek(lineSeek, "بۆشایی هێڵ: "
+        setSeek(lineSeek, getString(R.string.ks_0173)
                         + String.format(Locale.ROOT, "%.2f", style.lineSpacing),
                 Math.round((style.lineSpacing - 0.75f) * 100f));
-        setSeek(opacitySeek, "ڕوونی دەق: " + Math.round(style.textOpacity * 100f / 255f) + "%",
+        setSeek(opacitySeek, getString(R.string.ks_0433) + Math.round(style.textOpacity * 100f / 255f) + "%",
                 style.textOpacity - 20);
         alignmentSpinner.setSelection(style.alignment, false);
         italicCheck.setChecked(style.italic);
@@ -1256,30 +1274,30 @@ public class EditorActivity extends AppCompatActivity
         gradientCheck.setChecked(style.gradient);
         gradientDirectionSpinner.setSelection(style.gradientDirection, false);
         outlineCheck.setChecked(style.outline);
-        setSeek(outlineSeek, "ئەستووری دەوروبەر: "
+        setSeek(outlineSeek, getString(R.string.ks_0136)
                         + Math.round(style.outlineWidthRatio * 100f) + "%",
                 Math.round(style.outlineWidthRatio * 100f));
         shadowCheck.setChecked(style.shadow);
-        setSeek(shadowSeek, "هێزی سێبەر: " + Math.round(style.shadowStrength * 100f) + "%",
+        setSeek(shadowSeek, getString(R.string.ks_0339) + Math.round(style.shadowStrength * 100f) + "%",
                 Math.round(style.shadowStrength * 100f));
 
         backgroundModeSpinner.setSelection(style.backgroundMode, false);
-        setSeek(backgroundOpacitySeek, "ڕوونی پاشبنەما: "
+        setSeek(backgroundOpacitySeek, getString(R.string.ks_0435)
                         + Math.round(style.backgroundOpacity * 100f / 255f) + "%",
                 style.backgroundOpacity);
         backgroundShapeSpinner.setSelection(style.backgroundShape, false);
-        setSeek(radiusSeek, "خڕی گۆشەکان: "
+        setSeek(radiusSeek, getString(R.string.ks_0204)
                         + Math.round(style.backgroundRadiusRatio * 100f) + "%",
                 Math.round(style.backgroundRadiusRatio * 100f));
-        setSeek(paddingSeek, "بۆشایی ناوەوە: "
+        setSeek(paddingSeek, getString(R.string.ks_0171)
                         + Math.round(style.paddingScale * 100f) + "%",
                 Math.round((style.paddingScale - 0.35f) * 100f));
         borderCheck.setChecked(style.backgroundBorder);
-        setSeek(borderSeek, "ئەستووری سنوور: "
+        setSeek(borderSeek, getString(R.string.ks_0138)
                         + String.format(Locale.ROOT, "%.1fpx", style.backgroundBorderWidth),
                 Math.round(style.backgroundBorderWidth * 2f));
 
-        setSeek(rotationSeek, "سووڕان: " + Math.round(style.rotationDegrees) + "°",
+        setSeek(rotationSeek, getString(R.string.ks_0255) + Math.round(style.rotationDegrees) + "°",
                 Math.round(style.rotationDegrees) + 180);
         updateColorButtons(style);
         updateGeometryLabel();
@@ -1292,15 +1310,15 @@ public class EditorActivity extends AppCompatActivity
             return;
         }
         if (segment == null) {
-            simpleSelectedText.setText("هیچ دەقێک هەڵنەبژێردراوە");
+            simpleSelectedText.setText(getString(R.string.ks_0333));
             if (simpleFontButton != null) {
-                simpleFontButton.setText("A  فۆنت هەڵبژێرە");
+                simpleFontButton.setText(getString(R.string.ks_0086));
             }
             if (simpleSizeLabel != null) {
-                simpleSizeLabel.setText("قەبارە: —");
+                simpleSizeLabel.setText(getString(R.string.ks_0293));
             }
             if (simpleVisibilityButton != null) {
-                simpleVisibilityButton.setText("👁  پیشان بدە");
+                simpleVisibilityButton.setText(getString(R.string.ks_0637));
             }
             return;
         }
@@ -1308,14 +1326,14 @@ public class EditorActivity extends AppCompatActivity
         String shown = segment.ckb == null ? "" : segment.ckb.trim()
                 .replace('\n', ' ');
         if (shown.isEmpty()) {
-            shown = "(دەقەکە بەتاڵە)";
+            shown = getString(R.string.ks_0073);
         } else if (shown.length() > 72) {
             shown = shown.substring(0, 72) + "…";
         }
         String ocrWarning = segment.ocrConfidence >= 0f
                 && segment.ocrConfidence < 0.78f
-                ? "⚠ OCR گوماناوییە • " : "";
-        simpleSelectedText.setText(ocrWarning + "دەقی "
+                ? getString(R.string.ks_0507) : "";
+        simpleSelectedText.setText(ocrWarning + getString(R.string.ks_0225)
                 + (selectedSegmentIndex + 1) + ": " + shown);
         if (simpleFontButton != null) {
             String fontLabel = style.fontId;
@@ -1325,42 +1343,42 @@ public class EditorActivity extends AppCompatActivity
                     break;
                 }
             }
-            simpleFontButton.setText("A  فۆنت: " + fontLabel);
+            simpleFontButton.setText(getString(R.string.ks_0087) + fontLabel);
         }
         if (simpleSizeLabel != null) {
-            simpleSizeLabel.setText("قەبارە: "
-                    + Math.round(style.sizeScale * 100f) + "٪");
+            simpleSizeLabel.setText(getString(R.string.ks_0290)
+                    + Math.round(style.sizeScale * 100f) + getString(R.string.ks_0396));
         }
         if (simpleVisibilityButton != null) {
             simpleVisibilityButton.setText(style.visible
-                    ? "🙈  ئەم دەقە بشارەوە"
-                    : "👁  ئەم دەقە پیشان بدە");
+                    ? getString(R.string.ks_0672)
+                    : getString(R.string.ks_0636));
         }
     }
 
     private void updateColorButtons(TextStyleSettings style) {
         if (textColorButton != null) {
-            textColorButton.setText("A  ڕەنگی دەق  "
+            textColorButton.setText(getString(R.string.ks_0089)
                     + TextStyleSettings.hex(style.textColor));
         }
         if (gradientColorButton != null) {
-            gradientColorButton.setText("↘  گرادیانت  "
+            gradientColorButton.setText(getString(R.string.ks_0479)
                     + TextStyleSettings.hex(style.gradientColor));
         }
         if (outlineColorButton != null) {
-            outlineColorButton.setText("◐  دەوروبەر  "
+            outlineColorButton.setText(getString(R.string.ks_0495)
                     + TextStyleSettings.hex(style.outlineColor));
         }
         if (shadowColorButton != null) {
-            shadowColorButton.setText("☁  سێبەر  "
+            shadowColorButton.setText(getString(R.string.ks_0497)
                     + TextStyleSettings.hex(style.shadowColor));
         }
         if (backgroundColorButton != null) {
-            backgroundColorButton.setText("▦  پاشبنەما  "
+            backgroundColorButton.setText(getString(R.string.ks_0490)
                     + TextStyleSettings.hex(style.backgroundColor));
         }
         if (borderColorButton != null) {
-            borderColorButton.setText("▣  سنوور  "
+            borderColorButton.setText(getString(R.string.ks_0488)
                     + TextStyleSettings.hex(style.backgroundBorderColor));
         }
     }
@@ -1376,7 +1394,7 @@ public class EditorActivity extends AppCompatActivity
                     String tag = String.valueOf(seekBar.getTag());
                     if ("nudgeStep".equals(tag)) {
                         nudgeStepSeek.label.setText(
-                                "هەنگاوی جوڵاندن: " + (progress + 1) + "px");
+                                getString(R.string.ks_0354) + (progress + 1) + "px");
                         return;
                     }
                     Segment segment = selectedSegment();
@@ -1387,54 +1405,54 @@ public class EditorActivity extends AppCompatActivity
                     switch (tag) {
                         case "weight":
                             style.fontWeight = 100 + progress * 50;
-                            weightSeek.label.setText("ئەستووری فۆنت: " + style.fontWeight);
+                            weightSeek.label.setText(getString(R.string.ks_0140) + style.fontWeight);
                             break;
                         case "size":
                             style.sizeScale = (progress + 45) / 100f;
-                            sizeSeek.label.setText("قەبارەی دەق: " + (progress + 45) + "%");
+                            sizeSeek.label.setText(getString(R.string.ks_0295) + (progress + 45) + "%");
                             break;
                         case "line":
                             style.lineSpacing = 0.75f + progress / 100f;
-                            lineSeek.label.setText("بۆشایی هێڵ: " + String.format(
+                            lineSeek.label.setText(getString(R.string.ks_0173) + String.format(
                                     Locale.ROOT, "%.2f", style.lineSpacing));
                             break;
                         case "opacity":
                             style.textOpacity = progress + 20;
-                            opacitySeek.label.setText("ڕوونی دەق: "
+                            opacitySeek.label.setText(getString(R.string.ks_0433)
                                     + Math.round(style.textOpacity * 100f / 255f) + "%");
                             break;
                         case "outlineWidth":
                             style.outlineWidthRatio = progress / 100f;
                             outlineSeek.label.setText(
-                                    "ئەستووری دەوروبەر: " + progress + "%");
+                                    getString(R.string.ks_0136) + progress + "%");
                             break;
                         case "shadowStrength":
                             style.shadowStrength = progress / 100f;
-                            shadowSeek.label.setText("هێزی سێبەر: " + progress + "%");
+                            shadowSeek.label.setText(getString(R.string.ks_0339) + progress + "%");
                             break;
                         case "backgroundOpacity":
                             style.backgroundOpacity = progress;
-                            backgroundOpacitySeek.label.setText("ڕوونی پاشبنەما: "
+                            backgroundOpacitySeek.label.setText(getString(R.string.ks_0435)
                                     + Math.round(progress * 100f / 255f) + "%");
                             break;
                         case "radius":
                             style.backgroundRadiusRatio = progress / 100f;
-                            radiusSeek.label.setText("خڕی گۆشەکان: " + progress + "%");
+                            radiusSeek.label.setText(getString(R.string.ks_0204) + progress + "%");
                             break;
                         case "padding":
                             style.paddingScale = 0.35f + progress / 100f;
-                            paddingSeek.label.setText("بۆشایی ناوەوە: "
+                            paddingSeek.label.setText(getString(R.string.ks_0171)
                                     + Math.round(style.paddingScale * 100f) + "%");
                             break;
                         case "borderWidth":
                             style.backgroundBorderWidth = progress / 2f;
-                            borderSeek.label.setText("ئەستووری سنوور: " + String.format(
+                            borderSeek.label.setText(getString(R.string.ks_0138) + String.format(
                                     Locale.ROOT, "%.1fpx", style.backgroundBorderWidth));
                             break;
                         case "rotation":
                             style.rotationDegrees = progress - 180;
                             rotationSeek.label.setText(
-                                    "سووڕان: " + (progress - 180) + "°");
+                                    getString(R.string.ks_0255) + (progress - 180) + "°");
                             break;
                         default:
                             return;
@@ -1592,7 +1610,7 @@ public class EditorActivity extends AppCompatActivity
         updateNavigation();
         updateProjectStats();
         scheduleAutosave();
-        setStatus("✅ دەقەکە نوێکرایەوە.");
+        setStatus(getString(R.string.ks_0565));
     }
 
     private void showEditTextDialog() {
@@ -1605,11 +1623,11 @@ public class EditorActivity extends AppCompatActivity
         input.setMinLines(3);
         input.setPadding(dp(14), dp(10), dp(14), dp(10));
         new AlertDialog.Builder(this)
-                .setTitle("دەستکاری وەرگێڕانەکە")
+                .setTitle(getString(R.string.ks_0220))
                 .setMessage(segment.text)
                 .setView(input)
-                .setNegativeButton("هەڵپەساردن", null)
-                .setPositiveButton("پاشەکەوتکردن", (dialog, which) -> {
+                .setNegativeButton(getString(R.string.ks_0358), null)
+                .setPositiveButton(getString(R.string.ks_0403), (dialog, which) -> {
                     pushHistory();
                     segment.ckb = input.getText().toString().trim();
                     translatedEdit.setText(segment.ckb);
@@ -1629,7 +1647,7 @@ public class EditorActivity extends AppCompatActivity
     private void addSegment() {
         TranslationProject.Page page = currentPage();
         if (page == null || currentBitmap == null) {
-            setStatus("⚠ بۆ زیادکردنی دەق سەرەتا پێویستە وێنەی لاپەڕەکە باربێت.");
+            setStatus(getString(R.string.ks_0516));
             return;
         }
         pushHistory();
@@ -1642,7 +1660,7 @@ public class EditorActivity extends AppCompatActivity
                 Math.max(0, currentBitmap.getHeight() - height));
         Rect box = new Rect(left, top, left + width, top + height);
         Segment segment = new Segment("", box, 1);
-        segment.ckb = "دەقی نوێ";
+        segment.ckb = getString(R.string.ks_0227);
         segment.originalCkb = segment.ckb;
         Segment selected = selectedSegment();
         segment.style = new TextStyleSettings(
@@ -1702,11 +1720,11 @@ public class EditorActivity extends AppCompatActivity
             return;
         }
         new AlertDialog.Builder(this)
-                .setTitle("سڕینەوەی ئەم دەقە؟")
+                .setTitle(getString(R.string.ks_0259))
                 .setMessage(segment.ckb == null || segment.ckb.isEmpty()
                         ? segment.text : segment.ckb)
-                .setNegativeButton("نەخێر", null)
-                .setPositiveButton("سڕینەوە", (dialog, which) -> {
+                .setNegativeButton(getString(R.string.ks_0325), null)
+                .setPositiveButton(getString(R.string.ks_0257), (dialog, which) -> {
                     pushHistory();
                     page.segments.remove(selectedSegmentIndex);
                     selectedSegmentIndex = page.segments.isEmpty() ? -1
@@ -1753,7 +1771,7 @@ public class EditorActivity extends AppCompatActivity
             return;
         }
         if (segment.ensureStyle().locked) {
-            setStatus("⚠ ئەم دەقە قفڵ کراوە؛ سەرەتا لە ئامرازە پێشکەوتووەکان قفڵەکەی بکەرەوە.");
+            setStatus(getString(R.string.ks_0510));
             return;
         }
         pushHistory();
@@ -1783,7 +1801,7 @@ public class EditorActivity extends AppCompatActivity
             return;
         }
         if (segment.ensureStyle().locked) {
-            setStatus("⚠ ئەم دەقە قفڵ کراوە؛ سەرەتا لە ئامرازە پێشکەوتووەکان قفڵەکەی بکەرەوە.");
+            setStatus(getString(R.string.ks_0510));
             return;
         }
         pushHistory();
@@ -1857,11 +1875,11 @@ public class EditorActivity extends AppCompatActivity
             return;
         }
         new AlertDialog.Builder(this)
-                .setTitle(allPages ? "بۆ هەموو لاپەڕەکان؟" : "بۆ هەموو ئەم لاپەڕەیە؟")
-                .setMessage("فۆنت، ڕەنگ، پاشبنەما، دەوروبەر و سێبەری ئەم دەقە دەگوازرێتەوە؛ "
-                        + "شوێن و سووڕانی هەر دەقێک وەک خۆی دەمێنێتەوە.")
-                .setNegativeButton("نەخێر", null)
-                .setPositiveButton("جێبەجێ بکە", (dialog, which) -> {
+                .setTitle(allPages ? getString(R.string.ks_0165) : getString(R.string.ks_0163))
+                .setMessage(getString(R.string.ks_0286)
+                        + getString(R.string.ks_0276))
+                .setNegativeButton(getString(R.string.ks_0325), null)
+                .setPositiveButton(getString(R.string.ks_0194), (dialog, which) -> {
                     pushHistory();
                     TextStyleSettings style = new TextStyleSettings(source.ensureStyle());
                     if (allPages) {
@@ -1877,7 +1895,7 @@ public class EditorActivity extends AppCompatActivity
                     }
                     canvas.refreshStyles();
                     scheduleAutosave();
-                    setStatus("✅ ستایلەکە جێبەجێ کرا.");
+                    setStatus(getString(R.string.ks_0566));
                 })
                 .show();
     }
@@ -1892,18 +1910,18 @@ public class EditorActivity extends AppCompatActivity
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                 .putString(PREF_GLOBAL_STYLE, globalDefaultStyle.toJsonString())
                 .apply();
-        setStatus("✅ ئەم ستایلە بوو بە ستایلی بنەڕەتی بۆ وەرگێڕانەکانی داهاتوو.");
+        setStatus(getString(R.string.ks_0556));
     }
 
     private void armSampler(String target) {
         if (selectedSegment() == null) {
-            setStatus("⚠ سەرەتا دەقێک هەڵبژێرە.");
+            setStatus(getString(R.string.ks_0523));
             return;
         }
         samplerTarget = target;
         samplerArmed = true;
-        setStatus("🖍 ئێستا لەسەر وێنەکە بکە بۆ هەڵگرتنی ڕەنگ بۆ "
-                + ("background".equals(target) ? "پاشبنەما." : "دەق."));
+        setStatus(getString(R.string.ks_0663)
+                + ("background".equals(target) ? getString(R.string.ks_0399) : getString(R.string.ks_0224)));
     }
 
     // ------------------------------------------------------------------
@@ -1913,7 +1931,7 @@ public class EditorActivity extends AppCompatActivity
     private void showBlockList() {
         TranslationProject.Page page = currentPage();
         if (page == null || page.segments.isEmpty()) {
-            setStatus("ئەم لاپەڕەیە هیچ دەقێکی نییە.");
+            setStatus(getString(R.string.ks_0146));
             return;
         }
         String[] items = new String[page.segments.size()];
@@ -1928,13 +1946,13 @@ public class EditorActivity extends AppCompatActivity
             String ocrWarning = segment.ocrConfidence >= 0f
                     && segment.ocrConfidence < 0.78f ? "[⚠ OCR] " : "";
             items[i] = (i + 1) + ". "
-                    + (segment.ensureStyle().visible ? "" : "[شاردراوە] ")
+                    + (segment.ensureStyle().visible ? "" : getString(R.string.ks_0119))
                     + ocrWarning + shown;
         }
         new AlertDialog.Builder(this)
-                .setTitle("دەقەکانی لاپەڕە " + (pageIndex + 1))
+                .setTitle(getString(R.string.ks_0236) + (pageIndex + 1))
                 .setItems(items, (dialog, which) -> selectSegment(which, true))
-                .setNegativeButton("داخستن", null)
+                .setNegativeButton(getString(R.string.ks_0206), null)
                 .show();
     }
 
@@ -1944,16 +1962,16 @@ public class EditorActivity extends AppCompatActivity
         int pad = dp(16);
         layout.setPadding(pad, pad, pad, pad);
         EditText find = new EditText(this);
-        find.setHint("دۆزینەوە لە وەرگێڕانەکاندا…");
+        find.setHint(getString(R.string.ks_0215));
         EditText replace = new EditText(this);
-        replace.setHint("گۆڕین بۆ…");
+        replace.setHint(getString(R.string.ks_0464));
         layout.addView(find);
         layout.addView(replace);
         new AlertDialog.Builder(this)
-                .setTitle("دۆزینەوە و گۆڕین")
+                .setTitle(getString(R.string.ks_0216))
                 .setView(layout)
-                .setNegativeButton("هەڵپەساردن", null)
-                .setPositiveButton("گۆڕین لە هەموو پرۆژەکە", (dialog, which) -> {
+                .setNegativeButton(getString(R.string.ks_0358), null)
+                .setPositiveButton(getString(R.string.ks_0465), (dialog, which) -> {
                     String from = find.getText().toString();
                     String to = replace.getText().toString();
                     if (from.isEmpty() || project == null) {
@@ -1972,8 +1990,8 @@ public class EditorActivity extends AppCompatActivity
                     canvas.refreshStyles();
                     bindSelectedControls();
                     scheduleAutosave();
-                    setStatus(count == 0 ? "هیچ دەقێک نەدۆزرایەوە."
-                            : "✅ " + count + " دەق گۆڕدرا.");
+                    setStatus(count == 0 ? getString(R.string.ks_0332)
+                            : "✅ " + count + getString(R.string.ks_0031));
                 })
                 .show();
     }
@@ -1983,14 +2001,14 @@ public class EditorActivity extends AppCompatActivity
             return;
         }
         new AlertDialog.Builder(this)
-                .setTitle("سڕینەوەی دەستکارییەکان؟")
-                .setMessage("هەموو گۆڕانکارییەکانی شوێن، فۆنت، ڕەنگ و دەق لەم دانیشتنەدا "
-                        + "دەگەڕێنەوە بۆ ئەنجامی خۆکاری وەرگێڕانەکە.")
-                .setNegativeButton("نەخێر", null)
-                .setPositiveButton("گەڕاندنەوە", (dialog, which) -> {
+                .setTitle(getString(R.string.ks_0261))
+                .setMessage(getString(R.string.ks_0352)
+                        + getString(R.string.ks_0240))
+                .setNegativeButton(getString(R.string.ks_0325), null)
+                .setPositiveButton(getString(R.string.ks_0466), (dialog, which) -> {
                     pushHistory();
                     restoreSnapshot(originalSnapshotAtOpen);
-                    setStatus("↺ دەستکارییەکان گەڕێنرانەوە. دەتوانیت Undo بەکاربهێنیت بۆ گەڕانەوە.");
+                    setStatus(getString(R.string.ks_0480));
                 })
                 .show();
     }
@@ -2000,14 +2018,14 @@ public class EditorActivity extends AppCompatActivity
             return;
         }
         new AlertDialog.Builder(this)
-                .setTitle("سڕینەوەی پرۆژەی دەستکاری؟")
-                .setMessage("لاپەڕە ڕەسەنەکان و شوێن/ستایلە پاشەکەوتکراوەکانی ئەم "
-                        + "وەرگێڕانە دەسڕدرێنەوە. وێنە/CBZ و TXTی پێشتر دەرکراو لە "
-                        + "Downloads وەک خۆیان دەمێننەوە.")
-                .setNegativeButton("نەخێر", null)
-                .setPositiveButton("سڕینەوە", (dialog, which) -> {
+                .setTitle(getString(R.string.ks_0266))
+                .setMessage(getString(R.string.ks_0303)
+                        + getString(R.string.ks_0375)
+                        + getString(R.string.ks_0100))
+                .setNegativeButton(getString(R.string.ks_0325), null)
+                .setPositiveButton(getString(R.string.ks_0257), (dialog, which) -> {
                     mainHandler.removeCallbacks(autosaveRunnable);
-                    setStatus("سڕینەوەی پرۆژەکە…");
+                    setStatus(getString(R.string.ks_0265));
                     executor.execute(() -> {
                         TranslationProjectStore.deleteCurrent(getApplicationContext());
                         runOnUiThread(() -> {
@@ -2084,7 +2102,7 @@ public class EditorActivity extends AppCompatActivity
             updateNavigation();
             scheduleAutosave();
         } catch (Exception e) {
-            setStatus("❌ نەتوانرا مێژووەکە بگەڕێنرێتەوە: " + friendly(e));
+            setStatus(getString(R.string.ks_0610) + friendly(e));
         } finally {
             applyingHistory = false;
         }
@@ -2122,7 +2140,7 @@ public class EditorActivity extends AppCompatActivity
             final Exception resultFailure = failure;
             runOnUiThread(() -> {
                 if (resultFailure != null) {
-                    setStatus("❌ پاشەکەوتکردنی پرۆژەکە سەرنەکەوت: "
+                    setStatus(getString(R.string.ks_0613)
                             + friendly(resultFailure));
                     return;
                 }
@@ -2152,9 +2170,9 @@ public class EditorActivity extends AppCompatActivity
                 }
             }
         }
-        projectStats.setText(project.pages.size() + " لاپەڕە • "
-                + project.totalSegments() + " دەق • "
-                + visible + " پیشاندراو • " + hidden + " شاردراوە\n"
+        projectStats.setText(project.pages.size() + getString(R.string.ks_0040)
+                + project.totalSegments() + getString(R.string.ks_0032)
+                + visible + getString(R.string.ks_0061) + hidden + getString(R.string.ks_0036)
                 + (project.displayName == null ? "" : project.displayName));
     }
 
@@ -2177,7 +2195,7 @@ public class EditorActivity extends AppCompatActivity
     }
 
     private void importFont(Uri uri) {
-        setStatus("هاوردەکردنی فۆنتەکە…");
+        setStatus(getString(R.string.ks_0328));
         new Thread(() -> {
             try {
                 String fontId = FontCatalog.importFont(getApplicationContext(), uri);
@@ -2191,7 +2209,7 @@ public class EditorActivity extends AppCompatActivity
                         bindSelectedControls();
                         scheduleAutosave();
                     }
-                    setStatus("✅ فۆنتەکە هاوردەکرا و ئامادەیە بۆ بەکارهێنان.");
+                    setStatus(getString(R.string.ks_0568));
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> setStatus("❌ " + friendly(e)));
@@ -2202,15 +2220,15 @@ public class EditorActivity extends AppCompatActivity
     private void deleteCurrentCustomFont() {
         Segment segment = selectedSegment();
         if (segment == null || !FontCatalog.isCustom(segment.ensureStyle().fontId)) {
-            setStatus("⚠ تەنها فۆنتی هاوردەکراوی هەڵبژێردراو دەسڕدرێتەوە.");
+            setStatus(getString(R.string.ks_0518));
             return;
         }
         final String fontId = segment.ensureStyle().fontId;
         new AlertDialog.Builder(this)
-                .setTitle("سڕینەوەی فۆنتەکە؟")
-                .setMessage("هەر دەقێک ئەم فۆنتە بەکاردەهێنێت دەگەڕێتەوە بۆ Vazirmatn.")
-                .setNegativeButton("نەخێر", null)
-                .setPositiveButton("سڕینەوە", (dialog, which) -> {
+                .setTitle(getString(R.string.ks_0262))
+                .setMessage(getString(R.string.ks_0349))
+                .setNegativeButton(getString(R.string.ks_0325), null)
+                .setPositiveButton(getString(R.string.ks_0257), (dialog, which) -> {
                     pushHistory();
                     FontCatalog.deleteCustomFont(this, fontId);
                     if (project != null) {
@@ -2409,12 +2427,12 @@ public class EditorActivity extends AppCompatActivity
         int initial;
         String title;
         switch (target) {
-            case "gradient": initial = style.gradientColor; title = "ڕەنگی دووەمی گرادیانت"; break;
-            case "outline": initial = style.outlineColor; title = "ڕەنگی دەوروبەر"; break;
-            case "shadow": initial = style.shadowColor; title = "ڕەنگی سێبەر"; break;
-            case "background": initial = style.backgroundColor; title = "ڕەنگی پاشبنەما"; break;
-            case "border": initial = style.backgroundBorderColor; title = "ڕەنگی سنوور"; break;
-            default: initial = style.textColor; title = "ڕەنگی دەق"; break;
+            case "gradient": initial = style.gradientColor; title = getString(R.string.ks_0438); break;
+            case "outline": initial = style.outlineColor; title = getString(R.string.ks_0443); break;
+            case "shadow": initial = style.shadowColor; title = getString(R.string.ks_0445); break;
+            case "background": initial = style.backgroundColor; title = getString(R.string.ks_0446); break;
+            case "border": initial = style.backgroundBorderColor; title = getString(R.string.ks_0444); break;
+            default: initial = style.textColor; title = getString(R.string.ks_0440); break;
         }
         ColorPicker.show(this, title, initial, color -> {
             pushHistory();
@@ -2466,16 +2484,16 @@ public class EditorActivity extends AppCompatActivity
 
     private void updateNavigation() {
         if (project == null) {
-            pageLabel.setText("هیچ پرۆژەیەک نییە");
-            blockLabel.setText("هیچ دەقێک نییە");
+            pageLabel.setText(getString(R.string.ks_0335));
+            blockLabel.setText(getString(R.string.ks_0331));
             return;
         }
-        pageLabel.setText("لاپەڕە " + (pageIndex + 1) + "/" + project.pages.size());
+        pageLabel.setText(getString(R.string.ks_0301) + (pageIndex + 1) + "/" + project.pages.size());
         TranslationProject.Page page = currentPage();
         if (page == null || page.segments.isEmpty() || selectedSegmentIndex < 0) {
-            blockLabel.setText("هیچ دەقێک هەڵنەبژێردراوە");
+            blockLabel.setText(getString(R.string.ks_0333));
         } else {
-            blockLabel.setText("دەق " + (selectedSegmentIndex + 1)
+            blockLabel.setText(getString(R.string.ks_0222) + (selectedSegmentIndex + 1)
                     + "/" + page.segments.size());
         }
     }
@@ -2491,8 +2509,8 @@ public class EditorActivity extends AppCompatActivity
         }
         Rect box = segment.getRenderBox();
         geometryLabel.setText("X " + box.left + " • Y " + box.top
-                + " • پانی " + box.width() + " • بەرزی " + box.height()
-                + " • سووڕان "
+                + getString(R.string.ks_0067) + box.width() + getString(R.string.ks_0065) + box.height()
+                + getString(R.string.ks_0066)
                 + Math.round(segment.ensureStyle().rotationDegrees) + "°");
     }
 
@@ -2518,7 +2536,7 @@ public class EditorActivity extends AppCompatActivity
     private String friendly(Throwable error) {
         String message = error == null ? "" : error.getMessage();
         if (message == null || message.trim().isEmpty()) {
-            message = error == null ? "هەڵەی نادیار" : error.getClass().getSimpleName();
+            message = error == null ? getString(R.string.ks_0361) : error.getClass().getSimpleName();
         }
         return message.length() > 220 ? message.substring(0, 220) + "…" : message;
     }

@@ -18,7 +18,7 @@ public class KeepAliveBootReceiver extends BroadcastReceiver {
             return;
         }
         if (KeepAliveService.isManualDesired(context)) {
-            JobRuntime.setStatus("KurdMan دوای ڕیبووت/نوێکردنەوە گەڕایەوە — تا STOP");
+            JobRuntime.setStatus(context.getString(R.string.ks_0105));
             KeepAliveService.startManual(context);
         }
     }

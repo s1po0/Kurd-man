@@ -52,10 +52,10 @@ android {
         koorix {
             dimension "edition"
             applicationId "com.koorix.app"
-            versionCode 2
+            versionCode 3
             // Double quotes on purpose: the KurdMan release job greps the
             // first single-quoted versionName in this file.
-            versionName "1.1.0"
+            versionName "1.2.0"
             buildConfigField "boolean", "PUBLIC_EDITION", "true"
             buildConfigField "boolean", "SHOW_TELEGRAM", "false"
             buildConfigField "boolean", "SHOW_UNLIMITED_OCR", "false"
@@ -132,8 +132,10 @@ dependencies {
     implementation 'com.google.mlkit:text-recognition-korean:16.0.1'
     implementation 'com.google.mlkit:text-recognition-japanese:16.0.1'
     implementation 'com.google.mlkit:text-recognition-chinese:16.0.1'
-    // Runtime for the downloadable NLLB-200 offline translation model.
-    // The 1.34 GB model itself is intentionally not bundled in the APK.
+    // Lightweight offline translation language packs (~30 MB per
+    // language), replacing the removed 1.34 GB NLLB-200 download.
+    implementation 'com.google.mlkit:translate:17.0.3'
+    // ONNX Runtime, used by the optional PP-OCR accurate-OCR pack.
     implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.31.0'
     // Koorix public edition only: Google Sign-In (ID token is exchanged
     // for a Supabase session). Not present in the personal KurdMan APK.

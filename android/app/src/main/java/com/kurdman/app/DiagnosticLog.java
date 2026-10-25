@@ -125,7 +125,7 @@ final class DiagnosticLog {
         File file = logFile(context);
         String body = readFile(file);
         if (body.trim().isEmpty()) {
-            out.append("هیچ کێشەیەک هێشتا لەم بەشەدا تۆمار نەکراوە.\n")
+            out.append(context.getString(R.string.ks_0337))
                     .append("No diagnostic problem has been recorded yet.\n");
         } else {
             out.append("===== DIAGNOSTIC LOG (oldest → newest) =====\n");

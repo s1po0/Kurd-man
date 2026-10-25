@@ -40,7 +40,8 @@ import java.util.regex.Pattern;
 public class SoraniTranslator implements AutoCloseable {
     /** A fully on-device translation backend. */
     public interface OfflineEngine {
-        String translate(String text, String sourceLanguage) throws Exception;
+        String translate(String text, String sourceLanguage,
+                         String targetLanguage) throws Exception;
     }
     private static final int ROUTE_GOOGLEAPIS = 0;
     private static final int ROUTE_GOOGLE_WEB = 1;
@@ -142,6 +143,8 @@ public class SoraniTranslator implements AutoCloseable {
     private final Map<String, String> cache = new HashMap<>();
     private final OfflineEngine offlineEngine;
     private int preferredRoute = ROUTE_GOOGLEAPIS;
+    /** BCP-47-ish target language code (default Sorani). */
+    private String targetLanguage = "ckb";
 
     public SoraniTranslator() {
         this(null);
@@ -149,6 +152,34 @@ public class SoraniTranslator implements AutoCloseable {
 
     public SoraniTranslator(OfflineEngine offlineEngine) {
         this.offlineEngine = offlineEngine;
+    }
+
+    public void setTargetLanguage(String target) {
+        this.targetLanguage = (target == null || target.trim().isEmpty())
+                ? "ckb" : target.trim();
+    }
+
+    public String getTargetLanguage() {
+        return targetLanguage;
+    }
+
+    /** Targets written in Arabic script get Sorani-style sanity checks. */
+    static boolean isArabicScriptTarget(String target) {
+        if (target == null) {
+            return true;
+        }
+        switch (target) {
+            case "ckb":
+            case "ar":
+            case "fa":
+            case "ur":
+            case "ps":
+            case "sd":
+            case "ug":
+                return true;
+            default:
+                return false;
+        }
     }
 
     public boolean isOffline() {
@@ -169,8 +200,8 @@ public class SoraniTranslator implements AutoCloseable {
 
     /** Immediately fails an in-flight offline request after STOP. */
     public void cancelOffline() {
-        if (offlineEngine instanceof OfflineAiClient) {
-            ((OfflineAiClient) offlineEngine).requestCancel();
+        if (offlineEngine instanceof MlKitOfflineEngine) {
+            ((MlKitOfflineEngine) offlineEngine).requestCancel();
         }
     }
 
@@ -179,16 +210,23 @@ public class SoraniTranslator implements AutoCloseable {
         if (normalized.isEmpty()) {
             return "";
         }
+        // Re-lettering into the same language: keep the (cleaned) source.
+        if (sameLanguage(sourceLanguage, targetLanguage)) {
+            return normalized;
+        }
 
-        String glossaryHit = GLOSSARY.get(normalized.toLowerCase(Locale.ROOT));
-        if (glossaryHit != null) {
-            return glossaryHit;
+        if ("ckb".equals(targetLanguage)) {
+            String glossaryHit = GLOSSARY.get(normalized.toLowerCase(Locale.ROOT));
+            if (glossaryHit != null) {
+                return glossaryHit;
+            }
         }
 
         boolean offline = offlineEngine != null;
         String preparedSource = prepareSourceText(normalized, sourceLanguage);
         String key = (offline ? "offline" : "online")
-                + "\n" + sourceLanguage + "\n" + preparedSource;
+                + "\n" + sourceLanguage + "\n" + targetLanguage
+                + "\n" + preparedSource;
         String cached = cache.get(key);
         if (cached != null) {
             return cached;
@@ -196,8 +234,8 @@ public class SoraniTranslator implements AutoCloseable {
 
         String translated;
         if (offline) {
-            // The NLLB engine performs model-safe sentence/token chunking.
-            translated = offlineEngine.translate(preparedSource, sourceLanguage);
+            translated = offlineEngine.translate(
+                    preparedSource, sourceLanguage, targetLanguage);
         } else if (preparedSource.length() <= 1200) {
             translated = translateChunk(preparedSource, sourceLanguage);
         } else {
@@ -212,14 +250,18 @@ public class SoraniTranslator implements AutoCloseable {
             translated = joined.toString();
         }
 
-        translated = transliteratePreservedNames(normalized, translated);
-        translated = normalizeSoraniScript(normalize(translated));
+        if ("ckb".equals(targetLanguage)) {
+            translated = transliteratePreservedNames(normalized, translated);
+            translated = normalizeSoraniScript(normalize(translated));
+        } else {
+            translated = normalize(translated);
+        }
         if (translated.isEmpty()) {
             throw new IOException("Empty translation response");
         }
         if (offline && looksUntranslated(preparedSource, translated)) {
             throw new IOException(
-                    "Offline AI returned untranslated text for this segment");
+                    "Offline engine returned untranslated text for this segment");
         }
         cache.put(key, translated);
         return translated;
@@ -895,9 +937,12 @@ public class SoraniTranslator implements AutoCloseable {
         if (src.equalsIgnoreCase(out) && letterCount(src) >= 4) {
             return true;
         }
-        // A normal Sorani sentence contains Arabic-script letters. If the
-        // result has none, it is probably an echoed English/Korean source.
-        return letterCount(src) >= 5
+        // A normal sentence in an Arabic-script target contains
+        // Arabic-script letters. If the result has none, it is probably
+        // an echoed English/Korean source. For other scripts the
+        // equality check above is the only safe echo detector.
+        return isArabicScriptTarget(targetLanguage)
+                && letterCount(src) >= 5
                 && letterCount(out) >= 4
                 && arabicScriptLetterCount(out) == 0
                 && (src.contains(" ") || src.length() >= 8);
@@ -970,6 +1015,37 @@ public class SoraniTranslator implements AutoCloseable {
         return sourceLanguage == null ? "en-US" : sourceLanguage;
     }
 
+    private String googleTargetCode() {
+        return URLEncoder.encode(targetLanguage, StandardCharsets.UTF_8);
+    }
+
+    private String myMemoryTargetCode() {
+        if ("ckb".equals(targetLanguage)) {
+            return "ckb-IQ";
+        }
+        if ("zh-TW".equals(targetLanguage)) {
+            return "zh-TW";
+        }
+        if ("zh-CN".equals(targetLanguage) || "zh".equals(targetLanguage)) {
+            return "zh-CN";
+        }
+        return targetLanguage;
+    }
+
+    private static boolean sameLanguage(String a, String b) {
+        if (a == null || b == null) {
+            return false;
+        }
+        String x = a.toLowerCase(Locale.ROOT);
+        String y = b.toLowerCase(Locale.ROOT);
+        if (x.equals(y)) {
+            return true;
+        }
+        // Treat regional variants of Chinese/English as the same.
+        return x.split("-")[0].equals(y.split("-")[0])
+                && (x.startsWith("zh") || x.startsWith("en"));
+    }
+
     private String requestRoute(int route, String text, String sourceLanguage)
             throws Exception {
         String encodedSource = URLEncoder.encode(
@@ -978,15 +1054,16 @@ public class SoraniTranslator implements AutoCloseable {
         String url;
         if (route == ROUTE_GOOGLEAPIS) {
             url = "https://translate.googleapis.com/translate_a/single?client=gtx"
-                    + "&sl=" + encodedSource + "&tl=ckb&dt=t&q=" + encodedText;
+                    + "&sl=" + encodedSource + "&tl=" + googleTargetCode() + "&dt=t&q=" + encodedText;
         } else if (route == ROUTE_GOOGLE_WEB) {
             url = "https://translate.google.com/translate_a/single?client=gtx"
-                    + "&sl=" + encodedSource + "&tl=ckb&dt=t&q=" + encodedText;
+                    + "&sl=" + encodedSource + "&tl=" + googleTargetCode() + "&dt=t&q=" + encodedText;
         } else if (route == ROUTE_GOOGLE_CLIENTS5) {
             url = "https://clients5.google.com/translate_a/t?client=dict-chrome-ex"
-                    + "&sl=" + encodedSource + "&tl=ckb&q=" + encodedText;
+                    + "&sl=" + encodedSource + "&tl=" + googleTargetCode() + "&q=" + encodedText;
         } else {
-            String pair = myMemorySourceCode(sourceLanguage) + "|ckb-IQ";
+            String pair = myMemorySourceCode(sourceLanguage)
+                    + "|" + myMemoryTargetCode();
             url = "https://api.mymemory.translated.net/get?q=" + encodedText
                     + "&langpair=" + URLEncoder.encode(pair, StandardCharsets.UTF_8.name())
                     + "&mt=1";
