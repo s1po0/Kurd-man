@@ -34,7 +34,7 @@ def main() -> None:
     OUT.mkdir(exist_ok=True)
 
     print("== Exporting ONNX (fp32) ==", flush=True)
-    subprocess.run(
+    proc = subprocess.run(
         [
             "optimum-cli", "export", "onnx",
             "--model", MODEL_ID,
@@ -42,8 +42,16 @@ def main() -> None:
             "--opset", "14",
             str(FP32),
         ],
-        check=True,
+        capture_output=True, text=True,
     )
+    print(proc.stdout[-6000:], flush=True)
+    print(proc.stderr[-6000:], flush=True)
+    if proc.returncode != 0:
+        tail = (proc.stderr or proc.stdout).strip().splitlines()[-25:]
+        for line in tail:
+            clean = line.replace("%", "%25").replace("\r", " ")
+            print(f"::error title=EXPORTFAIL::{clean[:800]}", flush=True)
+        raise SystemExit(f"optimum-cli failed with code {proc.returncode}")
     for p in sorted(FP32.rglob("*")):
         if p.is_file():
             print("  fp32:", p, p.stat().st_size, flush=True)

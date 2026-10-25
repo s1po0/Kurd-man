@@ -45,8 +45,9 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          tail -n 45 convert.log | while IFS= read -r line; do
-            echo "::error title=CONVERTLOG::${line:0:900}"
+          sed -e 's/\x1b\[[0-9;]*m//g' convert.log | tail -n 30 | while IFS= read -r line; do
+            esc=$(printf '%s' "$line" | sed -e 's/%/%25/g')
+            echo "::error title=CONVERTLOG::${esc:0:800}"
           done
 
       - name: Publish to release sorani-pack-v1
