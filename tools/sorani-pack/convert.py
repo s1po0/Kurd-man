@@ -1,4 +1,4 @@
-"""Convert Helsinki-NLP/opus-mt-en-ine to a small quantized ONNX
+"""Convert Helsinki-NLP/opus-mt-en-ine (Apache-2.0) to a small quantized ONNX
 "Sorani language pack" for Koorix/KurdMan offline translation.
 
 Runs in GitHub Actions (see .github/workflows/sorani-pack.yml).

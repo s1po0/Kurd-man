@@ -36,7 +36,18 @@ jobs:
             sentencepiece sacremoses protobuf onnx onnxruntime huggingface_hub
 
       - name: Convert + quantize
-        run: python tools/sorani-pack/convert.py
+        shell: bash
+        run: |
+          set -o pipefail
+          python tools/sorani-pack/convert.py 2>&1 | tee convert.log
+
+      - name: Surface conversion log on failure
+        if: failure()
+        shell: bash
+        run: |
+          tail -n 45 convert.log | while IFS= read -r line; do
+            echo "::error title=CONVERTLOG::${line:0:900}"
+          done
 
       - name: Publish to release sorani-pack-v1
         env:
