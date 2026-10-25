@@ -5,11 +5,6 @@ name: Sorani language pack
 # Sorani translation, and publishes it to the sorani-pack-v1 release.
 on:
   workflow_dispatch:
-  push:
-    branches: ["main", "arena/**"]
-    paths:
-      - "tools/sorani-pack/**"
-      - ".github/workflows/sorani-pack.yml"
 
 permissions:
   contents: write

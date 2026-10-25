@@ -105,6 +105,42 @@ def piece_decode(ids, inv, banned, eos_id):
     return "".join(out).replace("\u2581", " ").strip()
 
 
+def beam_search_v1(enc, dec, ids, start_id, eos_id, banned, max_len=96):
+    """Round-1 exact beam (control): plain beam-4, no ngram/cap."""
+    ids_np = np.array([ids], dtype=np.int64)
+    mask_np = np.ones_like(ids_np)
+    hidden = enc.run(None, {"input_ids": ids_np,
+                            "attention_mask": mask_np})[0]
+    beams = [(0.0, [], False)]
+    for _ in range(max_len):
+        live = [b for b in beams if not b[2]]
+        if not live:
+            break
+        seqs = np.array([[start_id] + b[1] for b in live], dtype=np.int64)
+        logits = dec.run(None, {
+            "input_ids": seqs,
+            "encoder_hidden_states": np.repeat(hidden, len(live), axis=0),
+            "encoder_attention_mask": np.repeat(mask_np, len(live), axis=0),
+        })[0][:, -1, :].astype(np.float64)
+        for b in banned:
+            if b < logits.shape[1]:
+                logits[:, b] = -1e30
+        m = logits.max(axis=1, keepdims=True)
+        logp = logits - m - np.log(np.exp(logits - m).sum(axis=1, keepdims=True))
+        cand = []
+        for bi, (score, gen, _) in enumerate(live):
+            top = np.argpartition(-logp[bi], BEAMS)[:BEAMS]
+            for t in top:
+                cand.append((score + float(logp[bi, t]), gen + [int(t)],
+                             int(t) == eos_id))
+        cand.sort(key=lambda c: c[0], reverse=True)
+        beams = cand[:BEAMS]
+    def rank(b):
+        return b[0] / (max(1, len(b[1])) ** ALPHA)
+    beams.sort(key=rank, reverse=True)
+    return [t for t in beams[0][1] if t != eos_id]
+
+
 def run_model(label, pack_dir, tag_piece):
     import onnxruntime as ort
     import sentencepiece as spm
@@ -136,6 +172,9 @@ def run_model(label, pack_dir, tag_piece):
     for text in SENTENCES:
         gen = beam_search(enc, dec, encode(text), pad_id, eos_id, banned)
         results.append(piece_decode(gen, inv, banned, eos_id))
+    gen_v1 = beam_search_v1(enc, dec, encode(SENTENCES[0]), pad_id,
+                            eos_id, banned)
+    notice(f"{label}_CTRL", piece_decode(gen_v1, inv, banned, eos_id))
     for j in range(0, len(results), 3):
         chunk = " | ".join(
             f"[{j + k + 1}] {r}" for k, r in enumerate(results[j:j + 3]))
@@ -170,6 +209,11 @@ def export_quantize(model_id, fp32_dir, out_dir):
 
 
 def main():
+    import hashlib
+    for f in sorted(Path("a-pack").iterdir()):
+        if f.is_file():
+            notice("APACK", f"{f.name} {f.stat().st_size} "
+                            f"{hashlib.sha256(f.read_bytes()).hexdigest()[:16]}")
     export_quantize("Helsinki-NLP/opus-mt-ine-ine", "c-fp32", "c-out")
     notice("SENTENCES", " | ".join(
         f"[{i+1}] {s}" for i, s in enumerate(SENTENCES)))
