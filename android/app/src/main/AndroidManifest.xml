@@ -86,7 +86,7 @@
             </intent-filter>
         </receiver>
 
-        <!-- Offline ONNX/NLLB inference runs in its own process so a
+        <!-- Offline language-pack inference runs in its own process so a
              native abort or low-memory kill there cannot take the
              whole app down with it. -->
         <!-- PP-OCR's ONNX inference is isolated for the same reason: a

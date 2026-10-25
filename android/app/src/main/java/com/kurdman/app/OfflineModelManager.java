@@ -24,29 +24,28 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Downloads and verifies the optional, app-private NLLB-200 offline pack.
+ * Downloads and verifies the Sorani offline language pack.
  *
- * <p>The 1.34 GB model is deliberately not bundled in the APK and is never
- * written to the Git repository. Files are fetched from a pinned Hugging
- * Face revision, downloaded to resumable {@code .part} files, checked by
- * exact size and SHA-256, and only then renamed into place.</p>
+ * <p>Google's offline packs have no Sorani, so — exactly like every
+ * other language downloads its pack — Sorani downloads this pack once:
+ * Helsinki-NLP OPUS-MT (English &rarr; Sorani, Apache-2.0) converted to
+ * quantized ONNX by {@code tools/sorani-pack/convert.py} and hosted in
+ * the {@code sorani-pack-v1} GitHub release. Files are fetched to
+ * resumable {@code .part} files, checked by exact size and SHA-256,
+ * and only then renamed into place.</p>
  */
 final class OfflineModelManager {
     private static final String TAG = "OfflineModelManager";
 
     static final String ENCODER_FILE = "encoder_model_quantized.onnx";
     static final String DECODER_FILE = "decoder_model_quantized.onnx";
-    static final String DECODER_WITH_PAST_FILE =
-            "decoder_with_past_model_quantized.onnx";
-    static final String TOKENIZER_FILE = "sentencepiece.bpe.model";
+    static final String SOURCE_SPM_FILE = "source.spm";
+    static final String VOCAB_FILE = "vocab.json";
 
-    private static final String MODEL_REVISION =
-            "261c31d1a5732c67cdd16d80e8d6088507c7ccea";
     private static final String BASE_URL =
-            "https://huggingface.co/Xenova/nllb-200-distilled-600M/resolve/"
-                    + MODEL_REVISION;
-    private static final String VERIFIED_MARKER = "kurdman-verified-v1.txt";
-    private static final long EXTRA_FREE_SPACE_BYTES = 256L * 1024L * 1024L;
+            "https://github.com/s1po0/Kurd-man/releases/download/sorani-pack-v1";
+    private static final String VERIFIED_MARKER = "koorix-sorani-pack-v1.txt";
+    private static final long EXTRA_FREE_SPACE_BYTES = 64L * 1024L * 1024L;
     private static final int BUFFER_SIZE = 256 * 1024;
 
     interface Progress {
@@ -72,25 +71,25 @@ final class OfflineModelManager {
 
     static {
         FILES.add(new ModelFileSpec(
-                TOKENIZER_FILE,
-                TOKENIZER_FILE,
-                4852054L,
-                "14bb8dfb35c0ffdea7bc01e56cea38b9e3d5efcdcb9c251d6b40538e1aab555a"));
+                SOURCE_SPM_FILE,
+                SOURCE_SPM_FILE,
+                787791L,
+                "2ce1975bbd3ee1c2f8eb33eccbffa2b1130f5bbc3ba636c40b6b464e5bcf58fc"));
         FILES.add(new ModelFileSpec(
-                "onnx/" + ENCODER_FILE,
+                VOCAB_FILE,
+                VOCAB_FILE,
+                1668179L,
+                "b816b63f146179bcb88e1d60ce8375f72a789cc43bd7cdf5f43ead9c6f1b81be"));
+        FILES.add(new ModelFileSpec(
                 ENCODER_FILE,
-                419120483L,
-                "5cde664eacba07a62f198857ec6c06e09572b1ebb77c8137f1fa99ac604a3a28"));
+                ENCODER_FILE,
+                50959107L,
+                "ca19ae268210f5ec8e206946a3f7c42c0d6035de0af3baa35fe0a17d791b4686"));
         FILES.add(new ModelFileSpec(
-                "onnx/" + DECODER_FILE,
                 DECODER_FILE,
-                470533055L,
-                "ddea619b640379609719becf91a488c5e6ce4c4b2052efbb5388edaed465a552"));
-        FILES.add(new ModelFileSpec(
-                "onnx/" + DECODER_WITH_PAST_FILE,
-                DECODER_WITH_PAST_FILE,
-                445006987L,
-                "374293cb4bb59cd29810851a7cfbc568accb8efdc1a953ac04722e30adaf2d0b"));
+                DECODER_FILE,
+                89532045L,
+                "45e5007cfc638948501a16063280535e5e238a953641fbe17284c77bfd0c302d"));
     }
 
     private final Context context;
@@ -100,6 +99,12 @@ final class OfflineModelManager {
     }
 
     File modelDir() {
+        return new File(new File(context.getFilesDir(), "language-packs"),
+                "sorani-opus-v1");
+    }
+
+    /** The retired 1.34 GB model dir from Koorix 1.2.1, if downloaded. */
+    File legacyModelDir() {
         return new File(new File(context.getFilesDir(), "offline-ai"),
                 "nllb-200-distilled-600m-int8");
     }
@@ -172,7 +177,7 @@ final class OfflineModelManager {
         }
 
         // If a verified marker vanished but exact-size finals are present,
-        // verify them below instead of downloading gigabytes again.
+        // verify them below instead of downloading the pack again.
         ensureFreeSpace(dir);
         long completedBytes = 0;
         for (ModelFileSpec spec : FILES) {
@@ -199,12 +204,14 @@ final class OfflineModelManager {
 
         writeVerifiedMarker(dir);
         notifyProgress(progress, totalBytes(), "", false);
-        Log.i(TAG, "Offline NLLB model ready in " + dir.getAbsolutePath());
+        Log.i(TAG, "Sorani language pack ready in " + dir.getAbsolutePath());
     }
 
     boolean deleteModel() {
         File dir = modelDir();
         deleteRecursive(dir);
+        // Also free the retired 1.34 GB model from Koorix 1.2.1.
+        deleteRecursive(legacyModelDir());
         return !dir.exists();
     }
 
@@ -278,7 +285,7 @@ final class OfflineModelManager {
             connection.setReadTimeout(120000);
             connection.setInstanceFollowRedirects(true);
             connection.setRequestProperty("User-Agent",
-                    "KurdMan/1.5 (Android; NLLB-200 offline model)");
+                    "Koorix (Android; Sorani language pack)");
             connection.setRequestProperty("Accept", "application/octet-stream");
             connection.setRequestProperty("Accept-Encoding", "identity");
             if (existing > 0) {
@@ -440,7 +447,7 @@ final class OfflineModelManager {
         File marker = new File(dir, VERIFIED_MARKER);
         OutputStream out = new FileOutputStream(marker);
         try {
-            String text = "KurdMan offline NLLB pack verified\n"
+            String text = "Koorix Sorani language pack verified\n"
                     + "revision=" + MODEL_REVISION + "\n"
                     + "files=" + FILES.size() + "\n"
                     + "bytes=" + totalBytes() + "\n";

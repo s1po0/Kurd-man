@@ -42,7 +42,6 @@ final class SupabaseAuth {
     private static final String K_EXPIRES = "expires_at_ms";
     private static final String K_EMAIL = "email";
     private static final String K_PENDING_EMAIL = "pending_email";
-    private static final String K_PENDING_PHONE = "pending_phone";
     private static final String K_PREMIUM_UNTIL = "premium_until_cache";
     private static final String K_LOCAL_DAY = "local_day";
     private static final String K_LOCAL_JOBS = "local_jobs";
@@ -87,16 +86,12 @@ final class SupabaseAuth {
                 .apply();
     }
 
-    /** Display identity: email when present, else the phone number. */
+    /** Display identity: the signed-in email address. */
     private static String sessionIdentity(Context ctx, JSONObject user) {
         if (user != null) {
             String email = user.optString("email", "");
             if (!email.isEmpty()) {
                 return email;
-            }
-            String phone = user.optString("phone", "");
-            if (!phone.isEmpty()) {
-                return phone.startsWith("+") ? phone : "+" + phone;
             }
         }
         return email(ctx);
@@ -181,35 +176,6 @@ final class SupabaseAuth {
         } catch (JSONException ignored) {
         }
         post(ctx, "/auth/v1/verify", body, false, sessionSaver(ctx, cb));
-    }
-
-    /** Sends an SMS OTP via Supabase phone auth (provider must be on). */
-    static void sendPhoneOtp(Context ctx, String phoneE164, Callback cb) {
-        prefs(ctx).edit().putString(K_PENDING_PHONE, phoneE164).apply();
-        JSONObject body = new JSONObject();
-        try {
-            body.put("phone", phoneE164);
-            body.put("create_user", true);
-        } catch (JSONException ignored) {
-        }
-        post(ctx, "/auth/v1/otp", body, false, cb);
-    }
-
-    /** Verifies the SMS code; on success a session is saved. */
-    static void verifyPhoneOtp(Context ctx, String phoneE164, String token,
-                               Callback cb) {
-        JSONObject body = new JSONObject();
-        try {
-            body.put("type", "sms");
-            body.put("phone", phoneE164);
-            body.put("token", token.trim());
-        } catch (JSONException ignored) {
-        }
-        post(ctx, "/auth/v1/verify", body, false, sessionSaver(ctx, cb));
-    }
-
-    static String pendingPhone(Context ctx) {
-        return prefs(ctx).getString(K_PENDING_PHONE, "");
     }
 
     /**

@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Pure-Java SentencePiece BPE tokenizer for the NLLB-200 model.
+ * Pure-Java SentencePiece BPE tokenizer for the offline packs.
  *
  * <p>The protobuf/BPE approach is adapted from the MIT-licensed
  * InstantVoiceTranslate project (see assets/licenses). This implementation
@@ -151,6 +151,21 @@ final class SentencePieceBpe implements AutoCloseable {
         return result;
     }
 
+    /**
+     * Segments text into final piece strings (byte-fallback pieces are
+     * expanded to their {@code <0xXX>} names; unknown symbols become
+     * {@code <unk>}). For tokenizers whose model ids live in a separate
+     * vocabulary file (OPUS-MT's vocab.json) rather than in this .spm.
+     */
+    java.util.List<String> encodePieces(String text) {
+        int[] ids = encode(text);
+        ArrayList<String> result = new ArrayList<>(ids.length);
+        for (int id : ids) {
+            result.add(id >= 0 && id < pieces.length ? pieces[id] : "<unk>");
+        }
+        return result;
+    }
+
     String decode(int[] ids) {
         ensureLoaded();
         if (ids == null || ids.length == 0) {
@@ -173,6 +188,29 @@ final class SentencePieceBpe implements AutoCloseable {
         }
         flushPendingBytes(out, pendingBytes);
         return out.toString().replace(SPACE_MARKER, " ").trim();
+    }
+
+    /** Id of an exact piece string, or null when the model lacks it. */
+    Integer pieceId(String piece) {
+        ensureLoaded();
+        return pieceToId.get(piece);
+    }
+
+    /** Piece string for an id, or null when out of range. */
+    String piece(int id) {
+        ensureLoaded();
+        return id >= 0 && id < pieces.length ? pieces[id] : null;
+    }
+
+    /** SentencePiece piece type (1 NORMAL, 2 UNKNOWN, 3 CONTROL, 6 BYTE). */
+    int pieceType(int id) {
+        ensureLoaded();
+        return id >= 0 && id < types.length ? types[id] : -1;
+    }
+
+    int vocabSize() {
+        ensureLoaded();
+        return pieces.length;
     }
 
     @Override

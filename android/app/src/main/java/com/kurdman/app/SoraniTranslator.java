@@ -202,8 +202,8 @@ public class SoraniTranslator implements AutoCloseable {
     public void cancelOffline() {
         if (offlineEngine instanceof MlKitOfflineEngine) {
             ((MlKitOfflineEngine) offlineEngine).requestCancel();
-        } else if (offlineEngine instanceof OfflineAiClient) {
-            ((OfflineAiClient) offlineEngine).requestCancel();
+        } else if (offlineEngine instanceof SoraniPackEngine) {
+            ((SoraniPackEngine) offlineEngine).requestCancel();
         }
     }
 
@@ -301,7 +301,7 @@ public class SoraniTranslator implements AutoCloseable {
 
     /**
      * Converts a mostly-uppercase English block to ordinary sentence case.
-     * Both online routes and NLLB were trained predominantly on such text.
+     * Online routes and the offline pack were trained on such text.
      */
     private String prepareOfflineSourceText(String text, String sourceLanguage) {
         if (!isMostlyUppercaseEnglish(text, sourceLanguage)) {
