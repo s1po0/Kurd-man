@@ -11,6 +11,9 @@ public class Segment {
     public String ckb = "";
     /** Translation as first produced, used by the editor's reset action. */
     public String originalCkb = "";
+    /** Translation provenance/review hints; not a semantic accuracy score. */
+    public String translationMethod = "standard";
+    public String translationWarnings = "";
     /** OCR rectangle in page coordinates. This is never moved by the editor. */
     public Rect box;
     /** Editable rectangle where the Kurdish text is drawn. */
@@ -99,6 +102,8 @@ public class Segment {
         Segment copy = new Segment(text, box, lines);
         copy.ckb = ckb;
         copy.originalCkb = originalCkb;
+        copy.translationMethod = translationMethod;
+        copy.translationWarnings = translationWarnings;
         copy.renderBox = new Rect(getRenderBox());
         copy.eraseBox = new Rect(getEraseBox());
         copy.sourceLineHeight = sourceLineHeight;

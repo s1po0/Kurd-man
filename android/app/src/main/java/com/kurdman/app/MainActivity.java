@@ -168,6 +168,8 @@ public class MainActivity extends AppCompatActivity {
     private Spinner sourceSpinner;
     private Spinner targetSpinner;
     private Spinner translationModeSpinner;
+    private Button comicSettingsButton;
+    private TextView comicSkillSummary;
     private TextView offlineModelStatus;
     private Button downloadOfflineButton;
     private Button deleteOfflineButton;
@@ -335,6 +337,11 @@ public class MainActivity extends AppCompatActivity {
         sourceSpinner = findViewById(R.id.sourceSpinner);
         targetSpinner = findViewById(R.id.targetSpinner);
         translationModeSpinner = findViewById(R.id.translationModeSpinner);
+        comicSettingsButton = findViewById(R.id.comicSettingsButton);
+        comicSkillSummary = findViewById(R.id.comicSkillSummary);
+        comicSettingsButton.setOnClickListener(v -> startActivity(new Intent(this,
+                ComicSettingsActivity.class).putExtra("source", selectedSourceLanguage())
+                .putExtra("target", selectedTargetLanguage())));
         offlineModelStatus = findViewById(R.id.offlineModelStatus);
         downloadOfflineButton = findViewById(R.id.downloadOfflineButton);
         deleteOfflineButton = findViewById(R.id.deleteOfflineButton);
@@ -428,6 +435,7 @@ public class MainActivity extends AppCompatActivity {
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 prefs.edit().putInt("source_index", position).apply();
                 refreshOfflineModelUi();
+                refreshComicSkillUi();
             }
 
             @Override
@@ -452,6 +460,7 @@ public class MainActivity extends AppCompatActivity {
                 prefs.edit().putInt("target_index", position).apply();
                 refreshOfflineModelUi();
                 updateHeroTagline();
+                refreshComicSkillUi();
             }
 
             @Override
@@ -794,6 +803,7 @@ public class MainActivity extends AppCompatActivity {
             KeepAliveService.startManual(this);
         }
         reloadGlobalTextStyleFromPrefs();
+        refreshComicSkillUi();
         refreshKeepAliveUi();
         if (JobRuntime.isRunning()) {
             currentBusy = true;
@@ -1778,8 +1788,18 @@ public class MainActivity extends AppCompatActivity {
                 + 0.114f * Color.blue(color));
     }
 
+    private void refreshComicSkillUi() {
+        if (comicSkillSummary != null) {
+            comicSkillSummary.setText(ComicSettings.summary(this, ComicSettings.read(
+                    this, selectedSourceLanguage(), selectedTargetLanguage())));
+        }
+    }
+
     private SoraniTranslator createTranslator(boolean offlineMode,
-                                              String targetLanguage) {
+                                              String targetLanguage,
+                                              ComicTranslationSkill.Config comicConfig) throws Exception {
+        // Validate/load before allocating a native engine.
+        ComicTranslationSkill skill = new ComicTranslationSkill(comicConfig, ComicSettings.lexicon(this));
         SoraniTranslator translator;
         if (!offlineMode) {
             translator = new SoraniTranslator();
@@ -1791,8 +1811,35 @@ public class MainActivity extends AppCompatActivity {
             translator = new SoraniTranslator(new MlKitOfflineEngine());
         }
         translator.setTargetLanguage(targetLanguage);
+        translator.setComicSkill(skill);
         activeTranslator = translator;
         return translator;
+    }
+
+    private void translateSegments(SoraniTranslator translator, List<Segment> segments,
+                                   String source, String statusPrefix) throws Exception {
+        List<String> texts = new ArrayList<>();
+        for (Segment segment : segments) texts.add(segment.text);
+        ComicTranslationSkill.PageResult page = translator.translatePage(texts, source,
+                (completed, total) -> {
+                    throwIfJobStopped();
+                    setStatus(statusPrefix + Math.min(completed + 1, total) + "/" + total + "…");
+                });
+        if (page.results.size() != segments.size()) throw new IOException("Comic bubble alignment mismatch");
+        int review = 0;
+        for (int i = 0; i < segments.size(); i++) {
+            Segment segment = segments.get(i);
+            ComicTranslationSkill.Result result = page.results.get(i);
+            segment.ckb = result.text;
+            segment.originalCkb = result.text;
+            segment.translationMethod = result.method;
+            segment.translationWarnings = result.warnings;
+            if (!result.warnings.isEmpty()) review++;
+        }
+        DiagnosticLog.info(getApplicationContext(), "comic_skill",
+                "genre=" + page.genre + ", bubbles=" + segments.size() + ", localRules=" + page.localRules
+                        + ", contextRequests=" + page.contextRequests + ", contextFallbacks=" + page.contextFallbacks
+                        + ", glossaryFallbacks=" + page.glossaryFallbacks + ", review=" + review);
     }
 
     private void closeTranslator(SoraniTranslator translator) {
@@ -2873,6 +2920,7 @@ public class MainActivity extends AppCompatActivity {
         }
         final String sourceLanguage = selectedSourceLanguage();
         final String targetLanguage = selectedTargetLanguage();
+        final ComicTranslationSkill.Config comicConfig = ComicSettings.read(this, sourceLanguage, targetLanguage);
         ManhwaRenderer.activeTargetLanguage = targetLanguage;
         ManhwaRenderer.i18nContext = getApplicationContext();
         JobRuntime.init(getApplicationContext());
@@ -2918,6 +2966,7 @@ public class MainActivity extends AppCompatActivity {
                                 : (imageBatch ? batchFiles.size() : 1))
                         + ", source=" + sourceLanguage
                         + ", offline=" + offlineMode
+                        + ", comicSkill=" + comicConfig.enabled + ", comicGenre=" + comicConfig.genre
                         + ", accurateOcr=" + accurateOcr
                         + ", createPdf=" + createPdf
                         + ", unlimitedOcr=" + (unlimitedOcr != null));
@@ -2941,7 +2990,7 @@ public class MainActivity extends AppCompatActivity {
                             imageBatch ? batchNames : null,
                             imageBatch ? batchLabel : cbzName,
                             imageBatch ? batchBase : null,
-                            sourceLanguage, targetLanguage, offlineMode,
+                            sourceLanguage, targetLanguage, offlineMode, comicConfig,
                             accurateOcr,
                             createPdf, chosenStyle, unlimitedOcr);
                     return;
@@ -2971,6 +3020,7 @@ public class MainActivity extends AppCompatActivity {
                 projectPage.width = sourceBitmap.getWidth();
                 projectPage.height = sourceBitmap.getHeight();
                 project.targetLanguage = targetLanguage;
+                project.comicConfig = comicConfig;
                 project.pages.add(projectPage);
                 project.save();
 
@@ -3000,18 +3050,9 @@ public class MainActivity extends AppCompatActivity {
 
                 projectPage.segments.addAll(segments);
                 project.save();
-                translator = createTranslator(offlineMode, targetLanguage);
-                for (int i = 0; i < segments.size(); i++) {
-                    throwIfJobStopped();
-                    Segment segment = segments.get(i);
-                    setStatus((offlineMode
-                                    ? getString(R.string.ks_0686)
-                                    : getString(R.string.ks_0371))
-                            + (i + 1) + "/" + segments.size() + "…");
-                    segment.ckb = translator.translate(segment.text, sourceLanguage);
-                    segment.originalCkb = segment.ckb;
-                    throwIfJobStopped();
-                }
+                translator = createTranslator(offlineMode, targetLanguage, comicConfig);
+                translateSegments(translator, segments, sourceLanguage, offlineMode
+                        ? getString(R.string.ks_0686) : getString(R.string.ks_0371));
                 project.save();
 
                 // Free the (offline) model before rendering copies the full
@@ -3112,6 +3153,7 @@ public class MainActivity extends AppCompatActivity {
                                        String sourceLanguage,
                                        String targetLanguage,
                                        boolean offlineMode,
+                                       ComicTranslationSkill.Config comicConfig,
                                        boolean accurateOcr,
                                        boolean createPdf,
                                        TextStyleSettings chosenStyle,
@@ -3131,6 +3173,7 @@ public class MainActivity extends AppCompatActivity {
                 getApplicationContext(), true, displayName,
                 projectBase, sourceLanguage);
         project.targetLanguage = targetLanguage;
+        project.comicConfig = comicConfig;
         File inputDir = new File(project.projectDir, "pages");
         File outputDir = new File(getCacheDir(), "cbz-output-" + timestamp());
         if ((!inputDir.exists() && !inputDir.mkdirs())
@@ -3227,7 +3270,7 @@ public class MainActivity extends AppCompatActivity {
 
             // Phase 2: translate everything with no page bitmaps in memory,
             // then free the model before any rendering happens.
-            translator = createTranslator(offlineMode, targetLanguage);
+            translator = createTranslator(offlineMode, targetLanguage, comicConfig);
             for (int i = 0; i < pageTotal; i++) {
                 throwIfJobStopped();
                 List<Segment> segments = pageSegments.get(i);
@@ -3235,16 +3278,9 @@ public class MainActivity extends AppCompatActivity {
                     continue;
                 }
                 int pageNumber = i + 1;
-                for (int s = 0; s < segments.size(); s++) {
-                    throwIfJobStopped();
-                    Segment segment = segments.get(s);
-                    setStatus(getString(R.string.ks_0301) + pageNumber + "/" + pageTotal
-                            + (offlineMode ? getString(R.string.ks_0084) : getString(R.string.ks_0083))
-                            + (s + 1) + "/" + segments.size() + "…");
-                    segment.ckb = translator.translate(segment.text, sourceLanguage);
-                    segment.originalCkb = segment.ckb;
-                    throwIfJobStopped();
-                }
+                translateSegments(translator, segments, sourceLanguage,
+                        getString(R.string.ks_0301) + pageNumber + "/" + pageTotal
+                                + (offlineMode ? getString(R.string.ks_0084) : getString(R.string.ks_0083)));
             }
             project.save();
             closeTranslator(translator);
@@ -4711,6 +4747,8 @@ public class MainActivity extends AppCompatActivity {
             builder.append('[').append(i + 1).append("]\n");
             builder.append(segment.text.replace('\n', ' ')).append('\n');
             builder.append("→ ").append(segment.ckb);
+            String review = ComicSettings.warnings(this, segment.translationWarnings);
+            if (!review.isEmpty()) builder.append('\n').append(review);
             if (!segment.rendered) {
                 builder.append(getString(R.string.ks_0004));
             }
@@ -4939,6 +4977,8 @@ public class MainActivity extends AppCompatActivity {
         if (translationModeSpinner != null) {
             translationModeSpinner.setEnabled(enabled);
         }
+        if (targetSpinner != null) targetSpinner.setEnabled(enabled);
+        if (comicSettingsButton != null) comicSettingsButton.setEnabled(enabled);
         if (accurateOcrCheck != null) {
             accurateOcrCheck.setEnabled(enabled);
         }

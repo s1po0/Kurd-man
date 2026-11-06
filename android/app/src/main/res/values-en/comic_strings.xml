@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="comic_title">"Manga / Manhwa skill"</string>
+    <string name="comic_back">"Back"</string>
+    <string name="comic_enable">"Enable Manga / Manhwa skill"</string>
+    <string name="comic_intro">"Natural dialogue idioms, comic terminology and consistent names. Online, neighbouring dialogue is translated together, but each bubble stays separate."</string>
+    <string name="comic_configure">"✦ Configure Manga / Manhwa"</string>
+    <string name="comic_enabled_summary">"On • %1$s • %2$d custom names/terms"</string>
+    <string name="comic_disabled_summary">"Off — using standard translation."</string>
+    <string name="comic_genre_title">"01 / Story genre"</string>
+    <string name="comic_genre_auto">"Auto — page vocabulary"</string>
+    <string name="comic_genre_fantasy">"Fantasy / RPG / Hunters"</string>
+    <string name="comic_genre_martial">"Martial arts / Murim"</string>
+    <string name="comic_genre_everyday">"Everyday / School / Romance"</string>
+    <string name="comic_genre_help">"Auto uses lexical clues on this page, not guessed speakers or relationships. Select a genre for a known story. Ambiguous words such as class or party are not blindly forced into combat meanings."</string>
+    <string name="comic_glossary_title">"02 / Story names &amp; terminology"</string>
+    <string name="comic_glossary_help">"One entry per line: original = translation. Up to 100. Use your preferred name spelling. This preset is saved for this language pair and copied into each project; clear it when starting a different story."</string>
+    <string name="comic_glossary_example">"Jinwoo = جین‌وو\nShadow Monarch = پاشای سێبەرەکان"</string>
+    <string name="comic_glossary_generic_example">"original = preferred translation"</string>
+    <string name="comic_glossary_error">"Check line %1$d: original = translation; no duplicates; up to 100 entries (80 source / 160 target characters)."</string>
+    <string name="comic_clear">"Clear story glossary"</string>
+    <string name="comic_clear_title">"Clear the glossary?"</string>
+    <string name="comic_clear_message">"Saved projects are not changed. Tap Save to apply this change to future translations."</string>
+    <string name="comic_save">"Save skill &amp; glossary"</string>
+    <string name="comic_saved">"Manga / Manhwa settings saved."</string>
+    <string name="comic_other_targets">"The built-in Sorani lexicon applies only to Sorani. Online context windows and your own glossary also work with other targets; Sorani text is never forced into another language."</string>
+    <string name="comic_limits">"This is a rule-and-glossary layer, not a newly trained model. Offline uses the existing packs and remains limited. A ⚠ hint asks you to review numbers/terms; no warning does NOT guarantee correct meaning."</string>
+    <string name="comic_review_numbers">"Check numbers against the source"</string>
+    <string name="comic_review_repetition">"Check repeated words"</string>
+    <string name="comic_review_untranslated">"This text may be untranslated"</string>
+    <string name="comic_review_glossary">"Used normal fallback; check names/terminology"</string>
+</resources>

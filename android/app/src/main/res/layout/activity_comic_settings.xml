@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@drawable/bg_page_gradient" android:orientation="vertical"
+    android:fitsSystemWindows="true">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical" android:padding="16dp">
+        <Button android:id="@+id/comicBack" android:layout_width="wrap_content"
+            android:layout_height="48dp" android:text="@string/comic_back"
+            android:textAllCaps="false" android:textColor="@color/text_primary"
+            android:background="@drawable/bg_button_secondary" android:paddingHorizontal="16dp" />
+        <TextView android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="wrap_content" android:layout_marginStart="12dp"
+            android:text="@string/comic_title" android:textSize="20sp" android:textStyle="bold"
+            android:textColor="@color/text_primary" />
+    </LinearLayout>
+
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1" android:fillViewport="true">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:paddingHorizontal="16dp" android:paddingBottom="24dp">
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:background="@drawable/bg_card_accent" android:padding="20dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="MANGA / MANHWA" android:textDirection="ltr" android:textSize="12sp"
+                    android:letterSpacing="0.12" android:textColor="@color/primary" android:textStyle="bold" />
+                <CheckBox android:id="@+id/comicEnabled" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:minHeight="52dp"
+                    android:buttonTint="@color/primary" android:text="@string/comic_enable"
+                    android:textSize="17sp" android:textStyle="bold" android:textColor="@color/text_primary" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="@string/comic_intro" android:textSize="14sp" android:lineSpacingMultiplier="1.25"
+                    android:textColor="@color/text_secondary" />
+                <TextView android:id="@+id/comicLanguagePair" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_glass_chip" android:padding="10dp"
+                    android:textDirection="ltr" android:textColor="@color/text_primary" android:textSize="13sp" />
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="14dp" android:orientation="vertical"
+                android:background="@drawable/bg_card" android:padding="18dp">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="@string/comic_genre_title" android:textSize="17sp"
+                    android:textStyle="bold" android:textColor="@color/text_primary" />
+                <Spinner android:id="@+id/comicGenre" android:layout_width="match_parent"
+                    android:layout_height="52dp" android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_input" android:spinnerMode="dropdown" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp" android:text="@string/comic_genre_help"
+                    android:textColor="@color/text_secondary" android:textSize="13sp" android:lineSpacingMultiplier="1.2" />
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="14dp" android:orientation="vertical"
+                android:background="@drawable/bg_card" android:padding="18dp">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="@string/comic_glossary_title" android:textColor="@color/text_primary"
+                    android:textSize="17sp" android:textStyle="bold" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:text="@string/comic_glossary_help"
+                    android:textColor="@color/text_secondary" android:textSize="13sp" android:lineSpacingMultiplier="1.2" />
+                <EditText android:id="@+id/comicGlossary" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_input" android:gravity="top|start"
+                    android:inputType="textMultiLine|textNoSuggestions" android:minLines="5"
+                    android:maxLength="12000" android:padding="14dp" android:layoutDirection="ltr"
+                    android:textDirection="firstStrong" android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_muted" android:textSize="15sp"
+                    android:hint="@string/comic_glossary_example" android:importantForAutofill="no" />
+                <Button android:id="@+id/comicClear" android:layout_width="match_parent"
+                    android:layout_height="48dp" android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_button_secondary" android:text="@string/comic_clear"
+                    android:textAllCaps="false" android:textColor="@color/text_secondary" />
+            </LinearLayout>
+            <TextView android:id="@+id/comicOtherTargetsNote" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="16dp" android:paddingHorizontal="8dp"
+                android:text="@string/comic_other_targets" android:textColor="@color/text_secondary"
+                android:textSize="13sp" android:lineSpacingMultiplier="1.2" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="16dp" android:paddingHorizontal="8dp"
+                android:text="@string/comic_limits" android:textColor="@color/text_muted"
+                android:textSize="13sp" android:lineSpacingMultiplier="1.25" />
+        </LinearLayout>
+    </ScrollView>
+    <Button android:id="@+id/comicSave" android:layout_width="match_parent" android:layout_height="56dp"
+        android:layout_margin="16dp" android:background="@drawable/bg_button_primary"
+        android:text="@string/comic_save" android:textAllCaps="false" android:textSize="16sp"
+        android:textStyle="bold" android:textColor="@color/white" />
+</LinearLayout>

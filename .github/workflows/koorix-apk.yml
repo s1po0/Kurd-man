@@ -7,6 +7,7 @@ on:
     paths:
       - "android/**"
       - ".github/workflows/koorix-apk.yml"
+      - "tools/comic-skill/**"
 
 permissions:
   contents: read
@@ -25,6 +26,19 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+
+      - name: Test comic translation rules and safety contracts
+        run: |
+          set +e
+          bash tools/comic-skill/test.sh > /tmp/comic-tests.log 2>&1
+          code=$?
+          cat /tmp/comic-tests.log
+          if [ $code -ne 0 ]; then
+            tail -n 8 /tmp/comic-tests.log | while IFS= read -r line; do echo "::error::$line"; done
+          else
+            echo "::notice::$(tail -n 1 /tmp/comic-tests.log)"
+          fi
+          exit $code
 
       # Same cached stable debug keystore as the KurdMan build, so Koorix
       # updates also install over the previous Koorix version. This caches
@@ -201,7 +215,7 @@ jobs:
             exit 1
           fi
           cp "$APK" "Koorix-v$VERSION.apk"
-          NOTES="Koorix v$VERSION — manhwa translator to Sorani Kurdish (public edition, debug build, arm64). Create a free account inside the app to start translating; Premium removes the daily limit. Install over the previous Koorix version to keep your account and downloads."
+          NOTES="Koorix v$VERSION — manga/manhwa translation to all supported languages, with a specialised comic skill and editable story glossary (public edition, debug build, arm64). Create a free account inside the app to start translating; Premium removes the daily limit. Install over the previous Koorix version to keep your account and downloads."
           if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
             gh release upload "$TAG" "Koorix-v$VERSION.apk" --clobber \
               --repo "${{ github.repository }}"

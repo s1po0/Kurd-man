@@ -1,0 +1,211 @@
+# Koorix comic skill v1. Curated Sorani vocabulary, not a trained model.
+# kind<TAB>domain<TAB>source language<TAB>source<TAB>Sorani
+# Full-line idioms only: never replace these inside a different sentence.
+line	all	en	over my dead body	تا من زیندووم، ڕێگەی پێ نادەم!
+line	all	en	you've got some nerve	ڕووخۆشت زۆرە!
+line	all	en	you have some nerve	ڕووخۆشت زۆرە!
+line	all	en	don't push your luck	بەختت زیاتر تاقی مەکەرەوە.
+line	all	en	just my luck	بەختی من هەر ئەوەیە!
+line	all	en	get a hold of yourself	خۆت کۆنترۆڵ بکە!
+line	all	en	get hold of yourself	خۆت کۆنترۆڵ بکە!
+line	all	en	snap out of it	بەخۆتدا بێرەوە!
+line	all	en	hang in there	خۆت ڕابگرە!
+line	all	en	long time no see	زۆرە یەکترمان نەبینیوە!
+line	all	en	don't underestimate me	بە کەمم مەگرە!
+line	all	en	you're no match for me	تۆ هاوتای من نیت.
+line	all	en	you are no match for me	تۆ هاوتای من نیت.
+line	all	en	bring it on	وەرە پێشەوە!
+line	all	en	i've got your back	من پشتت دەگرم.
+line	all	en	i have your back	من پشتت دەگرم.
+line	all	en	leave it to me	بیهێڵە بۆ من.
+line	all	en	cut it out	واز بهێنە!
+line	all	en	give me a break	بەسمە ئیتر!
+line	all	en	watch your mouth	ئاگات لە قسەکردنت بێت!
+line	all	en	mark my words	ئەم قسەیەم لەبیر بێت.
+line	all	en	out of my way	لەبەر ڕێگام لابە!
+line	all	en	you asked for it	خۆت ئەمەت ویست!
+line	all	en	now we're even	ئێستا حیسابمان پاکە.
+line	all	en	we're running out of time	کاتمان تەواو دەبێت.
+line	all	en	we are running out of time	کاتمان تەواو دەبێت.
+line	all	en	no hard feelings	دڵت لێم نەگرە.
+line	all	en	are you kidding me?	گاڵتەم پێ دەکەیت؟
+line	all	en	what are you getting at?	مەبەستت چییە؟
+line	all	en	what's gotten into you?	چیت لێ هاتووە؟
+line	all	en	do you have a death wish?	مردنت دەوێت؟
+line	all	en	it can't be helped	چارەیەکی تر نییە.
+line	all	en	that goes without saying	ئەوە دیارە، پێویستی بە وتن نییە.
+line	all	en	you can count on me	دەتوانیت پشتم پێ ببەستیت.
+line	all	en	pull yourself together	خۆت کۆ بکەرەوە!
+line	all	en	stay out of this	تۆ تێکەڵی ئەم بابەتە مەبە.
+line	all	en	this is none of your business	ئەمە پەیوەندیی بە تۆوە نییە.
+line	all	en	i won't let you down	ناهێڵم نائومێد بیت.
+line	all	en	looks can be deceiving	ڕواڵەت هەمیشە ڕاستی نیشان نادات.
+line	all	en	better late than never	درەنگ بێت باشترە لەوەی هەر نەبێت.
+line	all	ko	말도 안 돼	مەحاڵە!
+line	all	ko	믿을 수 없어	باوەڕم پێ ناکرێت!
+line	all	ko	정신 차려	بەخۆتدا بێرەوە!
+line	all	ko	날 얕보지 마	بە کەمم مەگرە!
+line	all	ko	나한테 맡겨	بیهێڵە بۆ من!
+line	all	ko	비켜	لەبەر ڕێگام لابە!
+line	all	ko	오랜만이야	زۆرە یەکترمان نەبینیوە!
+line	all	ko	장난해?	گاڵتەم پێ دەکەیت؟
+line	all	ja	ふざけるな	گاڵتە مەکە!
+line	all	ja	信じられない	باوەڕم پێ ناکرێت!
+line	all	ja	任せろ	بیهێڵە بۆ من!
+line	all	ja	久しぶり	زۆرە یەکترمان نەبینیوە!
+line	all	ja	邪魔だ	لەبەر ڕێگام لابە!
+line	all	ja	しっかりしろ	خۆت ڕابگرە!
+line	all	ja	油断するな	ئاگادار بە، پشتگوێی مەخە!
+line	all	zh	开什么玩笑	ئەمە چ گاڵتەیەکە؟!
+line	all	zh	別小看我	بە کەمم مەگرە!
+line	all	zh	别小看我	بە کەمم مەگرە!
+line	all	zh	交给我吧	بیهێڵە بۆ من!
+line	all	zh	交給我吧	بیهێڵە بۆ من!
+line	all	zh	好久不见	زۆرە یەکترمان نەبینیوە!
+line	all	zh	好久不見	زۆرە یەکترمان نەبینیوە!
+line	all	zh	不可能	مەحاڵە!
+# Unambiguous compounds rather than ambiguous words (class/party/tank/core).
+term	fantasy	en	dungeon	دەنژن
+term	fantasy	en	dungeons	دەنژنەکان
+term	fantasy	en	dungeon break	شکانی بەربەستی دەنژن
+term	fantasy	en	dungeon boss	سەرۆکی دەنژن
+term	fantasy	en	boss monster	دڕندەی سەرۆک
+term	fantasy	en	mana	مانا
+term	fantasy	en	mana crystal	کریستاڵی مانا
+term	fantasy	en	mana crystals	کریستاڵەکانی مانا
+term	fantasy	en	mana points	خاڵەکانی مانا
+term	fantasy	en	health points	خاڵەکانی تەندروستی
+term	fantasy	en	experience points	خاڵەکانی ئەزموون
+term	fantasy	en	skill points	خاڵەکانی توانا
+term	fantasy	en	stat points	خاڵەکانی تایبەتمەندی
+term	fantasy	en	status window	پەنجەرەی دۆخ
+term	fantasy	en	system window	پەنجەرەی سیستەم
+term	fantasy	en	main quest	ئەرکی سەرەکی
+term	fantasy	en	side quest	ئەرکی لاوەکی
+term	fantasy	en	daily quest	ئەرکی ڕۆژانە
+term	fantasy	en	hidden quest	ئەرکی نهێنی
+term	fantasy	en	quest reward	پاداشتی ئەرک
+term	fantasy	en	guild master	سەرۆکی گیلد
+term	fantasy	en	guild leader	سەرۆکی گیلد
+term	fantasy	en	guild members	ئەندامەکانی گیلد
+term	fantasy	en	guild	گیلد
+term	fantasy	en	party members	ئەندامەکانی تیم
+term	fantasy	en	party member	ئەندامی تیم
+term	fantasy	en	raid party	تیمی هێرش
+term	fantasy	en	raid boss	سەرۆکی شەڕی گرووپی
+term	fantasy	en	passive skill	توانای خۆکار
+term	fantasy	en	active skill	توانای چالاک
+term	fantasy	en	skill cooldown	ماوەی چاوەڕوانیی توانا
+term	fantasy	en	cooldown time	ماوەی چاوەڕوانیی دووبارە بەکارهێنان
+term	fantasy	en	critical hit	لێدانی کرتیکاڵ
+term	fantasy	en	critical damage	زیانی لێدانی کرتیکاڵ
+term	fantasy	en	attack power	هێزی هێرش
+term	fantasy	en	defense power	هێزی بەرگری
+term	fantasy	en	healing potion	دەرمانی چاکبوونەوە
+term	fantasy	en	mana potion	دەرمانی گەڕاندنەوەی مانا
+term	fantasy	en	health potion	دەرمانی تەندروستی
+term	fantasy	en	magic stone	بەردی جادویی
+term	fantasy	en	monster core	ناوکی دڕندە
+term	fantasy	en	demon king	پاشای شەیتانەکان
+term	fantasy	en	shadow monarch	پاشای سێبەرەکان
+term	fantasy	en	shadow soldier	سەربازی سێبەر
+term	fantasy	en	summoning magic	جادووی بانگکردن
+term	fantasy	en	necromancer	جادووکەری مردووان
+term	fantasy	en	s-rank	پلەی S
+term	fantasy	en	a-rank	پلەی A
+term	fantasy	en	b-rank	پلەی B
+term	fantasy	en	c-rank	پلەی C
+term	fantasy	en	d-rank	پلەی D
+term	fantasy	en	e-rank	پلەی E
+line	fantasy	en	level up	ئاست بەرز بووەوە!
+line	fantasy	en	you have leveled up	ئاستەکەت بەرز بووەوە!
+line	fantasy	en	you have levelled up	ئاستەکەت بەرز بووەوە!
+line	fantasy	en	quest completed	ئەرکەکە تەواو کرا!
+line	fantasy	en	quest failed	ئەرکەکە شکستی هێنا!
+line	fantasy	en	skill acquired	توانایەکی نوێت بەدەست هێنا!
+line	fantasy	en	inventory	کۆگای کەرەستەکان
+line	fantasy	en	skill	توانا
+line	fantasy	en	skills	تواناکان
+# Martial vocabulary is activated only by explicit selection or strong cues.
+term	martial	en	martial arts	هونەرە جەنگییەکان
+term	martial	en	martial artist	شارەزای هونەرە جەنگییەکان
+term	martial	en	martial artists	شارەزایانی هونەرە جەنگییەکان
+term	martial	en	cultivation technique	تەکنیکی پەرەپێدانی هێزی ڕۆحی
+term	martial	en	cultivation realm	پلەی پەرەپێدانی هێزی ڕۆحی
+term	martial	en	cultivation base	ئاستی هێزی ڕۆحی
+term	martial	en	inner energy	وزەی ناوەکی
+term	martial	en	internal energy	وزەی ناوەکی
+term	martial	en	sword intent	ئیڕادەی شمشێر
+term	martial	en	sword aura	هالەی شمشێر
+term	martial	en	spiritual energy	وزەی ڕۆحی
+term	martial	en	spirit beast	ئاژەڵی ڕۆحی
+term	martial	en	spirit beasts	ئاژەڵە ڕۆحییەکان
+term	martial	en	sect leader	سەرۆکی قوتابخانەی جەنگی
+term	martial	en	sect elder	مامۆستای باڵای قوتابخانەی جەنگی
+term	martial	en	senior disciple	قوتابیی باڵاتر
+term	martial	en	junior disciple	قوتابیی خوارتر
+term	martial	en	young master	گەنجە بەگزادە
+term	martial	en	heavenly demon	شەیتانی ئاسمانی
+term	martial	en	murim	جیهانی موریم
+term	martial	en	dantian	دانتیان
+term	martial	en	qi	وزەی چی
+# Honorifics are retained, not guessed as literal family relationships.
+term	all	en	senpai	سێنپای
+term	all	en	sensei	سێنسێی
+term	all	en	sunbae	سۆنبێ
+term	all	en	hyung	هیۆنگ
+term	all	en	oppa	ئۆپا
+term	all	en	noona	نونا
+term	all	en	unnie	ئۆنی
+# Native-language terms (no forced English pivot in online mode).
+term	fantasy	ko	던전	دەنژن
+term	fantasy	ko	마나	مانا
+term	fantasy	ko	길드장	سەرۆکی گیلد
+term	fantasy	ko	길드	گیلد
+term	fantasy	ko	일일 퀘스트	ئەرکی ڕۆژانە
+term	fantasy	ko	퀘스트	ئەرک
+term	fantasy	ko	경험치	خاڵەکانی ئەزموون
+term	fantasy	ko	스킬 포인트	خاڵەکانی توانا
+term	fantasy	ko	상태창	پەنجەرەی دۆخ
+term	fantasy	ko	인벤토리	کۆگای کەرەستەکان
+term	fantasy	ko	마력석	بەردی جادویی
+term	fantasy	ko	회복 물약	دەرمانی چاکبوونەوە
+term	fantasy	ko	그림자 군주	پاشای سێبەرەکان
+line	fantasy	ko	레벨 업	ئاست بەرز بووەوە!
+line	fantasy	ko	퀘스트 완료	ئەرکەکە تەواو کرا!
+line	fantasy	ko	퀘스트 실패	ئەرکەکە شکستی هێنا!
+term	martial	ko	무림	جیهانی موریم
+term	martial	ko	단전	دانتیان
+term	martial	ko	내공	وزەی ناوەکی
+term	martial	ko	무공	هونەرە جەنگییەکان
+term	martial	ko	천마	شەیتانی ئاسمانی
+term	martial	ko	검기	هالەی شمشێر
+term	fantasy	ja	ダンジョン	دەنژن
+term	fantasy	ja	クエスト	ئەرک
+term	fantasy	ja	ギルド	گیلد
+term	fantasy	ja	経験値	خاڵەکانی ئەزموون
+term	fantasy	ja	魔力	هێزی جادویی
+term	fantasy	ja	回復薬	دەرمانی چاکبوونەوە
+line	fantasy	ja	レベルアップ	ئاست بەرز بووەوە!
+term	all	ja	先輩	سێنپای
+term	fantasy	zh	公会	گیلد
+term	fantasy	zh	公會	گیلد
+term	fantasy	zh	副本	دەنژن
+term	fantasy	zh	每日任务	ئەرکی ڕۆژانە
+term	fantasy	zh	每日任務	ئەرکی ڕۆژانە
+term	fantasy	zh	经验值	خاڵەکانی ئەزموون
+term	fantasy	zh	經驗值	خاڵەکانی ئەزموون
+term	fantasy	zh	技能点	خاڵەکانی توانا
+term	fantasy	zh	技能點	خاڵەکانی توانا
+term	fantasy	zh	魔力	هێزی جادویی
+term	martial	zh	武林	جیهانی موریم
+term	martial	zh	丹田	دانتیان
+term	martial	zh	内力	وزەی ناوەکی
+term	martial	zh	內力	وزەی ناوەکی
+term	martial	zh	真气	وزەی چی
+term	martial	zh	真氣	وزەی چی
+term	martial	zh	宗主	سەرۆکی قوتابخانەی جەنگی
+term	martial	zh	剑气	هالەی شمشێر
+term	martial	zh	劍氣	هالەی شمشێر
+term	martial	zh	修炼境界	پلەی پەرەپێدانی هێزی ڕۆحی
+term	martial	zh	修煉境界	پلەی پەرەپێدانی هێزی ڕۆحی

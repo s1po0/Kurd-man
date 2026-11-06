@@ -1001,6 +1001,8 @@ public class ManhwaRenderer {
         lower.ckb = joinWords(ckbWords, kCkb, ckbWords.length);
         upper.originalCkb = upper.ckb;
         lower.originalCkb = lower.ckb;
+        upper.translationMethod = lower.translationMethod = segment.translationMethod;
+        upper.translationWarnings = lower.translationWarnings = segment.translationWarnings;
         upper.ocrConfidence = segment.ocrConfidence;
         lower.ocrConfidence = segment.ocrConfidence;
         upper.sourceLineHeight = segment.sourceLineHeight;

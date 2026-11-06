@@ -33,6 +33,8 @@ public class TranslationProject {
     public String baseName = "kurdman";
     public String sourceLanguage = "en";
     public String targetLanguage = "ckb";
+    /** Frozen per-project choices, independent of future settings changes. */
+    public ComicTranslationSkill.Config comicConfig = ComicSettings.fromJson(null);
     public long createdAt = System.currentTimeMillis();
     public long updatedAt = System.currentTimeMillis();
     public final List<Page> pages = new ArrayList<>();
@@ -126,6 +128,7 @@ public class TranslationProject {
         root.put("baseName", baseName == null ? "kurdman" : baseName);
         root.put("sourceLanguage", sourceLanguage == null ? "en" : sourceLanguage);
         root.put("targetLanguage", targetLanguage == null ? "ckb" : targetLanguage);
+        root.put("comicSkill", ComicSettings.toJson(comicConfig));
         root.put("createdAt", createdAt);
         root.put("updatedAt", updatedAt);
         JSONArray pageArray = new JSONArray();
@@ -146,6 +149,7 @@ public class TranslationProject {
         project.baseName = root.optString("baseName", "kurdman");
         project.sourceLanguage = root.optString("sourceLanguage", "en");
         project.targetLanguage = root.optString("targetLanguage", "ckb");
+        project.comicConfig = ComicSettings.fromJson(root.optJSONObject("comicSkill"));
         project.createdAt = root.optLong("createdAt", System.currentTimeMillis());
         project.updatedAt = root.optLong("updatedAt", project.createdAt);
         project.projectDir = projectDir;
@@ -192,6 +196,7 @@ public class TranslationProject {
             baseName = restored.baseName;
             sourceLanguage = restored.sourceLanguage;
             targetLanguage = restored.targetLanguage;
+            comicConfig = restored.comicConfig;
             createdAt = restored.createdAt;
             updatedAt = restored.updatedAt;
             pages.clear();
@@ -237,6 +242,8 @@ public class TranslationProject {
         json.put("text", segment.text == null ? "" : segment.text);
         json.put("ckb", segment.ckb == null ? "" : segment.ckb);
         json.put("originalCkb", segment.originalCkb == null ? "" : segment.originalCkb);
+        json.put("translationMethod", segment.translationMethod);
+        json.put("translationWarnings", segment.translationWarnings);
         json.put("lines", segment.lines);
         json.put("sourceLineHeight", segment.sourceLineHeight);
         json.put("ocrConfidence", segment.ocrConfidence);
@@ -268,6 +275,8 @@ public class TranslationProject {
         segment.sourceLineHeight = (float) json.optDouble("sourceLineHeight", 0.0);
         segment.ocrConfidence = (float) json.optDouble("ocrConfidence", -1.0);
         segment.originalCkb = json.optString("originalCkb", segment.ckb);
+        segment.translationMethod = json.optString("translationMethod", "standard");
+        segment.translationWarnings = json.optString("translationWarnings", "");
         segment.rendered = json.optBoolean("rendered", false);
         segment.renderBox = rectFromJson(json.optJSONObject("renderBox"));
         segment.eraseBox = rectFromJson(json.optJSONObject("eraseBox"));

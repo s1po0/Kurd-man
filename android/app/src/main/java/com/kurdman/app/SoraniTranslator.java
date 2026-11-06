@@ -141,6 +141,7 @@ public class SoraniTranslator implements AutoCloseable {
     }
 
     private final Map<String, String> cache = new HashMap<>();
+    private ComicTranslationSkill comicSkill;
     private final OfflineEngine offlineEngine;
     private int preferredRoute = ROUTE_GOOGLEAPIS;
     /** BCP-47-ish target language code (default Sorani). */
@@ -207,7 +208,38 @@ public class SoraniTranslator implements AutoCloseable {
         }
     }
 
+    public void setComicSkill(ComicTranslationSkill skill) {
+        comicSkill = skill;
+    }
+
+    /** One result per input bubble, in precisely the same order. */
+    public ComicTranslationSkill.PageResult translatePage(List<String> sources,
+            String sourceLanguage, ComicTranslationSkill.Progress progress) throws Exception {
+        ComicTranslationSkill skill = comicSkill;
+        if (skill == null) {
+            skill = new ComicTranslationSkill(new ComicTranslationSkill.Config(false,
+                    ComicTranslationSkill.Genre.AUTO, ""), java.util.Collections.emptyList());
+        }
+        ComicTranslationSkill.PageResult page = skill.translatePage(sources,
+                sourceLanguage, targetLanguage, isOffline(),
+                (text, source, target) -> translateInternal(text, source, true), progress);
+        for (int i = 0; i < page.results.size(); i++) {
+            ComicTranslationSkill.Result result = page.results.get(i);
+            if ("ckb".equals(targetLanguage)) {
+                final String original = sources.get(i);
+                result.text = skill.formatPreservingGlossary(result.text, value ->
+                        normalizeSoraniScript(normalize(transliteratePreservedNames(original, value))));
+            }
+        }
+        return page;
+    }
+
     public String translate(String text, String sourceLanguage) throws Exception {
+        return translateInternal(text, sourceLanguage, false);
+    }
+
+    private String translateInternal(String text, String sourceLanguage,
+                                     boolean comicRaw) throws Exception {
         String normalized = normalize(text);
         if (normalized.isEmpty()) {
             return "";
@@ -228,7 +260,7 @@ public class SoraniTranslator implements AutoCloseable {
         String preparedSource = prepareSourceText(normalized, sourceLanguage);
         String key = (offline ? "offline" : "online")
                 + "\n" + sourceLanguage + "\n" + targetLanguage
-                + "\n" + preparedSource;
+                + "\n" + (comicRaw ? "raw" : "finished") + "\n" + preparedSource;
         String cached = cache.get(key);
         if (cached != null) {
             return cached;
@@ -253,7 +285,9 @@ public class SoraniTranslator implements AutoCloseable {
         }
 
         if ("ckb".equals(targetLanguage)) {
-            translated = transliteratePreservedNames(normalized, translated);
+            // The skill must validate/restore ASCII glossary markers before
+            // name transliteration; otherwise markers turn into Kurdish names.
+            if (!comicRaw) translated = transliteratePreservedNames(normalized, translated);
             translated = normalizeSoraniScript(normalize(translated));
         } else {
             translated = normalize(translated);

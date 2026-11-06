@@ -130,6 +130,7 @@ public class EditorActivity extends AppCompatActivity
     private boolean presetUserTouched = false;
 
     private TextView originalTextView;
+    private TextView translationReviewView;
     private EditText translatedEdit;
     private CheckBox visibleCheck;
     private CheckBox eraseCheck;
@@ -1002,6 +1003,9 @@ public class EditorActivity extends AppCompatActivity
         heading(panel, getString(R.string.ks_0223));
         label(panel, getString(R.string.ks_0231));
         originalTextView = textBox(panel, "—");
+        translationReviewView = textBox(panel, "");
+        translationReviewView.setTextColor(0xFFFACC15);
+        translationReviewView.setVisibility(View.GONE);
         label(panel, getString(R.string.ks_0374));
         translatedEdit = new EditText(this);
         translatedEdit.setBackgroundResource(R.drawable.bg_input);
@@ -1237,6 +1241,7 @@ public class EditorActivity extends AppCompatActivity
         updateProjectStats();
         if (segment == null) {
             originalTextView.setText("—");
+            translationReviewView.setVisibility(View.GONE);
             translatedEdit.setText("");
             geometryLabel.setText("—");
             updateSimpleControls(null);
@@ -1246,6 +1251,9 @@ public class EditorActivity extends AppCompatActivity
         TextStyleSettings style = segment.ensureStyle();
         originalTextView.setText(segment.text == null || segment.text.isEmpty()
                 ? getString(R.string.ks_0072) : segment.text);
+        String review = ComicSettings.warnings(this, segment.translationWarnings);
+        translationReviewView.setText(review);
+        translationReviewView.setVisibility(review.isEmpty() ? View.GONE : View.VISIBLE);
         if (!translatedEdit.hasFocus()) {
             translatedEdit.setText(segment.ckb == null ? "" : segment.ckb);
         }

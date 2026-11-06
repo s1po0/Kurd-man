@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="comic_title">"وضع المانغا / المانهوا"</string>
+    <string name="comic_back">"رجوع"</string>
+    <string name="comic_enable">"تفعيل وضع المانغا / المانهوا"</string>
+    <string name="comic_intro">"تعابير حوار طبيعية ومصطلحات القصص وتوحيد الأسماء. على الإنترنت تُترجم الحوارات المتجاورة معًا، مع بقاء كل فقاعة مستقلة."</string>
+    <string name="comic_configure">"✦ إعداد المانغا / المانهوا"</string>
+    <string name="comic_enabled_summary">"مفعّل • %1$s • %2$d أسماء/مصطلحات مخصصة"</string>
+    <string name="comic_disabled_summary">"معطّل — الترجمة العادية مفعّلة."</string>
+    <string name="comic_genre_title">"01 / نوع القصة"</string>
+    <string name="comic_genre_auto">"تلقائي — حسب مفردات الصفحة"</string>
+    <string name="comic_genre_fantasy">"فانتازيا / RPG / الصيادون"</string>
+    <string name="comic_genre_martial">"فنون قتالية / موريم"</string>
+    <string name="comic_genre_everyday">"حياة يومية / مدرسة / رومانسية"</string>
+    <string name="comic_genre_help">"يستخدم التلقائي قرائن مفردات الصفحة دون تخمين المتحدثين أو العلاقات. اختر النوع للقصة المعروفة. لا تُفرض معانٍ قتالية على كلمات ملتبسة مثل class أو party."</string>
+    <string name="comic_glossary_title">"02 / أسماء القصة ومصطلحاتها"</string>
+    <string name="comic_glossary_help">"إدخال واحد في كل سطر: الأصل = الترجمة. حتى 100 إدخال. استخدم تهجئة الأسماء المفضلة لديك. تُحفظ القائمة لزوج اللغات وتُنسخ إلى كل مشروع؛ امسحها عند بدء قصة أخرى."</string>
+    <string name="comic_glossary_example">"Jinwoo = جین‌وو\nShadow Monarch = پاشای سێبەرەکان"</string>
+    <string name="comic_glossary_generic_example">"الأصل = الترجمة المفضلة"</string>
+    <string name="comic_glossary_error">"راجع السطر %1$d: الأصل = الترجمة؛ دون تكرار؛ حتى 100 إدخال (80 حرفًا للأصل / 160 للترجمة)."</string>
+    <string name="comic_clear">"مسح قاموس القصة"</string>
+    <string name="comic_clear_title">"مسح القاموس؟"</string>
+    <string name="comic_clear_message">"لن تتغير المشاريع المحفوظة. اضغط حفظ لتطبيق التغيير على الترجمات القادمة."</string>
+    <string name="comic_save">"حفظ الوضع والقاموس"</string>
+    <string name="comic_saved">"تم حفظ إعدادات المانغا / المانهوا."</string>
+    <string name="comic_other_targets">"القاموس السوراني المدمج يُستخدم للسورانية فقط. يعمل سياق الحوار عبر الإنترنت وقاموسك المخصص مع اللغات الأخرى أيضًا، دون فرض نص سوراني عليها."</string>
+    <string name="comic_limits">"هذه طبقة قواعد وقاموس، وليست نموذجًا جديدًا مدرّبًا. يستخدم الوضع دون إنترنت الحزم الحالية وتبقى جودته محدودة. تنبيه ⚠ يطلب مراجعة الأرقام/المصطلحات؛ غيابه لا يضمن صحة المعنى."</string>
+    <string name="comic_review_numbers">"راجع الأرقام مقارنة بالأصل"</string>
+    <string name="comic_review_repetition">"راجع الكلمات المكررة"</string>
+    <string name="comic_review_untranslated">"قد يكون هذا النص غير مترجم"</string>
+    <string name="comic_review_glossary">"استُخدمت الترجمة العادية؛ راجع الأسماء/المصطلحات"</string>
+</resources>
