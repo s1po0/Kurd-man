@@ -3,7 +3,7 @@ on:
   push:
     branches: ["arena/**"]
     paths:
-      - "koorix/releases/v1.6.0.json"
+      - "koorix/releases/v1.6.1.json"
       - ".github/workflows/koorix-done.yml"
 permissions:
   contents: read
@@ -18,11 +18,12 @@ jobs:
         run: |
           python3 - <<'PY'
           import json
-          record=json.load(open('koorix/releases/v1.6.0.json'))
+          record=json.load(open('koorix/releases/v1.6.1.json'))
           assert record['features']['userLoginRemoved'] is True
           assert record['features']['premiumRemoved'] is True
           assert record['features']['dailyAppQuotasRemoved'] is True
-          assert record['features']['separateGalleryAndUnfilteredFiles'] is True
+          assert record['features']['unifiedAppCapableInputChooser'] is True
+          assert record['features']['separateGalleryAndUnfilteredFiles'] is False
           assert record['ci']['status']=='success'
           assert record['delivery']['chatFilePresented'] is True
           assert record['delivery']['telegramApkAcknowledged'] is True
@@ -36,10 +37,10 @@ jobs:
         run: |
           test -n "$TOKEN" && test -n "$ADMIN"
           MESSAGE="تەواو بووم ✅
-          Koorix 1.6.0 — بە تەواوی خۆڕایی بۆ ئێستا؛ Premium و سنووری ڕۆژانە لابران، Loginیش نییە.
-          Gallery / Photos و Files / CBZ بە جیا دانراون؛ Files بە جۆری فایل سنووردار نییە.
+          Koorix 1.6.1 — بە تەواوی خۆڕایی بۆ ئێستا؛ Premium و سنووری ڕۆژانە لابران، Loginیش نییە.
+          دوو بەشەکە لابران؛ یەک دوگمە و یەک هەڵبژێرەر بۆ ئەپە گونجاوە دامەزراوەکانی Gallery، MT Manager، ZArchiver و My Files.
           APKی وەشانی ئاسایی بە هەمان کلیلی v2 لە چات و Telegram نێردرا. لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە.
-          https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.6.0/Koorix-v1.6.0.apk"
+          https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.6.1/Koorix-v1.6.1.apk"
 
           RESPONSE=$(curl -fsS --connect-timeout 20 --max-time 60 \
             --data-urlencode "chat_id=$ADMIN" --data-urlencode "text=$MESSAGE" \
