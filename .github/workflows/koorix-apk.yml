@@ -207,11 +207,29 @@ jobs:
           cp "$APK_FILE" "Koorix-v$KOORIX_VERSION.apk"
           NOTES="Koorix v$KOORIX_VERSION — regular production update, com.koorix.app, arm64, non-debuggable. Completely FREE for now by the owner's decision: Premium, payments, activation codes, daily job/page quotas and device-registration/entitlement clients have been removed, not just hidden. No login, Google account, email or initial online allowance setup. Explicit Gallery/Photos uses Android's permissionless multi-photo picker, with a gallery-app fallback. Files opens all MIME types and shared-storage/SD/cloud document providers, including CBZ/ZIP files with missing MIME metadata. Existing source validation, 300-page/300-MB import and 1-GB cache safety limits remain; protected Android folders and external provider rate limits are not bypassed. Editable books, legacy projects, backups, frozen settings, STOP, recovery, all 74 target choices and Kurdish/English/Arabic UI are preserved. Same permanent v2 signer: install over v2-signed Koorix without uninstalling or deleting app data. Historical encrypted device/subscriber data is not erased or contacted. No paid API, new model or NLLB. Meaning and real-page/device visual acceptance remain limited/unverified; passing synthetic/JVM tests does not certify every translation, OEM gallery or device."
 
-          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            gh release upload "$TAG" "Koorix-v$KOORIX_VERSION.apk" --clobber --repo "${{ github.repository }}"
-          else
-            gh release create "$TAG" "Koorix-v$KOORIX_VERSION.apk" --repo "${{ github.repository }}" \
-              --target "${{ github.sha }}" --title "Koorix v$KOORIX_VERSION" --notes "$NOTES"
+          # An owner-prepared draft/tag is valid too. Upload verified bytes first,
+          # then publish; expose public CLI errors without printing credentials.
+          set +e
+          (
+            set -e
+            if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+              gh release upload "$TAG" "Koorix-v$KOORIX_VERSION.apk" --clobber --repo "${{ github.repository }}"
+            else
+              gh release create "$TAG" "Koorix-v$KOORIX_VERSION.apk" --repo "${{ github.repository }}" \
+                --target "${{ github.sha }}" --title "Koorix v$KOORIX_VERSION" --notes "$NOTES" --draft
+            fi
+            gh release edit "$TAG" --draft=false --repo "${{ github.repository }}"
+          ) > /tmp/koorix-publication.log 2>&1
+          code=$?
+          set -e
+          cat /tmp/koorix-publication.log
+          if [ "$code" -ne 0 ]; then
+            python3 <<'PUBLISH_ERROR'
+          from pathlib import Path
+          for line in Path('/tmp/koorix-publication.log').read_text(errors='replace').splitlines()[-8:]:
+              print('::error::Publication: '+line.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
+          PUBLISH_ERROR
+            exit "$code"
           fi
           URL="https://github.com/${{ github.repository }}/releases/download/$TAG/Koorix-v$KOORIX_VERSION.apk"
           echo "::notice::APK_DOWNLOAD_URL=$URL"
