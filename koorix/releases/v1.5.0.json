@@ -87,7 +87,9 @@
     "telegramApkAcknowledged": true,
     "publicUnauthenticatedDownloadHead": 302,
     "publicSoraniPackHead": 302,
-    "completionNotice": "pending"
+    "completionNotice": "acknowledged",
+    "completionRunId": 42288012398,
+    "completionJobId": 128133777625
   },
   "backend": {
     "projectRef": "cbkddsztcivllpwzflkx",
