@@ -27,7 +27,7 @@ final class ComicSettings {
 
     static ComicTranslationSkill.Config read(Context context, String source, String target) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        return new ComicTranslationSkill.Config(prefs.getBoolean(ENABLED, true),
+        return new ComicTranslationSkill.Config(BuildConfig.PUBLIC_EDITION || prefs.getBoolean(ENABLED, true),
                 genre(prefs.getString(GENRE, "AUTO")),
                 prefs.getString(glossaryKey(source, target), ""));
     }

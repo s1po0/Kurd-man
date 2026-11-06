@@ -10,7 +10,7 @@ do not hard-code `/home/user` or a branch name into scripts.
 | Online/offline dispatch | `android/app/src/main/java/com/kurdman/app/SoraniTranslator.java` |
 | In-app checks / review / correction memory | `ComicQualityChecks.java`, `ComicQualityReview.java`, `ComicQualityActivity.java` |
 | Settings + language-pair persistence | `ComicSettings.java`, `ComicSettingsActivity.java` in the same Java directory |
-| Job snapshots / input integration | `MainActivity.java` |
+| One-button automatic controls / pre-render integration | `ComicTranslateControls.java`, `ComicTranslationFlow.java`, `MainActivity.java` |
 | Saved JSON / target field | `TranslationProject.java`, `Segment.java`; `ckb` stores the selected target, not necessarily Sorani |
 | Latest phone-private project | `TranslationProjectStore.java`: app-private `files/projects/current/project.json` |
 | Layout / erasure / SFX | `ManhwaRenderer.java`, `CleanEraser.java`, `EditorActivity.java`; don't guess from JSON counts |
@@ -30,7 +30,10 @@ do not hard-code `/home/user` or a branch name into scripts.
 - Built-in Sorani terms must not be forced into Arabic, English or another target.
 - This AgentSkill does not replace that engine or execute inside Android. In
   1.4.0 the practical local checks/review workflow is separately implemented in
-  the native Koorix Skill screen. The Python developer tools still do not translate.
+  the native Koorix Skill screen. Since 1.4.1, readers simply use **Translate**:
+  local rules, explicit glossary, checks and bounded contextual recovery are in
+  that pipeline. Optional names/genre expand inline; manual review is optional.
+  The Python developer tools still do not translate.
 - The packet adapter accepts an explicitly supplied local JSON copy. The release
   app does NOT gain a full-project JSON export/import UI from installing a skill.
   Do not instruct users to uninstall/reinstall or use `run-as` on a non-debuggable

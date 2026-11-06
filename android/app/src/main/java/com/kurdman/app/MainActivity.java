@@ -168,8 +168,7 @@ public class MainActivity extends AppCompatActivity {
     private Spinner sourceSpinner;
     private Spinner targetSpinner;
     private Spinner translationModeSpinner;
-    private Button comicSettingsButton;
-    private TextView comicSkillSummary;
+    private ComicTranslateControls comicControls;
     private TextView offlineModelStatus;
     private Button downloadOfflineButton;
     private Button deleteOfflineButton;
@@ -337,13 +336,8 @@ public class MainActivity extends AppCompatActivity {
         sourceSpinner = findViewById(R.id.sourceSpinner);
         targetSpinner = findViewById(R.id.targetSpinner);
         translationModeSpinner = findViewById(R.id.translationModeSpinner);
-        comicSettingsButton = findViewById(R.id.comicSettingsButton);
-        comicSkillSummary = findViewById(R.id.comicSkillSummary);
-        findViewById(R.id.comicQualityButton).setOnClickListener(v -> openComicQuality());
+        comicControls = new ComicTranslateControls(this, findViewById(android.R.id.content), savedInstanceState);
         findViewById(R.id.resultQualityButton).setOnClickListener(v -> openComicQuality());
-        comicSettingsButton.setOnClickListener(v -> startActivity(new Intent(this,
-                ComicSettingsActivity.class).putExtra("source", selectedSourceLanguage())
-                .putExtra("target", selectedTargetLanguage())));
         offlineModelStatus = findViewById(R.id.offlineModelStatus);
         downloadOfflineButton = findViewById(R.id.downloadOfflineButton);
         deleteOfflineButton = findViewById(R.id.deleteOfflineButton);
@@ -1803,10 +1797,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void refreshComicSkillUi() {
-        if (comicSkillSummary != null) {
-            comicSkillSummary.setText(ComicSettings.summary(this, ComicSettings.read(
-                    this, selectedSourceLanguage(), selectedTargetLanguage())));
-        }
+        if (comicControls != null) comicControls.selectPair(selectedSourceLanguage(), selectedTargetLanguage());
+    }
+
+    @Override protected void onSaveInstanceState(Bundle outState) {
+        if (comicControls != null) comicControls.saveState(outState);
+        super.onSaveInstanceState(outState);
     }
 
     private SoraniTranslator createTranslator(boolean offlineMode,
@@ -1831,29 +1827,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void translateSegments(SoraniTranslator translator, List<Segment> segments,
-                                   String source, String statusPrefix) throws Exception {
+                                   String source, ComicTranslationSkill.Config comicConfig,
+                                   String statusPrefix) throws Exception {
         List<String> texts = new ArrayList<>();
         for (Segment segment : segments) texts.add(segment.text);
         ComicTranslationSkill.PageResult page = translator.translatePage(texts, source,
                 (completed, total) -> {
                     throwIfJobStopped();
-                    setStatus(statusPrefix + Math.min(completed + 1, total) + "/" + total + "…");
+                    setStatus(statusPrefix + Math.min(completed + 1, total) + "/" + total
+                            + "…" + (comicConfig.enabled ? " • " + getString(R.string.auto_skill_progress) : ""));
                 });
-        if (page.results.size() != segments.size()) throw new IOException("Comic bubble alignment mismatch");
-        int review = 0;
-        for (int i = 0; i < segments.size(); i++) {
-            Segment segment = segments.get(i);
-            ComicTranslationSkill.Result result = page.results.get(i);
-            segment.ckb = result.text;
-            segment.originalCkb = result.text;
-            segment.translationMethod = result.method;
-            segment.translationWarnings = result.warnings;
-            if (!result.warnings.isEmpty()) review++;
-        }
+        throwIfJobStopped();
+        int review = ComicTranslationFlow.apply(segments, page, source, translator.getTargetLanguage(),
+                comicConfig);
         DiagnosticLog.info(getApplicationContext(), "comic_skill",
                 "genre=" + page.genre + ", bubbles=" + segments.size() + ", localRules=" + page.localRules
                         + ", contextRequests=" + page.contextRequests + ", contextFallbacks=" + page.contextFallbacks
-                        + ", glossaryFallbacks=" + page.glossaryFallbacks + ", review=" + review);
+                        + ", glossaryFallbacks=" + page.glossaryFallbacks + ", autoRetries=" + page.qualityRetries
+                        + ", autoRecovered=" + page.qualityRecoveries + ", review=" + review);
     }
 
     private void closeTranslator(SoraniTranslator translator) {
@@ -2903,6 +2894,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void translateSelected() {
+        // Invalid optional names must not consume an account allowance or start OCR.
+        if (comicControls != null && !comicControls.validate()) return;
         int jobPages = selectedCbzFile != null
                 ? Math.max(1, selectedCbzPages)
                 : (!selectedBatchFiles.isEmpty()
@@ -2934,7 +2927,9 @@ public class MainActivity extends AppCompatActivity {
         }
         final String sourceLanguage = selectedSourceLanguage();
         final String targetLanguage = selectedTargetLanguage();
-        final ComicTranslationSkill.Config comicConfig = ComicSettings.read(this, sourceLanguage, targetLanguage);
+        refreshComicSkillUi();
+        final ComicTranslationSkill.Config comicConfig = comicControls.forTranslation();
+        if (comicConfig == null) return;
         ManhwaRenderer.activeTargetLanguage = targetLanguage;
         ManhwaRenderer.i18nContext = getApplicationContext();
         JobRuntime.init(getApplicationContext());
@@ -3065,7 +3060,7 @@ public class MainActivity extends AppCompatActivity {
                 projectPage.segments.addAll(segments);
                 project.save();
                 translator = createTranslator(offlineMode, targetLanguage, comicConfig);
-                translateSegments(translator, segments, sourceLanguage, offlineMode
+                translateSegments(translator, segments, sourceLanguage, comicConfig, offlineMode
                         ? getString(R.string.ks_0686) : getString(R.string.ks_0371));
                 project.save();
 
@@ -3292,7 +3287,7 @@ public class MainActivity extends AppCompatActivity {
                     continue;
                 }
                 int pageNumber = i + 1;
-                translateSegments(translator, segments, sourceLanguage,
+                translateSegments(translator, segments, sourceLanguage, comicConfig,
                         getString(R.string.ks_0301) + pageNumber + "/" + pageTotal
                                 + (offlineMode ? getString(R.string.ks_0084) : getString(R.string.ks_0083)));
             }
@@ -4992,8 +4987,9 @@ public class MainActivity extends AppCompatActivity {
             translationModeSpinner.setEnabled(enabled);
         }
         if (targetSpinner != null) targetSpinner.setEnabled(enabled);
-        if (comicSettingsButton != null) comicSettingsButton.setEnabled(enabled);
-        findViewById(R.id.comicQualityButton).setEnabled(enabled);
+        if (comicControls != null) comicControls.setEnabled(enabled);
+        ComicTranslationFlow.bindSummary(this, findViewById(android.R.id.content),
+                resultFile != null ? TranslationProjectStore.load(this) : null, busy);
         findViewById(R.id.resultQualityButton).setEnabled(enabled);
         if (accurateOcrCheck != null) {
             accurateOcrCheck.setEnabled(enabled);

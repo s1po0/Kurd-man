@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="q_title">"مهارة Koorix"</string>
+    <string name="q_title">"مراجعة النص (اختياري)"</string>
     <string name="q_badge">"مراجعة على الجهاز • بلا مفتاح API"</string>
-    <string name="q_intro">"أسماء القصة وفحص كل كتلة نصية وتصحيحها — داخل Koorix نفسه."</string>
+    <string name="q_intro">"يعمل Skill تلقائيًا مع Translate. هذه المراجعة والتصحيح اليدويان اختياريان ولا يلزمان لإتمام الترجمة."</string>
     <string name="q_open">"✦ فتح مهارة Koorix"</string>
     <string name="q_settings">"إعداد القصة"</string>
     <string name="q_project_settings">"إعداد قصة هذا المشروع"</string>

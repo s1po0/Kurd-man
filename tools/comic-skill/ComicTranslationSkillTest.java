@@ -29,6 +29,7 @@ public final class ComicTranslationSkillTest {
         testGlossary();
         testGlossaryFailures();
         testContext();
+        testAutomaticQualityRecovery();
         testAdversarialBoundaries();
         testIsolationAndOtherLanguages();
         testReviewAndCancellation();
@@ -217,6 +218,88 @@ public final class ComicTranslationSkillTest {
                 "Where is Jinwoo?", "He is inside.");
         equal(2, requestsCount.get(), "offline stays per bubble");
         equal(0, p.contextRequests, "offline context requests = 0");
+    }
+
+    private static void testAutomaticQualityRecovery() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        ComicTranslationSkill.PageResult p = page(skill(ComicTranslationSkill.Genre.EVERYDAY, ""), false, "en", "ckb",
+                (text, source, target) -> {
+                    calls.incrementAndGet();
+                    return text.contains("[[KX")
+                            ? "[[KX0000]] ڕێژە: 100/25. [[KX0001]] با ئێستا بڕۆین."
+                            : "ڕێژە: 25/100.";
+                }, "The gauge reads 25/100.", "We should leave now.");
+        equal(2, calls.get(), "one contextual request plus one targeted automatic recovery");
+        equal(1, p.qualityRetries, "automatic recovery is recorded");
+        equal(1, p.qualityRecoveries, "a strictly improved contract is recorded");
+        equal("ڕێژە: 25/100.", p.results.get(0).text, "ratio order repaired before rendering");
+        equal("comic_context_recovered", p.results.get(0).method, "automatic recovery provenance");
+        equal("با ئێستا بڕۆین.", p.results.get(1).text, "healthy neighbouring bubble stays unchanged");
+        equal("comic_context", p.results.get(1).method, "healthy bubble is not retransmitted");
+        equal("", p.results.get(0).warnings, "old ratio hint is not retained after recovery");
+
+        p = page(skill(ComicTranslationSkill.Genre.EVERYDAY, ""), false, "en", "ckb",
+                (text, source, target) -> text.contains("[[KX")
+                        ? "[[KX0000]] ڕێژە: 50. [[KX0001]] با ئێستا بڕۆین." : "ڕێژە: 50%.",
+                "The gauge reads 50%.", "We should leave now.");
+        equal(1, p.qualityRecoveries, "lost percent is automatically retried, not ignored");
+        equal("ڕێژە: 50%.", p.results.get(0).text, "percent survives on the final bubble");
+
+        for (String bad : Arrays.asList("ڕێژە: 25/99.", "Latin words 25/100.", "ZXQK9999QXZ")) {
+            p = page(skill(ComicTranslationSkill.Genre.EVERYDAY, ""), false, "en", "ckb",
+                    (text, source, target) -> text.contains("[[KX")
+                            ? "[[KX0000]] ڕێژە: 100/25. [[KX0001]] با ئێستا بڕۆین." : bad,
+                    "The gauge reads 25/100.", "We should leave now.");
+            equal("ڕێژە: 100/25.", p.results.get(0).text, "unsafe/worse replacement is discarded");
+            equal(0, p.qualityRecoveries, "failed recovery is not called a correction");
+            check(p.results.get(0).warnings.contains("number_order"), "unresolved hint remains visible");
+        }
+        p = page(skill(ComicTranslationSkill.Genre.EVERYDAY, ""), false, "en", "ckb",
+                (text, source, target) -> {
+                    if (!text.contains("[[KX")) throw new IOException("synthetic recovery outage");
+                    return "[[KX0000]] ڕێژە: 100/25. [[KX0001]] با ئێستا بڕۆین.";
+                }, "The gauge reads 25/100.", "We should leave now.");
+        equal(0, p.qualityRecoveries, "a failed recovery keeps the usable existing result");
+        check(p.results.get(0).warnings.contains("number_order"), "outage does not hide the warning");
+
+        calls.set(0);
+        p = page(skill(ComicTranslationSkill.Genre.EVERYDAY, ""), false, "en", "ckb",
+                (text, source, target) -> { calls.incrementAndGet(); return text; },
+                "Copper lamps line this hallway.", "Pale curtains cover that window.",
+                "A stone table stands outside.", "Someone left the garden gate open.");
+        equal(3, calls.get(), "unhelpful echoes cannot cause an unbounded retry loop");
+        equal(2, p.qualityRetries, "at most two contextual recoveries per page");
+        equal(0, p.qualityRecoveries, "same bad echo is never accepted as improvement");
+        equal(4, p.results.size(), "all original bubble identities remain separate");
+        for (ComicTranslationSkill.Result result : p.results) check(result.warnings.contains("untranslated"), "unresolved source echoes remain flagged");
+
+        p = page(skill(ComicTranslationSkill.Genre.EVERYDAY, ""), false, "en", "ar",
+                (text, source, target) -> text.contains("[[KX")
+                        ? "[[KX0000]] Copper lamps line this hallway. [[KX0001]] يجب أن نغادر الآن."
+                        : "تصطف مصابيح نحاسية في هذا الممر.",
+                "Copper lamps line this hallway.", "We should leave now.");
+        equal(1, p.qualityRecoveries, "automatic checking also works for Arabic targets");
+        equal("تصطف مصابيح نحاسية في هذا الممر.", p.results.get(0).text, "never force Sorani into another target");
+
+        calls.set(0);
+        p = page(skill(ComicTranslationSkill.Genre.EVERYDAY, ""), true, "en", "ckb",
+                (text, source, target) -> { calls.incrementAndGet(); return "وەرگێڕان"; },
+                "Copper lamps line this hallway.", "Pale curtains cover that window.");
+        equal(2, calls.get(), "offline stays on the selected per-block engine");
+        equal(0, p.qualityRetries, "offline never performs an online quality retry");
+        equal(0, p.contextRequests, "offline has no network context pass");
+        p = page(skill(ComicTranslationSkill.Genre.EVERYDAY, ""), false, "en", "en", NO_BACKEND,
+                "Copper lamps line this hallway.", "Pale curtains cover that window.");
+        equal(0, p.qualityRetries, "same-language re-lettering is not retranslated");
+
+        calls.set(0);
+        expect(IOException.class, () -> page(skill(ComicTranslationSkill.Genre.EVERYDAY, ""), false, "en", "ckb",
+                (text, source, target) -> {
+                    calls.incrementAndGet();
+                    if (!text.contains("[[KX")) throw new IOException("wrapped STOP", new InterruptedException("STOP"));
+                    return "[[KX0000]] Copper lamps line this hallway. [[KX0001]] Pale curtains cover that window.";
+                }, "Copper lamps line this hallway.", "Pale curtains cover that window."));
+        equal(2, calls.get(), "STOP during automatic recovery is never swallowed or retried");
     }
 
     private static void testAdversarialBoundaries() throws Exception {

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="q_title">"Koorix Skill"</string>
+    <string name="q_title">"Review text (optional)"</string>
     <string name="q_badge">"ON-DEVICE REVIEW • NO API KEY"</string>
-    <string name="q_intro">"Story names, per-block checks and corrections — right here in Koorix."</string>
+    <string name="q_intro">"Skill already runs automatically with Translate. This manual review/correction screen is optional; it is not needed to finish translation."</string>
     <string name="q_open">"✦ Open Koorix Skill"</string>
     <string name="q_settings">"Story setup"</string>
     <string name="q_project_settings">"This project’s story setup"</string>

@@ -12,6 +12,8 @@ can discover it under the project's `.claude/skills/` directory.
 ## Owner constraints
 
 - Regular **Koorix** only. No new Preview app or automatic KurdMan delivery.
+- Skill must work automatically with the normal **Translate** action. No required
+  separate Skill screen, setup/save step or reader checkmarks to finish a job.
 - No paid API, NLLB, large model download, hidden online fallback or repeated
   per-image chat roundtrip. Do not claim instructions are a trained model.
 - Preserve all target languages, Kurdish/English/Arabic UI, account and Premium

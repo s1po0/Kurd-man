@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="q_title">"Skillی Koorix"</string>
+    <string name="q_title">"پشکنینی دەق (ئارەزوومەندانە)"</string>
     <string name="q_badge">"پشکنینی ناوخۆ • بێ API key"</string>
-    <string name="q_intro">"ناو و زاراوەی چیرۆک، پشکنینی هەر بلۆکی دەق و چاککردنەوە — لەناو خودی Koorix."</string>
+    <string name="q_intro">"Skill خۆکارانە لەگەڵ Translate کار دەکات. ئەم پشکنین و چاککردنەوەی دەستییە ئارەزوومەندانەیە؛ پێویست نییە بۆ تەواوبوونی وەرگێڕان."</string>
     <string name="q_open">"✦ کردنەوەی Skillی Koorix"</string>
     <string name="q_settings">"ڕێکخستنی چیرۆک"</string>
     <string name="q_project_settings">"ڕێکخستنی چیرۆکی ئەم پڕۆژەیە"</string>

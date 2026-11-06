@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auto_skill_ready">"✦ Skill خۆکارە — تەنها Translate دابگرە."</string>
+    <string name="auto_story_toggle">"⌄ ناو / زاراوە (ئارەزوومەندانە)"</string>
+    <string name="auto_story_help">"هیچ ڕێکخستنێک پێویست نییە. دەتوانیت Auto و فەرهەنگی بەتاڵ بهێڵیتەوە. ئەم هەڵبژاردنانە بە هەمان Translate بەکاردێن؛ پڕۆژە پاشەکەوتکراوەکان ناگۆڕن. بۆ چیرۆکێکی نوێ فەرهەنگەکە پاک بکەرەوە."</string>
+    <string name="auto_translate_button">"وەرگێڕان — Translate"</string>
+    <string name="auto_skill_progress">"Skillی خۆکار"</string>
+    <string name="auto_result_summary">"✦ Skill لەگەڵ Translate کاریکرد: %1$d بلۆک • %2$d نیشانە.\nدەرئەنجامەکە ئامادەیە؛ پشکنینی دەستی ئارەزوومەندانەیە. پشکنینی ناوخۆیی دڵنیایی هەموو ماناکان نییە."</string>
+    <string name="auto_review_optional">"نیشانەکان بپشکنە (ئارەزوومەندانە)"</string>
+</resources>

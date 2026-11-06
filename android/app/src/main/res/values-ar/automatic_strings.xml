@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auto_skill_ready">"✦ يعمل Skill تلقائيًا — اضغط Translate فقط."</string>
+    <string name="auto_story_toggle">"⌄ الأسماء / المصطلحات (اختياري)"</string>
+    <string name="auto_story_help">"لا تحتاج إلى إعداد. يمكنك ترك Auto والمسرد فارغًا. تُطبّق هذه الخيارات بزر Translate نفسه ولا تغيّر المشاريع المحفوظة. امسح الأسماء عند بدء قصة أخرى."</string>
+    <string name="auto_translate_button">"ترجمة — Translate"</string>
+    <string name="auto_skill_progress">"Skill التلقائي"</string>
+    <string name="auto_result_summary">"✦ عمل Skill مع Translate: %1$d كتلة • %2$d ملاحظة.\nالنتيجة جاهزة والمراجعة اليدوية اختيارية. الفحوص المحلية لا تضمن صحة كل المعاني."</string>
+    <string name="auto_review_optional">"مراجعة الملاحظات (اختياري)"</string>
+</resources>

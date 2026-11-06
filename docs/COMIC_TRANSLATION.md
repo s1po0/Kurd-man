@@ -252,3 +252,40 @@ so resource symbols were checked in the compiled table, not guessed ZIP paths.
 - See `koorix/releases/v1.4.0.json` for exact build, test and delivery provenance.
   This is an in-place update over **v2-signed 1.3.1**; no uninstall/key rotation.
   The pre-v2 one-time migration warning remains separate and unchanged.
+
+
+## 1.4.1 — one Translate action; no required Skill screen
+
+The normal **Translate** action now owns the workflow. Koorix automatically
+uses the comic layer even if an older future-preset switch was off. Existing
+saved-project snapshots are not rewritten. Names and genre are optional,
+collapsed **inside Translate**, applied by that same button; there is no Save
+step, page switching or required reader assessment. Invalid optional names stay
+inline and are validated before the account gate/OCR. Pair switching and a
+recreated form do not paste one language's active draft into another pair.
+
+The common `ComicTranslationFlow.apply` pass persists final text/cues before
+rendering for single images, image batches and CBZ pages. Geometry, styles,
+source ordering, selected online/offline mode and account enforcement remain.
+A finished result includes a local-processing summary; the manual hints button
+is optional and appears only when hints remain. Reader decisions never become
+automatically approved merely because Translate succeeded.
+
+For online contextual outputs with review cues, the existing selected backend
+may retry only the affected bubble: at most **two additional requests per page**,
+never an unbounded semantic loop. A replacement must preserve the existing number
+and marker contracts and have a strict subset of the original local cue codes,
+with no new code. Failed/worse replies retain the original editable target and
+its warnings. Healthy neighbours keep their contextual output. Offline never
+uses this recovery request or a hidden network fallback; exact local rules and
+chosen names still work through its existing pipeline. This is constrained
+structural recovery, not a new model or semantic accuracy guarantee.
+
+New synthetic contracts: `testAutomaticQualityRecovery` covers ratios, percent,
+source echoes, unsafe replacements, budget, other targets and STOP.
+`ComicAutomaticTranslateTest` covers inline controls, automatic defaults,
+pair/draft isolation, pre-render persistence/geometry and the actual translator
+adapter with a mock offline engine at API 26/34. The release gate requires all
+**44 Android/JVM executions** (old 28 + new 16), no failures/errors/skips, before
+production signer restoration. CI/build/delivery provenance is recorded only
+after the actual run succeeds; device/real-page meaning acceptance is separate.

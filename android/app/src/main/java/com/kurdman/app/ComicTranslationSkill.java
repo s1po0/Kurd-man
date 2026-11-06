@@ -77,6 +77,9 @@ public final class ComicTranslationSkill {
         public int contextRequests;
         public int contextFallbacks;
         public int glossaryFallbacks;
+        /** Bounded contextual recovery, not semantic/reader approval. */
+        public int qualityRetries;
+        public int qualityRecoveries;
     }
 
     public static final class GlossaryException extends Exception {
@@ -128,6 +131,7 @@ public final class ComicTranslationSkill {
     private static final int MAX_WINDOW = 4;
     private static final int MAX_WINDOW_CHARS = 1050;
     private static final int MAX_GLOSSARY = 100;
+    private static final int MAX_QUALITY_RETRIES_PER_PAGE = 2;
 
     private final Config config;
     private final List<Entry> lexicon;
@@ -327,7 +331,36 @@ public final class ComicTranslationSkill {
                     throw new IOException("Unrestorable comic translation marker");
                 }
                 if (config.enabled && !sameLanguage(sourceLanguage, targetLanguage)) {
-                    warnings = addWarning(warnings, reviewHints(plan.source, value, sourceLanguage, targetLanguage));
+                    String cues = reviewHints(plan.source, value, sourceLanguage, targetLanguage);
+                    // A contextual response may obey marker/number counts yet echo
+                    // the source, reverse a ratio or lose a percent sign. Recover
+                    // just that bubble using the existing selected online route.
+                    // No second model, offline network fallback or unbounded loop.
+                    if (!offline && "comic_context".equals(method) && !cues.isEmpty()
+                            && !RESERVED.matcher(plan.source).find()
+                            && page.qualityRetries < MAX_QUALITY_RETRIES_PER_PAGE) {
+                        check(progress, page.results.size(), plans.size());
+                        page.qualityRetries++;
+                        try {
+                            String candidate = plan.mask.restore(backend.translate(
+                                    plan.input(), sourceLanguage, targetLanguage));
+                            check(progress, page.results.size(), plans.size());
+                            if (candidate != null && !candidate.isEmpty() && sameNumbers(plan.source, candidate)) {
+                                String candidateCues = reviewHints(plan.source, candidate, sourceLanguage, targetLanguage);
+                                if (strictlyFewerCues(cues, candidateCues)) {
+                                    value = candidate;
+                                    cues = candidateCues;
+                                    method = "comic_context_recovered";
+                                    page.qualityRecoveries++;
+                                }
+                            }
+                        } catch (Exception failure) {
+                            rethrowCancellation(failure);
+                            check(progress, page.results.size(), plans.size());
+                            // Preserve the original editable result and its hints.
+                        }
+                    }
+                    warnings = addWarning(warnings, cues);
                 }
                 page.results.add(new Result(clean(value), method, warnings));
                 check(progress, page.results.size(), plans.size());
@@ -556,6 +589,13 @@ public final class ComicTranslationSkill {
 
     String reviewHints(String source, String output, String sourceLanguage, String targetLanguage) {
         return config.enabled ? quality.review(source, output, sourceLanguage, targetLanguage) : "";
+    }
+
+    private static boolean strictlyFewerCues(String before, String after) {
+        Set<String> first = new HashSet<>(Arrays.asList(before.split(",")));
+        Set<String> second = new HashSet<>(Arrays.asList(after.split(",")));
+        first.remove(""); second.remove("");
+        return first.containsAll(second) && first.size() > second.size();
     }
 
     private static String addWarning(String current, String warning) {

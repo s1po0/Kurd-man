@@ -54,6 +54,7 @@ public final class ComicSettingsActivity extends AppCompatActivity {
         findViewById(R.id.comicProjectNote).setVisibility(project==null?View.GONE:View.VISIBLE);
         ComicTranslationSkill.Config config=project==null?ComicSettings.read(this,source,target):project.comicConfig;
         enabled.setChecked(config.enabled);
+        if (BuildConfig.PUBLIC_EDITION && project == null) enabled.setVisibility(View.GONE);
         ArrayAdapter<String> adapter=new ArrayAdapter<>(this,R.layout.spinner_item,ComicSettings.genreLabels(this));
         adapter.setDropDownViewResource(R.layout.spinner_dropdown_item);genre.setAdapter(adapter);genre.setSelection(config.genre.ordinal());
         glossary.setText(config.glossary);
@@ -74,7 +75,7 @@ public final class ComicSettingsActivity extends AppCompatActivity {
         String text=glossary.getText().toString();
         try{ComicTranslationSkill.validateGlossary(text);}
         catch(ComicTranslationSkill.GlossaryException invalid){glossary.setError(getString(R.string.comic_glossary_error,invalid.line));glossary.requestFocus();return;}
-        ComicTranslationSkill.Config chosen=new ComicTranslationSkill.Config(enabled.isChecked(),
+        ComicTranslationSkill.Config chosen=new ComicTranslationSkill.Config((BuildConfig.PUBLIC_EDITION && project == null) || enabled.isChecked(),
                 ComicTranslationSkill.Genre.values()[genre.getSelectedItemPosition()],text);
         if(project==null){ComicSettings.save(this,source,target,chosen);finishSaved();return;}
         if(project!=TranslationProjectStore.load(this)){finish();return;}
