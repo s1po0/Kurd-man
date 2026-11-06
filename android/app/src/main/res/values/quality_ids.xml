@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="qualityTargetInput" type="id" />
+    <item name="qualityDecision" type="id" />
+    <item name="qualityRemember" type="id" />
+    <item name="qualityOnPage" type="id" />
+    <item name="qualityMemorySource" type="id" />
+    <item name="qualityMemoryTarget" type="id" />
+    <item name="qualityMemoryExact" type="id" />
+    <item name="qualityMemoryFuture" type="id" />
+</resources>

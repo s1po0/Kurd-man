@@ -21,5 +21,6 @@ jobs:
           mkdir -p /tmp/comic-probe
           javac --release 17 -encoding UTF-8 -d /tmp/comic-probe \
             android/app/src/main/java/com/kurdman/app/ComicTranslationSkill.java \
+            android/app/src/main/java/com/kurdman/app/ComicQualityChecks.java \
             tools/comic-probe/LiveProbe.java
           java -cp /tmp/comic-probe com.kurdman.app.LiveProbe

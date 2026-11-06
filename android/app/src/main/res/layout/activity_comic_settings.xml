@@ -75,6 +75,14 @@
                     android:background="@drawable/bg_button_secondary" android:text="@string/comic_clear"
                     android:textAllCaps="false" android:textColor="@color/text_secondary" />
             </LinearLayout>
+            <TextView android:id="@+id/comicProjectNote" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="16dp"
+                android:text="@string/q_project_note" android:textColor="@color/text_secondary"
+                android:textSize="13sp" android:lineSpacingMultiplier="1.2" android:visibility="gone" />
+            <CheckBox android:id="@+id/comicApplyFuture" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:minHeight="52dp"
+                android:text="@string/q_future" android:buttonTint="@color/primary"
+                android:textColor="@color/text_primary" android:textSize="13sp" android:visibility="gone" />
             <TextView android:id="@+id/comicOtherTargetsNote" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:layout_marginTop="16dp" android:paddingHorizontal="8dp"
                 android:text="@string/comic_other_targets" android:textColor="@color/text_secondary"

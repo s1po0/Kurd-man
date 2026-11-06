@@ -244,6 +244,8 @@ public class TranslationProject {
         json.put("originalCkb", segment.originalCkb == null ? "" : segment.originalCkb);
         json.put("translationMethod", segment.translationMethod);
         json.put("translationWarnings", segment.translationWarnings);
+        json.put("readerReview", segment.readerReview);
+        json.put("readerReviewBinding", segment.readerReviewBinding);
         json.put("lines", segment.lines);
         json.put("sourceLineHeight", segment.sourceLineHeight);
         json.put("ocrConfidence", segment.ocrConfidence);
@@ -277,6 +279,8 @@ public class TranslationProject {
         segment.originalCkb = json.optString("originalCkb", segment.ckb);
         segment.translationMethod = json.optString("translationMethod", "standard");
         segment.translationWarnings = json.optString("translationWarnings", "");
+        segment.readerReview = json.optString("readerReview", "unreviewed");
+        segment.readerReviewBinding = json.optString("readerReviewBinding", "");
         segment.rendered = json.optBoolean("rendered", false);
         segment.renderBox = rectFromJson(json.optJSONObject("renderBox"));
         segment.eraseBox = rectFromJson(json.optJSONObject("eraseBox"));

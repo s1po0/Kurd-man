@@ -188,3 +188,40 @@ This establishes that the real route accepted the boundary/terminology
 contract on those examples, not that all comic dialogue is semantically
 correct. `tools/comic-probe` is advisory research tooling, uses no reader data
 or API key, and is not part of the app or an offline/network fallback.
+
+
+## 1.4.0 — Koorix Skill inside the normal app
+
+The standalone AgentSkill remains a developer resource, but readers no longer
+need it, Python or Claude Code to use the practical review workflow:
+**Translate / Results → Open Koorix Skill**. This is a native screen in
+`com.koorix.app`, not a Preview or another application.
+
+- Deterministic checks run on the phone: per-block number/ratio order/percent,
+  preferred-name occurrence counts (longest match, word boundaries), internal
+  markers, empty targets, source echoes, script, repetition and low OCR confidence.
+- Read originals, targets and neighbouring dialogue on the same page; edit a
+  target, choose a reader-declared assessment, or open that exact page/block in
+  the existing visual editor. Export there to regenerate images/CBZ/PDF.
+- Remember a chosen name or short phrase. Optional bulk correction touches only
+  **identical whole source blocks**, never substrings/guessed target synonyms.
+  Geometry, erasure, styles, hidden blocks and the original reset wording stay.
+- Story setup can target the saved project’s frozen language pair. Future presets
+  are separate and require an explicit checkbox. No cross-language glossary leak.
+- Reader decisions start unreviewed, survive project save/restart, and become
+  stale after relevant wording, neighbouring context, language or story-setting
+  edits. A reader label is not reviewer authentication or a semantic score.
+- Snapshot writes reject an older screen if a new translation replaced the latest
+  project. No additional raw dialogue/glossary is sent to diagnostics or a service.
+
+Implementation: `ComicQualityChecks` (pure Java), `ComicQualityReview` (project
+adapter) and `ComicQualityActivity` (reader UI). The existing Android-independent
+contract suite is extended. `ComicQualityAndroidTest` tests native Android views,
+editing, filters, story-memory isolation and restart persistence under Robolectric
+at API 26 and 34, before production signing/distribution. These are Android/JVM
+contracts, **not real-device visual acceptance or native-language accuracy**.
+
+No paid API, agent-service call, extra translation model or NLLB is added. The
+existing translator, selected online/offline mode, account quotas, cancellation
+and v2 signer remain authoritative. General offline Sorani meaning limitations
+remain; no-warning/checked-by-reader never means every meaning is correct.

@@ -230,6 +230,9 @@ public class SoraniTranslator implements AutoCloseable {
                 result.text = skill.formatPreservingGlossary(result.text, value ->
                         normalizeSoraniScript(normalize(transliteratePreservedNames(original, value))));
             }
+            // Review the final on-page wording too, after script/name cleanup.
+            result.warnings = ComicQualityChecks.merge(result.warnings,
+                    skill.reviewHints(sources.get(i), result.text, sourceLanguage, targetLanguage));
         }
         return page;
     }

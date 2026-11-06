@@ -61,7 +61,7 @@ public final class ComicTranslationSkill {
         public String text;
         public final String method;
         /** Comma-separated, language-independent review codes. */
-        public final String warnings;
+        public String warnings;
 
         Result(String text, String method, String warnings) {
             this.text = text;
@@ -132,6 +132,7 @@ public final class ComicTranslationSkill {
     private final Config config;
     private final List<Entry> lexicon;
     private final List<Entry> custom;
+    private final ComicQualityChecks quality;
     // Disable a failing optimisation for the rest of this job, not forever.
     private boolean contextSupported = true;
     private boolean offlineMaskingSupported = true;
@@ -141,6 +142,7 @@ public final class ComicTranslationSkill {
         this.config = config;
         this.lexicon = lexicon;
         this.custom = parseGlossary(config.glossary);
+        this.quality = new ComicQualityChecks(config);
     }
 
     static List<Entry> readLexicon(Reader reader) throws IOException {
@@ -170,7 +172,7 @@ public final class ComicTranslationSkill {
         return parseGlossary(text).size();
     }
 
-    private static List<Entry> parseGlossary(String text) throws GlossaryException {
+    static List<Entry> parseGlossary(String text) throws GlossaryException {
         List<Entry> entries = new ArrayList<>();
         Set<String> seen = new HashSet<>();
         String safe = text == null ? "" : text;
@@ -325,7 +327,7 @@ public final class ComicTranslationSkill {
                     throw new IOException("Unrestorable comic translation marker");
                 }
                 if (config.enabled && !sameLanguage(sourceLanguage, targetLanguage)) {
-                    warnings = addWarning(warnings, review(plan.source, value, targetLanguage));
+                    warnings = addWarning(warnings, reviewHints(plan.source, value, sourceLanguage, targetLanguage));
                 }
                 page.results.add(new Result(clean(value), method, warnings));
                 check(progress, page.results.size(), plans.size());
@@ -552,12 +554,8 @@ public final class ComicTranslationSkill {
         return result;
     }
 
-    private static String review(String source, String output, String target) {
-        String warnings = sameNumbers(source, output) ? "" : "numbers";
-        if (!REPEATED.matcher(source).find() && REPEATED.matcher(output).find()) warnings = addWarning(warnings, "repetition");
-        if (source.equalsIgnoreCase(output) && source.contains(" ")
-                && Arrays.asList("ckb", "ar", "fa").contains(target)) warnings = addWarning(warnings, "untranslated");
-        return warnings;
+    String reviewHints(String source, String output, String sourceLanguage, String targetLanguage) {
+        return config.enabled ? quality.review(source, output, sourceLanguage, targetLanguage) : "";
     }
 
     private static String addWarning(String current, String warning) {

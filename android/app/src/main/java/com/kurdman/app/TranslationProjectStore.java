@@ -68,6 +68,18 @@ final class TranslationProjectStore {
         return true;
     }
 
+    /** Serialize writes with project replacement; an older screen cannot overwrite a new job. */
+    static synchronized void saveSnapshot(TranslationProject expected, String snapshot) throws IOException {
+        if (expected == null || current != expected || snapshot == null) {
+            throw new IOException("Project changed before save");
+        }
+        try {
+            TranslationProject.fromJson(new org.json.JSONObject(snapshot), expected.projectDir).save();
+        } catch (org.json.JSONException invalid) {
+            throw new IOException("Invalid project snapshot", invalid);
+        }
+    }
+
     static synchronized void setCurrent(TranslationProject project) {
         current = project;
     }

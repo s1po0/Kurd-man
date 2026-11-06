@@ -550,6 +550,12 @@
                         android:text="@string/comic_configure"
                         android:textAllCaps="false"
                         android:textColor="@color/text_primary" />
+                    <Button
+                        android:id="@+id/comicQualityButton"
+                        android:layout_width="match_parent" android:layout_height="52dp"
+                        android:layout_marginTop="8dp" android:background="@drawable/bg_button_primary"
+                        android:text="@string/q_open" android:textAllCaps="false"
+                        android:textColor="@color/white" android:textSize="14sp" />
                 </LinearLayout>
 
                 <CheckBox
@@ -1137,6 +1143,13 @@
                     android:textAllCaps="false"
                     android:textColor="@color/white"
                     android:textSize="14sp" />
+
+                <Button
+                    android:id="@+id/resultQualityButton"
+                    android:layout_width="match_parent" android:layout_height="54dp"
+                    android:layout_marginTop="10dp" android:background="@drawable/bg_button_secondary"
+                    android:text="@string/q_open" android:textAllCaps="false"
+                    android:textColor="@color/text_primary" android:textSize="14sp" />
 
                 <Button
                     android:id="@+id/sendResultButton"

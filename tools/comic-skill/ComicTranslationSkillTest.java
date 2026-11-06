@@ -159,7 +159,8 @@ public final class ComicTranslationSkillTest {
                     }, "Jinwoo is here.");
             equal("ئەو لێرەیە.", p.results.get(0).text, "damaged/duplicate/unknown/truncated marker fallback");
             equal(2, calls.get(), "one constrained attempt + original-source fallback");
-            equal("glossary_unconfirmed", p.results.get(0).warnings, "fallback cannot claim glossary applied");
+            check(p.results.get(0).warnings.contains("glossary_unconfirmed"), "fallback cannot claim glossary applied");
+            check(p.results.get(0).warnings.contains("glossary_missing"), "missing chosen name has an actionable review hint");
         }
         ComicTranslationSkill.PageResult selfName = page(skill(ComicTranslationSkill.Genre.AUTO, "John=John Smith"), true,
                 "en", "ar", (text, source, target) -> text.contains("ZXQK") ? "broken" : text, "John and John");

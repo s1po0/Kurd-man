@@ -54,7 +54,48 @@ jobs:
           if [ $code -ne 0 ]; then
             tail -n 8 /tmp/comic-tests.log | while IFS= read -r line; do echo "::error::$line"; done
           else
-            echo "::notice::$(tail -n 1 /tmp/comic-tests.log)"
+            grep -E '^(Comic skill:|In-app skill:)' /tmp/comic-tests.log | while IFS= read -r line; do echo "::notice::$line"; done
+          fi
+          exit $code
+
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0"
+
+      - name: Test the real in-app skill screens, edits and restart-safe review state
+        run: |
+          set +e
+          gradle --no-daemon --no-configuration-cache --stacktrace -p android testKoorixReleaseUnitTest > /tmp/koorix-ui-tests.log 2>&1
+          code=$?
+          tail -n 65 /tmp/koorix-ui-tests.log
+          python3 <<'PYTEST'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          files=list(Path('android/app/build/test-results/testKoorixReleaseUnitTest').glob('TEST-*.xml'))
+          total=failed=skipped=0
+          for file in files:
+              root=ET.parse(file).getroot()
+              total+=int(root.get('tests',0));failed+=int(root.get('failures',0))+int(root.get('errors',0));skipped+=int(root.get('skipped',0))
+              for test in root.findall('testcase'):
+                  issue=test.find('failure')
+                  if issue is not None:
+                      detail=(issue.get('message','') or (issue.text or '').split('\n')[0])[:400]
+                      print('::error::In-app skill UI contract failed: '+test.get('name','test')+' '+detail.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
+          print(f'::notice::In-app skill Android/JVM tests: {total} run, {failed} failed, {skipped} skipped; not device/semantic proof')
+          if total < 28 or failed or skipped:
+              print('::error::In-app skill tests were missing, failed or skipped; production distribution is blocked')
+              raise SystemExit(1)
+          PYTEST
+          reports=$?
+          if [ $reports -ne 0 ]; then code=$reports; fi
+          if [ $code -ne 0 ]; then
+            grep -E 'error:|FAILED|What went wrong|Execution failed|Caused by:' /tmp/koorix-ui-tests.log | head -n 7 | while IFS= read -r line; do echo "::error::$line"; done
           fi
           exit $code
 
@@ -78,16 +119,6 @@ jobs:
             --out "$RUNNER_TEMP/koorix-key-b"
           cmp "$RUNNER_TEMP/koorix-key-a/koorix-release-v2.p12" "$RUNNER_TEMP/koorix-key-b/koorix-release-v2.p12"
           echo "::notice::Permanent production signing identity cold-restored twice without any cache; independent owner backup verified"
-
-      - name: Set up Gradle 8.7
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.7"
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: "platform-tools platforms;android-35 build-tools;35.0.0"
 
       - name: Build regular Koorix release APK
         run: |
@@ -154,7 +185,7 @@ jobs:
         run: |
           TAG="koorix-v$KOORIX_VERSION"
           cp "$APK_FILE" "Koorix-v$KOORIX_VERSION.apk"
-          NOTES="Koorix v$KOORIX_VERSION — regular production release, com.koorix.app, arm64, non-debuggable. Manga/Manhwa translation skill and editable story glossary included; not a new trained model, and offline Sorani quality remains limited. New permanent v2 signing identity with verified independent recovery backup. ONE-TIME MIGRATION from old-certificate Koorix: export the results you need BEFORE uninstalling the old app. Android cannot update across different signing keys. Uninstalling deletes private projects, settings and downloaded packs; no data migration or deletion is automated. Future v2-signed updates will keep this signing identity and install normally over this version."
+          NOTES="Koorix v$KOORIX_VERSION — regular production update, com.koorix.app, arm64, non-debuggable. Koorix Skill is now usable INSIDE the app: per-block on-device checks, original/translation review, story correction memory, exact whole-block corrections and page-editor/export access. No new paid API, Claude backend or translation model. Offline Sorani meaning remains limited; checks and reader declarations are not semantic accuracy scores. Uses the SAME permanent v2 signer as v1.3.1: install over v2-signed Koorix without uninstalling. Only pre-v2/old-certificate installs need the previously explained one-time migration; export important data before any such uninstall."
           if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
             gh release upload "$TAG" "Koorix-v$KOORIX_VERSION.apk" --clobber --repo "${{ github.repository }}"
           else
@@ -165,7 +196,7 @@ jobs:
           echo "::notice::APK_DOWNLOAD_URL=$URL"
           echo "APK_DOWNLOAD_URL=$URL" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Send regular Koorix APK to Telegram admin with migration warning
+      - name: Send regular same-key Koorix update to Telegram admin
         env:
           TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           ADMIN: ${{ secrets.TELEGRAM_ADMIN_ID }}
@@ -180,8 +211,8 @@ jobs:
             exit 1
           fi
           CAPTION="💜 Koorix v$KOORIX_VERSION — وەشانی ئاسایی، نەک Preview.
-          کلیلی نوێی جێگیر + دۆخی Manga/Manhwa.
-          ئاگاداری یەکجارەکی: پێش سڕینەوەی وەشانی کۆن، دەرئەنجامەکانت دەربهێنە؛ سڕینەوە داتای ناوخۆ و پاکێجەکانیش دەسڕێتەوە. کلیلی نوێ لەسەر وەشانی کۆن دانامەزرێت. نوێکارییەکانی دواتر هەمان کلیل بەکاردەهێنن."
+          Skillی Koorix ئێستا لەناو ئەپەکەیە: پشکنینی دەق و ناو/ژمارە، چاککردنەوە و فەرهەنگی چیرۆک؛ بەبێ APIی پارەدان.
+          هەمان کلیلی جێگیری v2؛ لەسەر 1.3.1ی v2 دایبمەزرێنە و ئەپی پێشوو مەسڕەوە. ئەمە مۆدێلی Claude یان دڵنیایی مانای هەموو وەرگێڕانێک نییە."
           RESP=$(curl -fsS --connect-timeout 20 --max-time 180 \
             --form-string "chat_id=$ADMIN" --form-string "caption=$CAPTION" \
             --form "document=@$APK_FILE;filename=Koorix-v$KOORIX_VERSION.apk" \

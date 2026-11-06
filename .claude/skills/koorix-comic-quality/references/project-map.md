@@ -8,6 +8,7 @@ do not hard-code `/home/user` or a branch name into scripts.
 | Runtime rules/context/glossary | `android/app/src/main/java/com/kurdman/app/ComicTranslationSkill.java` |
 | Curated entries (Sorani only) | `android/app/src/main/assets/comic-lexicon-v1.tsv` |
 | Online/offline dispatch | `android/app/src/main/java/com/kurdman/app/SoraniTranslator.java` |
+| In-app checks / review / correction memory | `ComicQualityChecks.java`, `ComicQualityReview.java`, `ComicQualityActivity.java` |
 | Settings + language-pair persistence | `ComicSettings.java`, `ComicSettingsActivity.java` in the same Java directory |
 | Job snapshots / input integration | `MainActivity.java` |
 | Saved JSON / target field | `TranslationProject.java`, `Segment.java`; `ckb` stores the selected target, not necessarily Sorani |
@@ -27,8 +28,9 @@ do not hard-code `/home/user` or a branch name into scripts.
 - Runtime comic mode already supports genre, curated phrases, reader glossary,
   bounded neighbouring context online and safe individual fallback.
 - Built-in Sorani terms must not be forced into Arabic, English or another target.
-- This agent skill does not replace that engine or run inside Android. Its tools
-  make review, reproducibility and development safer. They do not translate.
+- This AgentSkill does not replace that engine or execute inside Android. In
+  1.4.0 the practical local checks/review workflow is separately implemented in
+  the native Koorix Skill screen. The Python developer tools still do not translate.
 - The packet adapter accepts an explicitly supplied local JSON copy. The release
   app does NOT gain a full-project JSON export/import UI from installing a skill.
   Do not instruct users to uninstall/reinstall or use `run-as` on a non-debuggable

@@ -58,6 +58,11 @@
         </activity>
 
         <activity
+            android:name=".ComicQualityActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".ComicSettingsActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />

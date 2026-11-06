@@ -339,6 +339,8 @@ public class MainActivity extends AppCompatActivity {
         translationModeSpinner = findViewById(R.id.translationModeSpinner);
         comicSettingsButton = findViewById(R.id.comicSettingsButton);
         comicSkillSummary = findViewById(R.id.comicSkillSummary);
+        findViewById(R.id.comicQualityButton).setOnClickListener(v -> openComicQuality());
+        findViewById(R.id.resultQualityButton).setOnClickListener(v -> openComicQuality());
         comicSettingsButton.setOnClickListener(v -> startActivity(new Intent(this,
                 ComicSettingsActivity.class).putExtra("source", selectedSourceLanguage())
                 .putExtra("target", selectedTargetLanguage())));
@@ -1428,6 +1430,16 @@ public class MainActivity extends AppCompatActivity {
                 setStatus("❌ " + friendlyError(e));
             }
         }, "KurdManFontImport").start();
+    }
+
+    private void openComicQuality() {
+        if (currentBusy || JobRuntime.isRunning()) {
+            setStatus(getString(R.string.ks_0541));
+            return;
+        }
+        editorLauncher.launch(new Intent(this, ComicQualityActivity.class)
+                .putExtra("source", selectedSourceLanguage())
+                .putExtra("target", selectedTargetLanguage()));
     }
 
     private void openTextStudio() {
@@ -3524,14 +3536,14 @@ public class MainActivity extends AppCompatActivity {
 
     private void exportEditedProject() {
         final TranslationProject project = TranslationProjectStore.load(this);
-                    ManhwaRenderer.activeTargetLanguage = project.targetLanguage;
-                    ManhwaRenderer.i18nContext = getApplicationContext();
-                    JobRuntime.init(getApplicationContext());
         if (project == null || !project.completed || project.pages.isEmpty()) {
             setStatus(getString(R.string.ks_0540));
             updateButtons(false);
             return;
         }
+        ManhwaRenderer.activeTargetLanguage = project.targetLanguage;
+        ManhwaRenderer.i18nContext = getApplicationContext();
+        JobRuntime.init(getApplicationContext());
         final boolean createPdf = selectedCreatePdf();
         showMainPage(PAGE_RESULTS);
         setBusy(true);
@@ -4981,6 +4993,8 @@ public class MainActivity extends AppCompatActivity {
         }
         if (targetSpinner != null) targetSpinner.setEnabled(enabled);
         if (comicSettingsButton != null) comicSettingsButton.setEnabled(enabled);
+        findViewById(R.id.comicQualityButton).setEnabled(enabled);
+        findViewById(R.id.resultQualityButton).setEnabled(enabled);
         if (accurateOcrCheck != null) {
             accurateOcrCheck.setEnabled(enabled);
         }

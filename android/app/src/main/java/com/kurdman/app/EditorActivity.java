@@ -58,6 +58,8 @@ import java.util.concurrent.Executors;
 public class EditorActivity extends AppCompatActivity
         implements PageEditorView.Listener {
     public static final String EXTRA_EXPORT = "export_edited_project";
+    public static final String EXTRA_PAGE = "review_page";
+    public static final String EXTRA_SEGMENT = "review_segment";
     private static final String PREFS_NAME = "kurdman_settings";
     private static final String PREF_GLOBAL_STYLE = "global_text_style_json";
     private static final int PANEL_TEXTS = 0;
@@ -253,7 +255,11 @@ public class EditorActivity extends AppCompatActivity
             return;
         }
         originalSnapshotAtOpen = project.snapshotJson();
-        loadPage(0, true);
+        int startPage = Math.max(0, Math.min(getIntent().getIntExtra(EXTRA_PAGE, 0), project.pages.size() - 1));
+        int startSegment = Math.max(0, Math.min(getIntent().getIntExtra(EXTRA_SEGMENT, 0),
+                project.pages.get(startPage).segments.size() - 1));
+        selectedByPage.put(startPage, project.pages.get(startPage).segments.isEmpty() ? -1 : startSegment);
+        loadPage(startPage, true);
         updateHistoryButtons();
     }
 
@@ -287,6 +293,8 @@ public class EditorActivity extends AppCompatActivity
         if (!pending.equals(current)) {
             pushHistory();
             segment.ckb = pending;
+            ComicQualityReview.edited(segment);
+            segment.translationWarnings = ComicQualityReview.codes(project, pageIndex, selectedSegmentIndex);
             if (!pending.isEmpty()) {
                 segment.ensureStyle().visible = true;
             }
@@ -329,7 +337,12 @@ public class EditorActivity extends AppCompatActivity
                 currentBitmap = decoded;
                 canvas.setPage(decoded, page.segments, selectedSegmentIndex);
                 if (fit) {
-                    canvas.post(canvas::fitToScreen);
+                    canvas.post(() -> {
+                        canvas.fitToScreen();
+                        if (getIntent().hasExtra(EXTRA_SEGMENT) && selectedSegmentIndex >= 0) {
+                            canvas.centerOnSegment(selectedSegmentIndex);
+                        }
+                    });
                 }
                 if (old != null && old != decoded && !old.isRecycled()) {
                     old.recycle();
@@ -534,6 +547,7 @@ public class EditorActivity extends AppCompatActivity
     }
 
     private void closeWithoutExport() {
+        applyPendingTextBeforeLeavingSegment();
         saveProjectAsync(() -> {
             setResult(Activity.RESULT_CANCELED);
             finish();
@@ -1026,6 +1040,8 @@ public class EditorActivity extends AppCompatActivity
             }
             pushHistory();
             segment.ckb = segment.originalCkb == null ? "" : segment.originalCkb;
+            ComicQualityReview.edited(segment);
+            segment.translationWarnings = ComicQualityReview.codes(project, pageIndex, selectedSegmentIndex);
             translatedEdit.setText(segment.ckb);
             canvas.refreshStyles();
             scheduleAutosave();
@@ -1251,7 +1267,8 @@ public class EditorActivity extends AppCompatActivity
         TextStyleSettings style = segment.ensureStyle();
         originalTextView.setText(segment.text == null || segment.text.isEmpty()
                 ? getString(R.string.ks_0072) : segment.text);
-        String review = ComicSettings.warnings(this, segment.translationWarnings);
+        String review = ComicSettings.warnings(this,
+                ComicQualityReview.codes(project, pageIndex, selectedSegmentIndex));
         translationReviewView.setText(review);
         translationReviewView.setVisibility(review.isEmpty() ? View.GONE : View.VISIBLE);
         if (!translatedEdit.hasFocus()) {
@@ -1611,6 +1628,8 @@ public class EditorActivity extends AppCompatActivity
         }
         pushHistory();
         segment.ckb = translatedEdit.getText().toString().trim();
+            ComicQualityReview.edited(segment);
+            segment.translationWarnings = ComicQualityReview.codes(project, pageIndex, selectedSegmentIndex);
         if (!segment.ckb.isEmpty()) {
             segment.ensureStyle().visible = true;
         }
@@ -1638,6 +1657,8 @@ public class EditorActivity extends AppCompatActivity
                 .setPositiveButton(getString(R.string.ks_0403), (dialog, which) -> {
                     pushHistory();
                     segment.ckb = input.getText().toString().trim();
+            ComicQualityReview.edited(segment);
+            segment.translationWarnings = ComicQualityReview.codes(project, pageIndex, selectedSegmentIndex);
                     translatedEdit.setText(segment.ckb);
                     if (!segment.ckb.isEmpty()) {
                         segment.ensureStyle().visible = true;
@@ -2139,9 +2160,7 @@ public class EditorActivity extends AppCompatActivity
                 if (snapshot == null || dir == null) {
                     throw new IllegalStateException("Project snapshot is empty");
                 }
-                TranslationProject copy = TranslationProject.fromJson(
-                        new JSONObject(snapshot), dir);
-                copy.save();
+                TranslationProjectStore.saveSnapshot(project, snapshot);
             } catch (Exception e) {
                 failure = e;
             }

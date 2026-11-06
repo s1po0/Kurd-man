@@ -69,6 +69,14 @@ final class ComicSettings {
         for (String code : codes.split(",")) {
             switch (code) {
                 case "numbers": messages.add(context.getString(R.string.comic_review_numbers)); break;
+                case "number_order": messages.add(context.getString(R.string.q_numbers_order)); break;
+                case "glossary_missing": messages.add(context.getString(R.string.q_missing_term)); break;
+                case "target_script": messages.add(context.getString(R.string.q_script)); break;
+                case "empty_target": messages.add(context.getString(R.string.q_empty_target)); break;
+                case "markers": messages.add(context.getString(R.string.q_markers)); break;
+                case "source_empty": messages.add(context.getString(R.string.q_source_empty)); break;
+                case "ocr_low": messages.add(context.getString(R.string.q_ocr)); break;
+                case "glossary_invalid": messages.add(context.getString(R.string.q_invalid_glossary)); break;
                 case "repetition": messages.add(context.getString(R.string.comic_review_repetition)); break;
                 case "untranslated": messages.add(context.getString(R.string.comic_review_untranslated)); break;
                 case "glossary_unconfirmed": messages.add(context.getString(R.string.comic_review_glossary)); break;

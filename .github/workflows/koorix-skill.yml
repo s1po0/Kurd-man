@@ -6,6 +6,9 @@ on:
     paths:
       - ".claude/skills/koorix-comic-quality/**"
       - "AGENTS.md"
+      - "android/app/src/main/java/com/kurdman/app/ComicTranslationSkill.java"
+      - "android/app/src/main/java/com/kurdman/app/ComicQualityChecks.java"
+      - "tools/comic-skill/**"
       - ".github/workflows/koorix-skill.yml"
   workflow_dispatch:
 
@@ -64,6 +67,7 @@ jobs:
           PY
           javac --release 17 -encoding UTF-8 -d "$RUNNER_TEMP/koorix-skill-java" \
             android/app/src/main/java/com/kurdman/app/ComicTranslationSkill.java \
+            android/app/src/main/java/com/kurdman/app/ComicQualityChecks.java \
             .claude/skills/koorix-comic-quality/tests/GlossaryParity.java
           java -cp "$RUNNER_TEMP/koorix-skill-java" com.kurdman.app.GlossaryParity "$RUNNER_TEMP/koorix-glossary.tsv"
           echo "::notice::36 skill glossary fixtures match the actual Java app validator, including UTF-16/NFKC/emoji/limits"
@@ -76,6 +80,6 @@ jobs:
           if [ $code -ne 0 ]; then
             echo "::error::Existing Java comic rules failed; APK/runtime were not changed by this workflow"
           else
-            echo "::notice::$(tail -n 1 "$RUNNER_TEMP/koorix-comic-tests.log")"
+            grep -E '^(Comic skill:|In-app skill:)' "$RUNNER_TEMP/koorix-comic-tests.log" | while IFS= read -r line; do echo "::notice::$line"; done
           fi
           exit $code
