@@ -2,11 +2,14 @@ plugins {
     id 'com.android.application'
 }
 
-// Official CI only distributes APKs with the original pinned certificate.
-// A preview uses its own application ID/key and cannot replace the main app.
-// Local verification builds may still use AGP's disposable debug key.
+// Official Koorix releases restore the owner-authorized permanent v2 signer.
+// No CI cache or automatic key generation is used for production signing.
+// Personal/local debug signing remains independent.
 def kurdmanDebugKeystore = System.getenv('KURDMAN_DEBUG_KEYSTORE')
-def koorixPreview = project.findProperty('koorixPreview')?.toString() == 'true'
+def koorixReleaseKeystore = System.getenv('KOORIX_RELEASE_KEYSTORE')
+if (project.findProperty('koorixPreview')?.toString() == 'true') {
+    throw new GradleException('The separate Preview build is discontinued; build regular Koorix.')
+}
 
 android {
     namespace 'com.kurdman.app'
@@ -29,6 +32,26 @@ android {
 
     buildFeatures {
         buildConfig true
+    }
+
+    signingConfigs {
+        if (kurdmanDebugKeystore) {
+            ciDebug {
+                storeFile file(kurdmanDebugKeystore)
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+            }
+        }
+        if (koorixReleaseKeystore) {
+            koorixRelease {
+                storeFile file(koorixReleaseKeystore)
+                storeType 'PKCS12'
+                storePassword System.getenv('KOORIX_RELEASE_STORE_PASSWORD')
+                keyAlias System.getenv('KOORIX_RELEASE_ALIAS')
+                keyPassword System.getenv('KOORIX_RELEASE_KEY_PASSWORD')
+            }
+        }
     }
 
     // Two editions share one codebase:
@@ -54,15 +77,13 @@ android {
         koorix {
             dimension "edition"
             applicationId "com.koorix.app"
-            versionCode 8
+            versionCode 9
             // Double quotes on purpose: the KurdMan release job greps the
             // first single-quoted versionName in this file.
-            versionName "1.3.0"
-            buildConfigField "boolean", "PREVIEW_BUILD", koorixPreview.toString()
-            if (koorixPreview) {
-                applicationIdSuffix ".preview"
-                versionName "1.3.0-preview.1"
-                manifestPlaceholders = [applicationLabel: "Koorix Preview"]
+            versionName "1.3.1"
+            // Release signing is flavour-scoped: never signs the personal edition.
+            if (koorixReleaseKeystore) {
+                signingConfig signingConfigs.koorixRelease
             }
             buildConfigField "boolean", "PUBLIC_EDITION", "true"
             buildConfigField "boolean", "SHOW_TELEGRAM", "false"
@@ -78,17 +99,6 @@ android {
             // Row Level Security + SECURITY DEFINER RPCs server-side.
             buildConfigField "String", "SUPABASE_KEY",
                     '"sb_publishable_vVtVNjubYllxuSnfyzcolA_qk034IwO"'
-        }
-    }
-
-    signingConfigs {
-        if (kurdmanDebugKeystore) {
-            ciDebug {
-                storeFile file(kurdmanDebugKeystore)
-                storePassword 'android'
-                keyAlias 'androiddebugkey'
-                keyPassword 'android'
-            }
         }
     }
 

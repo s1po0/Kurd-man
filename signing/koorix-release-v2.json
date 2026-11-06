@@ -1,0 +1,15 @@
+{
+  "alias": "koorix-release",
+  "application_id": "com.koorix.app",
+  "created_at": "2026-11-06T01:36:15+00:00",
+  "format": 1,
+  "generation": 2,
+  "key_algorithm": "RSA-3072",
+  "keystore_sha256": "1b619ea29f70684dc7a4b93dfdd8e0206c9031735270e82982aaeabcb9efb4f9",
+  "owner_envelope_sha256": "05c5cc7516457b60338c8f911c9bf15cf8b057ff7a44bccbe465c904e3cd9be5",
+  "previous_signer_sha256": "48c50cf5a99fcde5bbff27f586d520095e10276b4c705236e708ca261c1cca35",
+  "signer_sha1": "21209f6f75195cfeb1dcaa7b7d74ad09e4954b6b",
+  "signer_sha256": "fb304de3cd357f35cf679e2a46befac08f3e97feef28b1b9a8af7b0891d40340",
+  "store_sha256": "d256080a9cc5b93736cf96a5cf004790ebed5e3553b7c0d51f50a15fb0ff5dc4",
+  "valid_until": "2126-11-06T00:00:00+00:00"
+}

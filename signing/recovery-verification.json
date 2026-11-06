@@ -1,0 +1,25 @@
+{
+  "archive_bytes": 12387,
+  "archive_sha256": "36ed6ba5fd694663184ea299dbda2e6a419d227790515fb8861fda1bbde7d8b7",
+  "bootstrap_run": "42144904867",
+  "cloud_bytes_downloaded_in_sandbox": false,
+  "dropbox_content_hash": "ae1cdad10185add9d977c6d05ffdf5fe0d861c999ea447fb1b738539d54564bf",
+  "dropbox_file_id": "id:AxD7wPmwcWwAAAAAAAAKhA",
+  "dropbox_rev": "0165f91a8c9169d0000000331e6d381",
+  "format": 1,
+  "generation": 2,
+  "keystore_sha256": "1b619ea29f70684dc7a4b93dfdd8e0206c9031735270e82982aaeabcb9efb4f9",
+  "private_backup": "dropbox:/Koorix-Signing-Backups-2026-11-06/Koorix-Signing-Recovery-v2-2026-11-06.zip",
+  "private_folder_unshared": true,
+  "public_share_links": 0,
+  "restored_and_verified": true,
+  "signer_sha256": "fb304de3cd357f35cf679e2a46befac08f3e97feef28b1b9a8af7b0891d40340",
+  "verification_methods": [
+    "independent_RSA_owner_envelope_decryption_without_CI_secret",
+    "Java_keytool_PKCS12_import",
+    "ZIP_integrity_and_keystore_roundtrip",
+    "Dropbox_server_content_hash_matches_local_4MiB_block_hash"
+  ],
+  "verified_at": "2026-11-06T01:40:51.206978+00:00",
+  "warning": "Contains the production key AND password. Keep the owner archive private. Never commit it, publish it or send it to Telegram."
+}

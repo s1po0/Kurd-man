@@ -18,7 +18,8 @@ Subsequent production builds must keep this v2 key and increase versionCode.
 * `signing/koorix-release-v2.json`: public SHA-256/SHA-1 certificate pins, exact
   encrypted-file and keystore hashes, alias and long certificate lifetime.
 * `signing/recovery-verification.json`: evidence of an actual independent owner
-  restore and private Dropbox upload/read-back before production distribution.
+  restore, private Dropbox upload and server content-hash verification before
+  production distribution.
 * Owner-only Dropbox archive: the actual PKCS12, password, recovery key, public
   certificate and a complete validated bundle. **The archive is secret**, is not
   a public download, and must not be shared or committed. A password stored next
