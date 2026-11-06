@@ -1,0 +1,121 @@
+{
+  "version": "1.5.0",
+  "versionCode": 12,
+  "applicationId": "com.koorix.app",
+  "label": "Koorix",
+  "debuggable": false,
+  "sourceCommit": "0ceb2f0b0cca489c8d70a766a450dff04671b536",
+  "nativeSourceLastChanged": "2b784d6f4315f724236ea9a1f579385bf3987440",
+  "repositoryPublic": true,
+  "releaseId": 436954981,
+  "assetId": 718409672,
+  "publishedAt": "2026-11-06T20:09:30Z",
+  "downloadUrl": "https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.5.0/Koorix-v1.5.0.apk",
+  "blobSha": "8be16944fd9b82898a0152e243c9d785a43bef16",
+  "apkBytes": 33547301,
+  "apkSha256": "3235da8be6e59d905b3fc868e970e9459c9c03ac623c49e8f300301def621ce1",
+  "zipEntries": 601,
+  "signerSha256": "fb304de3cd357f35cf679e2a46befac08f3e97feef28b1b9a8af7b0891d40340",
+  "signerSha1": "21209f6f75195cfeb1dcaa7b7d74ad09e4954b6b",
+  "signingIdentity": "permanent-v2",
+  "independentLocalVerification": {
+    "file": "Koorix-v1.5.0.apk",
+    "bytes": 33547301,
+    "sha256": "3235da8be6e59d905b3fc868e970e9459c9c03ac623c49e8f300301def621ce1",
+    "zip_entries": 601,
+    "signature": {
+      "scheme": "v2",
+      "rsa_bits": 3072,
+      "certificate_sha256": "fb304de3cd357f35cf679e2a46befac08f3e97feef28b1b9a8af7b0891d40340",
+      "algorithm": "0x103",
+      "content_digest_verified": true
+    },
+    "package": "com.koorix.app",
+    "version": "1.5.0",
+    "version_code": 12,
+    "label": "Koorix",
+    "debuggable": false,
+    "no_login_gate_checked": true,
+    "test_harness_and_private_recovery_absent": true
+  },
+  "ci": {
+    "runId": 42285492904,
+    "jobId": 128125103295,
+    "status": "success",
+    "cryptoTests": 18,
+    "comicAssertions": 604,
+    "qualityAssertions": 51,
+    "lexiconEntries": 204,
+    "androidJvmExecutions": 112,
+    "sdks": [
+      26,
+      34
+    ],
+    "failures": 0,
+    "skipped": 0,
+    "liveDeviceBackendChecks": 19,
+    "disposableDeviceDeleted": true,
+    "signerColdRestores": 2
+  },
+  "skillCi": {
+    "runId": 42285492999,
+    "status": "success",
+    "pythonTestsPerVersion": 55,
+    "pythonVersions": [
+      "3.11",
+      "3.14"
+    ],
+    "javaGlossaryFixtures": 36,
+    "meaningAccuracyBenchmark": false
+  },
+  "features": {
+    "userLoginRemoved": true,
+    "googleEmailPhonePromptRemoved": true,
+    "deviceStateEncrypted": true,
+    "oldSubscriberSessionMigration": true,
+    "editableProjectLibrary": true,
+    "legacyCurrentPreserved": true,
+    "backupRestore": true,
+    "frozenPerPageCheckpoints": true,
+    "stopDisablesRecovery": true,
+    "sameSavedJobNotChargedTwice": true,
+    "automaticSkillWithTranslate": true,
+    "optionalPremiumRetained": true
+  },
+  "delivery": {
+    "chatFilePresented": true,
+    "telegramApkAcknowledged": true,
+    "publicUnauthenticatedDownloadHead": 302,
+    "publicSoraniPackHead": 302,
+    "completionNotice": "pending"
+  },
+  "backend": {
+    "projectRef": "cbkddsztcivllpwzflkx",
+    "migration": "koorix_device_reliability_v2",
+    "deviceFunction": "koorix-device-session",
+    "functionId": "e294041d-a8ba-4213-87a6-20c14cad3569",
+    "version": 1,
+    "readerEmailOrPhoneRequired": false,
+    "serviceRoleKeyInApkOrSite": false
+  },
+  "website": {
+    "sourceReady": true,
+    "deploymentStatus": "blocked",
+    "vercelProjectId": "prj_7fyHvk7ciYHNI3cHdtfuIiVkuELz",
+    "reasons": [
+      "No GitHub account connected to the Vercel account for Git-source deployment.",
+      "Inline file deployment rejected: provider requires projectSettings not exposed by the available deployment tool.",
+      "GitHub Pages creation denied with HTTP 403 Resource not accessible by integration."
+    ],
+    "publicLanding": "https://github.com/s1po0/Kurd-man/releases/tag/koorix-v1.5.0",
+    "publicWebsiteClaimed": false
+  },
+  "remainingLimits": [
+    "Existing OPUS/ML Kit engines unchanged; no NLLB, new model or paid API.",
+    "Real-page Sorani meaning, clean-erasure/RTL visual acceptance and physical-device/OEM/RAM/thermal benchmarks remain unverified.",
+    "Android 8+ and arm64 only.",
+    "Uninstall/clear-data can lose device Premium identity; ordinary same-v2-key updates retain data.",
+    "Premium payment verification is manual; a request does not charge money automatically.",
+    "Permanent standalone website hosting is blocked by provider/integration capabilities; APK and model downloads are public."
+  ]
+}

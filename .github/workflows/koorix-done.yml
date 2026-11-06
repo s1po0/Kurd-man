@@ -13,6 +13,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
+      - uses: actions/checkout@v4
+      - name: Require verified actual APK delivery evidence
+        run: |
+          python3 - <<'PY'
+          import json
+          record=json.load(open('koorix/releases/v1.5.0.json'))
+          assert record['features']['userLoginRemoved'] is True
+          assert record['ci']['status']=='success'
+          assert record['delivery']['chatFilePresented'] is True
+          assert record['delivery']['telegramApkAcknowledged'] is True
+          assert record['independentLocalVerification']['no_login_gate_checked'] is True
+          PY
       - name: Tell the owner the verified regular Koorix work is complete
         env:
           TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -23,6 +35,7 @@ jobs:
           Koorix 1.5.0 — Login لابرا و وەشانی ئاسایی بە هەمان کلیلی v2 نێردرا.
           پڕۆژەکان، Backup، بەردەوامکردنەوە و ژمارەی بەکارهێنان چاک کران؛ repo و داونلۆد گشتین.
           دایبمەزرێنە لەسەر ئەپی پێشوو، مەیسڕەوە.
+          تێبینی: هۆستکردنی سایتی سەربەخۆ بە ڕێگریی Vercel/Pages نەکرا؛ ئەپ و داونلۆدی گشتی ئامادەن. مانای هەموو وەرگێڕانێک بە تەستەکان ناسەلمێنرێت.
           https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.5.0/Koorix-v1.5.0.apk"
           RESPONSE=$(curl -fsS --connect-timeout 20 --max-time 60 \
             --data-urlencode "chat_id=$ADMIN" --data-urlencode "text=$MESSAGE" \

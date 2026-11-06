@@ -100,3 +100,21 @@ projects remain unless the reader separately deletes them.
 
 See `koorix/releases/v1.5.0.json` for the final published APK hash, source, signature,
 delivery and site evidence once the regular release is actually distributed.
+
+## Final release / hosting status
+
+Regular APK CI **42285492904 / 128125103295** passed all gates, including 112
+Android/JVM executions, 19 live device-service checks with cleanup, twice-restored
+permanent signing and independent v2/manifest/no-login byte verification. Release
+**436954981**, asset **718409672**, is published and its APK was delivered in
+Telegram and presented in chat. Local independent verification of the downloaded
+33,547,301-byte APK also passed; SHA-256:
+`3235da8be6e59d905b3fc868e970e9459c9c03ac623c49e8f300301def621ce1`.
+
+The static site and a pinned, token-free public-source build are ready, but a
+permanent website deployment is **not claimed**: Vercel has no GitHub-provider
+connection; inline deployment hits a provider `projectSettings` requirement not
+exposed by the available tool; GitHub Pages creation is denied (403). No new or
+unrelated project was created. The public release page is the working download
+landing page. The publisher web console is prepared source, not a claimed live
+production service. Reader translation/code redemption does not depend on it.
