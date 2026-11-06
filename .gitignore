@@ -25,3 +25,7 @@ android/local.properties
 *.pfx
 *.pkcs12
 Koorix-Signing-Recovery-*.zip
+
+# Portable agent-skill bundles are generated locally; never stage local settings.
+skill-download/
+.claude/settings.local.json

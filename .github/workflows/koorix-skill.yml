@@ -1,0 +1,81 @@
+name: Koorix free agent skill
+
+on:
+  push:
+    branches: ["main", "arena/**"]
+    paths:
+      - ".claude/skills/koorix-comic-quality/**"
+      - "AGENTS.md"
+      - ".github/workflows/koorix-skill.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tools:
+    name: Offline skill tools (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Test private I/O, review contracts, safe packaging and no paid dependencies
+        run: |
+          python3 <<'PY'
+          import unittest
+          suite = unittest.defaultTestLoader.discover('.claude/skills/koorix-comic-quality/tests')
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          if not result.wasSuccessful():
+              print('::error::Offline skill contracts failed; no translation quality claim or release is made')
+              raise SystemExit(1)
+          print(f'::notice::Koorix agent skill: {result.testsRun} offline tooling/privacy tests passed; NOT a semantic accuracy score')
+          PY
+      - name: Verify skill and build public allowlisted bundle without artifact storage
+        run: |
+          python3 .claude/skills/koorix-comic-quality/scripts/quality.py self-check
+          python3 .claude/skills/koorix-comic-quality/scripts/quality.py bundle --out "$RUNNER_TEMP/koorix-comic-quality.zip"
+
+  java-contracts:
+    name: Match real Koorix Java glossary and rule contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Compare skill glossary limits to the actual Android-independent parser
+        run: |
+          mkdir -p "$RUNNER_TEMP/koorix-skill-java"
+          python3 - "$RUNNER_TEMP/koorix-glossary.tsv" <<'PY'
+          import base64, json, sys
+          cases = json.load(open('.claude/skills/koorix-comic-quality/assets/glossary-contract-cases.json', encoding='utf-8'))['cases']
+          with open(sys.argv[1], 'w', encoding='utf-8') as output:
+              for case in cases:
+                  output.write(str(case['expected_count']) + '\t' + base64.b64encode(case['text'].encode()).decode() + '\n')
+          PY
+          javac --release 17 -encoding UTF-8 -d "$RUNNER_TEMP/koorix-skill-java" \
+            android/app/src/main/java/com/kurdman/app/ComicTranslationSkill.java \
+            .claude/skills/koorix-comic-quality/tests/GlossaryParity.java
+          java -cp "$RUNNER_TEMP/koorix-skill-java" com.kurdman.app.GlossaryParity "$RUNNER_TEMP/koorix-glossary.tsv"
+          echo "::notice::36 skill glossary fixtures match the actual Java app validator, including UTF-16/NFKC/emoji/limits"
+      - name: Preserve existing production comic rule and safety contracts
+        run: |
+          set +e
+          bash tools/comic-skill/test.sh > "$RUNNER_TEMP/koorix-comic-tests.log" 2>&1
+          code=$?
+          cat "$RUNNER_TEMP/koorix-comic-tests.log"
+          if [ $code -ne 0 ]; then
+            echo "::error::Existing Java comic rules failed; APK/runtime were not changed by this workflow"
+          else
+            echo "::notice::$(tail -n 1 "$RUNNER_TEMP/koorix-comic-tests.log")"
+          fi
+          exit $code

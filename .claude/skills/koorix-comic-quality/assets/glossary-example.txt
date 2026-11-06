@@ -1,0 +1,4 @@
+# Example only: select en -> ckb and replace with reader-approved story names.
+# Never apply automatically to another story or language pair.
+Jinwoo = جین‌وو
+Mana Crystal = کریستاڵی مانا

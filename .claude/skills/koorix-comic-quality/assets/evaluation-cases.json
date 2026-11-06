@@ -1,0 +1,296 @@
+{
+  "schema": "koorix.evaluation.v1",
+  "synthetic": true,
+  "reference_translations": false,
+  "native_language_validation": "pending",
+  "notice": "Original synthetic review prompts only. No translated answers, scores, copyrighted manga pages, or accuracy claims. Source-language phrasing also needs qualified review.",
+  "cases": [
+    {
+      "id": "en-auto",
+      "source_language": "en",
+      "genre": "AUTO",
+      "bubbles": [
+        "Our class starts at 3.",
+        "This party is for my sister, not a raid."
+      ],
+      "review_focus": [
+        "ambiguous class/party",
+        "negation",
+        "no invented fantasy context"
+      ]
+    },
+    {
+      "id": "en-fantasy",
+      "source_language": "en",
+      "genre": "FANTASY",
+      "bubbles": [
+        "HP: 25/100",
+        "Do not spend the remaining 30 mana points.",
+        "If the gate opens, wait for me."
+      ],
+      "review_focus": [
+        "ratio order",
+        "negation",
+        "condition",
+        "no invented speaker gender"
+      ]
+    },
+    {
+      "id": "en-martial",
+      "source_language": "en",
+      "genre": "MARTIAL",
+      "bubbles": [
+        "Do not circulate your qi yet.",
+        "If your meridians hurt, stop the technique."
+      ],
+      "review_focus": [
+        "martial terminology",
+        "conditional instruction",
+        "no extra plot"
+      ]
+    },
+    {
+      "id": "en-everyday",
+      "source_language": "en",
+      "genre": "EVERYDAY",
+      "bubbles": [
+        "Give me a break from work.",
+        "I meant a day off, not an excuse."
+      ],
+      "review_focus": [
+        "literal vs idiomatic break",
+        "tone",
+        "negation"
+      ]
+    },
+    {
+      "id": "ko-auto",
+      "source_language": "ko",
+      "genre": "AUTO",
+      "bubbles": [
+        "오늘 수업은 세 시에 시작해.",
+        "이건 생일 파티야. 레이드는 아니야."
+      ],
+      "review_focus": [
+        "school class vs RPG",
+        "party context",
+        "negation"
+      ]
+    },
+    {
+      "id": "ko-fantasy",
+      "source_language": "ko",
+      "genre": "FANTASY",
+      "bubbles": [
+        "체력: 25/100",
+        "남은 마나 30을 쓰지 마.",
+        "문이 열리면 나를 기다려."
+      ],
+      "review_focus": [
+        "ratio order",
+        "negation",
+        "condition"
+      ]
+    },
+    {
+      "id": "ko-martial",
+      "source_language": "ko",
+      "genre": "MARTIAL",
+      "bubbles": [
+        "아직 기를 운용하지 마.",
+        "경맥이 아프면 그 기술을 멈춰."
+      ],
+      "review_focus": [
+        "martial terminology",
+        "condition",
+        "implicit subject"
+      ]
+    },
+    {
+      "id": "ko-everyday",
+      "source_language": "ko",
+      "genre": "EVERYDAY",
+      "bubbles": [
+        "손 좀 빌려줘.",
+        "이 상자를 옮기는 것만 도와주면 돼."
+      ],
+      "review_focus": [
+        "idiom and neighbouring context",
+        "natural dialogue",
+        "no invented injury"
+      ]
+    },
+    {
+      "id": "ja-auto",
+      "source_language": "ja",
+      "genre": "AUTO",
+      "bubbles": [
+        "今日の授業は三時に始まる。",
+        "これは誕生日のパーティーで、討伐隊ではない。"
+      ],
+      "review_focus": [
+        "school vs RPG",
+        "party ambiguity",
+        "negation"
+      ]
+    },
+    {
+      "id": "ja-fantasy",
+      "source_language": "ja",
+      "genre": "FANTASY",
+      "bubbles": [
+        "HP: 25/100",
+        "残りの魔力30は使わないで。",
+        "門が開いたら、私を待って。"
+      ],
+      "review_focus": [
+        "ratio order",
+        "negation",
+        "condition",
+        "no invented gender"
+      ]
+    },
+    {
+      "id": "ja-martial",
+      "source_language": "ja",
+      "genre": "MARTIAL",
+      "bubbles": [
+        "まだ気を巡らせないで。",
+        "経脈が痛むなら、その技を止めて。"
+      ],
+      "review_focus": [
+        "martial terminology",
+        "condition",
+        "politeness"
+      ]
+    },
+    {
+      "id": "ja-everyday",
+      "source_language": "ja",
+      "genre": "EVERYDAY",
+      "bubbles": [
+        "手を貸して。",
+        "この箱を運ぶのを手伝ってほしいだけ。"
+      ],
+      "review_focus": [
+        "idiom and context",
+        "natural dialogue",
+        "no literal dismemberment"
+      ]
+    },
+    {
+      "id": "zh-cn-auto",
+      "source_language": "zh-CN",
+      "genre": "AUTO",
+      "bubbles": [
+        "今天三点开始上课。",
+        "这是生日聚会，不是突袭队。"
+      ],
+      "review_focus": [
+        "school vs RPG",
+        "party ambiguity",
+        "negation"
+      ]
+    },
+    {
+      "id": "zh-cn-fantasy",
+      "source_language": "zh-CN",
+      "genre": "FANTASY",
+      "bubbles": [
+        "生命值：25/100",
+        "不要使用剩下的30点魔力。",
+        "如果门开了，就等我。"
+      ],
+      "review_focus": [
+        "ratio order",
+        "negation",
+        "condition"
+      ]
+    },
+    {
+      "id": "zh-cn-martial",
+      "source_language": "zh-CN",
+      "genre": "MARTIAL",
+      "bubbles": [
+        "现在先不要运气。",
+        "经脉疼的话，就停止那个功法。"
+      ],
+      "review_focus": [
+        "martial sense of qi",
+        "condition",
+        "no invented plot"
+      ]
+    },
+    {
+      "id": "zh-cn-everyday",
+      "source_language": "zh-CN",
+      "genre": "EVERYDAY",
+      "bubbles": [
+        "别误会。",
+        "我不是来找你打架的。"
+      ],
+      "review_focus": [
+        "negation",
+        "natural dialogue",
+        "roles and tone"
+      ]
+    },
+    {
+      "id": "zh-tw-auto",
+      "source_language": "zh-TW",
+      "genre": "AUTO",
+      "bubbles": [
+        "今天三點開始上課。",
+        "這是生日聚會，不是突襲隊。"
+      ],
+      "review_focus": [
+        "school vs RPG",
+        "party ambiguity",
+        "negation"
+      ]
+    },
+    {
+      "id": "zh-tw-fantasy",
+      "source_language": "zh-TW",
+      "genre": "FANTASY",
+      "bubbles": [
+        "生命值：25/100",
+        "不要使用剩下的30點魔力。",
+        "如果門開了，就等我。"
+      ],
+      "review_focus": [
+        "ratio order",
+        "negation",
+        "condition"
+      ]
+    },
+    {
+      "id": "zh-tw-martial",
+      "source_language": "zh-TW",
+      "genre": "MARTIAL",
+      "bubbles": [
+        "現在先不要運氣。",
+        "經脈疼的話，就停止那個功法。"
+      ],
+      "review_focus": [
+        "martial sense of qi",
+        "condition",
+        "no invented plot"
+      ]
+    },
+    {
+      "id": "zh-tw-everyday",
+      "source_language": "zh-TW",
+      "genre": "EVERYDAY",
+      "bubbles": [
+        "別誤會。",
+        "我不是來找你打架的。"
+      ],
+      "review_focus": [
+        "negation",
+        "natural dialogue",
+        "roles and tone"
+      ]
+    }
+  ]
+}

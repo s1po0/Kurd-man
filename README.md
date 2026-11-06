@@ -84,3 +84,23 @@ Bot Token وەکو پاسۆردە: تەنها لە `.env`ـی خۆت، لە GitH
 کۆد/چاتدا مەینووسە. ئەگەر دزە بکات: `@BotFather` → `/revoke`.
 
 تەنها ئەو بەرھەمانە وەرگێڕە کە مافت هەیە / بۆ بەکارهێنانی کەسی خۆتە.
+
+
+## Free Koorix agent skill
+
+The project includes [koorix-comic-quality](.claude/skills/koorix-comic-quality/SKILL.md),
+an original MIT-licensed Agent Skills bundle for meaning-first comic review,
+reader glossaries and safe Koorix development. See the
+[Kurdish quick start](.claude/skills/koorix-comic-quality/README_KU.md).
+The standard-library tools work offline without an API key or new model:
+
+```sh
+python3 .claude/skills/koorix-comic-quality/scripts/quality.py self-check
+python3 -m unittest discover -s .claude/skills/koorix-comic-quality/tests -v
+```
+
+This is an agent/developer skill, not Claude embedded in Android or an APK
+update. It does not translate by itself or fix the offline model's general
+meaning limitations. Synthetic cases and contract tests are not semantic
+accuracy/visual benchmarks. Private packets/notes stay outside Git; key recovery
+is never an input to this skill. See `AGENTS.md` for project-wide safety rules.
