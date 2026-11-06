@@ -6,7 +6,7 @@ import java.io.*;
 import java.util.*;
 import java.util.zip.*;
 
-/** Frozen UI input. Sources are private and durable BEFORE quota is spent. */
+/** Frozen UI input. Sources are private and durable before translation starts. */
 final class SavedJobInput {
     final File image,cbz;
     final List<File> images;
@@ -27,7 +27,7 @@ final class SavedJobInput {
         boolean batch=cbz==null&&images.size()>1;
         TranslationProject p=TranslationProjectStore.createNew(context,cbz!=null||batch,name,base,source);
         JobRuntime.activateSavedProject(p);
-        p.targetLanguage=target;p.comicConfig=config;p.jobStyle=style;p.offlineMode=offline;p.accurateOcr=accurate;p.createPdf=pdf;p.imageBatch=batch;p.quotaJobId=UUID.randomUUID().toString();
+        p.targetLanguage=target;p.comicConfig=config;p.jobStyle=style;p.offlineMode=offline;p.accurateOcr=accurate;p.createPdf=pdf;p.imageBatch=batch;
         try {
             if(cbz!=null) {
                 if(!cbz.isFile()||cbz.length()>300L*1024*1024)throw new IOException("CBZ import limit exceeded");

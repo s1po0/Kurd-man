@@ -40,18 +40,13 @@ final class SavedJobCoordinator {
                 SavedJobPipeline.Progress progress=(phase,page,total)->status(context,context.getString(phase==0?R.string.rel_ocr_progress:phase==1?R.string.rel_translate_progress:R.string.rel_render_progress,page,total));
                 SavedJobPipeline.ocr(project,backend,progress);
                 if(project.totalSegments()==0){for(TranslationProject.Page page:project.pages)if(!page.unreadable){page.ocrComplete=false;page.translationComplete=false;}project.autoResume=false;project.save();throw new NoText();}
-                if(SavedJobPipeline.needsTranslation(project)){
-                    if(project.quotaJobId.isEmpty())project.quotaJobId=UUID.randomUUID().toString();
-                    if(project.quotaPages<=0)project.quotaPages=project.pages.size();project.save();
-                    status(context,context.getString(R.string.rel_check_allowance));
-                    CountDownLatch latch=new CountDownLatch(1);boolean[] allowed={false};String[] reason={"network"};
-                    AccountGate.authorize(context,project,(ok,why)->{allowed[0]=ok;reason[0]=why;latch.countDown();});
-                    if(!latch.await(90,TimeUnit.SECONDS))throw new NetworkUnavailable();JobRuntime.throwIfStopped();
-                    if(!allowed[0]){project.autoResume=false;project.save();if("network".equals(reason[0]))throw new NetworkUnavailable();status(context,project.offlineMode?context.getString(R.string.rel_offline_allowance):"limit".equals(reason[0])?context.getString(R.string.kx_limit_body,3,60):context.getString(R.string.rel_device_network));return;}
-                    project.jobOwner=AccountGate.identity(context);project.save();SavedJobPipeline.translate(project,backend,progress);
+                if(SavedJobPipeline.needsTranslation(project)) {
+                    // Owner-authorized free edition: online AND offline jobs run
+                    // without device registration, a paid permit or an allowance server.
+                    SavedJobPipeline.translate(project,backend,progress);
                 }
                 JobRuntime.throwIfStopped();SavedJobPipeline.render(project,backend,progress);ProjectResults.publish(context,project);
-                project.completed=true;project.autoResume=false;project.save();TranslationProjectStore.allowRecovery(context,project,false);AccountGate.jobFinished(context,project);
+                project.completed=true;project.autoResume=false;project.save();TranslationProjectStore.allowRecovery(context,project,false);
                 status(context,context.getString(project.renderedSegments()<project.totalSegments()?R.string.rel_partial:R.string.rel_complete));
             }catch(Throwable failure){
                 if(project!=null){try{
@@ -78,7 +73,6 @@ final class SavedJobCoordinator {
         IOException report=new IOException("Saved job "+failure.getClass().getSimpleName()+code);
         report.setStackTrace(failure.getStackTrace());return report;
     }
-    private static boolean transientFailure(Throwable failure){for(Throwable e=failure;e!=null;e=e.getCause()){if(e instanceof NetworkUnavailable||e instanceof SocketTimeoutException||e instanceof UnknownHostException||e instanceof ConnectException)return true;String message=e.getMessage();if(message!=null&&(message.contains("HTTP 429")||message.matches(".*HTTP 5[0-9]{2}.*")))return true;}return false;}
-    private static final class NetworkUnavailable extends IOException {NetworkUnavailable(){super("Network unavailable; checkpoint retained");}}
+    private static boolean transientFailure(Throwable failure){for(Throwable e=failure;e!=null;e=e.getCause()){if(e instanceof SocketTimeoutException||e instanceof UnknownHostException||e instanceof ConnectException)return true;String message=e.getMessage();if(message!=null&&(message.contains("HTTP 429")||message.matches(".*HTTP 5[0-9]{2}.*")))return true;}return false;}
     private static final class NoText extends IOException {NoText(){super("No readable dialogue");}}
 }

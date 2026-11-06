@@ -104,7 +104,7 @@ def manifest(data):
     return elements
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('apk');parser.add_argument('--pins',default='signing/koorix-release-v2.json');parser.add_argument('--version',required=True);parser.add_argument('--code',type=int,required=True);parser.add_argument('--no-login',action='store_true');args=parser.parse_args()
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('apk');parser.add_argument('--pins',default='signing/koorix-release-v2.json');parser.add_argument('--version',required=True);parser.add_argument('--code',type=int,required=True);parser.add_argument('--no-login',action='store_true');parser.add_argument('--free',action='store_true');args=parser.parse_args()
     path=Path(args.apk);data=path.read_bytes();pins=json.loads(Path(args.pins).read_text());signature=verify_v2(data,pins)
     with zipfile.ZipFile(path) as archive:
         assert archive.testzip() is None,'APK CRC mismatch';names=archive.namelist()
@@ -120,8 +120,14 @@ def main():
             assert not any(n=='activity' and str(a.get('name','')).endswith('.AccountActivity') for n,a in elements)
             assert not any(n=='data' and a.get('scheme')=='com.koorix.app' and a.get('host')=='auth' for n,a in elements)
             assert b'Lcom/kurdman/app/AccountActivity;' not in dex
-            for required in ('PremiumActivity','DeviceStateStore','SavedJobCoordinator','ProjectLibraryActivity','ComicTranslateControls'):
+            for required in (('SavedJobCoordinator','ProjectLibraryActivity','ComicTranslateControls','ComicInputPicker') if args.free else ('PremiumActivity','DeviceStateStore','SavedJobCoordinator','ProjectLibraryActivity','ComicTranslateControls')):
                 assert ('Lcom/kurdman/app/'+required+';').encode() in dex,'Missing native class '+required
-        result={'file':path.name,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),'zip_entries':len(names),'signature':signature,'package':package['package'],'version':package['versionName'],'version_code':package['versionCode'],'label':app['label'],'debuggable':False,'no_login_gate_checked':args.no_login,'test_harness_and_private_recovery_absent':True}
+        if args.free:
+            for forbidden in ('AccountGate','PremiumActivity','SupabaseAuth','DeviceAllowance','DeviceStateStore'):
+                assert ('Lcom/kurdman/app/'+forbidden+';').encode() not in dex,'Retired billing client packaged: '+forbidden
+                assert not any(n=='activity' and str(a.get('name','')).endswith('.'+forbidden) for n,a in elements),'Retired billing UI registered'
+            assert b'cbkddsztcivllpwzflkx.supabase.co' not in dex,'Entitlement server remains in free runtime'
+            assert b'sb_publishable_' not in dex,'Entitlement key remains in free runtime'
+        result={'file':path.name,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),'zip_entries':len(names),'signature':signature,'package':package['package'],'version':package['versionName'],'version_code':package['versionCode'],'label':app['label'],'debuggable':False,'no_login_gate_checked':args.no_login,'free_edition_checked':args.free,'test_harness_and_private_recovery_absent':True}
     print(json.dumps(result,indent=2))
 if __name__=='__main__':main()

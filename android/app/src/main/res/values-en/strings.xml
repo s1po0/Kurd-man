@@ -1,8 +1,7 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="kx_hero_subtitle">"The best app for translating manhwa into every language"</string>
     <string name="kx_version_chip">v%1$s  •  Manhwa translator</string>
-    <string name="kx_account_btn">👤  My account  •  💎 Premium</string>
     <string name="kx_settings_subtitle">Output format, the offline model, the stronger OCR pack and keep-alive until STOP are gathered here.</string>
     <string name="kx_nav_translate">✦\nTranslate</string>
     <string name="kx_nav_style">🎨\nStyle</string>
@@ -12,54 +11,6 @@
     <string name="kx_pick_btn">Choose image or CBZ</string>
     <string name="kx_translate_btn">✦  Translate to Sorani</string>
     <string name="kx_language_title">🌐 App language</string>
-
-    <string name="kx_welcome">Welcome 👋</string>
-    <string name="kx_login_intro">Sign in with the Google account on your phone, or get a sign-in code by email.</string>
-    <string name="kx_email_hint">Email (Gmail)</string>
-    <string name="kx_send_code">📧 Send sign-in code</string>
-    <string name="kx_code_hint">Enter the code (6–8 digits)</string>
-    <string name="kx_verify_code">Sign in with code</string>
-    <string name="kx_or">or</string>
-    <string name="kx_google">G  •  Continue with Google</string>
-    <string name="kx_google_soon">Google sign-in is coming soon — please use the email code for now.</string>
-    <string name="kx_code_sent">✅ A sign-in code and link were sent to %1$s. Open it: tap the link or type the code here. (It may be in Spam)</string>
-    <string name="kx_my_account">👤 My account</string>
-    <string name="kx_premium_active">💎 Premium is active</string>
-    <string name="kx_premium_until">💎 Premium is active\nUntil %1$s</string>
-    <string name="kx_free_plan">Free plan</string>
-    <string name="kx_unlimited_thanks">Unlimited translation — thank you for your support! 🎉</string>
-    <string name="kx_usage_today">Today: %1$d/%2$d translations • %3$d/%4$d pages used\n%5$d free translations left for today.</string>
-    <string name="kx_checking_status">Checking today\'s status…</string>
-    <string name="kx_status_unavailable">⚠ Server unavailable; showing the last known status.</string>
-    <string name="kx_premium_title">💎 Premium</string>
-    <string name="kx_buy">🛒 Buy Premium</string>
-    <string name="kx_redeem">Activate code</string>
-    <string name="kx_start_translating">🚀 Start translating</string>
-    <string name="kx_sign_out">Sign out</string>
-    <string name="kx_welcome_toast">Welcome to Koorix 🎉</string>
-    <string name="kx_err_email">Please enter a valid email.</string>
-    <string name="kx_err_code_short">Enter the code (6–8 digits).</string>
-    <string name="kx_err_enter_code">Please enter an activation code.</string>
-    <string name="kx_err_invalid_code">This code is invalid or already used.</string>
-    <string name="kx_err_otp_invalid">The code is wrong or expired; request a new one.</string>
-    <string name="kx_err_network">No internet connection; please try again.</string>
-    <string name="kx_err_generic">Something went wrong; please try again.</string>
-    <string name="kx_err_google_failed">Google sign-in failed (%1$d).</string>
-    <string name="kx_err_google_no_token">Google did not return an identity token.</string>
-    <string name="kx_err_provider_disabled">Google sign-in is not enabled on the server yet.</string>
-    <string name="kx_redeem_ok">🎉 Premium activated! %1$d days added%2$s.</string>
-    <string name="kx_redeem_until"> — until %1$s</string>
-    <string name="kx_login_required">Please sign in to your account first to translate.</string>
-    <string name="kx_checking_account">Checking account…</string>
-    <string name="kx_free_remaining">Free translations today: %1$d of %2$d left</string>
-    <string name="kx_session_expired">Your session expired; please sign in again.</string>
-    <string name="kx_offline_mode">Server unreachable — continuing in offline mode.</string>
-    <string name="kx_limit_title">Today\'s free limit is used up 💎</string>
-    <string name="kx_limit_body">Today you used %1$d free translations and up to %2$d pages.\n\nWith Premium you can translate without limits. Enter your activation code under “My account”.</string>
-    <string name="kx_premium_btn">💎 Premium</string>
-    <string name="kx_later">Later</string>
-
-    <!-- Full-app UI strings (ks_*) -->
     <string name="ks_0000">"\n\nTechnical details are below; tap «Copy report» and send it to support."</string>
     <string name="ks_0001">"\n\nThe duplicate copy in Download/KurdMan or "</string>
     <string name="ks_0002">"\n\n… (full text is in the TXT file under «Downloads»)"</string>

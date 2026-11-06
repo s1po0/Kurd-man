@@ -57,10 +57,8 @@ android {
     // Two editions share one codebase:
     //  - kurdman: the developer's personal build (Telegram tools,
     //    optional Unlimited-OCR server mode, no account, no limits).
-    //  - koorix: the public/commercial build for other people — no
-    //    Telegram section, no Baidu/Unlimited-OCR or user login,
-    //    protected device entitlements, a small free daily allowance and
-    //    Premium unlocked with activation codes.
+    //  - koorix: the owner's completely free public edition for now.
+    //    No user login, billing, daily quota, registration or public Telegram/Baidu UI.
     flavorDimensions "edition"
     productFlavors {
         kurdman {
@@ -78,10 +76,10 @@ android {
             dimension "edition"
             applicationId "com.koorix.app"
             manifestPlaceholders = [applicationLabel: "Koorix"]
-            versionCode 12
+            versionCode 13
             // Double quotes on purpose: the KurdMan release job greps the
             // first single-quoted versionName in this file.
-            versionName "1.5.0"
+            versionName "1.6.0"
             // Release signing is flavour-scoped: never signs the personal edition.
             if (koorixReleaseKeystore) {
                 signingConfig signingConfigs.koorixRelease
@@ -90,16 +88,11 @@ android {
             buildConfigField "boolean", "SHOW_TELEGRAM", "false"
             buildConfigField "boolean", "SHOW_UNLIMITED_OCR", "false"
             buildConfigField "boolean", "REQUIRE_ACCOUNT", "false"
-            // Display mirror of the server-side limits in Supabase
-            // (koorix_consume_job); the server value is authoritative.
-            buildConfigField "int", "FREE_DAILY_JOBS", "3"
-            buildConfigField "int", "FREE_DAILY_PAGES", "60"
-            buildConfigField "String", "SUPABASE_URL",
-                    '"https://cbkddsztcivllpwzflkx.supabase.co"'
-            // Publishable (public) key; all data access is protected by
-            // Row Level Security + SECURITY DEFINER RPCs server-side.
-            buildConfigField "String", "SUPABASE_KEY",
-                    '"sb_publishable_vVtVNjubYllxuSnfyzcolA_qk034IwO"'
+            // Zero means no commercial quota; technical import limits still apply.
+            buildConfigField "int", "FREE_DAILY_JOBS", "0"
+            buildConfigField "int", "FREE_DAILY_PAGES", "0"
+            buildConfigField "boolean", "FREE_EDITION", "true"
+
         }
     }
 

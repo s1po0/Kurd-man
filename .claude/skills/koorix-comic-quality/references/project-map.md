@@ -14,7 +14,7 @@ do not hard-code `/home/user` or a branch name into scripts.
 | Saved JSON / target field | `TranslationProject.java`, `Segment.java`; `ckb` stores the selected target, not necessarily Sorani |
 | Local editable library / explicit backups | `TranslationProjectStore.java`, `ProjectLibraryActivity.java`, `ProjectArchive.java`; `files/projects/p-UUID`, legacy `projects/current` retained |
 | Durable regular-Koorix pipeline | `SavedJobInput.java`, `SavedJobPipeline.java`, `SavedJobBackend.java`, `SavedJobCoordinator.java`, `ProjectResults.java` |
-| No-login device budget / optional Premium | Koorix flavour `AccountGate.java`, `SupabaseAuth.java`, `DeviceStateStore.java`, `DeviceAllowance.java`, `PremiumActivity.java`; `koorix/backend/` |
+| Free public edition / gallery + Files | `ComicInputPicker.java`, `MainActivity.java`, `tools/free-edition/check.py`; no runtime account/Premium client |
 | Layout / erasure / SFX | `ManhwaRenderer.java`, `CleanEraser.java`, `EditorActivity.java`; don't guess from JSON counts |
 | Three-language skill UI | `res/values*/comic_strings.xml`, `res/layout/activity_comic_settings.xml` |
 | Actual Java contract tests | `tools/comic-skill/test.sh`, `ComicTranslationSkillTest.java` |
@@ -49,6 +49,7 @@ For an offline error, reproduce with the offline path; do not silently use the
 online route to make a test pass. For release work, read public signing metadata
 and the existing workflow, not secret material.
 
-Since 1.5 the owner explicitly removed reader login. Preserve silent device
-entitlements and optional Premium, never reintroduce Google/email/phone prompts.
+Since 1.6 the owner explicitly removed both login and Premium. The public app is
+completely free with no daily app quota or device registration. Keep historical
+private subscriber data untouched; never reintroduce a paywall without permission.
 See `docs/KOORIX_1_5.md` for durable checkpoints, STOP and backup boundaries.

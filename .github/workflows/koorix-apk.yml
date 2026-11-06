@@ -73,7 +73,7 @@ jobs:
         with:
           packages: "platform-tools platforms;android-35 build-tools;35.0.0"
 
-      - name: Test no-login, device protection, project library, recovery and automatic translation
+      - name: Test fully free main activity, gallery/Files routing, projects, recovery and automatic translation
         run: |
           set +e
           gradle --no-daemon --no-configuration-cache --stacktrace -p android testKoorixReleaseUnitTest > /tmp/koorix-ui-tests.log 2>&1
@@ -93,7 +93,7 @@ jobs:
                       detail=(issue.get('message','') or (issue.text or '').split('\n')[0])[:400]
                       print('::error::In-app skill UI contract failed: '+test.get('name','test')+' '+detail.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
           print(f'::notice::In-app skill Android/JVM tests: {total} run, {failed} failed, {skipped} skipped; not device/semantic proof')
-          if total < 112 or failed or skipped:
+          if total < 134 or failed or skipped:
               print('::error::In-app skill tests were missing, failed or skipped; production distribution is blocked')
               raise SystemExit(1)
           PYTEST
@@ -104,8 +104,8 @@ jobs:
           fi
           exit $code
 
-      - name: Verify deployed no-login service, real quota enforcement and disposable-device cleanup
-        run: python3 tools/backend/live_smoke.py
+      - name: Verify free public edition has no payment, registration or allowance service
+        run: python3 tools/free-edition/check.py
 
       # No signing cache, no debug fallback and no production key generation.
       # The owner-authorized v2 key is restored from authenticated durable storage.
@@ -166,7 +166,7 @@ jobs:
       - name: Independently verify public APK v2 digest, manifest, no-login classes and harness exclusion
         run: |
           python3 tools/signing/inspect-public-apk.py "$APK_FILE" \
-            --version "$KOORIX_VERSION" --code "$KOORIX_CODE" --no-login
+            --version "$KOORIX_VERSION" --code "$KOORIX_CODE" --no-login --free
           echo "::notice::Independent public-only APK signature/content/no-login verification passed"
 
       # Releases/chat delivery do not depend on the repository artifact quota.
@@ -201,7 +201,7 @@ jobs:
         run: |
           TAG="koorix-v$KOORIX_VERSION"
           cp "$APK_FILE" "Koorix-v$KOORIX_VERSION.apk"
-          NOTES="Koorix v$KOORIX_VERSION — regular production update, com.koorix.app, arm64, non-debuggable. User login has been REMOVED: no Google/email/phone entry or mandatory account screen. Protected random device entitlements retain the 3-job/60-page daily allowance and optional Premium. New local editable-project library, explicit backups/restores, per-page OCR/translation/render checkpoints, process/reboot recovery respecting STOP, encrypted device state, idempotent saved-job permits, safer deletion and private diagnostics. Skill still runs with normal Translate; all targets and Kurdish/English/Arabic UI remain. Same permanent v2 signer: install over v2-signed Koorix without uninstalling or deleting data. Existing local projects and normal valid subscriber sessions are retained. New device credentials are lost on uninstall/clear-data; retain activation/order references and explicit project backups. No paid API, new model or NLLB. Offline Sorani meaning and real-page/device visual acceptance remain limited/unverified; passing synthetic tests is not an accuracy score. Premium requests do not charge money automatically: publisher payment verification is manual."
+          NOTES="Koorix v$KOORIX_VERSION — regular production update, com.koorix.app, arm64, non-debuggable. Completely FREE for now by the owner's decision: Premium, payments, activation codes, daily job/page quotas and device-registration/entitlement clients have been removed, not just hidden. No login, Google account, email or initial online allowance setup. Explicit Gallery/Photos uses Android's permissionless multi-photo picker, with a gallery-app fallback. Files opens all MIME types and shared-storage/SD/cloud document providers, including CBZ/ZIP files with missing MIME metadata. Existing source validation, 300-page/300-MB import and 1-GB cache safety limits remain; protected Android folders and external provider rate limits are not bypassed. Editable books, legacy projects, backups, frozen settings, STOP, recovery, all 74 target choices and Kurdish/English/Arabic UI are preserved. Same permanent v2 signer: install over v2-signed Koorix without uninstalling or deleting app data. Historical encrypted device/subscriber data is not erased or contacted. No paid API, new model or NLLB. Meaning and real-page/device visual acceptance remain limited/unverified; passing synthetic/JVM tests does not certify every translation, OEM gallery or device."
 
           if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
             gh release upload "$TAG" "Koorix-v$KOORIX_VERSION.apk" --clobber --repo "${{ github.repository }}"
@@ -229,9 +229,9 @@ jobs:
             exit 1
           fi
           CAPTION="💜 Koorix v$KOORIX_VERSION — وەشانی ئاسایی، نەک Preview.
-          Login لابرا؛ بێ Google، ئیمەیڵ و ژمارەی مۆبایل.
-          پڕۆژە کۆنەکان دەمێننەوە؛ Backup و بەردەوامکردنەوە لە هەنگاوی پارێزراو زیاد کراون. Skill لەگەڵ Translate ـی ئاسایی کار دەکات.
-          هەمان کلیلی جێگیری v2؛ لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە. مانای هەموو وەرگێڕانێک یان جوانی هەموو پەڕەیەک بە تەستەکان ناسەلمێنرێت."
+          بە تەواوی خۆڕایی بۆ ئێستا: Premium، کۆدی چالاککردن و سنووری ڕۆژانە لابران؛ Loginیش نییە.
+          Gallery / Photos و Files / CBZ بە جیا دانراون؛ Files هەموو جۆرە فایلەکان پیشان دەدات. تەنیا وێنە یان CBZ/ZIP بۆ وەرگێڕان هەڵبژێرە.
+          پڕۆژەکان، Backup، STOP و Skillی خۆکار پارێزراون. هەمان کلیلی v2 ـە؛ لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە."
 
           RESP=$(curl -fsS --connect-timeout 20 --max-time 180 \
             --form-string "chat_id=$ADMIN" --form-string "caption=$CAPTION" \

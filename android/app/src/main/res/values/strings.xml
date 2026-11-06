@@ -1,13 +1,8 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">Kurd-man مانهوا</string>
-
-    <!-- Koorix public-edition UI strings (Sorani default; English in
-         values-en, Arabic in values-ar). Only applied in the Koorix
-         flavour; the personal KurdMan UI keeps its hardcoded texts. -->
     <string name="kx_hero_subtitle">"باشترین بەرنامە بۆ وەرگێڕانی مانھوا بۆ هەموو زمانەکان"</string>
     <string name="kx_version_chip">v%1$s  •  وەرگێڕی مانهوا</string>
-    <string name="kx_account_btn">👤  هەژمارەکەم  •  💎 Premium</string>
     <string name="kx_settings_subtitle">جۆری فایلی کۆتایی، مۆدێلی ئۆفلاین، پاکێجی OCRی بەهێز و پارێزگاری تا STOP لێرە کۆکراونەتەوە.</string>
     <string name="kx_nav_translate">✦\nوەرگێڕان</string>
     <string name="kx_nav_style">🎨\nستایل</string>
@@ -17,54 +12,6 @@
     <string name="kx_pick_btn">هەڵبژاردنی وێنە یان CBZ</string>
     <string name="kx_translate_btn">✦  وەرگێڕان بۆ سۆرانی</string>
     <string name="kx_language_title">🌐 زمانی ئەپەکە</string>
-
-    <string name="kx_welcome">بەخێر بێیت 👋</string>
-    <string name="kx_login_intro">بە Googleی ناو مۆبایلەکەت بچۆرە ژوورەوە، یان کۆدی چوونەژوورەوە بۆ Gmailەکەت بنێرین.</string>
-    <string name="kx_email_hint">ئیمەیڵ (Gmail)</string>
-    <string name="kx_send_code">📧 ناردنی کۆدی چوونەژوورەوە</string>
-    <string name="kx_code_hint">کۆدەکە بنووسە (٦–٨ ژمارە)</string>
-    <string name="kx_verify_code">چوونەژوورەوە بە کۆد</string>
-    <string name="kx_or">یان</string>
-    <string name="kx_google">G  •  بەردەوامبوون بە Google</string>
-    <string name="kx_google_soon">چوونەژوورەوە بە Google بەم زوانە دێت — تکایە ئێستا بە کۆدی ئیمەیڵ بچۆرە ژوورەوە.</string>
-    <string name="kx_code_sent">✅ کۆد و لینکی چوونەژوورەوە نێردرا بۆ %1$s. ئیمەیڵەکەت بکەرەوە: کرتە لە لینکەکە بکە یان کۆدەکە لێرە بنووسە. (لەوانەیە لە Spamدا بێت)</string>
-    <string name="kx_my_account">👤 هەژمارەکەم</string>
-    <string name="kx_premium_active">💎 Premium چالاکە</string>
-    <string name="kx_premium_until">💎 Premium چالاکە\nتا بەرواری %1$s</string>
-    <string name="kx_free_plan">پلانی خۆڕایی</string>
-    <string name="kx_unlimited_thanks">وەرگێڕانی بێسنوور — سوپاس بۆ پشتگیریت! 🎉</string>
-    <string name="kx_usage_today">ئەمڕۆ: %1$d/%2$d وەرگێڕان • %3$d/%4$d لاپەڕە بەکار هاتووە\n%5$d وەرگێڕانی خۆڕایی ماوە بۆ ئەمڕۆ.</string>
-    <string name="kx_checking_status">پشکنینی دۆخی ئەمڕۆ…</string>
-    <string name="kx_status_unavailable">⚠ سێرڤەر بەردەست نییە؛ دۆخی دوایین پشکنین پیشان دەدرێت.</string>
-    <string name="kx_premium_title">💎 Premium</string>
-    <string name="kx_buy">🛒 کڕینی Premium</string>
-    <string name="kx_redeem">چالاککردنی کۆد</string>
-    <string name="kx_start_translating">🚀 دەستپێکردنی وەرگێڕان</string>
-    <string name="kx_sign_out">چوونەدەرەوە</string>
-    <string name="kx_welcome_toast">بەخێر بێیت بۆ Koorix 🎉</string>
-    <string name="kx_err_email">تکایە ئیمەیڵێکی دروست بنووسە.</string>
-    <string name="kx_err_code_short">کۆدەکە بنووسە (٦–٨ ژمارە).</string>
-    <string name="kx_err_enter_code">تکایە کۆدی چالاککردن بنووسە.</string>
-    <string name="kx_err_invalid_code">ئەم کۆدە دروست نییە یان پێشتر بەکار هاتووە.</string>
-    <string name="kx_err_otp_invalid">کۆدەکە هەڵەیە یان بەسەرچووە؛ کۆدێکی نوێ بنێرە.</string>
-    <string name="kx_err_network">پەیوەندی ئینتەرنێت نییە؛ تکایە هەوڵ بدەرەوە.</string>
-    <string name="kx_err_generic">هەڵەیەک ڕووی دا؛ تکایە دووبارە هەوڵ بدەرەوە.</string>
-    <string name="kx_err_google_failed">چوونەژوورەوەی Google سەرنەکەوت (%1$d).</string>
-    <string name="kx_err_google_no_token">Google هیچ ناسنامەیەکی نەگەڕاندەوە.</string>
-    <string name="kx_err_provider_disabled">چوونەژوورەوە بە Google هێشتا لەسەر سێرڤەر چالاک نەکراوە.</string>
-    <string name="kx_redeem_ok">🎉 Premium چالاک کرا! %1$d ڕۆژ زیاد کرا%2$s.</string>
-    <string name="kx_redeem_until"> — تا %1$s</string>
-    <string name="kx_login_required">بۆ وەرگێڕان سەرەتا بچۆرە ژوورەوە بە هەژمارەکەت.</string>
-    <string name="kx_checking_account">پشکنینی هەژمار…</string>
-    <string name="kx_free_remaining">وەرگێڕانی خۆڕایی ئەمڕۆ: %1$d جار ماوە لە %2$d</string>
-    <string name="kx_session_expired">هەژمارەکەت پێویستی بە چوونەژوورەوەیەکی نوێیە.</string>
-    <string name="kx_offline_mode">سێرڤەر بەردەست نییە — بە شێوازی ئۆفلاین بەردەوام دەبێت.</string>
-    <string name="kx_limit_title">سنووری خۆڕایی ئەمڕۆ تەواو بوو 💎</string>
-    <string name="kx_limit_body">ئەمڕۆ %1$d وەرگێڕانی خۆڕایی و تا %2$d لاپەڕەت بەکار هێنا.\n\nبە Premium دەتوانیت بەبێ سنوور وەرگێڕان بکەیت. کۆدی چالاککردن لە بەشی «هەژمارەکەم» دابنێ.</string>
-    <string name="kx_premium_btn">💎 Premium</string>
-    <string name="kx_later">دواتر</string>
-
-    <!-- Full-app UI strings (ks_*) -->
     <string name="ks_0000">"\n\nوردەکاریی تەکنیکی لە خوارەوەیە؛ «کۆپی ڕاپۆرت» دابگرە و بینێرە بۆ پشتیوانی."</string>
     <string name="ks_0001">"\n\nکۆپییە هاوشێوەکە لە Download/KurdMan یان "</string>
     <string name="ks_0002">"\n\n… (دەقی تەواو لە فایلی TXTی «داگرتنەکان»دایە)"</string>

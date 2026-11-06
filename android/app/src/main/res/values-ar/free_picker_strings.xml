@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="edition_free_short">مجاني</string>
+    <string name="edition_free_note">مجاني بالكامل • بلا Premium أو تسجيل دخول</string>
+    <string name="input_choose_source">اختر الصور أو الملفات</string>
+    <string name="input_gallery">المعرض / الصور</string>
+    <string name="input_files">الملفات / CBZ</string>
+    <string name="input_browse_hint">المعرض للصور، والملفات لعرض جميع الأنواع في التنزيلات أو التخزين المشترك أو بطاقة SD أو السحابة. اختر صورًا أو CBZ/ZIP للترجمة.</string>
+    <string name="input_picker_unavailable">لا يتوفر منتقي متوافق. يمكنك أيضًا مشاركة الصور من المعرض إلى Koorix.</string>
+</resources>

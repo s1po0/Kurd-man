@@ -39,7 +39,9 @@ Installing the files does not make the host agent/service free of charge.
 
 - Work on regular **Koorix / `com.koorix.app`**, not KurdMan or a testing app.
 - No paid translation API, NLLB, new large model, model-training claim, hidden
-  online fallback, account/Premium bypass, or per-image trip to this chat.
+  online fallback or per-image trip to this chat. Since 1.6 the owner explicitly
+  made the public app free: no login, Premium, daily app quota or device-registration
+  server. This does not remove third-party provider limits or technical import limits.
 - One source block -> one target block, same page, same order, same identity.
   Never combine neighbouring bubbles to make the text easier to translate.
   Shared context is evidence only, not permission to merge rendered blocks.

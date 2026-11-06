@@ -50,6 +50,7 @@ import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -227,6 +228,10 @@ public class MainActivity extends AppCompatActivity {
     private int currentMainPage = PAGE_TRANSLATE;
 
     private ActivityResultLauncher<String[]> pickLauncher;
+    private ActivityResultLauncher<PickVisualMediaRequest> galleryLauncher;
+    private ActivityResultLauncher<Intent> galleryFallbackLauncher;
+    private ActivityResultLauncher<Void> allFilesLauncher;
+    private ActivityResultLauncher<Intent> filesFallbackLauncher;
     private ActivityResultLauncher<String[]> importFontLauncher;
     private ActivityResultLauncher<String> notificationPermissionLauncher;
     private ActivityResultLauncher<Intent> editorLauncher;
@@ -477,6 +482,13 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
 
+        galleryLauncher = registerForActivityResult(new ActivityResultContracts.PickMultipleVisualMedia(),this::acceptPickedInput);
+        galleryFallbackLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                result -> acceptPickedInput(ComicInputPicker.selected(result.getResultCode(),result.getData())));
+        allFilesLauncher = registerForActivityResult(new ComicInputPicker.Documents(),this::acceptPickedInput);
+        filesFallbackLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                result -> acceptPickedInput(ComicInputPicker.selected(result.getResultCode(),result.getData())));
+
         importFontLauncher = registerForActivityResult(
                 new ActivityResultContracts.OpenDocument(),
                 uri -> {
@@ -583,16 +595,15 @@ public class MainActivity extends AppCompatActivity {
         });
         verifyButton.setOnClickListener(v -> verifyBot());
         sendTextButton.setOnClickListener(v -> sendTextMessage());
-        pickButton.setOnClickListener(v -> pickLauncher.launch(new String[]{
-                "image/*",
-                "application/zip",
-                "application/x-zip-compressed",
-                "application/x-cbz",
-                "application/vnd.comicbook+zip",
-                "application/x-comicbook",
-                "application/octet-stream"
-        }));
-        downloadOfflineButton.setOnClickListener(v -> { if(BuildConfig.PUBLIC_EDITION)AccountGate.prepareOfflineAllowance(this); downloadOfflineModel(); });
+        pickButton.setOnClickListener(v -> {
+            if(BuildConfig.PUBLIC_EDITION)ComicInputPicker.choose(this,this::openGallery,this::openAllFiles);
+            else pickLauncher.launch(new String[]{"image/*","application/zip","application/x-zip-compressed","application/x-cbz","application/vnd.comicbook+zip","application/x-comicbook","application/octet-stream"});
+        });
+        View inputSources=findViewById(R.id.inputSourceButtons);
+        inputSources.setVisibility(BuildConfig.PUBLIC_EDITION?View.VISIBLE:View.GONE);
+        findViewById(R.id.pickGalleryButton).setOnClickListener(v -> openGallery());
+        findViewById(R.id.pickFilesButton).setOnClickListener(v -> openAllFiles());
+        downloadOfflineButton.setOnClickListener(v -> downloadOfflineModel());
         deleteOfflineButton.setOnClickListener(v -> confirmDeleteOfflineModel());
         downloadPaddleOcrButton.setOnClickListener(v -> downloadPaddleOcrPack());
         deletePaddleOcrButton.setOnClickListener(v -> confirmDeletePaddleOcrPack());
@@ -630,7 +641,6 @@ public class MainActivity extends AppCompatActivity {
         updateButtons(currentBusy);
         refreshDownloadsList();
         refreshReportUi();
-        AccountGate.handleAuthDeepLink(this, getIntent());
         applyEditionUi();
         if (savedInstanceState == null) {
             handleIncomingShareIntent(getIntent());
@@ -672,7 +682,7 @@ public class MainActivity extends AppCompatActivity {
                         BuildConfig.VERSION_NAME));
             }
             if (heroTelegramChip != null) {
-                heroTelegramChip.setText(R.string.kx_premium_btn);
+                heroTelegramChip.setText(R.string.edition_free_short);
             }
             TextView settingsSubtitle = findViewById(R.id.settingsSubtitle);
             if (settingsSubtitle != null) {
@@ -722,16 +732,7 @@ public class MainActivity extends AppCompatActivity {
             heroVersionChip.setText("v" + BuildConfig.VERSION_NAME
                     + getString(R.string.ks_0009));
         }
-        Button accountButton = findViewById(R.id.accountButton);
-        if (accountButton != null) {
-            accountButton.setVisibility(BuildConfig.PUBLIC_EDITION
-                    ? View.VISIBLE : View.GONE);
-            if (BuildConfig.PUBLIC_EDITION) {
-                accountButton.setText(R.string.rel_premium);
-            }
-            accountButton.setOnClickListener(
-                    v -> AccountGate.openAccount(this));
-        }
+        findViewById(R.id.freeEditionNote).setVisibility(BuildConfig.PUBLIC_EDITION?View.VISIBLE:View.GONE);
         View unlimitedSection = findViewById(R.id.unlimitedOcrSection);
         if (unlimitedSection != null && !BuildConfig.SHOW_UNLIMITED_OCR) {
             unlimitedSection.setVisibility(View.GONE);
@@ -743,7 +744,6 @@ public class MainActivity extends AppCompatActivity {
         if (sendResultButton != null && !BuildConfig.SHOW_TELEGRAM) {
             sendResultButton.setVisibility(View.GONE);
         }
-        AccountGate.enforceOnLaunch(this);
     }
 
     /** Koorix language picker: ckb (Sorani), en, ar. Recreated by AppCompat. */
@@ -806,7 +806,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        AccountGate.handleAuthDeepLink(this, intent);
         handleIncomingShareIntent(intent);
     }
 
@@ -2478,6 +2477,37 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void acceptPickedInput(List<Uri> uris) {
+        if(uris==null||uris.isEmpty())return; // Cancel never clears the current choice.
+        for(Uri uri:uris)try {
+            getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        }catch(SecurityException|IllegalArgumentException transientGrant) {
+            // Gallery/GetContent can grant temporary access only. Sources are
+            // copied immediately into private storage by the existing importer.
+        }
+        loadPickedFiles(uris);
+    }
+
+    private void openGallery() {
+        if(currentBusy||JobRuntime.isRunning())return;
+        try {
+            if(ActivityResultContracts.PickVisualMedia.isPhotoPickerAvailable()) galleryLauncher.launch(ComicInputPicker.imagesOnly());
+            else galleryFallbackLauncher.launch(Intent.createChooser(ComicInputPicker.galleryFallback(),getString(R.string.input_gallery)));
+        }catch(ActivityNotFoundException unavailable) {
+            try { galleryFallbackLauncher.launch(Intent.createChooser(ComicInputPicker.galleryFallback(),getString(R.string.input_gallery))); }
+            catch(ActivityNotFoundException missing){setStatus(getString(R.string.input_picker_unavailable));}
+        }
+    }
+
+    private void openAllFiles() {
+        if(currentBusy||JobRuntime.isRunning())return;
+        try { allFilesLauncher.launch(null); }
+        catch(ActivityNotFoundException unavailable) {
+            try {filesFallbackLauncher.launch(Intent.createChooser(ComicInputPicker.filesFallback(),getString(R.string.input_files)));}
+            catch(ActivityNotFoundException missing){setStatus(getString(R.string.input_picker_unavailable));}
+        }
+    }
+
     private void clearBatchSelection() {
         selectedBatchFiles.clear();
         selectedBatchNames.clear();
@@ -2963,8 +2993,7 @@ public class MainActivity extends AppCompatActivity {
         // Koorix public edition: jobs are gated behind the signed-in
         // account's daily allowance (checked server-side). The
         // personal KurdMan build runs the job immediately.
-        AccountGate.guardJobStart(this, jobPages,
-                this::performTranslateSelected);
+        performTranslateSelected();
     }
 
     private void performTranslateSelected() {
@@ -5039,7 +5068,8 @@ public class MainActivity extends AppCompatActivity {
         pickButton.setEnabled(enabled);
         translateButton.setEnabled(enabled && (!BuildConfig.PUBLIC_EDITION || hasPublicInput()));
         findViewById(R.id.projectLibraryButton).setEnabled(enabled);
-        findViewById(R.id.accountButton).setEnabled(enabled);
+        findViewById(R.id.pickGalleryButton).setEnabled(enabled);
+        findViewById(R.id.pickFilesButton).setEnabled(enabled);
         refreshDownloadsButton.setEnabled(enabled);
         openDownloadsButton.setEnabled(enabled);
         if (sourceSpinner != null) {

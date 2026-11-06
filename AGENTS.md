@@ -17,9 +17,12 @@ can discover it under the project's `.claude/skills/` directory.
 - No paid API, NLLB, large model download, hidden online fallback or repeated
   per-image chat roundtrip. Do not claim instructions are a trained model.
 - Preserve all target languages and Kurdish/English/Arabic UI. The owner explicitly
-  removed user login: no Google/email/phone screen or forced account setup. Keep
-  daily device allowances and optional Premium without a user login; never bypass
-  server entitlement checks. No public Telegram/Baidu section.
+  removed user login AND Premium: the public app is completely free for now,
+  with no daily quota, activation codes, device registration or entitlement-server
+  dependency. Keep the 300-page/300-MB import/1-GB cache safety limits. Do not erase
+  historical subscriber/device records or phone data. No public Telegram/Baidu section.
+- The input chooser must expose separate Gallery/Photos and unfiltered Files
+  routes, support multi-select and Android URI grants without broad storage access.
 - One source block/bubble -> one target block, original page/order/geometry;
   preserve clean erasure, black narration, joined ovals, outside SFX and studio.
 - Keep offline truly offline, STOP responsive, saved projects/Reports persistent,

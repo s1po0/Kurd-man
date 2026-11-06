@@ -1,9 +1,7 @@
 name: Koorix no-login backend
+# Legacy 1.5 backend only. Free releases must never create test/device accounts.
 on:
   workflow_dispatch:
-  push:
-    branches: ["arena/**"]
-    paths: ["koorix/backend/**", "koorix/functions/**", "tools/backend/**", ".github/workflows/koorix-backend.yml"]
 permissions:
   contents: read
 jobs:
