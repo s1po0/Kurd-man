@@ -1,0 +1,25 @@
+name: Comic translation live probe
+on:
+  push:
+    branches: ["arena/**"]
+    paths: ["tools/comic-probe/**"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Probe real public route with the production comic layer
+        run: |
+          mkdir -p /tmp/comic-probe
+          javac --release 17 -encoding UTF-8 -d /tmp/comic-probe \
+            android/app/src/main/java/com/kurdman/app/ComicTranslationSkill.java \
+            tools/comic-probe/LiveProbe.java
+          java -cp /tmp/comic-probe com.kurdman.app.LiveProbe
