@@ -626,9 +626,11 @@
                         android:textSize="14sp" />
                 </LinearLayout>
                 <TextView
+                    android:id="@+id/inputBrowseHint"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
+                    android:visibility="gone"
                     android:text="@string/input_browse_hint"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp" />

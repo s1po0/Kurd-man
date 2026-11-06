@@ -482,13 +482,6 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
 
-        galleryLauncher = registerForActivityResult(new ActivityResultContracts.PickMultipleVisualMedia(),this::acceptPickedInput);
-        galleryFallbackLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
-                result -> acceptPickedInput(ComicInputPicker.selected(result.getResultCode(),result.getData())));
-        allFilesLauncher = registerForActivityResult(new ComicInputPicker.Documents(),this::acceptPickedInput);
-        filesFallbackLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
-                result -> acceptPickedInput(ComicInputPicker.selected(result.getResultCode(),result.getData())));
-
         importFontLauncher = registerForActivityResult(
                 new ActivityResultContracts.OpenDocument(),
                 uri -> {
@@ -508,6 +501,15 @@ public class MainActivity extends AppCompatActivity {
         editorLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> handleStudioOrLibraryResult(result.getResultCode(),result.getData()));
+
+        // Append new contracts after existing ones to keep saved callback keys stable.
+        galleryLauncher = registerForActivityResult(new ActivityResultContracts.PickMultipleVisualMedia(),this::acceptPickedInput);
+        galleryFallbackLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                result -> acceptPickedInput(ComicInputPicker.selected(result.getResultCode(),result.getData())));
+        allFilesLauncher = registerForActivityResult(new ComicInputPicker.Documents(),this::acceptPickedInput);
+        filesFallbackLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                result -> acceptPickedInput(ComicInputPicker.selected(result.getResultCode(),result.getData())));
+
 
         JobRuntime.setStopAction(() -> {
             SoraniTranslator translator = activeTranslator;
@@ -601,6 +603,7 @@ public class MainActivity extends AppCompatActivity {
         });
         View inputSources=findViewById(R.id.inputSourceButtons);
         inputSources.setVisibility(BuildConfig.PUBLIC_EDITION?View.VISIBLE:View.GONE);
+        findViewById(R.id.inputBrowseHint).setVisibility(BuildConfig.PUBLIC_EDITION?View.VISIBLE:View.GONE);
         findViewById(R.id.pickGalleryButton).setOnClickListener(v -> openGallery());
         findViewById(R.id.pickFilesButton).setOnClickListener(v -> openAllFiles());
         downloadOfflineButton.setOnClickListener(v -> downloadOfflineModel());
@@ -2984,15 +2987,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void translateSelected() {
         if (BuildConfig.PUBLIC_EDITION) { translatePublicSelection(); return; }
-        // Invalid optional names must not consume an account allowance or start OCR.
+        // Validate optional names before OCR; neither edition has an app paywall.
         if (comicControls != null && !comicControls.validate()) return;
-        int jobPages = selectedCbzFile != null
-                ? Math.max(1, selectedCbzPages)
-                : (!selectedBatchFiles.isEmpty()
-                        ? selectedBatchFiles.size() : 1);
-        // Koorix public edition: jobs are gated behind the signed-in
-        // account's daily allowance (checked server-side). The
-        // personal KurdMan build runs the job immediately.
         performTranslateSelected();
     }
 

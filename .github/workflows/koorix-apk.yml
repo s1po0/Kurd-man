@@ -106,7 +106,10 @@ jobs:
           exit $code
 
       - name: Verify free public edition has no payment, registration or allowance service
-        run: python3 tools/free-edition/check.py
+        run: |
+          python3 tools/free-edition/check.py
+          node tools/free-edition/site-test.mjs
+          node koorix/site/build.mjs
 
       # No signing cache, no debug fallback and no production key generation.
       # The owner-authorized v2 key is restored from authenticated durable storage.

@@ -25,11 +25,22 @@ root=E.parse(ANDROID/'src/main/res/layout/activity_main.xml').getroot()
 ns='{http://schemas.android.com/apk/res/android}'
 ids={node.get(ns+'id','') for node in root.iter()}
 assert '@+id/accountButton' not in ids
-for name in ('freeEditionNote','pickGalleryButton','pickFilesButton','inputSourceButtons','projectLibraryButton'):
+for name in ('freeEditionNote','pickGalleryButton','pickFilesButton','inputSourceButtons','inputBrowseHint','projectLibraryButton'):
     assert '@+id/'+name in ids,name
 main=(ANDROID/'src/main/java/com/kurdman/app/MainActivity.java').read_text()
 assert 'new ComicInputPicker.Documents()' in main and 'new ActivityResultContracts.PickMultipleVisualMedia()' in main
 assert 'this::openGallery,this::openAllFiles' in main
-for p in (ANDROID/'src/main/res').glob('values*/free_picker_strings.xml'):E.parse(p)
+keys=None
+for p in (ANDROID/'src/main/res').glob('values*/free_picker_strings.xml'):
+    names={e.attrib['name'] for e in E.parse(p).getroot().findall('string')}
+    if keys is None:keys=names
+    assert names==keys,'Missing translated picker/free-edition labels: '+str(p)
+for p in (ANDROID/'src/main/res').glob('values*/strings.xml'):
+    assert 'ks_0639' not in p.read_text(),'Retired account/Premium label remains'
+assert '300L * 1024L * 1024L' in main and '1024L * 1024L * 1024L' in main
+assert 'requestedCount - 300' in main
+permissions={e.get(ns+'name','') for e in E.parse(ANDROID/'src/main/AndroidManifest.xml').getroot().findall('uses-permission')}
+assert not permissions.intersection({'android.permission.MANAGE_EXTERNAL_STORAGE','android.permission.READ_EXTERNAL_STORAGE','android.permission.READ_MEDIA_IMAGES','android.permission.READ_MEDIA_VISUAL_USER_SELECTED'})
+
 assert len(list((ANDROID/'src/main/res').glob('values*/free_picker_strings.xml')))==3
 print('Free public edition contracts passed: no billing/registration/allowance dependency; gallery + unfiltered Files wired; technical limits retained.')
