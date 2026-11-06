@@ -1,0 +1,146 @@
+{
+  "version": "1.6.0",
+  "versionCode": 13,
+  "applicationId": "com.koorix.app",
+  "label": "Koorix",
+  "debuggable": false,
+  "sourceCommit": "b2d4857a290ec543d26be0ab1fda88cb0f8598aa",
+  "buildCommit": "f57ad65775d225787fe76d664722c727e76b8a17",
+  "nativeSourceLastChanged": "b2d4857a290ec543d26be0ab1fda88cb0f8598aa",
+  "nativeTreeSha": "dc4b4a46ba8f6b9daf4a0522e30701f7d8e9348f",
+  "tagAndBuildHaveIdenticalAndroidSource": true,
+  "repositoryPublic": true,
+  "releaseId": 437156503,
+  "assetId": 718903879,
+  "publishedAt": "2026-11-06T23:17:31Z",
+  "downloadUrl": "https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.6.0/Koorix-v1.6.0.apk",
+  "blobSha": "a69cce7a3d930128b763861b92ed9c64a24defac",
+  "apkBytes": 33498433,
+  "apkSha256": "07c1775b6f0812ee645a162db950ec8486f2bd77fdf652f6f4c847ef9de62d94",
+  "zipEntries": 601,
+  "signerSha256": "fb304de3cd357f35cf679e2a46befac08f3e97feef28b1b9a8af7b0891d40340",
+  "signerSha1": "21209f6f75195cfeb1dcaa7b7d74ad09e4954b6b",
+  "signingIdentity": "permanent-v2",
+  "independentLocalVerification": {
+    "file": "Koorix-v1.6.0.apk",
+    "bytes": 33498433,
+    "sha256": "07c1775b6f0812ee645a162db950ec8486f2bd77fdf652f6f4c847ef9de62d94",
+    "zip_entries": 601,
+    "signature": {
+      "scheme": "v2",
+      "rsa_bits": 3072,
+      "certificate_sha256": "fb304de3cd357f35cf679e2a46befac08f3e97feef28b1b9a8af7b0891d40340",
+      "algorithm": "0x103",
+      "content_digest_verified": true
+    },
+    "package": "com.koorix.app",
+    "version": "1.6.0",
+    "version_code": 13,
+    "label": "Koorix",
+    "debuggable": false,
+    "no_login_gate_checked": true,
+    "free_edition_checked": true,
+    "test_harness_and_private_recovery_absent": true
+  },
+  "mergedApkBroadStorageMediaReadPermissionsAbsent": true,
+  "ci": {
+    "runId": 42310455964,
+    "jobId": 128210289409,
+    "status": "success",
+    "cryptoTests": 18,
+    "comicAssertions": 604,
+    "qualityAssertions": 51,
+    "lexiconEntries": 204,
+    "androidJvmExecutions": 136,
+    "sdks": [
+      26,
+      34
+    ],
+    "failures": 0,
+    "skipped": 0,
+    "signerColdRestores": 2,
+    "entitlementBackendInvoked": false,
+    "staticSiteLanguages": 3,
+    "staticSitePreferenceStorageStates": 6
+  },
+  "developerSkill": {
+    "localPythonTests": 55,
+    "unchangedSkillCiRunId": 42308492517,
+    "ciStatus": "success",
+    "pythonVersions": [
+      "3.11",
+      "3.14"
+    ],
+    "pythonTestsPerVersion": 55,
+    "javaGlossaryFixtures": 36,
+    "meaningAccuracyBenchmark": false
+  },
+  "features": {
+    "userLoginRemoved": true,
+    "premiumRemoved": true,
+    "paymentsAndActivationCodesRemoved": true,
+    "dailyAppQuotasRemoved": true,
+    "deviceRegistrationRemoved": true,
+    "noInitialOnlineAllowanceRequired": true,
+    "separateGalleryAndUnfilteredFiles": true,
+    "galleryMultiPhotoPickerAndFallback": true,
+    "filesWithoutMimeWhitelist": true,
+    "selectedUriReadAccessOnly": true,
+    "editableProjectsPreserved": true,
+    "legacyCurrentPreserved": true,
+    "backupRestorePreserved": true,
+    "frozenPerPageCheckpointsPreserved": true,
+    "stopAndRecoveryPreserved": true,
+    "automaticSkillWithTranslate": true,
+    "targetLanguageChoices": 74,
+    "uiLanguages": [
+      "ckb",
+      "en",
+      "ar"
+    ],
+    "newTranslationModel": false,
+    "nllbAdded": false
+  },
+  "preservedSafetyLimits": {
+    "pages": 300,
+    "importMb": 300,
+    "cacheGb": 1,
+    "androidProtectedFoldersNotBypassed": true,
+    "platformPhotoPickerMayImposeSelectionCap": true,
+    "externalProviderRateLimitsUnchanged": true
+  },
+  "delivery": {
+    "chatFilePresented": true,
+    "telegramApkAcknowledged": true,
+    "publicUnauthenticatedDownloadHead": 302,
+    "releaseAssetDigestMatchesChatFile": true,
+    "completionNotice": "pending"
+  },
+  "historicalData": {
+    "serverRecordsDeleted": false,
+    "localCredentialsDeleted": false,
+    "newRuntimeUsesOldEntitlements": false,
+    "newRuntimeContactsSupabase": false,
+    "backendMutatedByThisTask": false
+  },
+  "hosting": {
+    "status": "not_deployed",
+    "siteSourceUpdatedToFreeEdition": true,
+    "legacyPurchaseConsoleRetired": true,
+    "buildUsesLocalReviewedSources": true,
+    "previousVercelPagesIntegrationBlockUnchanged": true,
+    "newHostingAttempts": 0
+  },
+  "limitations": {
+    "physicalPhonePickerAcceptance": "unverified; real intents and full main-activity routes tested with Robolectric only",
+    "semanticVisualAccuracyGuarantee": false,
+    "soraniEngine": "unchanged OPUS; meaning quality remains limited",
+    "historicalPreV2SignatureMigrationLimitationUnchanged": true
+  },
+  "publicationRecovery": {
+    "initialVerifiedRun": 42309541608,
+    "initialFailure": "GitHub release publication step failed after native/cryptographic/byte-verification gates; no APK was presented from that attempt.",
+    "actionsRerun": "403 integration lacks Actions write permission; no credentials requested or altered",
+    "resolution": "Prepared the exact-source release tag and metadata-only draft via authorized gh release/API operations; pushed a publication-only workflow correction on the existing branch. Final run reverified all gates, uploaded and published the release, and acknowledged Telegram delivery."
+  }
+}
