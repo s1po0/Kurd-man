@@ -289,3 +289,27 @@ adapter with a mock offline engine at API 26/34. The release gate requires all
 **44 Android/JVM executions** (old 28 + new 16), no failures/errors/skips, before
 production signer restoration. CI/build/delivery provenance is recorded only
 after the actual run succeeds; device/real-page meaning acceptance is separate.
+
+### Verified automatic-workflow release (2026-11-06)
+
+Run [`42224707698`](https://github.com/s1po0/Kurd-man/actions/runs/42224707698)
+succeeded at `88e0e8dcbd21c2ab162b3ba24547d22ae271ba54`, also the exact 1.4.1 tag:
+**44 Android/JVM tests, 0 failures/errors/skips**, 604 rule/safety assertions,
+51 quality/glossary/binding assertions and 18 recovery/fail-closed crypto tests.
+The skill run `42224707633` also passed 55 Python tests per 3.11/3.14 and the
+36 actual-Java glossary parity fixtures. All use synthetic fixtures/mocks;
+real-device visuals and native-language meaning acceptance remain pending.
+
+The downloaded **Koorix 1.4.1 / code 11** APK independently passed v2 RSA and
+chunked-content verification, ZIP CRC and binary-manifest verification. It is
+non-debuggable `com.koorix.app`, 33,652,415 bytes / 609 ZIP entries, signed by the
+same permanent v2 certificate. Actual DEX/resource checks confirm the automatic
+pipeline and inline controls are packaged, the independent Translate-tab Skill
+launcher is gone, and test/Robolectric classes are not bundled.
+
+- SHA-256: `01f5bf0a752bf935ba2476f145e0c0744eb05f28d4a85070a0ef9294831ba112`.
+- [Download Koorix 1.4.1](https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.4.1/Koorix-v1.4.1.apk)
+  (repository access required); the APK was presented in chat and Telegram
+  delivery was acknowledged by the release workflow.
+- Exact provenance: `koorix/releases/v1.4.1.json`. Updates over v2-signed
+  1.3.1 / 1.4.0 without uninstalling; no signing-key change or data reset.
