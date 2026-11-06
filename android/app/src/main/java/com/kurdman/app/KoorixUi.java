@@ -7,7 +7,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.view.View;
 import android.widget.*;
 
-/** Small accessible dark-theme building blocks shared by the local library/Premium pages. */
+/** Small accessible dark-theme building blocks used by the local saved-project library. */
 final class KoorixUi {
     static int dp(Activity a,int n){return Math.round(a.getResources().getDisplayMetrics().density*n);}
     static LinearLayout page(Activity a,String title,String subtitle){
