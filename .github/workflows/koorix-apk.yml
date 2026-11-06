@@ -73,7 +73,7 @@ jobs:
         with:
           packages: "platform-tools platforms;android-35 build-tools;35.0.0"
 
-      - name: Test one-button automatic translation, optional inline controls and saved review state
+      - name: Test no-login, device protection, project library, recovery and automatic translation
         run: |
           set +e
           gradle --no-daemon --no-configuration-cache --stacktrace -p android testKoorixReleaseUnitTest > /tmp/koorix-ui-tests.log 2>&1
@@ -93,7 +93,7 @@ jobs:
                       detail=(issue.get('message','') or (issue.text or '').split('\n')[0])[:400]
                       print('::error::In-app skill UI contract failed: '+test.get('name','test')+' '+detail.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
           print(f'::notice::In-app skill Android/JVM tests: {total} run, {failed} failed, {skipped} skipped; not device/semantic proof')
-          if total < 44 or failed or skipped:
+          if total < 102 or failed or skipped:
               print('::error::In-app skill tests were missing, failed or skipped; production distribution is blocked')
               raise SystemExit(1)
           PYTEST

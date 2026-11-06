@@ -25,6 +25,13 @@ public final class AccountGate {
         }
     }
 
+    public static void guardJobStart(Activity a,int pages,boolean offline,String id,Runnable allowed,Runnable blocked) { allowed.run(); }
+    public interface Decision { void ready(boolean allowed,String reason); }
+    public static void authorize(android.content.Context context,TranslationProject p,Decision result) { result.ready(true,""); }
+    public static String identity(android.content.Context context) { return "personal"; }
+    public static boolean isJobApproved(android.content.Context context,TranslationProject project) { return true; }
+    public static void jobFinished(android.content.Context context,TranslationProject project) { }
+
     public static void openAccount(Activity activity) {
         // No account screen in the personal build.
     }

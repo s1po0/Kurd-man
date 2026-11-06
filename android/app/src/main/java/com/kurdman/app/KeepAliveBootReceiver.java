@@ -17,7 +17,9 @@ public class KeepAliveBootReceiver extends BroadcastReceiver {
                 && !Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
             return;
         }
-        if (KeepAliveService.isManualDesired(context)) {
+        if (SavedJobCoordinator.hasPending(context)) {
+            KeepAliveService.startForJob(context);
+        } else if (KeepAliveService.isManualDesired(context)) {
             JobRuntime.setStatus(context.getString(R.string.ks_0105));
             KeepAliveService.startManual(context);
         }

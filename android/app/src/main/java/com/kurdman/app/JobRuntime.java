@@ -32,6 +32,17 @@ final class JobRuntime {
         return context == null ? fallback : context.getString(resId);
     }
     private static volatile Runnable stopAction;
+    private static volatile TranslationProject activeProject;
+    private static final java.util.Set<Runnable> cancellations = java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<Runnable,Boolean>());
+    static void registerCancellation(Runnable action) { cancellations.add(action); }
+    static void unregisterCancellation(Runnable action) { cancellations.remove(action); }
+    static synchronized boolean tryBeginJob() {
+        if (!RUNNING.compareAndSet(false,true)) return false;
+        STOP_REQUESTED.set(false); activeProject=null; return true;
+    }
+    static synchronized void activateSavedProject(TranslationProject project) { activeProject=project; }
+    static boolean isJobThread() { return jobThread==Thread.currentThread(); }
+
 
     private JobRuntime() {
     }
@@ -59,7 +70,8 @@ final class JobRuntime {
         }
     }
 
-    static void endJob() {
+    static synchronized void endJob() {
+        activeProject = null;
         RUNNING.set(false);
         jobThread = null;
     }
@@ -72,8 +84,10 @@ final class JobRuntime {
         return STOP_REQUESTED.get() || Thread.currentThread().isInterrupted();
     }
 
-    static void requestStop() {
+    static synchronized void requestStop() {
         STOP_REQUESTED.set(true);
+        if (appContext != null && activeProject != null) TranslationProjectStore.allowRecovery(appContext,activeProject,false);
+        for (Runnable cancel : cancellations) { try { cancel.run(); } catch (RuntimeException ignored) { } }
         STATUS.set(s(R.string.ks_0677, "🛑 وەستاندن داواکرا…"));
         Runnable action = stopAction;
         if (action != null) {

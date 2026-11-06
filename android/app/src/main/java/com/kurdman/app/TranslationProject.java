@@ -26,7 +26,7 @@ import java.util.List;
 public class TranslationProject {
     static final String PROJECT_FILE = "project.json";
 
-    public int version = 1;
+    public int version = 2;
     public boolean cbz;
     public boolean completed;
     public String displayName = "";
@@ -35,6 +35,19 @@ public class TranslationProject {
     public String targetLanguage = "ckb";
     /** Frozen per-project choices, independent of future settings changes. */
     public ComicTranslationSkill.Config comicConfig = ComicSettings.fromJson(null);
+    /** Frozen durable job options. Legacy completed projects remain readable. */
+    public boolean offlineMode;
+    public boolean accurateOcr = true;
+    public boolean createPdf;
+    public boolean imageBatch;
+    public boolean resumable;
+    public boolean autoResume;
+    public int quotaPages;
+    public boolean exportsComplete;
+    public String outputBinding = "";
+    public String quotaJobId = "";
+    public String jobOwner = "";
+    public TextStyleSettings jobStyle = new TextStyleSettings();
     public long createdAt = System.currentTimeMillis();
     public long updatedAt = System.currentTimeMillis();
     public final List<Page> pages = new ArrayList<>();
@@ -47,6 +60,10 @@ public class TranslationProject {
         public int width;
         public int height;
         public boolean unreadable;
+        public boolean ocrComplete;
+        public boolean translationComplete;
+        public boolean renderComplete;
+        public boolean layoutPrepared;
         public final List<Segment> segments = new ArrayList<>();
 
         public Page() {
@@ -59,7 +76,12 @@ public class TranslationProject {
         }
 
         public File sourceFile(File projectDir) {
-            return sourcePath == null ? null : new File(projectDir, sourcePath);
+            if (sourcePath == null || projectDir == null) return null;
+            try {
+                File source = new File(projectDir, sourcePath).getCanonicalFile();
+                String root = projectDir.getCanonicalPath() + File.separator;
+                return source.getPath().startsWith(root) ? source : null;
+            } catch (IOException invalid) { return null; }
         }
     }
 
@@ -97,25 +119,17 @@ public class TranslationProject {
         } catch (JSONException e) {
             throw new IOException("Could not serialize translation project", e);
         }
-        File temporary = new File(projectDir, PROJECT_FILE + ".tmp");
-        try (OutputStreamWriter writer = new OutputStreamWriter(
-                new FileOutputStream(temporary), StandardCharsets.UTF_8)) {
-            writer.write(json);
-        }
-        File target = new File(projectDir, PROJECT_FILE);
+        android.util.AtomicFile atomic = new android.util.AtomicFile(new File(projectDir, PROJECT_FILE));
+        FileOutputStream stream = null;
         try {
-            Files.move(temporary.toPath(), target.toPath(),
-                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException moveFailure) {
-            // Some Android filesystems dislike atomic replacement across a
-            // directory boundary; both files are in the same directory, but
-            // keep a plain rename as a conservative fallback.
-            if (target.exists() && !target.delete()) {
-                throw moveFailure;
-            }
-            if (!temporary.renameTo(target)) {
-                throw moveFailure;
-            }
+            stream = atomic.startWrite();
+            byte[] data = json.getBytes(StandardCharsets.UTF_8);
+            if (data.length > 32 * 1024 * 1024) throw new IOException("Saved project metadata is too large");
+            stream.write(data);
+            atomic.finishWrite(stream);
+        } catch (IOException failure) {
+            if (stream != null) atomic.failWrite(stream);
+            throw failure;
         }
     }
 
@@ -129,6 +143,13 @@ public class TranslationProject {
         root.put("sourceLanguage", sourceLanguage == null ? "en" : sourceLanguage);
         root.put("targetLanguage", targetLanguage == null ? "ckb" : targetLanguage);
         root.put("comicSkill", ComicSettings.toJson(comicConfig));
+        JSONObject job = new JSONObject();
+        job.put("offline", offlineMode); job.put("accurateOcr", accurateOcr);
+        job.put("pdf", createPdf); job.put("imageBatch", imageBatch);
+        job.put("resumable", resumable); job.put("autoResume", autoResume);
+        job.put("quotaPages", quotaPages); job.put("exportsComplete", exportsComplete); job.put("outputBinding", outputBinding);
+        job.put("quotaJobId", quotaJobId); job.put("owner", jobOwner);
+        job.put("style", jobStyle.toJson()); root.put("job", job);
         root.put("createdAt", createdAt);
         root.put("updatedAt", updatedAt);
         JSONArray pageArray = new JSONArray();
@@ -150,6 +171,19 @@ public class TranslationProject {
         project.sourceLanguage = root.optString("sourceLanguage", "en");
         project.targetLanguage = root.optString("targetLanguage", "ckb");
         project.comicConfig = ComicSettings.fromJson(root.optJSONObject("comicSkill"));
+        JSONObject job = root.optJSONObject("job");
+        if (job != null) {
+            project.offlineMode = job.optBoolean("offline", false);
+            project.accurateOcr = job.optBoolean("accurateOcr", true);
+            project.createPdf = job.optBoolean("pdf", false);
+            project.imageBatch = job.optBoolean("imageBatch", false);
+            project.resumable = job.optBoolean("resumable", false);
+            project.autoResume = job.optBoolean("autoResume", false);
+            project.quotaPages = job.optInt("quotaPages", 0); project.exportsComplete = job.optBoolean("exportsComplete", false); project.outputBinding = job.optString("outputBinding", "");
+            project.quotaJobId = job.optString("quotaJobId", "");
+            project.jobOwner = job.optString("owner", "");
+            project.jobStyle = TextStyleSettings.fromJson(job.optJSONObject("style"));
+        }
         project.createdAt = root.optLong("createdAt", System.currentTimeMillis());
         project.updatedAt = root.optLong("updatedAt", project.createdAt);
         project.projectDir = projectDir;
@@ -159,15 +193,24 @@ public class TranslationProject {
                 project.pages.add(pageFromJson(pageArray.getJSONObject(i)));
             }
         }
+        if (project.version < 2 && project.completed) for (Page page : project.pages) { page.layoutPrepared=true; page.ocrComplete=true; page.translationComplete=true; }
         return project;
     }
 
     public static TranslationProject load(File projectDir) throws IOException {
         File file = new File(projectDir, PROJECT_FILE);
-        if (!file.exists()) {
-            return null;
+        android.util.AtomicFile atomic = new android.util.AtomicFile(file);
+        if (!file.exists() && !new File(file.getPath() + ".bak").exists()) return null;
+        String text;
+        try (java.io.FileInputStream in = atomic.openRead();
+                java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
+            byte[] buffer = new byte[8192]; int n;
+            while ((n = in.read(buffer)) != -1) {
+                if (out.size() + n > 32 * 1024 * 1024) throw new IOException("Saved project is too large");
+                out.write(buffer, 0, n);
+            }
+            text = new String(out.toByteArray(), StandardCharsets.UTF_8);
         }
-        String text = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
         try {
             return fromJson(new JSONObject(text), projectDir);
         } catch (JSONException e) {
@@ -197,6 +240,11 @@ public class TranslationProject {
             sourceLanguage = restored.sourceLanguage;
             targetLanguage = restored.targetLanguage;
             comicConfig = restored.comicConfig;
+            offlineMode = restored.offlineMode; accurateOcr = restored.accurateOcr;
+            createPdf = restored.createPdf; imageBatch = restored.imageBatch;
+            resumable = restored.resumable; autoResume = restored.autoResume;
+            quotaJobId = restored.quotaJobId; jobOwner = restored.jobOwner; quotaPages = restored.quotaPages; exportsComplete = restored.exportsComplete; outputBinding = restored.outputBinding;
+            jobStyle = restored.jobStyle;
             createdAt = restored.createdAt;
             updatedAt = restored.updatedAt;
             pages.clear();
@@ -213,6 +261,9 @@ public class TranslationProject {
         json.put("width", page.width);
         json.put("height", page.height);
         json.put("unreadable", page.unreadable);
+        json.put("ocrComplete", page.ocrComplete);
+        json.put("translationComplete", page.translationComplete);
+        json.put("renderComplete", page.renderComplete); json.put("layoutPrepared", page.layoutPrepared);
         JSONArray segments = new JSONArray();
         for (Segment segment : page.segments) {
             segments.put(segmentToJson(segment));
@@ -228,6 +279,9 @@ public class TranslationProject {
         page.width = json.optInt("width", 0);
         page.height = json.optInt("height", 0);
         page.unreadable = json.optBoolean("unreadable", false);
+        page.ocrComplete = json.optBoolean("ocrComplete", false);
+        page.translationComplete = json.optBoolean("translationComplete", false);
+        page.renderComplete = json.optBoolean("renderComplete", false); page.layoutPrepared = json.optBoolean("layoutPrepared", false);
         JSONArray segments = json.optJSONArray("segments");
         if (segments != null) {
             for (int i = 0; i < segments.length(); i++) {

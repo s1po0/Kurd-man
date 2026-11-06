@@ -1,431 +1,145 @@
 package com.kurdman.app;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.Handler;
-import android.os.Looper;
-
-import org.json.JSONException;
+import android.os.SystemClock;
 import org.json.JSONObject;
-
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.security.SecureRandom;
+import java.time.*;
+import java.util.*;
+import java.util.concurrent.*;
 
-/**
- * Koorix account client: talks to Supabase Auth + PostgREST RPC over
- * plain HTTPS (no SDK). The session lives in SharedPreferences; only
- * the publishable key is embedded — all data access is controlled by
- * Row Level Security and SECURITY DEFINER functions on the server
- * (koorix_my_status / koorix_consume_job / koorix_redeem_code), so a
- * modified client cannot grant itself Premium.
- */
+/** No user login: a random device credential protects free usage and Premium. */
 final class SupabaseAuth {
-
-    interface Callback {
-        /** @param result parsed JSON body on success, null on failure */
-        void onResult(JSONObject result, String error);
+    interface Callback { void onResult(JSONObject result,String error); }
+    interface Work { JSONObject run(Context app) throws Exception; }
+    private static final ExecutorService IO=Executors.newSingleThreadExecutor();
+    private static final Handler MAIN=new Handler(android.os.Looper.getMainLooper());
+    private static final Object STATE_LOCK=new Object();
+    private SupabaseAuth() { }
+    private static DeviceStateStore store(Context ctx){return new DeviceStateStore(ctx);}
+    private static JSONObject object(JSONObject root,String key) throws Exception {
+        JSONObject value=root.optJSONObject(key);if(value==null){value=new JSONObject();root.put(key,value);}return value;
     }
-
-    private static final String PREFS = "koorix_account";
-    private static final String K_ACCESS = "access_token";
-    private static final String K_REFRESH = "refresh_token";
-    private static final String K_EXPIRES = "expires_at_ms";
-    private static final String K_EMAIL = "email";
-    private static final String K_PENDING_EMAIL = "pending_email";
-    private static final String K_PREMIUM_UNTIL = "premium_until_cache";
-    private static final String K_LOCAL_DAY = "local_day";
-    private static final String K_LOCAL_JOBS = "local_jobs";
-    private static final String K_LOCAL_PAGES = "local_pages";
-
-    private static final ExecutorService IO = Executors.newSingleThreadExecutor();
-    private static final Handler MAIN = new Handler(Looper.getMainLooper());
-
-    private SupabaseAuth() {
-    }
-
-    // ---------- session state ----------
-
-    private static SharedPreferences prefs(Context ctx) {
-        return ctx.getApplicationContext()
-                .getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-    }
-
-    static boolean isSignedIn(Context ctx) {
-        return !prefs(ctx).getString(K_ACCESS, "").isEmpty()
-                && !prefs(ctx).getString(K_REFRESH, "").isEmpty();
-    }
-
-    static String email(Context ctx) {
-        return prefs(ctx).getString(K_EMAIL, "");
-    }
-
-    static void clearSession(Context ctx) {
-        prefs(ctx).edit().clear().apply();
-    }
-
-    private static void saveSession(Context ctx, JSONObject body)
-            throws JSONException {
-        long expiresInSec = body.optLong("expires_in", 3600L);
-        JSONObject user = body.optJSONObject("user");
-        prefs(ctx).edit()
-                .putString(K_ACCESS, body.getString("access_token"))
-                .putString(K_REFRESH, body.getString("refresh_token"))
-                .putLong(K_EXPIRES,
-                        System.currentTimeMillis() + expiresInSec * 1000L)
-                .putString(K_EMAIL, sessionIdentity(ctx, user))
-                .apply();
-    }
-
-    /** Display identity: the signed-in email address. */
-    private static String sessionIdentity(Context ctx, JSONObject user) {
-        if (user != null) {
-            String email = user.optString("email", "");
-            if (!email.isEmpty()) {
-                return email;
-            }
-        }
-        return email(ctx);
-    }
-
-    /** Premium known from the last successful server status check. */
-    static boolean cachedPremium(Context ctx) {
-        String until = prefs(ctx).getString(K_PREMIUM_UNTIL, "");
-        if (until.isEmpty() || "null".equals(until)) {
-            return false;
-        }
-        // premium_until is ISO-8601 UTC; lexicographic compare against
-        // the current UTC timestamp in the same format is sufficient.
-        SimpleDateFormat fmt = new SimpleDateFormat(
-                "yyyy-MM-dd'T'HH:mm:ss", Locale.US);
-        fmt.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
-        String now = fmt.format(new Date());
-        return until.compareTo(now) > 0;
-    }
-
-    static void cacheStatus(Context ctx, JSONObject status) {
-        if (status == null) {
-            return;
-        }
-        String until = status.isNull("premium_until") ? ""
-                : status.optString("premium_until", "");
-        prefs(ctx).edit().putString(K_PREMIUM_UNTIL, until).apply();
-    }
-
-    /**
-     * Offline fallback counter: when the server cannot be reached, a
-     * free user may still spend today's local allowance. The server
-     * remains authoritative whenever it answers.
-     */
-    static boolean localConsume(Context ctx, int pages) {
-        SharedPreferences p = prefs(ctx);
-        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.US)
-                .format(new Date());
-        int jobs = today.equals(p.getString(K_LOCAL_DAY, ""))
-                ? p.getInt(K_LOCAL_JOBS, 0) : 0;
-        int usedPages = today.equals(p.getString(K_LOCAL_DAY, ""))
-                ? p.getInt(K_LOCAL_PAGES, 0) : 0;
-        if (jobs >= BuildConfig.FREE_DAILY_JOBS
-                || usedPages + Math.max(1, pages) > BuildConfig.FREE_DAILY_PAGES) {
-            return false;
-        }
-        p.edit().putString(K_LOCAL_DAY, today)
-                .putInt(K_LOCAL_JOBS, jobs + 1)
-                .putInt(K_LOCAL_PAGES, usedPages + Math.max(1, pages))
-                .apply();
-        return true;
-    }
-
-    // ---------- auth + rpc calls ----------
-
-    /**
-     * Sends a sign-in email with both a magic link (deep-links back
-     * into the app) and — once the dashboard email template includes
-     * {{ .Token }} — a numeric code the user can type.
-     */
-    static void sendEmailOtp(Context ctx, String email, Callback cb) {
-        prefs(ctx).edit().putString(K_PENDING_EMAIL, email).apply();
-        JSONObject body = new JSONObject();
-        try {
-            body.put("email", email);
-            body.put("create_user", true);
-        } catch (JSONException ignored) {
-        }
-        post(ctx, "/auth/v1/otp?redirect_to="
-                        + android.net.Uri.encode(BuildConfig.APPLICATION_ID + "://auth/callback"),
-                body, false, cb);
-    }
-
-    /** Verifies the numeric code from the sign-in email. */
-    static void verifyEmailOtp(Context ctx, String email, String token,
-                               Callback cb) {
-        JSONObject body = new JSONObject();
-        try {
-            body.put("type", "email");
-            body.put("email", email);
-            body.put("token", token.trim());
-        } catch (JSONException ignored) {
-        }
-        post(ctx, "/auth/v1/verify", body, false, sessionSaver(ctx, cb));
-    }
-
-    /**
-     * Handles the magic-link deep link
-     * (com.koorix.app://auth/callback#access_token=...&amp;refresh_token=...).
-     * Returns true when a session was stored.
-     */
-    static boolean handleAuthDeepLink(Context ctx, android.net.Uri uri) {
-        if (uri == null || uri.getFragment() == null
-                || !BuildConfig.APPLICATION_ID.equals(uri.getScheme())
-                || !"auth".equals(uri.getHost()) || !"/callback".equals(uri.getPath())) {
-            return false;
-        }
-        String access = null;
-        String refresh = null;
-        long expiresIn = 3600L;
-        for (String part : uri.getFragment().split("&")) {
-            int eq = part.indexOf('=');
-            if (eq <= 0) {
-                continue;
-            }
-            String k = part.substring(0, eq);
-            String v = android.net.Uri.decode(part.substring(eq + 1));
-            if ("access_token".equals(k)) {
-                access = v;
-            } else if ("refresh_token".equals(k)) {
-                refresh = v;
-            } else if ("expires_in".equals(k)) {
-                try {
-                    expiresIn = Long.parseLong(v);
-                } catch (NumberFormatException ignored) {
-                }
-            }
-        }
-        if (access == null || refresh == null) {
-            return false;
-        }
-        String pendingEmail = prefs(ctx).getString(K_PENDING_EMAIL, "");
-        prefs(ctx).edit()
-                .putString(K_ACCESS, access)
-                .putString(K_REFRESH, refresh)
-                .putLong(K_EXPIRES,
-                        System.currentTimeMillis() + expiresIn * 1000L)
-                .putString(K_EMAIL, pendingEmail)
-                .apply();
-        return true;
-    }
-
-    static String pendingEmail(Context ctx) {
-        return prefs(ctx).getString(K_PENDING_EMAIL, "");
-    }
-
-    static void signInWithGoogleIdToken(Context ctx, String idToken,
-                                        Callback cb) {
-        JSONObject body = new JSONObject();
-        try {
-            body.put("provider", "google");
-            body.put("id_token", idToken);
-        } catch (JSONException ignored) {
-        }
-        post(ctx, "/auth/v1/token?grant_type=id_token", body, false,
-                sessionSaver(ctx, cb));
-    }
-
-    private static Callback sessionSaver(Context ctx, Callback cb) {
-        return (result, error) -> {
-            if (result != null) {
-                try {
-                    saveSession(ctx, result);
-                } catch (JSONException e) {
-                    cb.onResult(null, e.getMessage());
-                    return;
-                }
-            }
-            cb.onResult(result, error);
-        };
-    }
-
-    static void signOut(Context ctx, Callback cb) {
-        post(ctx, "/auth/v1/logout", new JSONObject(), true,
-                (result, error) -> {
-                    clearSession(ctx);
-                    cb.onResult(new JSONObject(), null);
-                });
-    }
-
-    static void fetchStatus(Context ctx, Callback cb) {
-        rpc(ctx, "koorix_my_status", new JSONObject(), (result, error) -> {
-            if (result != null) {
-                cacheStatus(ctx, result);
-            }
-            cb.onResult(result, error);
+    static void perform(Context context,Work work,Callback cb) {
+        Context app=context.getApplicationContext();
+        IO.execute(()->{JSONObject value=null;String error=null;
+            try {value=work.run(app);}catch(Exception failure){error=failure instanceof NetworkFailure?"network":"device_unavailable";}
+            final JSONObject result=value;final String reason=error;
+            MAIN.post(()->{if(cb!=null)cb.onResult(result,reason);});
         });
     }
-
-    static void consumeJob(Context ctx, int pages, Callback cb) {
-        JSONObject params = new JSONObject();
+    private static JSONObject request(String path,JSONObject data,String access,String method) throws Exception {
+        HttpURLConnection connection=(HttpURLConnection)new URL(BuildConfig.SUPABASE_URL+path).openConnection();
         try {
-            params.put("p_pages", Math.max(1, pages));
-        } catch (JSONException ignored) {
-        }
-        rpc(ctx, "koorix_consume_job", params, (result, error) -> {
-            if (result != null) {
-                cacheStatus(ctx, result);
+            connection.setConnectTimeout(15000);connection.setReadTimeout(20000);connection.setRequestMethod(method);
+            connection.setRequestProperty("apikey",BuildConfig.SUPABASE_KEY);
+            connection.setRequestProperty("Authorization","Bearer "+(access==null?BuildConfig.SUPABASE_KEY:access));
+            connection.setRequestProperty("Content-Type","application/json");
+            if(!"GET".equals(method)){connection.setDoOutput(true);try(OutputStream out=connection.getOutputStream()){out.write(data.toString().getBytes(StandardCharsets.UTF_8));}}
+            int status=connection.getResponseCode();
+            InputStream stream=status<400?connection.getInputStream():connection.getErrorStream();
+            String text="";
+            if(stream!=null)try(InputStream in=stream;ByteArrayOutputStream out=new ByteArrayOutputStream()){
+                byte[] buffer=new byte[4096];int n;while((n=in.read(buffer))!=-1){if(out.size()+n>1024*1024)throw new IOException("Response too large");out.write(buffer,0,n);}
+                text=new String(out.toByteArray(),StandardCharsets.UTF_8);
             }
-            cb.onResult(result, error);
-        });
+            if(status<200||status>=300)throw new ApiFailure(status);
+            if(text.isEmpty()||"null".equals(text))return new JSONObject();
+            if(text.trim().startsWith("["))return new JSONObject().put("items",new org.json.JSONArray(text));
+            return new JSONObject(text);
+        }catch(ApiFailure failure){throw failure;}
+        catch(IOException failure){throw new NetworkFailure();}
+        finally{connection.disconnect();}
     }
-
-    static void redeemCode(Context ctx, String code, Callback cb) {
-        JSONObject params = new JSONObject();
-        try {
-            params.put("p_code", code);
-        } catch (JSONException ignored) {
-        }
-        rpc(ctx, "koorix_redeem_code", params, cb);
-    }
-
-    // ---------- transport ----------
-
-    private static void rpc(Context ctx, String fn, JSONObject params,
-                            Callback cb) {
-        ensureFreshToken(ctx, ok -> {
-            if (!ok) {
-                deliver(cb, null, "session_expired");
-                return;
+    private static final class ApiFailure extends IOException { final int status;ApiFailure(int status){super("Service request rejected");this.status=status;} }
+    private static final class NetworkFailure extends IOException {NetworkFailure(){super("Network unavailable");}}
+    private static String randomSecret(){byte[] bytes=new byte[32];new SecureRandom().nextBytes(bytes);StringBuilder out=new StringBuilder();for(byte b:bytes)out.append(String.format(Locale.ROOT,"%02x",b&255));return out.toString();}
+    private static void saveSession(Context ctx,JSONObject session) throws Exception {
+        synchronized(STATE_LOCK){JSONObject state=store(ctx).read();JSONObject user=session.optJSONObject("user");
+            if(user==null||user.optString("id","").isEmpty())throw new IOException("Missing device identity");
+            if (!state.optString("uid","").isEmpty() && !state.optString("uid","").equals(user.getString("id"))) {
+                state.remove("status");state.remove("approved_jobs");state.remove("pending_offline");state.remove("pending_complete");
             }
-            post(ctx, "/rest/v1/rpc/" + fn, params, true, cb);
-        });
-    }
-
-    private interface BoolCallback {
-        void onResult(boolean ok);
-    }
-
-    private static void ensureFreshToken(Context ctx, BoolCallback cb) {
-        long expires = prefs(ctx).getLong(K_EXPIRES, 0L);
-        if (System.currentTimeMillis() < expires - 60_000L) {
-            cb.onResult(true);
-            return;
+            state.put("access_token",session.getString("access_token"));state.put("refresh_token",session.getString("refresh_token"));
+            state.put("expires_at_ms",System.currentTimeMillis()+session.optLong("expires_in",3600)*1000L);
+            state.put("uid",user.getString("id"));state.put("validated",true);store(ctx).write(state);
         }
-        String refresh = prefs(ctx).getString(K_REFRESH, "");
-        if (refresh.isEmpty()) {
-            cb.onResult(false);
-            return;
-        }
-        JSONObject body = new JSONObject();
-        try {
-            body.put("refresh_token", refresh);
-        } catch (JSONException ignored) {
-        }
-        post(ctx, "/auth/v1/token?grant_type=refresh_token", body, false,
-                (result, error) -> {
-                    if (result == null) {
-                        // A rejected refresh (revoked/rotated elsewhere)
-                        // means the stored session is dead.
-                        if (error != null && !error.startsWith("network")) {
-                            clearSession(ctx);
-                        }
-                        cb.onResult(false);
-                        return;
-                    }
-                    try {
-                        saveSession(ctx, result);
-                        cb.onResult(true);
-                    } catch (JSONException e) {
-                        cb.onResult(false);
-                    }
-                });
     }
-
-    private static void post(Context ctx, String path, JSONObject body,
-                             boolean withUserToken, Callback cb) {
-        final Context app = ctx.getApplicationContext();
-        IO.execute(() -> {
-            HttpURLConnection conn = null;
-            try {
-                URL url = new URL(BuildConfig.SUPABASE_URL + path);
-                conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("POST");
-                conn.setConnectTimeout(15_000);
-                conn.setReadTimeout(20_000);
-                conn.setDoOutput(true);
-                conn.setRequestProperty("Content-Type", "application/json");
-                conn.setRequestProperty("apikey", BuildConfig.SUPABASE_KEY);
-                String bearer = withUserToken
-                        ? prefs(app).getString(K_ACCESS, "")
-                        : BuildConfig.SUPABASE_KEY;
-                if (!bearer.isEmpty()) {
-                    conn.setRequestProperty("Authorization", "Bearer " + bearer);
-                }
-                byte[] payload = body.toString()
-                        .getBytes(StandardCharsets.UTF_8);
-                try (OutputStream out = conn.getOutputStream()) {
-                    out.write(payload);
-                }
-                int code = conn.getResponseCode();
-                InputStream in = code >= 200 && code < 300
-                        ? conn.getInputStream() : conn.getErrorStream();
-                String text = readAll(in);
-                if (code >= 200 && code < 300) {
-                    JSONObject json = text.isEmpty()
-                            ? new JSONObject() : new JSONObject(text);
-                    deliver(cb, json, null);
-                } else {
-                    deliver(cb, null, extractError(text, code));
-                }
-            } catch (Exception e) {
-                deliver(cb, null, "network: " + e.getMessage());
-            } finally {
-                if (conn != null) {
-                    conn.disconnect();
-                }
+    private static String session(Context ctx) throws Exception {
+        JSONObject state; synchronized(STATE_LOCK){state=store(ctx).read();}
+        String access=state.optString("access_token","");
+        if(!access.isEmpty()&&state.optLong("expires_at_ms",0)>System.currentTimeMillis()+60000){
+            if(state.optString("uid","").isEmpty()) {
+                JSONObject user=request("/auth/v1/user",new JSONObject(),access,"GET");
+                synchronized(STATE_LOCK){state=store(ctx).read();state.put("uid",user.getString("id"));state.put("validated",true);store(ctx).write(state);}
             }
-        });
-    }
-
-    private static String readAll(InputStream in) throws Exception {
-        if (in == null) {
-            return "";
+            return access;
         }
-        StringBuilder sb = new StringBuilder();
-        try (BufferedReader r = new BufferedReader(
-                new InputStreamReader(in, StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = r.readLine()) != null) {
-                sb.append(line);
-            }
+        String refresh=state.optString("refresh_token","");
+        if(!refresh.isEmpty())try {
+            JSONObject renewed=request("/auth/v1/token?grant_type=refresh_token",new JSONObject().put("refresh_token",refresh),null,"POST");
+            saveSession(ctx,renewed);return renewed.getString("access_token");
+        }catch(ApiFailure failure){if(failure.status!=400&&failure.status!=401&&failure.status!=403)throw failure;}
+        JSONObject device=new JSONObject();
+        synchronized(STATE_LOCK){state=store(ctx).read();
+            if(state.optString("device_id","").isEmpty()){state.put("device_id",UUID.randomUUID().toString());state.put("device_secret",randomSecret());store(ctx).write(state);}
+            device.put("device_id",state.getString("device_id"));device.put("device_secret",state.getString("device_secret"));
         }
-        return sb.toString();
+        JSONObject created=request("/functions/v1/koorix-device-session",device,null,"POST");saveSession(ctx,created);return created.getString("access_token");
     }
-
-    private static String extractError(String text, int code) {
-        try {
-            JSONObject json = new JSONObject(text);
-            String msg = json.optString("msg",
-                    json.optString("message",
-                            json.optString("error_description",
-                                    json.optString("error", ""))));
-            String errorCode = json.optString("error_code", "");
-            if (!errorCode.isEmpty()) {
-                return errorCode + ": " + msg;
-            }
-            return msg.isEmpty() ? ("http_" + code) : msg;
-        } catch (JSONException e) {
-            return "http_" + code;
+    private static JSONObject rpc(Context ctx,String name,JSONObject params) throws Exception {
+        String token=session(ctx);return request("/rest/v1/rpc/"+name,params,token,"POST");
+    }
+    private static void sync(Context ctx) throws Exception {
+        List<String> ids=new ArrayList<>();
+        synchronized(STATE_LOCK){JSONObject pending=object(store(ctx).read(),"pending_offline");Iterator<String> keys=pending.keys();while(keys.hasNext())ids.add(keys.next());}
+        for(String id:ids){JSONObject record;synchronized(STATE_LOCK){record=object(store(ctx).read(),"pending_offline").getJSONObject(id);}
+            rpc(ctx,"koorix_sync_offline_job",new JSONObject().put("p_job_id",id).put("p_pages",record.getInt("pages")).put("p_day",record.getString("day")).put("p_completed",record.optBoolean("complete",false)));
+            synchronized(STATE_LOCK){JSONObject state=store(ctx).read();object(state,"pending_offline").remove(id);store(ctx).write(state);}
+        }
+        ids.clear();synchronized(STATE_LOCK){JSONObject pending=object(store(ctx).read(),"pending_complete");Iterator<String> keys=pending.keys();while(keys.hasNext())ids.add(keys.next());}
+        for(String id:ids){rpc(ctx,"koorix_finish_job",new JSONObject().put("p_job_id",id));synchronized(STATE_LOCK){JSONObject state=store(ctx).read();object(state,"pending_complete").remove(id);store(ctx).write(state);}}
+    }
+    private static void cache(Context ctx,JSONObject status) throws Exception {
+        synchronized(STATE_LOCK){JSONObject state=store(ctx).read();state.put("status",status);state.put("status_elapsed",SystemClock.elapsedRealtime());state.put("status_wall",System.currentTimeMillis());store(ctx).write(state);}
+    }
+    static void fetchStatus(Context ctx,Callback cb){perform(ctx,app->{session(app);sync(app);JSONObject status=rpc(app,"koorix_status_v2",new JSONObject());cache(app,status);return status;},cb);}
+    static void consumeJob(Context ctx,int pages,String id,Callback cb){perform(ctx,app->{session(app);sync(app);JSONObject result=rpc(app,"koorix_authorize_job",new JSONObject().put("p_job_id",id).put("p_pages",pages));if(result.has("usage_day"))cache(app,result);if(result.optBoolean("allowed",false))approve(app,id,pages);return result;},cb);}
+    static void authorizeProject(Context ctx,TranslationProject project,Callback cb){perform(ctx,app->{
+        session(app);String owner=identity(app);
+        if(!project.jobOwner.isEmpty()&&!project.jobOwner.equals(owner)){
+            project.quotaJobId=UUID.randomUUID().toString();project.jobOwner="";project.save();
+        }
+        sync(app);JSONObject result=rpc(app,"koorix_authorize_job",new JSONObject().put("p_job_id",project.quotaJobId).put("p_pages",project.quotaPages));
+        if(result.has("usage_day"))cache(app,result);if(result.optBoolean("allowed",false))approve(app,project.quotaJobId,project.quotaPages);return result;
+    },cb);}
+    private static void approve(Context ctx,String id,int pages) throws Exception {
+        synchronized(STATE_LOCK){JSONObject state=store(ctx).read();JSONObject approved=object(state,"approved_jobs");
+            approved.put(id,new JSONObject().put("uid",state.getString("uid")).put("pages",pages));
+            while(approved.length()>100){String oldest=approved.keys().next();if(oldest.equals(id))break;approved.remove(oldest);}
+            store(ctx).write(state);
         }
     }
-
-    private static void deliver(Callback cb, JSONObject result, String error) {
-        MAIN.post(() -> cb.onResult(result, error));
+    static String identity(Context ctx){try{synchronized(STATE_LOCK){return store(ctx).read().optString("uid","");}}catch(Exception unavailable){return "";}}
+    static boolean approved(Context ctx,TranslationProject p){try{synchronized(STATE_LOCK){JSONObject state=store(ctx).read();JSONObject permit=object(state,"approved_jobs").optJSONObject(p.quotaJobId);return permit!=null&&state.optBoolean("validated",false)&&!p.jobOwner.isEmpty()&&p.jobOwner.equals(state.optString("uid",""))&&p.jobOwner.equals(permit.optString("uid",""))&&permit.optInt("pages",0)==(p.quotaPages>0?p.quotaPages:p.pages.size());}}catch(Exception unavailable){return false;}}
+    static boolean cachedPremium(Context ctx){try{synchronized(STATE_LOCK){JSONObject state=store(ctx).read();JSONObject status=state.optJSONObject("status");return state.optBoolean("validated",false)&&premium(status,now(state));}}catch(Exception unavailable){return false;}}
+    static boolean premium(JSONObject status,long now){return DeviceAllowance.premium(status,now);}
+    private static long now(JSONObject state){long wall=System.currentTimeMillis(), elapsed=SystemClock.elapsedRealtime(), oldElapsed=state.optLong("status_elapsed",-1);JSONObject status=state.optJSONObject("status");long server=status==null?0:status.optLong("server_ms",0);long oldWall=state.optLong("status_wall",wall);if(wall<oldWall-120000)return Long.MAX_VALUE;return Math.max(wall,server+Math.max(0,elapsed-oldElapsed));}
+    static boolean localConsume(Context ctx,int pages,String id) throws Exception {
+        synchronized(STATE_LOCK){JSONObject state=store(ctx).read();boolean allowed=DeviceAllowance.reserve(state,pages,id,now(state));if(allowed)store(ctx).write(state);return allowed;}
     }
+    static void completed(Context ctx,TranslationProject p){try{synchronized(STATE_LOCK){JSONObject state=store(ctx).read();JSONObject pending=object(state,"pending_offline").optJSONObject(p.quotaJobId);if(pending!=null)pending.put("complete",true);else object(state,"pending_complete").put(p.quotaJobId,true);object(state,"approved_jobs").remove(p.quotaJobId);store(ctx).write(state);}if(!p.offlineMode)perform(ctx,app->{sync(app);return new JSONObject();},null);}catch(Exception ignored){/* Local result remains available; sync is retried on the next online action. */}}
+    static void redeemCode(Context ctx,String code,Callback cb){perform(ctx,app->{JSONObject result=rpc(app,"koorix_redeem_code",new JSONObject().put("p_code",code));JSONObject status=rpc(app,"koorix_status_v2",new JSONObject());cache(app,status);return result;},cb);}
+    static void requestOrder(Context ctx,int months,Callback cb){perform(ctx,app->rpc(app,"koorix_request_order",new JSONObject().put("p_months",months)),cb);}
+    static void deleteDeviceData(Context ctx,Callback cb){perform(ctx,app->{String token=session(app);JSONObject state; synchronized(STATE_LOCK){state=store(app).read();}
+        JSONObject result;
+        if(state.has("device_id"))result=request("/functions/v1/koorix-device-session",new JSONObject().put("device_id",state.getString("device_id")).put("device_secret",state.getString("device_secret")).put("confirm","DELETE_KOORIX_DEVICE"),token,"DELETE");
+        else result=rpc(app,"koorix_delete_my_data",new JSONObject());
+        synchronized(STATE_LOCK){store(app).write(new JSONObject());}return result;
+    },cb);}
 }

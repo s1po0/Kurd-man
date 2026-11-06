@@ -58,8 +58,8 @@ android {
     //  - kurdman: the developer's personal build (Telegram tools,
     //    optional Unlimited-OCR server mode, no account, no limits).
     //  - koorix: the public/commercial build for other people — no
-    //    Telegram section, no Baidu/Unlimited-OCR, account sign-in
-    //    (email/Google via Supabase), a small free daily allowance and
+    //    Telegram section, no Baidu/Unlimited-OCR or user login,
+    //    protected device entitlements, a small free daily allowance and
     //    Premium unlocked with activation codes.
     flavorDimensions "edition"
     productFlavors {
@@ -78,10 +78,10 @@ android {
             dimension "edition"
             applicationId "com.koorix.app"
             manifestPlaceholders = [applicationLabel: "Koorix"]
-            versionCode 11
+            versionCode 12
             // Double quotes on purpose: the KurdMan release job greps the
             // first single-quoted versionName in this file.
-            versionName "1.4.1"
+            versionName "1.5.0"
             // Release signing is flavour-scoped: never signs the personal edition.
             if (koorixReleaseKeystore) {
                 signingConfig signingConfigs.koorixRelease
@@ -89,7 +89,7 @@ android {
             buildConfigField "boolean", "PUBLIC_EDITION", "true"
             buildConfigField "boolean", "SHOW_TELEGRAM", "false"
             buildConfigField "boolean", "SHOW_UNLIMITED_OCR", "false"
-            buildConfigField "boolean", "REQUIRE_ACCOUNT", "true"
+            buildConfigField "boolean", "REQUIRE_ACCOUNT", "false"
             // Display mirror of the server-side limits in Supabase
             // (koorix_consume_job); the server value is authoritative.
             buildConfigField "int", "FREE_DAILY_JOBS", "3"
@@ -171,7 +171,4 @@ dependencies {
     implementation 'com.google.mlkit:translate:17.0.3'
     // ONNX Runtime, used by the optional PP-OCR accurate-OCR pack.
     implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.31.0'
-    // Koorix public edition only: Google Sign-In (ID token is exchanged
-    // for a Supabase session). Not present in the personal KurdMan APK.
-    koorixImplementation 'com.google.android.gms:play-services-auth:21.3.0'
 }

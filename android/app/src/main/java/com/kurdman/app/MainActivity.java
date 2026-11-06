@@ -96,42 +96,15 @@ public class MainActivity extends AppCompatActivity {
                 getString(R.string.ks_0691), getString(R.string.ks_0692),
                 getString(R.string.ks_0693)};
     }
-    private static final String[] SOURCE_CODES = {
-            "en", "ko", "ja", "zh-CN", "zh-TW"
-    };
+    private static final String[] SOURCE_CODES = TranslationLanguages.SOURCES;
     private String[] translationModeLabels() {
         return new String[]{
                 getString(R.string.ks_0694), getString(R.string.ks_0695)};
     }
 
     /** Target languages (autonym labels; codes are Google/ML Kit tags). */
-    private static final String[] TARGET_CODES = {
-            "ckb", "ku", "ar", "en", "fa", "tr", "ru", "de", "fr", "es",
-            "pt", "it", "nl", "pl", "uk", "id", "ms", "hi", "ur", "bn",
-            "ta", "te", "mr", "gu", "kn", "ml", "pa", "th", "vi", "ko",
-            "ja", "zh-CN", "zh-TW", "el", "sv", "da", "fi", "no", "cs", "hu",
-            "ro", "bg", "sr", "hr", "uz", "kk", "az", "he", "ps", "sw",
-            "am", "my", "km", "ne", "si", "ka", "hy", "lt", "lv", "et",
-            "sk", "sl", "ga", "cy", "mt", "is", "mk", "sq", "be", "ca",
-            "gl", "eu", "af", "tl"
-    };
-    private static final String[] TARGET_LABELS = {
-            "کوردی سۆرانی", "Kurdî (Kurmanji)", "العربية", "English",
-            "فارسی", "Türkçe", "Русский", "Deutsch", "Français", "Español",
-            "Português", "Italiano", "Nederlands", "Polski", "Українська",
-            "Bahasa Indonesia", "Bahasa Melayu", "हिन्दी", "اردو", "বাংলা",
-            "தமிழ்", "తెలుగు", "मराठी", "ગુજરાતી", "ಕನ್ನಡ", "മലയാളം",
-            "ਪੰਜਾਬੀ", "ไทย", "Tiếng Việt", "한국어",
-            "日本語", "中文（简体）", "中文（繁體）", "Ελληνικά", "Svenska",
-            "Dansk", "Suomi", "Norsk", "Čeština", "Magyar",
-            "Română", "Български", "Српски", "Hrvatski", "O'zbek",
-            "Қазақша", "Azərbaycan", "עברית", "پښتو", "Kiswahili",
-            "አማርኛ", "မြန်မာ", "ខ្មែរ", "नेपाली", "සිංහල",
-            "ქართული", "Հայերեն", "Lietuvių", "Latviešu", "Eesti",
-            "Slovenčina", "Slovenščina", "Gaeilge", "Cymraeg", "Malti",
-            "Íslenska", "Македонски", "Shqip", "Беларуская", "Català",
-            "Galego", "Euskara", "Afrikaans", "Filipino"
-    };
+    private static final String[] TARGET_CODES = TranslationLanguages.TARGETS;
+    private static final String[] TARGET_LABELS = TranslationLanguages.LABELS;
 
     private String[] backgroundModeLabels() {
         return new String[]{
@@ -522,20 +495,7 @@ public class MainActivity extends AppCompatActivity {
                 });
         editorLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    reloadGlobalTextStyleFromPrefs();
-                    if (result.getResultCode() == RESULT_OK
-                            && result.getData() != null
-                            && result.getData().getBooleanExtra(
-                                    EditorActivity.EXTRA_EXPORT, false)) {
-                        exportEditedProject();
-                    } else {
-                        updateButtons(currentBusy);
-                        if (TranslationProjectStore.hasCompletedProject(this)) {
-                            setStatus(getString(R.string.ks_0413));
-                        }
-                    }
-                });
+                result -> handleStudioOrLibraryResult(result.getResultCode(),result.getData()));
 
         JobRuntime.setStopAction(() -> {
             SoraniTranslator translator = activeTranslator;
@@ -636,6 +596,9 @@ public class MainActivity extends AppCompatActivity {
         deleteOfflineButton.setOnClickListener(v -> confirmDeleteOfflineModel());
         downloadPaddleOcrButton.setOnClickListener(v -> downloadPaddleOcrPack());
         deletePaddleOcrButton.setOnClickListener(v -> confirmDeletePaddleOcrPack());
+        View libraryButton = findViewById(R.id.projectLibraryButton);
+        libraryButton.setVisibility(BuildConfig.PUBLIC_EDITION ? View.VISIBLE : View.GONE);
+        libraryButton.setOnClickListener(v -> { if (!JobRuntime.isRunning()) editorLauncher.launch(new Intent(this,ProjectLibraryActivity.class)); });
         translateButton.setOnClickListener(v -> translateSelected());
         sendResultButton.setOnClickListener(v -> sendResultToTelegram());
         refreshDownloadsButton.setOnClickListener(v -> refreshDownloadsList());
@@ -761,10 +724,10 @@ public class MainActivity extends AppCompatActivity {
         }
         Button accountButton = findViewById(R.id.accountButton);
         if (accountButton != null) {
-            accountButton.setVisibility(BuildConfig.REQUIRE_ACCOUNT
+            accountButton.setVisibility(BuildConfig.PUBLIC_EDITION
                     ? View.VISIBLE : View.GONE);
             if (BuildConfig.PUBLIC_EDITION) {
-                accountButton.setText(R.string.kx_account_btn);
+                accountButton.setText(R.string.rel_premium);
             }
             accountButton.setOnClickListener(
                     v -> AccountGate.openAccount(this));
@@ -791,6 +754,16 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private final SavedJobCoordinator.Listener savedJobListener = (project,message,running) -> {
+        if (isFinishing() || isDestroyed() || statusText == null) return;
+        currentBusy=running; progress.setVisibility(running?View.VISIBLE:View.GONE);
+        statusText.setText(message); updateButtons(running); refreshKeepAliveUi(); updateKeepScreenFlag();
+        if (!running && project != null && project.completed && project.exportsComplete) showSavedProjectResult(project);
+        if (!running) refreshDownloadsList();
+    };
+    @Override protected void onStart() { super.onStart(); if(BuildConfig.PUBLIC_EDITION)SavedJobCoordinator.addListener(savedJobListener); }
+    @Override protected void onStop() { if(BuildConfig.PUBLIC_EDITION)SavedJobCoordinator.removeListener(savedJobListener); super.onStop(); }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -810,6 +783,11 @@ public class MainActivity extends AppCompatActivity {
         }
         updateButtons(currentBusy);
         updateKeepScreenFlag();
+        if (BuildConfig.PUBLIC_EDITION) {
+            if (!JobRuntime.isRunning()) SavedJobCoordinator.maybeRecover(getApplicationContext());
+            TranslationProject restored=TranslationProjectStore.load(this);
+            if (!JobRuntime.isRunning() && restored!=null && restored.completed && restored.exportsComplete) showSavedProjectResult(restored);
+        }
     }
 
     @Override
@@ -2893,7 +2871,83 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private boolean hasPublicInput() {
+        return selectedCbzFile != null && selectedCbzFile.isFile() || selectedBatchFiles.size()>1
+                || selectedImageFile != null && selectedImageFile.isFile()
+                || originalBitmap != null && !originalBitmap.isRecycled();
+    }
+
+    private void translatePublicSelection() {
+        if (comicControls==null || !comicControls.validate()) return;
+        String source=selectedSourceLanguage(),target=selectedTargetLanguage(); boolean offline=selectedOfflineMode();
+        boolean input=hasPublicInput(),present=input;
+        if(selectedCbzFile!=null)present=selectedCbzFile.isFile();
+        else if(selectedBatchFiles.size()>1)for(File file:selectedBatchFiles)if(file==null||!file.isFile())present=false;
+        boolean supported=TranslationLanguages.source(source)&&TranslationLanguages.target(target)
+                && (!offline || "ckb".equals(target) || MlKitOfflineEngine.isPairSupported(source,target));
+        boolean ready=offlinePackReady && (source+">"+target).equals(offlinePackPair)
+                && (!"ckb".equals(target) || offlineModelManager!=null && offlineModelManager.isModelReady());
+        TranslationPreflight.Error problem=TranslationPreflight.check(currentBusy||JobRuntime.isRunning(),input,present,supported,offline,ready);
+        if(problem!=TranslationPreflight.Error.NONE) {
+            setStatus(getString(problem==TranslationPreflight.Error.NO_INPUT?R.string.ks_0524:
+                    problem==TranslationPreflight.Error.SOURCE_MISSING?R.string.rel_source_missing:
+                    problem==TranslationPreflight.Error.BUSY?R.string.rel_busy:
+                    problem==TranslationPreflight.Error.PACK_MISSING?R.string.ks_0737:R.string.ks_0539)); return;
+        }
+        ComicTranslationSkill.Config config=comicControls.forTranslation(); if(config==null)return;
+        boolean batch=selectedCbzFile==null&&selectedBatchFiles.size()>1;
+        String name=batch?selectedBatchLabel:selectedName;
+        String base=batch?selectedBatchBase:baseNameWithoutExtension(selectedName);
+        base=sanitizeFileName(base);if(base.isEmpty())base="Koorix";
+        SavedJobInput request=new SavedJobInput(selectedImageFile,selectedCbzFile,new ArrayList<>(selectedBatchFiles),name,base,
+                source,target,offline,accurateOcrCheck==null||accurateOcrCheck.isChecked(),selectedCreatePdf(),config,globalTextStyle,originalBitmap);
+        if(SavedJobCoordinator.start(getApplicationContext(),request)){
+            resultFile=null;resultTextFile=null;showMainPage(PAGE_RESULTS);currentBusy=true;
+            progress.setVisibility(View.VISIBLE);statusText.setText(R.string.rel_prepare);updateButtons(true);
+            requestNotificationPermissionIfNeeded();updateKeepScreenFlag();
+        }
+    }
+
+    private void handleStudioOrLibraryResult(int code,Intent data) {
+        reloadGlobalTextStyleFromPrefs();
+        if(code==RESULT_OK&&data!=null){
+            String story=data.getStringExtra(ProjectLibraryActivity.EXTRA_STORY);
+            if(story!=null){try{
+                TranslationProject p=TranslationProjectStore.load(this,story);
+                if(p!=null){sourceSpinner.setSelection(java.util.Arrays.asList(SOURCE_CODES).indexOf(p.sourceLanguage));targetSpinner.setSelection(java.util.Arrays.asList(TARGET_CODES).indexOf(p.targetLanguage));comicControls.useStory(p.sourceLanguage,p.targetLanguage,p.comicConfig);showMainPage(PAGE_TRANSLATE);setStatus(getString(R.string.rel_story_loaded));}
+            }catch(Exception failure){setStatus(getString(R.string.rel_failed));}return;}
+            String resume=data.getStringExtra(ProjectLibraryActivity.EXTRA_RESUME);
+            if(resume!=null){try{TranslationProject p=TranslationProjectStore.load(this,resume);
+                if(p!=null&&SavedJobCoordinator.resume(getApplicationContext(),p,true)){resultFile=null;resultTextFile=null;currentBusy=true;showMainPage(PAGE_RESULTS);progress.setVisibility(View.VISIBLE);updateButtons(true);requestNotificationPermissionIfNeeded();}
+            }catch(Exception failure){setStatus(getString(R.string.rel_failed));}return;}
+            if(data.getBooleanExtra(EditorActivity.EXTRA_EXPORT,false)){exportEditedProject();return;}
+            if(data.getBooleanExtra(ProjectLibraryActivity.EXTRA_CHANGED,false)){
+                TranslationProject p=TranslationProjectStore.load(this);resultFile=null;resultTextFile=null;
+                if(p!=null&&p.completed&&p.exportsComplete)showSavedProjectResult(p);
+                setStatus(getString(R.string.rel_project_selected));
+            }
+        }
+        updateButtons(currentBusy);
+    }
+
+    private void showSavedProjectResult(TranslationProject project) {
+        File product=ProjectResults.result(project);
+        if(!product.isFile())return;
+        try{if(!project.outputBinding.equals(ProjectResults.binding(project)))return;}catch(Exception invalid){return;}
+        if(resultFile!=null&&resultFile.equals(product))return;
+        resultFile=product;resultTextFile=ProjectResults.text(project);pairsText=ProjectResults.pairs(project);resultText.setText(pairsText);
+        Bitmap thumbnail=null;
+        for(int i=0;i<project.pages.size()&&thumbnail==null;i++)thumbnail=BitmapIo.decodeFile(SavedJobPipeline.renderedPage(project,i));
+        if(thumbnail!=null){Bitmap oldResult=resultBitmap,oldSource=originalBitmap;resultBitmap=thumbnail;previewImage.setImageBitmap(thumbnail);
+            if(selectedImageFile!=null&&selectedImageFile.isFile())originalBitmap=null;
+            if(oldResult!=null&&oldResult!=thumbnail&&oldResult!=originalBitmap&&!oldResult.isRecycled())oldResult.recycle();
+            if(oldSource!=null&&oldSource!=originalBitmap&&oldSource!=oldResult&&!oldSource.isRecycled())oldSource.recycle();
+        }
+        updateButtons(false);
+    }
+
     private void translateSelected() {
+        if (BuildConfig.PUBLIC_EDITION) { translatePublicSelection(); return; }
         // Invalid optional names must not consume an account allowance or start OCR.
         if (comicControls != null && !comicControls.validate()) return;
         int jobPages = selectedCbzFile != null
@@ -4977,7 +5031,9 @@ public class MainActivity extends AppCompatActivity {
         verifyButton.setEnabled(enabled);
         sendTextButton.setEnabled(enabled);
         pickButton.setEnabled(enabled);
-        translateButton.setEnabled(enabled);
+        translateButton.setEnabled(enabled && (!BuildConfig.PUBLIC_EDITION || hasPublicInput()));
+        findViewById(R.id.projectLibraryButton).setEnabled(enabled);
+        findViewById(R.id.accountButton).setEnabled(enabled);
         refreshDownloadsButton.setEnabled(enabled);
         openDownloadsButton.setEnabled(enabled);
         if (sourceSpinner != null) {

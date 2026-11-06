@@ -67,6 +67,8 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity android:name=".ProjectLibraryActivity" android:exported="false" />
+
         <activity
             android:name=".EditorActivity"
             android:exported="false"

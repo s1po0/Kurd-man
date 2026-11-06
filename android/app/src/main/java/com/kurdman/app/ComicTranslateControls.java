@@ -116,6 +116,12 @@ final class ComicTranslateControls {
         return config;
     }
 
+    void useStory(String source,String target,ComicTranslationSkill.Config config) {
+        ComicTranslationSkill.Config selected = new ComicTranslationSkill.Config(true,config.genre,config.glossary);
+        ComicSettings.save(context,source,target,selected);
+        drafts.remove(key(source,target)); this.source=source; this.target=target; load(selected);
+    }
+
     void saveState(Bundle out) {
         if (source == null) return;
         ComicTranslationSkill.Config config = current();

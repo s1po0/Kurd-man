@@ -143,6 +143,10 @@ public class SoraniTranslator implements AutoCloseable {
     private final Map<String, String> cache = new HashMap<>();
     private ComicTranslationSkill comicSkill;
     private final OfflineEngine offlineEngine;
+    private final java.util.Set<HttpURLConnection> activeRequests = java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<HttpURLConnection,Boolean>());
+    private volatile boolean cancelled;
+    private static final java.util.concurrent.ExecutorService CANCEL_IO = java.util.concurrent.Executors.newSingleThreadExecutor(task -> { Thread thread=new Thread(task,"Koorix-network-stop");thread.setDaemon(true);return thread; });
+
     private int preferredRoute = ROUTE_GOOGLEAPIS;
     /** BCP-47-ish target language code (default Sorani). */
     private String targetLanguage = "ckb";
@@ -201,6 +205,10 @@ public class SoraniTranslator implements AutoCloseable {
 
     /** Immediately fails an in-flight offline request after STOP. */
     public void cancelOffline() {
+        cancelled = true;
+        for (HttpURLConnection request : activeRequests) {
+            if(activeRequests.remove(request))CANCEL_IO.execute(request::disconnect);
+        }
         if (offlineEngine instanceof MlKitOfflineEngine) {
             ((MlKitOfflineEngine) offlineEngine).requestCancel();
         } else if (offlineEngine instanceof SoraniPackEngine) {
@@ -1116,7 +1124,9 @@ public class SoraniTranslator implements AutoCloseable {
 
     private String fetchText(String url, String routeName) throws IOException {
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+        activeRequests.add(conn);
         try {
+            if(cancelled || Thread.currentThread().isInterrupted())throw new java.io.InterruptedIOException("Translation stopped");
             conn.setRequestMethod("GET");
             conn.setConnectTimeout(15000);
             conn.setReadTimeout(25000);
@@ -1137,6 +1147,7 @@ public class SoraniTranslator implements AutoCloseable {
             }
             return body;
         } finally {
+            activeRequests.remove(conn);
             conn.disconnect();
         }
     }

@@ -47,7 +47,8 @@ public class KeepAliveService extends Service {
     private final Runnable watchdog = new Runnable() {
         @Override
         public void run() {
-            if (!JobRuntime.isRunning() && !isManualDesired(KeepAliveService.this)) {
+            if (!JobRuntime.isRunning() && SavedJobCoordinator.hasPending(KeepAliveService.this)) SavedJobCoordinator.maybeRecover(KeepAliveService.this);
+            if (!JobRuntime.isRunning() && !isManualDesired(KeepAliveService.this) && !SavedJobCoordinator.hasPending(KeepAliveService.this)) {
                 stopForeground(STOP_FOREGROUND_REMOVE);
                 stopSelf();
                 return;
@@ -148,6 +149,7 @@ public class KeepAliveService extends Service {
             return START_NOT_STICKY;
         }
         boolean shouldRun = JobRuntime.isRunning()
+                || SavedJobCoordinator.hasPending(this)
                 || isManualDesired(this)
                 || ACTION_START_JOB.equals(action)
                 || ACTION_START_MANUAL.equals(action);
@@ -159,7 +161,8 @@ public class KeepAliveService extends Service {
 
         serviceRunning = true;
         ensureForeground();
-        if (ACTION_JOB_FINISHED.equals(action) && !isManualDesired(this)) {
+        if (!JobRuntime.isRunning() && SavedJobCoordinator.hasPending(this)) SavedJobCoordinator.maybeRecover(this);
+        if (ACTION_JOB_FINISHED.equals(action) && !isManualDesired(this) && !SavedJobCoordinator.hasPending(this)) {
             stopForeground(STOP_FOREGROUND_REMOVE);
             stopSelf();
             return START_NOT_STICKY;
