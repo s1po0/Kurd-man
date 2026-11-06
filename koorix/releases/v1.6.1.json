@@ -137,7 +137,9 @@
     "telegramApkAcknowledged": true,
     "publicUnauthenticatedDownloadHead": 302,
     "releaseAssetDigestMatchesChatFile": true,
-    "completionNotice": "pending"
+    "completionNotice": "acknowledged",
+    "completionRunId": 42312863660,
+    "completionJobId": 128218289104
   },
   "historicalData": {
     "serverRecordsDeleted": false,
