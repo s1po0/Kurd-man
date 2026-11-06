@@ -25,7 +25,8 @@ code = int(re.search(r"versionCode='(\d+)'", data).group(1))
 label = re.search(r"^application-label:'([^']*)'$", data, re.M).group(1)
 expected = re.search(r'\bkoorix\s*\{.*?versionCode\s+(\d+).*?versionName\s+"([^"]+)"',
                      open('android/app/build.gradle').read(), re.S)
-print(f'Actual package={package} version={version} code={code} label={label} debuggable={'application-debuggable' in data}')
+debuggable = 'application-debuggable' in data
+print(f'Actual package={package} version={version} code={code} label={label} debuggable={debuggable}')
 assert package == manifest['application_id'] == 'com.koorix.app', 'Not regular Koorix'
 assert version == expected.group(2) and code == int(expected.group(1)), 'APK version mismatch'
 assert 'preview' not in version.lower() and label == 'Koorix', 'Preview is not a production delivery'
