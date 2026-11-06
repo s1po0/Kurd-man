@@ -169,3 +169,38 @@ first bootstrap its fingerprint is pinned and missing/mismatched keys must
 fail closed, not silently break later preview updates. Export important
 preview projects; this test application is not a substitute for recovery
 of the original production signing key.
+
+### Verified preview delivery
+
+- Source commit `c20a37f`, CI `42141658408`: **success**. Required 563 rule/safety
+  assertions passed; Android build, actual APK package/version/label and
+  signature verification passed. Telegram reported `ok:true`.
+- APK: `Koorix-Preview-v1.3.0-1.apk`, 36,485,978 bytes, ZIP verified locally
+  (606 entries), SHA-256
+  `8a7685a2b21ec7166d47053537e85f02863c1ff0d43ee0382bfca569f75dc145`.
+- Preview signer:
+  `652abef9a4742cf8a9fa8f04c92691bdfa2e26bd7a544ba154e4c26d96c62181`.
+  The workflow is now pinned to this test certificate. It remains unrelated
+  to the production certificate; the original signing blocker is unresolved.
+- Clearly marked prerelease (not the site's official download):
+  https://github.com/s1po0/Kurd-man/releases/download/koorix-preview-v1.3.0-1/Koorix-Preview-v1.3.0-1.apk
+- The preview needs its own login and, for offline use, its own language-pack
+  download. It does not read, overwrite or migrate the main app's private data.
+  Device visual/semantic quality acceptance remains pending.
+
+### Actual free-route smoke probe
+
+Advisory run `42141822128` compiled the production comic skill and used the live
+public Google route with two synthetic English dialogue bubbles. It preserved
+both bubble boundaries and all protected terms: 1 context request, 0 context
+fallbacks, 0 glossary fallbacks. Observed examples:
+
+| Source | Standard route | Comic skill |
+| --- | --- | --- |
+| Jinwoo, bring the mana crystal. | جینوو، کریستاڵەکەی مانا بهێنە. | جین‌وو، کریستاڵی مانا بهێنە. |
+| The guild master is waiting for us. | وەستای گیڵد چاوەڕێمان دەکات. | سەرۆکی گیلد چاوەڕێمان دەکات. |
+
+This establishes that the real route accepted the boundary/terminology
+contract on those examples, not that all comic dialogue is semantically
+correct. `tools/comic-probe` is advisory research tooling, uses no reader data
+or API key, and is not part of the app or an offline/network fallback.

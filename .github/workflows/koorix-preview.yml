@@ -18,9 +18,9 @@ jobs:
     permissions:
       contents: write
     env:
-      # Empty only for bootstrapping the first separate test application.
-      # Pinned after its first verified build; never the production signer.
-      PREVIEW_SIGNER: ""
+      # Separate preview signer, pinned after the first verified bootstrap.
+      # A missing cache/secret must fail closed, never silently replace it.
+      PREVIEW_SIGNER: "652abef9a4742cf8a9fa8f04c92691bdfa2e26bd7a544ba154e4c26d96c62181"
     steps:
       - uses: actions/checkout@v4
 
