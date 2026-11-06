@@ -1,1 +1,1 @@
-{"name":"koorix-static-release","private":true,"version":"1.5.0","scripts":{"build":"node build.mjs"}}
+{"name":"koorix-static-release","private":true,"version":"1.6.0","scripts":{"build":"node build.mjs"}}

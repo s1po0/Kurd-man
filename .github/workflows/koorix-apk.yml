@@ -13,6 +13,7 @@ on:
       - "android/**"
       - ".github/workflows/koorix-apk.yml"
       - "tools/comic-skill/**"
+      - "tools/free-edition/**"
       - "tools/signing/*.py"
       - "tools/signing/*.sh"
       - "tools/signing/requirements.txt"
@@ -93,7 +94,7 @@ jobs:
                       detail=(issue.get('message','') or (issue.text or '').split('\n')[0])[:400]
                       print('::error::In-app skill UI contract failed: '+test.get('name','test')+' '+detail.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
           print(f'::notice::In-app skill Android/JVM tests: {total} run, {failed} failed, {skipped} skipped; not device/semantic proof')
-          if total < 134 or failed or skipped:
+          if total < 136 or failed or skipped:
               print('::error::In-app skill tests were missing, failed or skipped; production distribution is blocked')
               raise SystemExit(1)
           PYTEST
@@ -163,7 +164,7 @@ jobs:
           fi
           exit $code
 
-      - name: Independently verify public APK v2 digest, manifest, no-login classes and harness exclusion
+      - name: Independently verify public APK v2 digest, manifest, free-edition classes and harness exclusion
         run: |
           python3 tools/signing/inspect-public-apk.py "$APK_FILE" \
             --version "$KOORIX_VERSION" --code "$KOORIX_CODE" --no-login --free

@@ -3,7 +3,7 @@ on:
   push:
     branches: ["arena/**"]
     paths:
-      - "koorix/releases/v1.5.0.json"
+      - "koorix/releases/v1.6.0.json"
       - ".github/workflows/koorix-done.yml"
 permissions:
   contents: read
@@ -18,12 +18,16 @@ jobs:
         run: |
           python3 - <<'PY'
           import json
-          record=json.load(open('koorix/releases/v1.5.0.json'))
+          record=json.load(open('koorix/releases/v1.6.0.json'))
           assert record['features']['userLoginRemoved'] is True
+          assert record['features']['premiumRemoved'] is True
+          assert record['features']['dailyAppQuotasRemoved'] is True
+          assert record['features']['separateGalleryAndUnfilteredFiles'] is True
           assert record['ci']['status']=='success'
           assert record['delivery']['chatFilePresented'] is True
           assert record['delivery']['telegramApkAcknowledged'] is True
           assert record['independentLocalVerification']['no_login_gate_checked'] is True
+          assert record['independentLocalVerification']['free_edition_checked'] is True
           PY
       - name: Tell the owner the verified regular Koorix work is complete
         env:
@@ -32,11 +36,11 @@ jobs:
         run: |
           test -n "$TOKEN" && test -n "$ADMIN"
           MESSAGE="تەواو بووم ✅
-          Koorix 1.5.0 — Login لابرا و وەشانی ئاسایی بە هەمان کلیلی v2 نێردرا.
-          پڕۆژەکان، Backup، بەردەوامکردنەوە و ژمارەی بەکارهێنان چاک کران؛ repo و داونلۆد گشتین.
-          دایبمەزرێنە لەسەر ئەپی پێشوو، مەیسڕەوە.
-          تێبینی: هۆستکردنی سایتی سەربەخۆ بە ڕێگریی Vercel/Pages نەکرا؛ ئەپ و داونلۆدی گشتی ئامادەن. مانای هەموو وەرگێڕانێک بە تەستەکان ناسەلمێنرێت.
-          https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.5.0/Koorix-v1.5.0.apk"
+          Koorix 1.6.0 — بە تەواوی خۆڕایی بۆ ئێستا؛ Premium و سنووری ڕۆژانە لابران، Loginیش نییە.
+          Gallery / Photos و Files / CBZ بە جیا دانراون؛ Files بە جۆری فایل سنووردار نییە.
+          APKی وەشانی ئاسایی بە هەمان کلیلی v2 لە چات و Telegram نێردرا. لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە.
+          https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.6.0/Koorix-v1.6.0.apk"
+
           RESPONSE=$(curl -fsS --connect-timeout 20 --max-time 60 \
             --data-urlencode "chat_id=$ADMIN" --data-urlencode "text=$MESSAGE" \
             "https://api.telegram.org/bot${TOKEN}/sendMessage")

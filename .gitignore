@@ -32,3 +32,6 @@ skill-download/
 
 # Local verification/build dependencies are not product source.
 /.cache/
+
+# Static site build output is generated, never committed.
+/koorix/site/public/

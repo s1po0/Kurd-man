@@ -1,26 +1,33 @@
-# Koorix 1.5.0 — بێ Login / No login / بلا تسجيل دخول
+# Koorix 1.6.0 — بە تەواوی خۆڕایی / Completely free / مجاني بالكامل
 
-[**⬇ Download the regular Android APK**](https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.5.0/Koorix-v1.5.0.apk)
+[**⬇ Download the regular Android APK**](https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.6.0/Koorix-v1.6.0.apk)
 
-- وێنە هەڵبژێرە و Translate بکە؛ Google و ئیمەیڵ و ژمارەی مۆبایل پێویست نین.
-- پڕۆژەکان دەمێننەوە؛ Backup/Restore و هەنگاوە پارێزراوەکان هەن.
-- هەمان واژۆی v2 ـە؛ نوێکردنەوە لەسەر ئەپی پێشوو دابمەزرێنە، مەیسڕەوە.
+- **بۆ ئێستا بە تەواوی خۆڕاییە:** Premium، کۆدی چالاککردن و سنووری ڕۆژانە لابران.
+- **Gallery / Photos** بۆ وێنە و **Files / CBZ** بۆ فایل، بە جیا دانراون؛ Files بە جۆری فایل سنووردار نییە.
+- Login، Google، ئیمەیڵ و ژمارەی مۆبایل پێویست نین.
+- پڕۆژەکان، Backup، STOP، ڕاپۆرت و Skillی خۆکار پارێزراون.
+- هەمان واژۆی v2 ـە؛ لەسەر ئەپی پێشوو دایبمەزرێنە، مەیسڕەوە.
 
-Choose images and tap Translate. Keep editable books, explicit backups and saved
-checkpoints, with 74 target choices and Kurdish/English/Arabic UI. No reader
-login. Optional Premium and daily free uses belong to this device.
+Choose Gallery / Photos or Files / CBZ, then tap **Translate**. Premium, payment
+plans, activation codes, daily job/page quotas and device registration are removed
+from the public runtime, not just hidden. No first-online entitlement setup is
+needed. Keep editable books, backups and checkpoints, 74 target choices and the
+Kurdish/English/Arabic interface. Historical private records are left untouched.
 
-اختر الصور واضغط ترجمة دون بريد أو حساب Google أو هاتف. تُحفظ المشاريع ونقاط
-التقدم ويمكن نسخها احتياطيًا. ثبّت التحديث فوق التطبيق الحالي دون حذفه.
+التطبيق مجاني بالكامل حاليًا: أزيل Premium ورموز التفعيل والحد اليومي وتسجيل
+الجهاز. اختر المعرض أو الملفات بشكل منفصل ثم اضغط ترجمة. لا تُخفى أنواع الملفات
+بقائمة MIME. ثبّت التحديث فوق التطبيق الحالي دون حذفه للحفاظ على مشاريعك.
 
-**Limits:** Android 8+ / ARM64. Existing offline engines are unchanged; synthetic
-tests do not certify meaning, erasure or physical-device performance. Premium
-requests do not charge money automatically. Keep activation/order references;
-uninstalling/clearing storage can lose device identity and Premium access.
+**Technical limits:** Android 8+ / ARM64. Existing 300-page/300-MB import and
+1-GB cache safeguards remain. Android-protected folders cannot be bypassed;
+its photo picker may impose its own selection cap. Select images or CBZ/ZIP,
+not arbitrary unsupported documents. Online providers retain their rate limits.
+Existing offline engines are unchanged; synthetic/JVM tests do not certify
+meaning, erasure, every OEM gallery or physical-device performance.
 
-[Release details](https://github.com/s1po0/Kurd-man/releases/tag/koorix-v1.5.0) ·
-[Technical notes](../docs/KOORIX_1_5.md) · [Privacy source](site/privacy.html)
+[Release details](https://github.com/s1po0/Kurd-man/releases/tag/koorix-v1.6.0) ·
+[Technical notes](../docs/KOORIX_1_6.md) · [Privacy source](site/privacy.html)
 
-The standalone site source is ready; production hosting is blocked by the
-available Vercel/Pages integration capabilities. This public release page and
-its download are available without repository access.
+The standalone static site source reflects 1.6; no successful production
+website deployment is claimed. Existing Vercel/Pages integration limitations
+remain. The public GitHub release supplies the permanent APK download.
