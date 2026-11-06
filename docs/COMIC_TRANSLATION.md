@@ -225,3 +225,30 @@ No paid API, agent-service call, extra translation model or NLLB is added. The
 existing translator, selected online/offline mode, account quotas, cancellation
 and v2 signer remain authoritative. General offline Sorani meaning limitations
 remain; no-warning/checked-by-reader never means every meaning is correct.
+
+### Verified 1.4.0 delivery (2026-11-06)
+
+Regular release run [`42155104001`](https://github.com/s1po0/Kurd-man/actions/runs/42155104001)
+passed at `2d37a41e589eada0ceebb70bab004ff93bb2dfa4`, the exact release-tag commit:
+18 signing-recovery tests, 567 existing rule/safety assertions, 51 new local
+quality/glossary/binding assertions and **28 Android/JVM tests, zero failures,
+errors or skips** (14 methods at API 26 and 34). The independent skill run
+`42155103736` passed 55 Python tests on each of 3.11/3.14 and 36 Java glossary
+parity fixtures. These use synthetic data and deterministic backend mocks;
+real-page meaning and actual-device visual behaviour remain **pending**.
+
+The production signer was cold-restored twice only after Android tests passed.
+The actual downloaded 33,641,911-byte APK independently passed v2 RSA signature,
+chunked content-digest, ZIP CRC and binary-manifest verification. It is ordinary
+`com.koorix.app`, **Koorix 1.4.0 / code 10**, non-debuggable, with the original
+permanent v2 certificate. Native review classes and resource symbols are present;
+Robolectric/test classes are absent from its DEX. AAPT optimizes `res/` filenames,
+so resource symbols were checked in the compiled table, not guessed ZIP paths.
+
+- APK SHA-256: `293a1837f39872b6a03806a48e8c0fb855b6f1a5a5703bb60f47baac1025be24`.
+- [Download Koorix 1.4.0](https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.4.0/Koorix-v1.4.0.apk)
+  (repository access required). The same APK was presented in chat and Telegram
+  delivery was acknowledged by the existing release workflow.
+- See `koorix/releases/v1.4.0.json` for exact build, test and delivery provenance.
+  This is an in-place update over **v2-signed 1.3.1**; no uninstall/key rotation.
+  The pre-v2 one-time migration warning remains separate and unchanged.

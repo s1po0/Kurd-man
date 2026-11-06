@@ -1,0 +1,78 @@
+{
+  "android_and_signing_trees_identical_to_tag": true,
+  "application_id": "com.koorix.app",
+  "blob_sha": "9ee62f32b207c4b17aa94927725280e8315b75bf",
+  "build_type": "release",
+  "bytes": 33641911,
+  "certificate_sha1": "21209f6f75195cfeb1dcaa7b7d74ad09e4954b6b",
+  "certificate_sha256": "fb304de3cd357f35cf679e2a46befac08f3e97feef28b1b9a8af7b0891d40340",
+  "certificate_valid_until": "2126-11-06T00:00:00+00:00",
+  "debuggable": false,
+  "delivery": {
+    "chat_file_presented": true,
+    "github_regular_release": true,
+    "prerelease": false,
+    "telegram_acknowledged": true
+  },
+  "download_url": "https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.4.0/Koorix-v1.4.0.apk",
+  "feature": {
+    "native_skill_entry": "Translate / Results → Open Koorix Skill",
+    "new_paid_api": false,
+    "new_translation_model": false,
+    "reader_assessments_are_declarations_not_semantic_proof": true
+  },
+  "file": "Koorix-v1.4.0.apk",
+  "format": 1,
+  "github_repository_access_required": true,
+  "label": "Koorix",
+  "preview": false,
+  "release_published_at": "2026-11-06T03:17:03Z",
+  "release_tag_commit": "2d37a41e589eada0ceebb70bab004ff93bb2dfa4",
+  "sha256": "293a1837f39872b6a03806a48e8c0fb855b6f1a5a5703bb60f47baac1025be24",
+  "signing_generation": 2,
+  "update": {
+    "in_place_over_v2_signed_1_3_1": true,
+    "pre_v2_signature_migration_still_separate": true,
+    "signing_key_rotated": false,
+    "uninstall_for_v2_update_required": false
+  },
+  "verification": {
+    "android_jvm_errors": 0,
+    "android_jvm_failures": 0,
+    "android_jvm_fixtures_are_synthetic": true,
+    "android_jvm_sdk_levels": [
+      26,
+      34
+    ],
+    "android_jvm_skipped": 0,
+    "android_jvm_tests": 28,
+    "apk_signer_and_badging_verified_in_ci": true,
+    "comic_rule_safety_assertions": 567,
+    "crypto_recovery_fail_closed_tests": 18,
+    "curated_lexicon_entries": 204,
+    "independent_local_v2_rsa_signature_verified": true,
+    "java_glossary_parity_fixtures": 36,
+    "local_binary_manifest_verified": true,
+    "local_v2_chunked_content_digests_verified": true,
+    "native_activity_present_and_nonexported": true,
+    "native_skill_classes_and_resource_symbols_present": true,
+    "production_signer_cold_restored_twice": true,
+    "python_skill_tests_per_version": 55,
+    "python_versions": [
+      "3.11",
+      "3.14"
+    ],
+    "quality_glossary_binding_assertions": 51,
+    "real_device_visual_semantic_acceptance": "pending",
+    "rule_backends_are_mocks": true,
+    "signing_recovery_files_absent_from_apk_entry_names": true,
+    "test_harness_absent_from_apk_dex": true,
+    "zip_integrity_verified": true
+  },
+  "verified_ci_commit": "2d37a41e589eada0ceebb70bab004ff93bb2dfa4",
+  "verified_ci_run": "42155104001",
+  "verified_skill_ci_run": "42155103736",
+  "version": "1.4.0",
+  "version_code": 10,
+  "zip_entries": 609
+}

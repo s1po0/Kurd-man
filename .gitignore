@@ -29,3 +29,6 @@ Koorix-Signing-Recovery-*.zip
 # Portable agent-skill bundles are generated locally; never stage local settings.
 skill-download/
 .claude/settings.local.json
+
+# Local verification/build dependencies are not product source.
+/.cache/
