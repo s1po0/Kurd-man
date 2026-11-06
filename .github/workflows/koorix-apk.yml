@@ -2,6 +2,11 @@ name: Koorix APK
 
 on:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish the verified production APK and deliver it (otherwise verify only)"
+        type: boolean
+        default: false
   push:
     branches: ["main", "arena/**"]
     paths:
@@ -157,6 +162,7 @@ jobs:
 
       # Releases/chat delivery do not depend on the repository artifact quota.
       - name: Publish verified APK blob for chat delivery
+        if: (github.event_name == 'workflow_dispatch' && inputs.publish) || contains(github.event.head_commit.message, '[release-koorix]')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -180,6 +186,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publish regular Koorix APK to GitHub Release
+        if: (github.event_name == 'workflow_dispatch' && inputs.publish) || contains(github.event.head_commit.message, '[release-koorix]')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -197,6 +204,7 @@ jobs:
           echo "APK_DOWNLOAD_URL=$URL" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Send regular same-key Koorix update to Telegram admin
+        if: (github.event_name == 'workflow_dispatch' && inputs.publish) || contains(github.event.head_commit.message, '[release-koorix]')
         env:
           TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           ADMIN: ${{ secrets.TELEGRAM_ADMIN_ID }}

@@ -1,0 +1,19 @@
+name: Koorix no-login backend
+on:
+  workflow_dispatch:
+  push:
+    branches: ["arena/**"]
+    paths: ["koorix/backend/**", "koorix/functions/**", "tools/backend/**", ".github/workflows/koorix-backend.yml"]
+permissions:
+  contents: read
+jobs:
+  live-device-contract:
+    name: Disposable no-login device, quota, RLS and cleanup
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read-only public credential-format check
+        run: python3 tools/security/check-public.py
+      - name: Verify real deployed service with one disposable device
+        run: python3 tools/backend/live_smoke.py
