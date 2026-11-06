@@ -2,9 +2,7 @@
 <resources>
     <string name="edition_free_short">Free</string>
     <string name="edition_free_note">Completely free • No Premium or login</string>
-    <string name="input_choose_source">Choose photos or files</string>
-    <string name="input_gallery">Gallery / Photos</string>
-    <string name="input_files">Files / CBZ</string>
-    <string name="input_browse_hint">Gallery opens photos. Files shows all file types in Downloads, shared phone storage, SD or cloud providers. Import images or CBZ/ZIP for translation.</string>
+    <string name="input_choose_source">Choose images or CBZ</string>
+    <string name="input_browse_hint">One chooser for images and CBZ/ZIP. Choose a compatible installed source such as Samsung Gallery, MT Manager, ZArchiver or My Files.</string>
     <string name="input_picker_unavailable">No compatible picker is available. You can also share images from your gallery to Koorix.</string>
 </resources>

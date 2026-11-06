@@ -2,9 +2,7 @@
 <resources>
     <string name="edition_free_short">خۆڕایی</string>
     <string name="edition_free_note">بە تەواوی خۆڕایی • بێ Premium و بێ Login</string>
-    <string name="input_choose_source">وێنە یان فایل لە کوێ هەڵدەبژێریت؟</string>
-    <string name="input_gallery">گالەری / وێنەکان</string>
-    <string name="input_files">فایلەکان / CBZ</string>
-    <string name="input_browse_hint">گالەری بۆ وێنەکان؛ فایلەکان بۆ هەموو جۆرە فایلێک لە Downloads، بیرگەی مۆبایل، SD یان هەور. بۆ وەرگێڕان وێنە یان CBZ/ZIP هەڵبژێرە.</string>
+    <string name="input_choose_source">هەڵبژاردنی وێنە یان CBZ</string>
+    <string name="input_browse_hint">یەک هەڵبژێرەر بۆ وێنە و CBZ/ZIP؛ لە ئەپە گونجاوە دامەزراوەکان وەک Samsung Gallery، MT Manager، ZArchiver یان My Files هەڵبژێرە.</string>
     <string name="input_picker_unavailable">گالەری یان بەڕێوەبەری فایل بەردەست نییە؛ وێنەکان لە گالەری بە Share بۆ Koorix بنێرە.</string>
 </resources>

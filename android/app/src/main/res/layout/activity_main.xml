@@ -596,35 +596,6 @@
                     android:textColor="#5EEAD4"
                     android:textDirection="firstStrongRtl"
                     android:textSize="15sp" />
-                <LinearLayout
-                    android:id="@+id/inputSourceButtons"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginTop="8dp"
-                    android:visibility="gone">
-                    <Button
-                        android:id="@+id/pickGalleryButton"
-                        android:layout_width="0dp"
-                        android:layout_height="56dp"
-                        android:layout_weight="1"
-                        android:layout_marginEnd="6dp"
-                        android:background="@drawable/bg_button_secondary"
-                        android:text="@string/input_gallery"
-                        android:textAllCaps="false"
-                        android:textColor="@color/text_primary"
-                        android:textSize="14sp" />
-                    <Button
-                        android:id="@+id/pickFilesButton"
-                        android:layout_width="0dp"
-                        android:layout_height="56dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/bg_button_secondary"
-                        android:text="@string/input_files"
-                        android:textAllCaps="false"
-                        android:textColor="@color/text_primary"
-                        android:textSize="14sp" />
-                </LinearLayout>
                 <TextView
                     android:id="@+id/inputBrowseHint"
                     android:layout_width="match_parent"

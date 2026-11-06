@@ -50,7 +50,6 @@ import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -228,10 +227,7 @@ public class MainActivity extends AppCompatActivity {
     private int currentMainPage = PAGE_TRANSLATE;
 
     private ActivityResultLauncher<String[]> pickLauncher;
-    private ActivityResultLauncher<PickVisualMediaRequest> galleryLauncher;
-    private ActivityResultLauncher<Intent> galleryFallbackLauncher;
-    private ActivityResultLauncher<Void> allFilesLauncher;
-    private ActivityResultLauncher<Intent> filesFallbackLauncher;
+    private ActivityResultLauncher<Void> inputSourcesLauncher;
     private ActivityResultLauncher<String[]> importFontLauncher;
     private ActivityResultLauncher<String> notificationPermissionLauncher;
     private ActivityResultLauncher<Intent> editorLauncher;
@@ -502,14 +498,8 @@ public class MainActivity extends AppCompatActivity {
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> handleStudioOrLibraryResult(result.getResultCode(),result.getData()));
 
-        // Append new contracts after existing ones to keep saved callback keys stable.
-        galleryLauncher = registerForActivityResult(new ActivityResultContracts.PickMultipleVisualMedia(),this::acceptPickedInput);
-        galleryFallbackLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
-                result -> acceptPickedInput(ComicInputPicker.selected(result.getResultCode(),result.getData())));
-        allFilesLauncher = registerForActivityResult(new ComicInputPicker.Documents(),this::acceptPickedInput);
-        filesFallbackLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
-                result -> acceptPickedInput(ComicInputPicker.selected(result.getResultCode(),result.getData())));
-
+        // Keep existing font/editor callback keys; one public source chooser.
+        inputSourcesLauncher = registerForActivityResult(new ComicInputPicker.Sources(),this::acceptPickedInput);
 
         JobRuntime.setStopAction(() -> {
             SoraniTranslator translator = activeTranslator;
@@ -598,14 +588,10 @@ public class MainActivity extends AppCompatActivity {
         verifyButton.setOnClickListener(v -> verifyBot());
         sendTextButton.setOnClickListener(v -> sendTextMessage());
         pickButton.setOnClickListener(v -> {
-            if(BuildConfig.PUBLIC_EDITION)ComicInputPicker.choose(this,this::openGallery,this::openAllFiles);
+            if(BuildConfig.PUBLIC_EDITION)openInputSources();
             else pickLauncher.launch(new String[]{"image/*","application/zip","application/x-zip-compressed","application/x-cbz","application/vnd.comicbook+zip","application/x-comicbook","application/octet-stream"});
         });
-        View inputSources=findViewById(R.id.inputSourceButtons);
-        inputSources.setVisibility(BuildConfig.PUBLIC_EDITION?View.VISIBLE:View.GONE);
         findViewById(R.id.inputBrowseHint).setVisibility(BuildConfig.PUBLIC_EDITION?View.VISIBLE:View.GONE);
-        findViewById(R.id.pickGalleryButton).setOnClickListener(v -> openGallery());
-        findViewById(R.id.pickFilesButton).setOnClickListener(v -> openAllFiles());
         downloadOfflineButton.setOnClickListener(v -> downloadOfflineModel());
         deleteOfflineButton.setOnClickListener(v -> confirmDeleteOfflineModel());
         downloadPaddleOcrButton.setOnClickListener(v -> downloadPaddleOcrPack());
@@ -2491,24 +2477,10 @@ public class MainActivity extends AppCompatActivity {
         loadPickedFiles(uris);
     }
 
-    private void openGallery() {
+    private void openInputSources() {
         if(currentBusy||JobRuntime.isRunning())return;
-        try {
-            if(ActivityResultContracts.PickVisualMedia.isPhotoPickerAvailable()) galleryLauncher.launch(ComicInputPicker.imagesOnly());
-            else galleryFallbackLauncher.launch(Intent.createChooser(ComicInputPicker.galleryFallback(),getString(R.string.input_gallery)));
-        }catch(ActivityNotFoundException unavailable) {
-            try { galleryFallbackLauncher.launch(Intent.createChooser(ComicInputPicker.galleryFallback(),getString(R.string.input_gallery))); }
-            catch(ActivityNotFoundException missing){setStatus(getString(R.string.input_picker_unavailable));}
-        }
-    }
-
-    private void openAllFiles() {
-        if(currentBusy||JobRuntime.isRunning())return;
-        try { allFilesLauncher.launch(null); }
-        catch(ActivityNotFoundException unavailable) {
-            try {filesFallbackLauncher.launch(Intent.createChooser(ComicInputPicker.filesFallback(),getString(R.string.input_files)));}
-            catch(ActivityNotFoundException missing){setStatus(getString(R.string.input_picker_unavailable));}
-        }
+        try { inputSourcesLauncher.launch(null); }
+        catch(ActivityNotFoundException unavailable){setStatus(getString(R.string.input_picker_unavailable));}
     }
 
     private void clearBatchSelection() {
@@ -5064,8 +5036,6 @@ public class MainActivity extends AppCompatActivity {
         pickButton.setEnabled(enabled);
         translateButton.setEnabled(enabled && (!BuildConfig.PUBLIC_EDITION || hasPublicInput()));
         findViewById(R.id.projectLibraryButton).setEnabled(enabled);
-        findViewById(R.id.pickGalleryButton).setEnabled(enabled);
-        findViewById(R.id.pickFilesButton).setEnabled(enabled);
         refreshDownloadsButton.setEnabled(enabled);
         openDownloadsButton.setEnabled(enabled);
         if (sourceSpinner != null) {

@@ -74,7 +74,7 @@ jobs:
         with:
           packages: "platform-tools platforms;android-35 build-tools;35.0.0"
 
-      - name: Test fully free main activity, gallery/Files routing, projects, recovery and automatic translation
+      - name: Test fully free main activity, unified source-app chooser routing, projects, recovery and automatic translation
         run: |
           set +e
           gradle --no-daemon --no-configuration-cache --stacktrace -p android testKoorixReleaseUnitTest > /tmp/koorix-ui-tests.log 2>&1
@@ -205,7 +205,7 @@ jobs:
         run: |
           TAG="koorix-v$KOORIX_VERSION"
           cp "$APK_FILE" "Koorix-v$KOORIX_VERSION.apk"
-          NOTES="Koorix v$KOORIX_VERSION — regular production update, com.koorix.app, arm64, non-debuggable. Completely FREE for now by the owner's decision: Premium, payments, activation codes, daily job/page quotas and device-registration/entitlement clients have been removed, not just hidden. No login, Google account, email or initial online allowance setup. Explicit Gallery/Photos uses Android's permissionless multi-photo picker, with a gallery-app fallback. Files opens all MIME types and shared-storage/SD/cloud document providers, including CBZ/ZIP files with missing MIME metadata. Existing source validation, 300-page/300-MB import and 1-GB cache safety limits remain; protected Android folders and external provider rate limits are not bypassed. Editable books, legacy projects, backups, frozen settings, STOP, recovery, all 74 target choices and Kurdish/English/Arabic UI are preserved. Same permanent v2 signer: install over v2-signed Koorix without uninstalling or deleting app data. Historical encrypted device/subscriber data is not erased or contacted. No paid API, new model or NLLB. Meaning and real-page/device visual acceptance remain limited/unverified; passing synthetic/JVM tests does not certify every translation, OEM gallery or device."
+          NOTES="Koorix v$KOORIX_VERSION — regular production update, com.koorix.app, arm64, non-debuggable. Completely FREE for now by the owner's decision: Premium, payments, activation codes, daily job/page quotas and device-registration/entitlement clients have been removed, not just hidden. No login, Google account, email or initial online allowance setup. Corrects the 1.6 split picker: ONE input button opens Android's app-capable GET_CONTENT */* chooser for compatible installed Samsung Gallery, MT Manager, ZArchiver, My Files, cloud/photo/file handlers. No separate Gallery/Files screen, photo-only picker, pinned storage root or MIME whitelist. Apps must be installed and declare compatible content selection; exact OEM lists remain phone-dependent. Existing source validation, 300-page/300-MB import and 1-GB cache safety limits remain; protected Android folders and external provider rate limits are not bypassed. Editable books, legacy projects, backups, frozen settings, STOP, recovery, all 74 target choices and Kurdish/English/Arabic UI are preserved. Same permanent v2 signer: install over v2-signed Koorix without uninstalling or deleting app data. Historical encrypted device/subscriber data is not erased or contacted. No paid API, new model or NLLB. Meaning and real-page/device visual acceptance remain limited/unverified; passing synthetic/JVM tests does not certify every translation, OEM gallery or device."
 
           # An owner-prepared draft/tag is valid too. Upload verified bytes first,
           # then publish; expose public CLI errors without printing credentials.
@@ -252,7 +252,7 @@ jobs:
           fi
           CAPTION="💜 Koorix v$KOORIX_VERSION — وەشانی ئاسایی، نەک Preview.
           بە تەواوی خۆڕایی بۆ ئێستا: Premium، کۆدی چالاککردن و سنووری ڕۆژانە لابران؛ Loginیش نییە.
-          Gallery / Photos و Files / CBZ بە جیا دانراون؛ Files هەموو جۆرە فایلەکان پیشان دەدات. تەنیا وێنە یان CBZ/ZIP بۆ وەرگێڕان هەڵبژێرە.
+          یەک دوگمەی هەڵبژاردن: ئەپە گونجاوە دامەزراوەکان وەک Samsung Gallery، MT Manager، ZArchiver و My Files لە یەک هەڵبژێرەردا، نەک دوو بەش. وێنە یان CBZ/ZIP هەڵبژێرە.
           پڕۆژەکان، Backup، STOP و Skillی خۆکار پارێزراون. هەمان کلیلی v2 ـە؛ لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە."
 
           RESP=$(curl -fsS --connect-timeout 20 --max-time 180 \

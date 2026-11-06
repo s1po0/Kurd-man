@@ -14,7 +14,7 @@ do not hard-code `/home/user` or a branch name into scripts.
 | Saved JSON / target field | `TranslationProject.java`, `Segment.java`; `ckb` stores the selected target, not necessarily Sorani |
 | Local editable library / explicit backups | `TranslationProjectStore.java`, `ProjectLibraryActivity.java`, `ProjectArchive.java`; `files/projects/p-UUID`, legacy `projects/current` retained |
 | Durable regular-Koorix pipeline | `SavedJobInput.java`, `SavedJobPipeline.java`, `SavedJobBackend.java`, `SavedJobCoordinator.java`, `ProjectResults.java` |
-| Free public edition / gallery + Files | `ComicInputPicker.java`, `MainActivity.java`, `tools/free-edition/check.py`; no runtime account/Premium client |
+| Free public edition / one app-capable input chooser | `ComicInputPicker.java`, `MainActivity.java`, `tools/free-edition/check.py`; no runtime account/Premium client |
 | Layout / erasure / SFX | `ManhwaRenderer.java`, `CleanEraser.java`, `EditorActivity.java`; don't guess from JSON counts |
 | Three-language skill UI | `res/values*/comic_strings.xml`, `res/layout/activity_comic_settings.xml` |
 | Actual Java contract tests | `tools/comic-skill/test.sh`, `ComicTranslationSkillTest.java` |
@@ -53,3 +53,7 @@ Since 1.6 the owner explicitly removed both login and Premium. The public app is
 completely free with no daily app quota or device registration. Keep historical
 private subscriber data untouched; never reintroduce a paywall without permission.
 See `docs/KOORIX_1_5.md` for durable checkpoints, STOP and backup boundaries.
+
+Since 1.6.1 the owner rejected the split Gallery/Files UI. Keep one input button
+using a system GET_CONTENT */* chooser with compatible installed source apps.
+Do not restore OPEN_DOCUMENT or a photo-only picker for normal public input.

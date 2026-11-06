@@ -25,11 +25,17 @@ root=E.parse(ANDROID/'src/main/res/layout/activity_main.xml').getroot()
 ns='{http://schemas.android.com/apk/res/android}'
 ids={node.get(ns+'id','') for node in root.iter()}
 assert '@+id/accountButton' not in ids
-for name in ('freeEditionNote','pickGalleryButton','pickFilesButton','inputSourceButtons','inputBrowseHint','projectLibraryButton'):
+for retired_id in ('pickGalleryButton','pickFilesButton','inputSourceButtons'):
+    assert '@+id/'+retired_id not in ids,'Split input UI remains: '+retired_id
+for name in ('freeEditionNote','pickButton','inputBrowseHint','projectLibraryButton'):
     assert '@+id/'+name in ids,name
 main=(ANDROID/'src/main/java/com/kurdman/app/MainActivity.java').read_text()
-assert 'new ComicInputPicker.Documents()' in main and 'new ActivityResultContracts.PickMultipleVisualMedia()' in main
-assert 'this::openGallery,this::openAllFiles' in main
+assert 'new ComicInputPicker.Sources()' in main and 'if(BuildConfig.PUBLIC_EDITION)openInputSources()' in main
+assert 'PickMultipleVisualMedia' not in main and 'ComicInputPicker.choose(' not in main
+picker=(ANDROID/'src/main/java/com/kurdman/app/ComicInputPicker.java').read_text()
+assert 'new Intent(Intent.ACTION_GET_CONTENT)' in picker and '.setType("*/*")' in picker
+assert 'Intent.createChooser(content(),' in picker
+assert 'Intent.ACTION_OPEN_DOCUMENT' not in picker and 'EXTRA_MIME_TYPES' not in picker and 'EXTRA_INITIAL_URI' not in picker
 keys=None
 for p in (ANDROID/'src/main/res').glob('values*/free_picker_strings.xml'):
     names={e.attrib['name'] for e in E.parse(p).getroot().findall('string')}
@@ -43,4 +49,4 @@ permissions={e.get(ns+'name','') for e in E.parse(ANDROID/'src/main/AndroidManif
 assert not permissions.intersection({'android.permission.MANAGE_EXTERNAL_STORAGE','android.permission.READ_EXTERNAL_STORAGE','android.permission.READ_MEDIA_IMAGES','android.permission.READ_MEDIA_VISUAL_USER_SELECTED'})
 
 assert len(list((ANDROID/'src/main/res').glob('values*/free_picker_strings.xml')))==3
-print('Free public edition contracts passed: no billing/registration/allowance dependency; gallery + unfiltered Files wired; technical limits retained.')
+print('Free public edition contracts passed: no billing/registration/allowance dependency; one app-capable unfiltered source chooser wired; technical limits retained.')
