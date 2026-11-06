@@ -161,6 +161,12 @@ public final class ComicTranslationSkillTest {
             equal(2, calls.get(), "one constrained attempt + original-source fallback");
             equal("glossary_unconfirmed", p.results.get(0).warnings, "fallback cannot claim glossary applied");
         }
+        ComicTranslationSkill.PageResult selfName = page(skill(ComicTranslationSkill.Genre.AUTO, "John=John Smith"), true,
+                "en", "ar", (text, source, target) -> text.contains("ZXQK") ? "broken" : text, "John and John");
+        equal("John Smith and John Smith", selfName.results.get(0).text, "echo fallback cannot repeatedly expand a name");
+        ComicTranslationSkill.PageResult crossNames = page(skill(ComicTranslationSkill.Genre.AUTO, "Alpha=Beta\nBeta=Gamma"), true,
+                "en", "ar", (text, source, target) -> text.contains("ZXQK") ? "broken" : text, "Alpha and Beta");
+        equal("Beta and Gamma", crossNames.results.get(0).text, "echo fallback is simultaneous, not cascading");
         AtomicInteger masked = new AtomicInteger();
         ComicTranslationSkill s = skill(ComicTranslationSkill.Genre.AUTO, "Jinwoo = جین‌وو");
         ComicTranslationSkill.Backend b = (text, source, target) -> {
@@ -193,6 +199,17 @@ public final class ComicTranslationSkillTest {
                 (text, source, target) -> "[[kx0000]] ZXQK0000QXZ هات. [[kx0001]] ئەو لێرەیە.",
                 "Jinwoo arrived.", "He is here.");
         equal("جین‌وو هات.", p.results.get(0).text, "glossary restored inside context window");
+        AtomicInteger windows = new AtomicInteger();
+        page(skill(ComicTranslationSkill.Genre.AUTO, ""), false, "en", "ckb", (text, source, target) -> {
+            windows.incrementAndGet();
+            java.util.regex.Matcher markers = java.util.regex.Pattern.compile("\\[\\[KX[0-9]{4}]]").matcher(text);
+            StringBuilder response = new StringBuilder();
+            int count = 0;
+            while (markers.find()) { response.append(markers.group()).append(" وەرگێڕان "); count++; }
+            check(count <= 4, "context window is bounded to four bubbles");
+            return response.toString();
+        }, "one", "two", "three", "four", "five", "six", "seven", "eight");
+        equal(2, windows.get(), "eight bubbles form two bounded windows");
         AtomicInteger requestsCount = new AtomicInteger();
         p = page(skill(ComicTranslationSkill.Genre.AUTO, ""), true, "en", "ckb",
                 (text, source, target) -> { check(!text.contains("[[KX"), "offline never uses a context batch"); requestsCount.incrementAndGet(); return "وەرگێڕان"; },

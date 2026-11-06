@@ -392,11 +392,26 @@ public final class ComicTranslationSkill {
             return RESERVED.matcher(out).find() && !allowReserved ? null : out;
         }
         String replaceEchoedTerms(String response) {
-            String out = response;
-            for (ProtectedTerm term : terms) {
-                out = term.entry.pattern.matcher(out).replaceAll(Matcher.quoteReplacement(term.entry.target));
+            // One pass over the original output: A=B and B=C must not cascade
+            // into A=C, nor repeatedly expand a name whose target includes it.
+            List<Entry> unique = new ArrayList<>();
+            for (ProtectedTerm term : terms) if (!unique.contains(term.entry)) unique.add(term.entry);
+            unique.sort(Comparator.comparingInt((Entry e) -> e.source.length()).reversed());
+            if (unique.isEmpty()) return response;
+            List<String> alternatives = new ArrayList<>();
+            for (Entry entry : unique) alternatives.add("(?:" + entry.pattern.pattern() + ")");
+            Matcher matches = Pattern.compile(String.join("|", alternatives),
+                    Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE).matcher(response);
+            StringBuffer out = new StringBuffer();
+            while (matches.find()) {
+                String replacement = matches.group();
+                for (Entry entry : unique) {
+                    if (entry.source.equalsIgnoreCase(matches.group())) { replacement = entry.target; break; }
+                }
+                matches.appendReplacement(out, Matcher.quoteReplacement(replacement));
             }
-            return out;
+            matches.appendTail(out);
+            return out.toString();
         }
     }
 

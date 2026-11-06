@@ -14,15 +14,19 @@ permissions:
 
 jobs:
   build:
-    name: Build Koorix debug APK
+    name: Verify and publish Koorix APK
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      EXPECTED_SIGNER: "48c50cf5a99fcde5bbff27f586d520095e10276b4c705236e708ca261c1cca35"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -40,28 +44,39 @@ jobs:
           fi
           exit $code
 
-      # Same cached stable debug keystore as the KurdMan build, so Koorix
-      # updates also install over the previous Koorix version. This caches
-      # a DEBUG key only; never use this pattern for release signing.
-      - name: Restore stable debug keystore
-        uses: actions/cache@v4
+      # Recovery fallback only. A cache is evictable after seven idle days;
+      # it must NEVER be the only backup of an application's signing key.
+      - name: Restore legacy debug keystore cache if still available
+        uses: actions/cache/restore@v4
         with:
           path: ~/kurdman-debug.keystore
           key: kurdman-debug-keystore-v2
 
-      - name: Prepare stable debug keystore
+      - name: Prepare original signing key (never generate a replacement)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KURDMAN_DEBUG_KEYSTORE_B64 }}
         run: |
           KEYSTORE="$HOME/kurdman-debug.keystore"
-          if [ ! -f "$KEYSTORE" ]; then
-            keytool -genkeypair -v -keystore "$KEYSTORE" -storetype PKCS12 \
-              -storepass android -keypass android -alias androiddebugkey \
-              -keyalg RSA -keysize 2048 -validity 10950 \
-              -dname "CN=Android Debug,O=Android,C=US"
-            echo "::notice::generated a new stable debug keystore (first run)"
-          else
-            echo "::notice::reusing cached stable debug keystore"
+          ready=false
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            umask 077
+            printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE"
           fi
-          echo "KURDMAN_DEBUG_KEYSTORE=$KEYSTORE" >> "$GITHUB_ENV"
+          if [ -f "$KEYSTORE" ]; then
+            keytool -exportcert -keystore "$KEYSTORE" -storepass android \
+              -alias androiddebugkey -file /tmp/koorix-signer.der >/dev/null
+            ACTUAL=$(sha256sum /tmp/koorix-signer.der | cut -d' ' -f1)
+            if [ "$ACTUAL" = "$EXPECTED_SIGNER" ]; then
+              ready=true
+              echo "KURDMAN_DEBUG_KEYSTORE=$KEYSTORE" >> "$GITHUB_ENV"
+              echo "::notice::original Koorix signing certificate verified"
+            else
+              echo "::warning::Signing certificate mismatch. This key will NOT sign or publish an update."
+            fi
+          else
+            echo "::warning::Original signing key is unavailable. Compilation may continue for verification, but APK distribution is blocked. Restore KURDMAN_DEBUG_KEYSTORE_B64 securely in repository Actions secrets."
+          fi
+          echo "SIGNING_READY=$ready" >> "$GITHUB_ENV"
 
       - name: Set up Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
@@ -74,9 +89,6 @@ jobs:
           packages: "platform-tools platforms;android-35 build-tools;35.0.0"
 
       - name: Build Koorix debug APK
-        # Capture the build output and, on failure, surface the actual
-        # compiler/Gradle error lines as annotations (raw log downloads
-        # are not reachable from every environment).
         run: |
           set +e
           gradle --stacktrace -p android assembleKoorixDebug > /tmp/build.log 2>&1
@@ -86,92 +98,44 @@ jobs:
             grep -E "error:|FAILED|What went wrong|Execution failed|Caused by:" -A2 -B1 /tmp/build.log \
               | head -50 \
               | while IFS= read -r line; do echo "::error::$line"; done
+          else
+            echo "::notice::Koorix Android compilation passed"
           fi
           exit $code
 
-      - name: Report APK signer fingerprint
+      # Mandatory before *any* APK leaves this job. Even if a cache/secret
+      # contains a different valid keystore, never silently break updates.
+      - name: Require original APK signer before distribution
         run: |
-          APK=$(ls android/app/build/outputs/apk/koorix/debug/*.apk | head -n 1)
-          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f 2>/dev/null | sort | tail -n 1)
-          if [ -n "$APK" ] && [ -n "$APKSIGNER" ]; then
-            DIGEST=$("$APKSIGNER" verify --print-certs "$APK" 2>/dev/null | grep -im1 'SHA-256 digest' | sed 's/.*digest: *//')
-            if [ -n "$DIGEST" ]; then
-              echo "::notice::APK signer SHA-256=$DIGEST"
-            fi
-            SHA1=$("$APKSIGNER" verify --print-certs "$APK" 2>/dev/null | grep -im1 'SHA-1 digest' | sed 's/.*digest: *//')
-            if [ -n "$SHA1" ]; then
-              echo "::notice::APK signer SHA-1=$SHA1"
-            fi
+          if [ "$SIGNING_READY" != "true" ]; then
+            echo "::error::SIGNING_KEY_UNAVAILABLE: compiled for verification only. No APK, Telegram message or release is published. The original private signing key is required; a key cannot be recovered from an APK certificate."
+            exit 1
           fi
+          APK=$(find android/app/build/outputs/apk/koorix/debug -name '*.apk' | head -n 1)
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort | tail -n 1)
+          CERTS=$("$APKSIGNER" verify --print-certs "$APK")
+          DIGEST=$(printf '%s\n' "$CERTS" | grep -im1 'SHA-256 digest' | sed 's/.*digest: *//')
+          if [ "$DIGEST" != "$EXPECTED_SIGNER" ]; then
+            echo "::error::APK signer mismatch; distribution refused"
+            exit 1
+          fi
+          echo "::notice::APK signer SHA-256=$DIGEST"
+          SHA1=$(printf '%s\n' "$CERTS" | grep -im1 'SHA-1 digest' | sed 's/.*digest: *//')
+          echo "::notice::APK signer SHA-1=$SHA1"
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: koorix-debug-apk
-          path: android/app/build/outputs/apk/koorix/debug/*.apk
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Send APK to Telegram admin
-        env:
-          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          ADMIN: ${{ secrets.TELEGRAM_ADMIN_ID }}
-        run: |
-          if [ -z "$TOKEN" ] || [ -z "$ADMIN" ]; then
-            echo "::warning::TELEGRAM_BOT_TOKEN or TELEGRAM_ADMIN_ID is missing; skipping Telegram APK send."
-            exit 0
-          fi
-          APK=$(ls android/app/build/outputs/apk/koorix/debug/*.apk | head -n 1)
-          if [ -z "$APK" ]; then
-            echo "::warning::APK not found; skipping Telegram send."
-            exit 0
-          fi
-          SIZE=$(stat -c%s "$APK")
-          echo "::notice::APK=$APK bytes=$SIZE"
-          if [ "$SIZE" -gt 49000000 ]; then
-            echo "::warning::APK is too large for Telegram bot upload; download it from the Actions artifact instead."
-            exit 0
-          fi
-          RESP=$(curl -s -F chat_id="$ADMIN" -F caption="💜 Koorix Android APK (debug) — run ${{ github.run_id }}" -F document=@\"$APK\" "https://api.telegram.org/bot${TOKEN}/sendDocument")
-          if echo "$RESP" | grep -q '"ok":true'; then
-            echo "::notice::APK sent to Telegram admin"
-          else
-            echo "::warning::Telegram APK send did not return ok:true"
-          fi
-
-  # The chat-delivery sandbox cannot reach the Azure blob host that
-  # serves Actions artifacts, so the APK also travels back as an
-  # unreferenced git blob fetched through api.github.com.
-  publish-apk-blob:
-    name: Publish Koorix APK blob for chat delivery
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    steps:
-      - name: Download built APK artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: koorix-debug-apk
-          path: apk
-
-      - name: Create git blob from APK
+      # Publish in this job, without upload/download-artifact. Releases and
+      # chat delivery must not depend on the repository's artifact quota.
+      - name: Publish verified APK blob for chat delivery
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          APK=$(find apk -name '*.apk' | head -n 1)
-          if [ -z "$APK" ]; then
-            echo "::error::APK not found in downloaded artifact"
-            exit 1
-          fi
+          APK=$(find android/app/build/outputs/apk/koorix/debug -name '*.apk' | head -n 1)
           APK_BYTES=$(stat -c%s "$APK")
           APK_SHA256=$(sha256sum "$APK" | cut -d' ' -f1)
           python3 - "$APK" <<'PY'
           import base64, json, sys
           data = open(sys.argv[1], 'rb').read()
-          payload = {'content': base64.b64encode(data).decode(),
-                     'encoding': 'base64'}
+          payload = {'content': base64.b64encode(data).decode(), 'encoding': 'base64'}
           open('/tmp/apk-blob.json', 'w').write(json.dumps(payload))
           PY
           BLOB_SHA=$(gh api -X POST "repos/${{ github.repository }}/git/blobs" \
@@ -184,50 +148,49 @@ jobs:
             echo "APK_BYTES=$APK_BYTES"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # Permanent public download link:
-  # https://github.com/<repo>/releases/download/koorix-v<version>/Koorix-v<version>.apk
-  github-release:
-    name: Publish Koorix APK to GitHub Release
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout (to read versionName)
-        uses: actions/checkout@v4
-
-      - name: Download built APK artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: koorix-debug-apk
-          path: apk
-
-      - name: Create or update GitHub Release with APK
+      - name: Publish verified APK to GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION=$(grep -oP 'versionName "\K[^"]+' android/app/build.gradle | head -n 1)
           TAG="koorix-v$VERSION"
-          APK=$(find apk -name '*.apk' | head -n 1)
+          APK=$(find android/app/build/outputs/apk/koorix/debug -name '*.apk' | head -n 1)
           if [ -z "$VERSION" ] || [ -z "$APK" ]; then
             echo "::error::versionName or APK not found"
             exit 1
           fi
           cp "$APK" "Koorix-v$VERSION.apk"
-          NOTES="Koorix v$VERSION — manga/manhwa translation to all supported languages, with a specialised comic skill and editable story glossary (public edition, debug build, arm64). Create a free account inside the app to start translating; Premium removes the daily limit. Install over the previous Koorix version to keep your account and downloads."
+          NOTES="Koorix v$VERSION — manga/manhwa translation to all supported languages, with a specialised comic skill and editable story glossary (public edition, debug build, arm64). The skill is a rule/glossary layer, not a newly trained model; offline Sorani remains limited. Install over the previous Koorix version to keep your account and downloads."
           if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            gh release upload "$TAG" "Koorix-v$VERSION.apk" --clobber \
-              --repo "${{ github.repository }}"
-            echo "::notice::updated existing release $TAG"
+            gh release upload "$TAG" "Koorix-v$VERSION.apk" --clobber --repo "${{ github.repository }}"
           else
-            gh release create "$TAG" "Koorix-v$VERSION.apk" \
-              --repo "${{ github.repository }}" \
-              --target "${{ github.sha }}" \
-              --title "Koorix v$VERSION" \
-              --notes "$NOTES"
-            echo "::notice::created release $TAG"
+            gh release create "$TAG" "Koorix-v$VERSION.apk" --repo "${{ github.repository }}" \
+              --target "${{ github.sha }}" --title "Koorix v$VERSION" --notes "$NOTES"
           fi
           URL="https://github.com/${{ github.repository }}/releases/download/$TAG/Koorix-v$VERSION.apk"
           echo "::notice::APK_DOWNLOAD_URL=$URL"
           echo "APK_DOWNLOAD_URL=$URL" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Send verified APK to Telegram admin
+        env:
+          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          ADMIN: ${{ secrets.TELEGRAM_ADMIN_ID }}
+        run: |
+          if [ -z "$TOKEN" ] || [ -z "$ADMIN" ]; then
+            echo "::warning::Telegram secrets are missing; download from the GitHub Release."
+            exit 0
+          fi
+          APK=$(find android/app/build/outputs/apk/koorix/debug -name '*.apk' | head -n 1)
+          SIZE=$(stat -c%s "$APK")
+          if [ "$SIZE" -gt 49000000 ]; then
+            echo "::warning::APK is too large for Telegram bot upload; use the GitHub Release."
+            exit 0
+          fi
+          VERSION=$(grep -oP 'versionName "\K[^"]+' android/app/build.gradle | head -n 1)
+          RESP=$(curl -s -F chat_id="$ADMIN" -F caption="💜 Koorix v$VERSION — Manga/Manhwa skill" \
+            -F document=@\"$APK\" "https://api.telegram.org/bot${TOKEN}/sendDocument")
+          if echo "$RESP" | grep -q '"ok":true'; then
+            echo "::notice::APK sent to Telegram admin"
+          else
+            echo "::warning::Telegram APK send did not return ok:true"
+          fi
