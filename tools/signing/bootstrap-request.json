@@ -1,0 +1,8 @@
+{
+  "generation": 2,
+  "application_id": "com.koorix.app",
+  "valid_until": "2126-11-06T00:00:00+00:00",
+  "owner_public_key": "signing/owner-recovery-public.pem",
+  "reason": "Owner explicitly authorized a new durable production signing identity after the original cache-only key was lost. No Preview replacement.",
+  "requested_on": "2026-11-06"
+}

@@ -15,3 +15,10 @@ android/**/build/
 android/local.properties
 *.apk
 *.aab
+
+# Private signing material is NEVER committed; only authenticated ciphertext is tracked.
+.private/
+*.jks
+*.keystore
+*.p12
+*-private.pem

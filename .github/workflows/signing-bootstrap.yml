@@ -1,0 +1,63 @@
+name: Koorix permanent signing bootstrap
+
+on:
+  push:
+    branches: ["arena/**"]
+    # One explicit request only, NOT normal Android or signing helper changes.
+    paths: ["tools/signing/bootstrap-request.json"]
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    name: Create and verify encrypted permanent signing backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install pinned signing tooling
+        run: python3 -m pip install -r tools/signing/requirements.txt --disable-pip-version-check
+      - name: Test cryptographic recovery and fail-closed behavior
+        run: python3 -m unittest discover -s tools/signing -p 'test_*.py' -v
+      - name: Explicit one-time bootstrap (forbidden once a manifest exists)
+        env:
+          KOORIX_SIGNING_WRAP_KEY: ${{ secrets.KOORIX_SIGNING_WRAP_KEY }}
+          TELEGRAM_SIGNING_WRAP: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          umask 077
+          python3 tools/signing/store.py bootstrap \
+            --request tools/signing/bootstrap-request.json --out "$RUNNER_TEMP/signing-bootstrap"
+      - name: Publish ciphertext only for independent recovery verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # NEVER glob this directory: its private/ subfolder must not be published.
+          for NAME in koorix-release-v2.enc.json koorix-release-v2.owner.enc.json koorix-release-v2.json; do
+            FILE="$RUNNER_TEMP/signing-bootstrap/$NAME"
+            python3 - "$FILE" "$RUNNER_TEMP/signing-blob.json" <<'PY'
+          import base64, json, sys
+          with open(sys.argv[2], 'w') as stream:
+              json.dump({'content': base64.b64encode(open(sys.argv[1], 'rb').read()).decode(), 'encoding': 'base64'}, stream)
+          PY
+            BLOB=$(gh api -X POST "repos/${{ github.repository }}/git/blobs" \
+              --input "$RUNNER_TEMP/signing-blob.json" --jq .sha)
+            echo "::notice::SIGNING_ENCRYPTED_FILE=$NAME BLOB_SHA=$BLOB"
+          done
+          python3 - "$RUNNER_TEMP/signing-bootstrap/koorix-release-v2.json" <<'PY'
+          import json, sys
+          manifest = json.load(open(sys.argv[1]))
+          print('::notice::PERMANENT_SIGNER_SHA256=' + manifest['signer_sha256'])
+          print('::notice::PERMANENT_SIGNER_SHA1=' + manifest['signer_sha1'])
+          print('::notice::CERTIFICATE_VALID_UNTIL=' + manifest['valid_until'])
+          PY
+
+      - name: Remove ephemeral plaintext signing files
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/signing-bootstrap/private"
