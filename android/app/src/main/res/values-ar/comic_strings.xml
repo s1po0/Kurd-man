@@ -29,4 +29,5 @@
     <string name="comic_review_repetition">"راجع الكلمات المكررة"</string>
     <string name="comic_review_untranslated">"قد يكون هذا النص غير مترجم"</string>
     <string name="comic_review_glossary">"استُخدمت الترجمة العادية؛ راجع الأسماء/المصطلحات"</string>
+    <string name="comic_preview_notice">"نسخة تجريبية — تعمل بجانب Koorix الأساسي وليست تحديثًا له. البيانات منفصلة. احتفظ بالتطبيق الأصلي وصدّر المشاريع التجريبية المهمة."</string>
 </resources>

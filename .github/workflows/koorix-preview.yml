@@ -1,0 +1,175 @@
+name: Koorix Preview APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["arena/**"]
+    # An explicit preview request, not every normal Android change.
+    paths: ["koorix/preview-release.json"]
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    name: Build separate Koorix test preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      # Empty only for bootstrapping the first separate test application.
+      # Pinned after its first verified build; never the production signer.
+      PREVIEW_SIGNER: ""
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Test comic translation rules
+        run: |
+          set +e
+          bash tools/comic-skill/test.sh > /tmp/preview-tests.log 2>&1
+          code=$?
+          cat /tmp/preview-tests.log
+          if [ $code -ne 0 ]; then
+            tail -n 8 /tmp/preview-tests.log | while IFS= read -r line; do echo "::error::$line"; done
+          else
+            echo "::notice::$(tail -n 1 /tmp/preview-tests.log)"
+          fi
+          exit $code
+
+      - name: Restore separate preview test key
+        uses: actions/cache@v4
+        with:
+          path: ~/koorix-preview-debug.keystore
+          key: koorix-preview-debug-keystore-v1
+
+      - name: Prepare preview key (cannot replace main Koorix)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KOORIX_PREVIEW_KEYSTORE_B64 }}
+        run: |
+          KEYSTORE="$HOME/koorix-preview-debug.keystore"
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            umask 077
+            printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE"
+          fi
+          if [ ! -f "$KEYSTORE" ]; then
+            if [ -n "$PREVIEW_SIGNER" ]; then
+              echo "::error::Preview key unavailable. Restore its secure backup; never silently replace a pinned test key."
+              exit 1
+            fi
+            keytool -genkeypair -keystore "$KEYSTORE" -storetype PKCS12 \
+              -storepass android -keypass android -alias androiddebugkey \
+              -keyalg RSA -keysize 2048 -validity 10950 \
+              -dname "CN=Koorix Test Preview,O=Koorix,C=IQ"
+          fi
+          echo "KURDMAN_DEBUG_KEYSTORE=$KEYSTORE" >> "$GITHUB_ENV"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0"
+
+      - name: Build preview application ID
+        run: |
+          set +e
+          gradle --stacktrace -p android -PkoorixPreview=true assembleKoorixDebug > /tmp/preview-build.log 2>&1
+          code=$?
+          tail -n 60 /tmp/preview-build.log
+          if [ $code -ne 0 ]; then
+            grep -E "error:|FAILED|What went wrong|Execution failed|Caused by:" -A2 -B1 /tmp/preview-build.log \
+              | head -40 | while IFS= read -r line; do echo "::error::$line"; done
+          fi
+          exit $code
+
+      - name: Verify separation, version and signer before any publication
+        run: |
+          APK=$(find android/app/build/outputs/apk/koorix/debug -name '*.apk' | head -n 1)
+          AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort | tail -n 1)
+          "$AAPT" dump badging "$APK" > /tmp/preview-badging.txt
+          python3 <<'PY'
+          import json, re, os
+          request = json.load(open('koorix/preview-release.json'))
+          data = open('/tmp/preview-badging.txt').read()
+          package = re.search(r"package: name='([^']+)'", data).group(1)
+          version = re.search(r"versionName='([^']+)'", data).group(1)
+          label = re.search(r"^application-label:'([^']*)'$", data, re.M).group(1)
+          assert package == request['applicationId'] == 'com.koorix.app.preview', package
+          assert version == request['version'] and 'preview' in version, version
+          assert label == 'Koorix Preview', label
+          assert re.fullmatch(r'koorix-preview-v[0-9.]+-[0-9]+', request['tag'])
+          assert re.fullmatch(r'Koorix-Preview-v[0-9.]+-[0-9]+\.apk', request['file'])
+          with open(os.environ['GITHUB_ENV'], 'a') as env:
+              env.write(f"PREVIEW_TAG={request['tag']}\nPREVIEW_FILE={request['file']}\nPREVIEW_VERSION={version}\n")
+          print(f'::notice::PREVIEW_PACKAGE={package} version={version} label={label}; separate storage, no main-app replacement')
+          PY
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort | tail -n 1)
+          CERTS=$("$APKSIGNER" verify --print-certs "$APK")
+          DIGEST=$(printf '%s\n' "$CERTS" | grep -im1 'SHA-256 digest' | sed 's/.*digest: *//')
+          if [ -n "$PREVIEW_SIGNER" ] && [ "$DIGEST" != "$PREVIEW_SIGNER" ]; then
+            echo "::error::Preview signer mismatch; publication refused"
+            exit 1
+          fi
+          echo "::notice::PREVIEW_SIGNER_SHA256=$DIGEST"
+
+      - name: Publish verified preview blob for chat delivery
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          APK=$(find android/app/build/outputs/apk/koorix/debug -name '*.apk' | head -n 1)
+          APK_BYTES=$(stat -c%s "$APK")
+          APK_SHA256=$(sha256sum "$APK" | cut -d' ' -f1)
+          python3 - "$APK" <<'PY'
+          import base64, json, sys
+          data = open(sys.argv[1], 'rb').read()
+          open('/tmp/preview-blob.json', 'w').write(json.dumps({'content': base64.b64encode(data).decode(), 'encoding': 'base64'}))
+          PY
+          BLOB_SHA=$(gh api -X POST "repos/${{ github.repository }}/git/blobs" --input /tmp/preview-blob.json --jq .sha)
+          echo "::notice::APK_BLOB_SHA=$BLOB_SHA"
+          echo "::notice::APK_FILE_SHA256=$APK_SHA256 bytes=$APK_BYTES"
+
+      - name: Publish clearly labelled prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          APK=$(find android/app/build/outputs/apk/koorix/debug -name '*.apk' | head -n 1)
+          cp "$APK" "$PREVIEW_FILE"
+          NOTES="Koorix $PREVIEW_VERSION — separate test preview of the Manga/Manhwa skill. Installs as com.koorix.app.preview BESIDE the main Koorix; it is NOT an in-place production update. Keep the original app. Accounts are still required and daily limits apply. Projects and downloaded packs are separate; export important preview work. Includes curated Sorani comic idioms/terms, genre selection, editable story glossary and bounded online dialogue context. No NLLB/new model; offline Sorani quality remains limited. Original production signing key recovery is still unresolved."
+          if gh release view "$PREVIEW_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release upload "$PREVIEW_TAG" "$PREVIEW_FILE" --clobber --repo "${{ github.repository }}"
+          else
+            gh release create "$PREVIEW_TAG" "$PREVIEW_FILE" --prerelease \
+              --repo "${{ github.repository }}" --target "${{ github.sha }}" \
+              --title "Koorix $PREVIEW_VERSION — separate test preview" --notes "$NOTES"
+          fi
+          echo "::notice::APK_DOWNLOAD_URL=https://github.com/${{ github.repository }}/releases/download/$PREVIEW_TAG/$PREVIEW_FILE"
+
+      - name: Send preview to Telegram owner
+        env:
+          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          ADMIN: ${{ secrets.TELEGRAM_ADMIN_ID }}
+        run: |
+          if [ -z "$TOKEN" ] || [ -z "$ADMIN" ]; then
+            echo "::warning::Telegram secrets unavailable; preview remains downloadable from its prerelease."
+            exit 0
+          fi
+          APK=$(find android/app/build/outputs/apk/koorix/debug -name '*.apk' | head -n 1)
+          if [ "$(stat -c%s "$APK")" -gt 49000000 ]; then
+            echo "::warning::Preview too large for Telegram; use the prerelease link."
+            exit 0
+          fi
+          RESP=$(curl -s -F chat_id="$ADMIN" \
+            -F caption="💜 Koorix Preview $PREVIEW_VERSION — Manga/Manhwa skill. Separate test app; keep your main Koorix." \
+            -F document=@\"$APK\" "https://api.telegram.org/bot${TOKEN}/sendDocument")
+          if echo "$RESP" | grep -q '"ok":true'; then
+            echo "::notice::Preview APK sent to Telegram admin"
+          else
+            echo "::warning::Telegram preview send did not return ok:true"
+          fi

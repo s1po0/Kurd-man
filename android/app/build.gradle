@@ -2,11 +2,11 @@ plugins {
     id 'com.android.application'
 }
 
-// CI sets KURDMAN_DEBUG_KEYSTORE to a cached debug keystore so every build
-// is signed with the same key and installs over the previous version
-// (keeping the saved token and the downloaded offline model). Local builds
-// leave it unset and fall back to AGP's default debug key.
+// Official CI only distributes APKs with the original pinned certificate.
+// A preview uses its own application ID/key and cannot replace the main app.
+// Local verification builds may still use AGP's disposable debug key.
 def kurdmanDebugKeystore = System.getenv('KURDMAN_DEBUG_KEYSTORE')
+def koorixPreview = project.findProperty('koorixPreview')?.toString() == 'true'
 
 android {
     namespace 'com.kurdman.app'
@@ -18,6 +18,8 @@ android {
         targetSdk 35
         versionCode 28 // KurdMan 1.8.3: edition flavours (personal build unchanged)
         versionName '1.8.3'
+        manifestPlaceholders = [applicationLabel: "@string/app_name"]
+        buildConfigField "boolean", "PREVIEW_BUILD", "false"
         ndk {
             // Most modern phones are arm64; this keeps the ML Kit APK small
             // enough to send through Telegram and GitHub artifacts easily.
@@ -56,6 +58,12 @@ android {
             // Double quotes on purpose: the KurdMan release job greps the
             // first single-quoted versionName in this file.
             versionName "1.3.0"
+            buildConfigField "boolean", "PREVIEW_BUILD", koorixPreview.toString()
+            if (koorixPreview) {
+                applicationIdSuffix ".preview"
+                versionName "1.3.0-preview.1"
+                manifestPlaceholders = [applicationLabel: "Koorix Preview"]
+            }
             buildConfigField "boolean", "PUBLIC_EDITION", "true"
             buildConfigField "boolean", "SHOW_TELEGRAM", "false"
             buildConfigField "boolean", "SHOW_UNLIMITED_OCR", "false"

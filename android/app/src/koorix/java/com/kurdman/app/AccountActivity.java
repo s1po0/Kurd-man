@@ -56,6 +56,11 @@ public class AccountActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_account);
+        findViewById(R.id.accountPreviewNotice).setVisibility(
+                BuildConfig.PREVIEW_BUILD ? View.VISIBLE : View.GONE);
+        if (BuildConfig.PREVIEW_BUILD) {
+            ((TextView) findViewById(R.id.accountBrandTitle)).setText("Koorix Preview");
+        }
 
         // English is LTR; Sorani/Arabic are RTL.
         View root = findViewById(R.id.accountRoot);

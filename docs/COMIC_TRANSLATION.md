@@ -141,3 +141,31 @@ workflow deliberately failed at `Require original APK signer before
 distribution` (`SIGNING_KEY_UNAVAILABLE`). All blob/Release/Telegram steps
 were skipped. This is an unresolved signing/distribution blocker, not a
 successful public 1.3.0 release.
+
+## Separate test preview
+
+A non-destructive preview can be built with:
+
+```sh
+gradle -p android -PkoorixPreview=true assembleKoorixDebug
+```
+
+It is explicitly named **Koorix Preview**, version `1.3.0-preview.1`, package
+`com.koorix.app.preview`. It installs beside, never over, the installed
+production Koorix. Both launch and account screens show the separate-preview
+notice in all three UI languages. Accounts/daily server quotas still apply;
+there is no sign-in or Premium bypass. Files, downloaded packs, preferences
+and sessions are separate. Auth callback schemes follow the application ID
+so the preview cannot intercept production magic links. Email codes remain
+usable without registering the preview's optional callback redirect.
+
+`.github/workflows/koorix-preview.yml` builds only on an explicit request in
+`koorix/preview-release.json`. It verifies the actual APK package, version,
+label and signature before publishing a clearly labelled **prerelease**, chat
+blob and Telegram preview. It never changes the official download website
+or the original-signer production gate. The preview has its own debug key;
+a secure `KOORIX_PREVIEW_KEYSTORE_B64` backup can restore that key. After the
+first bootstrap its fingerprint is pinned and missing/mismatched keys must
+fail closed, not silently break later preview updates. Export important
+preview projects; this test application is not a substitute for recovery
+of the original production signing key.

@@ -8,7 +8,7 @@
         <activity
             android:name=".AccountActivity"
             android:exported="true"
-            android:label="Koorix"
+            android:label="${applicationLabel}"
             android:launchMode="singleTop"
             android:theme="@style/AppTheme">
             <intent-filter android:autoVerify="false">
@@ -18,7 +18,7 @@
                 <data
                     android:host="auth"
                     android:path="/callback"
-                    android:scheme="com.koorix.app" />
+                    android:scheme="${applicationId}" />
             </intent-filter>
         </activity>
     </application>

@@ -29,4 +29,5 @@
     <string name="comic_review_repetition">"Check repeated words"</string>
     <string name="comic_review_untranslated">"This text may be untranslated"</string>
     <string name="comic_review_glossary">"Used normal fallback; check names/terminology"</string>
+    <string name="comic_preview_notice">"Test preview — installs beside the main Koorix, not over it. Data is separate. Keep the original app; export important preview projects."</string>
 </resources>

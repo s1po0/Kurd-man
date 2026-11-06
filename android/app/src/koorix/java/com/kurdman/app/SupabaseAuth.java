@@ -161,7 +161,7 @@ final class SupabaseAuth {
         } catch (JSONException ignored) {
         }
         post(ctx, "/auth/v1/otp?redirect_to="
-                        + "com.koorix.app%3A%2F%2Fauth%2Fcallback",
+                        + android.net.Uri.encode(BuildConfig.APPLICATION_ID + "://auth/callback"),
                 body, false, cb);
     }
 
@@ -184,7 +184,9 @@ final class SupabaseAuth {
      * Returns true when a session was stored.
      */
     static boolean handleAuthDeepLink(Context ctx, android.net.Uri uri) {
-        if (uri == null || uri.getFragment() == null) {
+        if (uri == null || uri.getFragment() == null
+                || !BuildConfig.APPLICATION_ID.equals(uri.getScheme())
+                || !"auth".equals(uri.getHost()) || !"/callback".equals(uri.getPath())) {
             return false;
         }
         String access = null;

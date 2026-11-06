@@ -690,6 +690,8 @@ public class MainActivity extends AppCompatActivity {
         TextView heroSubtitle = findViewById(R.id.heroSubtitle);
         TextView heroVersionChip = findViewById(R.id.heroVersionChip);
         TextView heroTelegramChip = findViewById(R.id.heroTelegramChip);
+        View previewNotice = findViewById(R.id.previewNotice);
+        previewNotice.setVisibility(BuildConfig.PREVIEW_BUILD ? View.VISIBLE : View.GONE);
         if (BuildConfig.PUBLIC_EDITION) {
             // Direction: English LTR, Sorani/Arabic RTL.
             String lang = getResources().getConfiguration()
@@ -701,7 +703,7 @@ public class MainActivity extends AppCompatActivity {
                         : View.LAYOUT_DIRECTION_RTL);
             }
             if (heroTitle != null) {
-                heroTitle.setText("Koorix");
+                heroTitle.setText(BuildConfig.PREVIEW_BUILD ? "Koorix Preview" : "Koorix");
             }
             if (heroSubtitle != null) {
                 updateHeroTagline();
