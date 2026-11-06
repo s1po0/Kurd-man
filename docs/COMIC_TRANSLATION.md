@@ -134,3 +134,10 @@ signing identity requires the owner's explicit migration decision and data
 backup. Do **not** uninstall the current app to try this feature. The website
 continues to link to the existing, correctly signed 1.2.4 until a distributable
 1.3.0 is actually available.
+
+Latest verification: commit `9843e23`, run `42139024790` passed **563**
+production rule/safety assertions and the full Android build. The overall
+workflow deliberately failed at `Require original APK signer before
+distribution` (`SIGNING_KEY_UNAVAILABLE`). All blob/Release/Telegram steps
+were skipped. This is an unresolved signing/distribution blocker, not a
+successful public 1.3.0 release.
