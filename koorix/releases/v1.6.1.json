@@ -1,0 +1,161 @@
+{
+  "version": "1.6.1",
+  "versionCode": 14,
+  "applicationId": "com.koorix.app",
+  "label": "Koorix",
+  "debuggable": false,
+  "sourceCommit": "e4b60d207e4594e71b04b3ffd13b8fa0935c97f7",
+  "buildCommit": "e4b60d207e4594e71b04b3ffd13b8fa0935c97f7",
+  "nativeSourceLastChanged": "2650a6280dd7578941445116840bd7fdd57e2fda",
+  "nativeTreeSha": "fc6d3ef82107f6eabdf9444ed157ea00f12b3a60",
+  "repositoryPublic": true,
+  "releaseId": 437177535,
+  "assetId": 718943783,
+  "publishedAt": "2026-11-06T23:33:52Z",
+  "downloadUrl": "https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.6.1/Koorix-v1.6.1.apk",
+  "blobSha": "5d10d6b680efa600d8b290d1d3159046541c32d3",
+  "apkBytes": 33496665,
+  "apkSha256": "87e17b7d1cf3cf60159baa9e3bf7b524c47eae45e55b239d735b275745844ea6",
+  "zipEntries": 601,
+  "signerSha256": "fb304de3cd357f35cf679e2a46befac08f3e97feef28b1b9a8af7b0891d40340",
+  "signerSha1": "21209f6f75195cfeb1dcaa7b7d74ad09e4954b6b",
+  "signingIdentity": "permanent-v2",
+  "independentLocalVerification": {
+    "file": "Koorix-v1.6.1.apk",
+    "bytes": 33496665,
+    "sha256": "87e17b7d1cf3cf60159baa9e3bf7b524c47eae45e55b239d735b275745844ea6",
+    "zip_entries": 601,
+    "signature": {
+      "scheme": "v2",
+      "rsa_bits": 3072,
+      "certificate_sha256": "fb304de3cd357f35cf679e2a46befac08f3e97feef28b1b9a8af7b0891d40340",
+      "algorithm": "0x103",
+      "content_digest_verified": true
+    },
+    "package": "com.koorix.app",
+    "version": "1.6.1",
+    "version_code": 14,
+    "label": "Koorix",
+    "debuggable": false,
+    "no_login_gate_checked": true,
+    "free_edition_checked": true,
+    "test_harness_and_private_recovery_absent": true
+  },
+  "mergedApkBroadStorageMediaReadPermissionsAbsent": true,
+  "ci": {
+    "runId": 42312330405,
+    "jobId": 128216565017,
+    "status": "success",
+    "cryptoTests": 18,
+    "comicAssertions": 604,
+    "qualityAssertions": 51,
+    "lexiconEntries": 204,
+    "androidJvmExecutions": 136,
+    "sdks": [
+      26,
+      34
+    ],
+    "failures": 0,
+    "skipped": 0,
+    "signerColdRestores": 2,
+    "entitlementBackendInvoked": false,
+    "staticSiteLanguages": 3,
+    "staticSitePreferenceStorageStates": 6,
+    "candidateVerificationRunId": 42311891245
+  },
+  "developerSkill": {
+    "localPythonTests": 55,
+    "ciRunId": 42311891385,
+    "ciStatus": "success",
+    "pythonVersions": [
+      "3.11",
+      "3.14"
+    ],
+    "pythonTestsPerVersion": 55,
+    "javaGlossaryFixtures": 36,
+    "meaningAccuracyBenchmark": false
+  },
+  "features": {
+    "userLoginRemoved": true,
+    "premiumRemoved": true,
+    "dailyAppQuotasRemoved": true,
+    "deviceRegistrationRemoved": true,
+    "noInitialOnlineAllowanceRequired": true,
+    "unifiedAppCapableInputChooser": true,
+    "singleInputButton": true,
+    "separateGalleryAndUnfilteredFiles": false,
+    "photoOnlyPickerUsedForPublicInput": false,
+    "systemChooserAction": "android.intent.action.CHOOSER",
+    "sourceAction": "android.intent.action.GET_CONTENT",
+    "mimeType": "*/*",
+    "mimeWhitelist": false,
+    "pinnedInitialStorageRoot": false,
+    "hardcodedSourcePackage": false,
+    "multiSelectRequested": true,
+    "selectedUriReadAccessOnly": true,
+    "cancelPreservesSelection": true,
+    "editableProjectsPreserved": true,
+    "backupRestorePreserved": true,
+    "stopAndRecoveryPreserved": true,
+    "automaticSkillWithTranslate": true,
+    "targetLanguageChoices": 74,
+    "uiLanguages": [
+      "ckb",
+      "en",
+      "ar"
+    ],
+    "newTranslationModel": false,
+    "nllbAdded": false
+  },
+  "pickerCorrection": {
+    "ownerRejectedSplitGalleryFilesUi": true,
+    "rootCause": "OPEN_DOCUMENT is document-provider selection, not the requested app-capable GET_CONTENT list; the separate photo-picker route was also rejected.",
+    "handlerContractsTested": [
+      "image/*",
+      "application/zip",
+      "*/*"
+    ],
+    "examplesRequireInstalledCompatibleHandlers": [
+      "Samsung Gallery",
+      "MT Manager",
+      "ZArchiver",
+      "My Files"
+    ],
+    "physicalOemAppAcceptance": "unverified; intent matching and full main-button routes tested with Robolectric only",
+    "privateScreenshotsCommitted": false
+  },
+  "preservedSafetyLimits": {
+    "pages": 300,
+    "importMb": 300,
+    "cacheGb": 1,
+    "androidProtectedFoldersNotBypassed": true,
+    "sourceAppsMayImposeSelectionCaps": true,
+    "externalProviderRateLimitsUnchanged": true
+  },
+  "delivery": {
+    "chatFilePresented": true,
+    "telegramApkAcknowledged": true,
+    "publicUnauthenticatedDownloadHead": 302,
+    "releaseAssetDigestMatchesChatFile": true,
+    "completionNotice": "pending"
+  },
+  "historicalData": {
+    "serverRecordsDeleted": false,
+    "localCredentialsDeleted": false,
+    "newRuntimeUsesOldEntitlements": false,
+    "newRuntimeContactsSupabase": false,
+    "backendMutatedByThisTask": false
+  },
+  "hosting": {
+    "status": "not_deployed",
+    "siteSourceUpdatedToUnifiedChooser": true,
+    "previousVercelPagesIntegrationBlockUnchanged": true,
+    "newHostingAttempts": 0
+  },
+  "limitations": {
+    "semanticVisualAccuracyGuarantee": false,
+    "soraniEngine": "unchanged OPUS; meaning quality remains limited",
+    "sourceAppListIsControlledByAndroidAndDeclaredIntentSupport": true,
+    "historicalPreV2SignatureMigrationLimitationUnchanged": true
+  }
+}
