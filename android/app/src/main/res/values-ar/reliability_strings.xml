@@ -51,4 +51,5 @@
     <string name="rel_project_selected">تم اختيار المشروع. يمكنك تعديله في الاستوديو.</string>
     <string name="rel_reuse_story">استخدام أسماء هذه القصة ومصطلحاتها للمهمة التالية</string>
     <string name="rel_story_loaded">تم اختيار أسماء القصة ومصطلحاتها؛ ستُستخدم تلقائيًا عند الترجمة.</string>
+    <string name="rel_partial">اكتملت المعالجة، لكن بقي بعض النص حفاظًا على الرسم أو لعدم اتساع المكان. يمكنك تعديل المشروع في الاستوديو.</string>
 </resources>

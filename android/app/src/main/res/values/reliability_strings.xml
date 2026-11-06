@@ -51,4 +51,5 @@
     <string name="rel_project_selected">پڕۆژەکە هەڵبژێردرا؛ دەتوانیت لە ستۆدیۆ دەستکاری بکەیت.</string>
     <string name="rel_reuse_story">بەکارهێنانی ناو و زاراوەکانی ئەم چیرۆکە بۆ کاری داهاتوو</string>
     <string name="rel_story_loaded">ناو و زاراوەکانی پڕۆژەکە هەڵبژێردران؛ لەگەڵ Translate خۆکار بەکار دێن.</string>
+    <string name="rel_partial">کارەکە تەواو بوو، بەڵام هەندێک دەق بەهۆی سەلامەتی یان جێنەبوونەوە نەگۆڕدراوە. پڕۆژەکە لە ستۆدیۆ دەستکاری دەکرێت.</string>
 </resources>

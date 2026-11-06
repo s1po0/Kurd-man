@@ -21,6 +21,23 @@ final class BitmapIo {
     private BitmapIo() {
     }
 
+    /** UI-only preview. OCR and exports continue to decode the full bounded source. */
+    static Bitmap decodePreview(File file) {
+        if(file==null||!file.isFile())return null;
+        BitmapFactory.Options bounds=new BitmapFactory.Options();bounds.inJustDecodeBounds=true;
+        BitmapFactory.decodeFile(file.getAbsolutePath(),bounds);
+        if(bounds.outWidth<=0||bounds.outHeight<=0)return null;
+        BitmapFactory.Options options=new BitmapFactory.Options();
+        options.inSampleSize=previewSampleSize(bounds.outWidth,bounds.outHeight);
+        options.inPreferredConfig=Bitmap.Config.ARGB_8888;
+        return toSoftwareBitmap(BitmapFactory.decodeFile(file.getAbsolutePath(),options));
+    }
+    static int previewSampleSize(int width,int height) {
+        int sample=1;
+        while((long)Math.max(1,width)*Math.max(1,height)/((long)sample*sample)>1_600_000L&&sample<256)sample*=2;
+        return sample;
+    }
+
     static Bitmap decodeFile(File file) {
         if (file == null || !file.exists()) {
             return null;

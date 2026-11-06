@@ -10,7 +10,7 @@ checks=0
 
 def call(path,body=None,token=None,method='POST'):
     headers={'apikey':PUBLIC,'Content-Type':'application/json'}
-    if token:headers['Authorization']='Bearer '+token
+    headers['Authorization']='Bearer '+(token or PUBLIC)
     raw=None if body is None else json.dumps(body).encode()
     req=urllib.request.Request(BASE+path,data=raw,headers=headers,method=method)
     try:

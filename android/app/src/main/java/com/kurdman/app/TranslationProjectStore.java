@@ -25,7 +25,7 @@ final class TranslationProjectStore {
     static synchronized File projectDir(Context context) {
         String id = context.getApplicationContext().getSharedPreferences(PREFS, 0)
                 .getString(CURRENT, "current");
-        return new File(root(context), validId(id) ? id : "current");
+        return new File(root(context), id!=null&&id.isEmpty()?".none":validId(id)?id:"current");
     }
     static synchronized TranslationProject createNew(Context context, boolean cbz,
             String displayName, String baseName, String sourceLanguage) throws IOException {
@@ -108,7 +108,7 @@ final class TranslationProjectStore {
         File dir = projectDir(context);
         current = null;
         deleteRecursive(dir);
-        context.getApplicationContext().getSharedPreferences(PREFS, 0).edit().remove(CURRENT).commit();
+        context.getApplicationContext().getSharedPreferences(PREFS, 0).edit().putString(CURRENT, "").commit();
     }
     static synchronized void delete(Context context, TranslationProject project) throws IOException {
         if (JobRuntime.isRunning() && !JobRuntime.isJobThread()) throw new IOException("A job is running");

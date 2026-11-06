@@ -93,7 +93,7 @@ jobs:
                       detail=(issue.get('message','') or (issue.text or '').split('\n')[0])[:400]
                       print('::error::In-app skill UI contract failed: '+test.get('name','test')+' '+detail.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
           print(f'::notice::In-app skill Android/JVM tests: {total} run, {failed} failed, {skipped} skipped; not device/semantic proof')
-          if total < 102 or failed or skipped:
+          if total < 112 or failed or skipped:
               print('::error::In-app skill tests were missing, failed or skipped; production distribution is blocked')
               raise SystemExit(1)
           PYTEST
@@ -103,6 +103,9 @@ jobs:
             grep -E 'error:|FAILED|What went wrong|Execution failed|Caused by:' /tmp/koorix-ui-tests.log | head -n 7 | while IFS= read -r line; do echo "::error::$line"; done
           fi
           exit $code
+
+      - name: Verify deployed no-login service, real quota enforcement and disposable-device cleanup
+        run: python3 tools/backend/live_smoke.py
 
       # No signing cache, no debug fallback and no production key generation.
       # The owner-authorized v2 key is restored from authenticated durable storage.

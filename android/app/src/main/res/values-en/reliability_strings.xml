@@ -51,4 +51,5 @@
     <string name="rel_project_selected">Project selected. You can edit it in the studio.</string>
     <string name="rel_reuse_story">Use this story’s names and terms for the next job</string>
     <string name="rel_story_loaded">Story names and terms selected; normal Translate uses them automatically.</string>
+    <string name="rel_partial">Processing finished, but some text was retained for safety or did not fit. You can edit the saved project in the studio.</string>
 </resources>

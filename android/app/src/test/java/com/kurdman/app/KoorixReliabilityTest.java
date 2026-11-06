@@ -107,4 +107,10 @@ public class KoorixReliabilityTest {
         TranslationProjectStore.delete(app,a);assertFalse(a.projectDir.exists());assertTrue(b.projectDir.exists());
         assertSame(b,TranslationProjectStore.load(app));assertEquals(1,TranslationProjectStore.list(app).size());
     }
+    @Test public void deletingCurrentDoesNotSilentlySelectTheLegacyBook() throws Exception {
+        TranslationProject legacy=sample("legacy");File original=legacy.projectDir;
+        File currentDir=new File(TranslationProjectStore.root(app),"current");assertTrue(original.renameTo(currentDir));legacy.projectDir=currentDir;TranslationProjectStore.activate(app,legacy);
+        TranslationProject fresh=sample("new");TranslationProjectStore.delete(app,fresh);
+        assertNull(TranslationProjectStore.load(app));assertTrue(currentDir.isDirectory());assertEquals(1,TranslationProjectStore.list(app).size());
+    }
 }

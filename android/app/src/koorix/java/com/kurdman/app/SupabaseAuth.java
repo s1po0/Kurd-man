@@ -28,7 +28,7 @@ final class SupabaseAuth {
     static void perform(Context context,Work work,Callback cb) {
         Context app=context.getApplicationContext();
         IO.execute(()->{JSONObject value=null;String error=null;
-            try {value=work.run(app);}catch(Exception failure){error=failure instanceof NetworkFailure?"network":"device_unavailable";}
+            try {value=work.run(app);}catch(Exception failure){error=failure instanceof NetworkFailure || failure instanceof ApiFailure && (((ApiFailure)failure).status>=500 || ((ApiFailure)failure).status==429)?"network":"device_unavailable";}
             final JSONObject result=value;final String reason=error;
             MAIN.post(()->{if(cb!=null)cb.onResult(result,reason);});
         });
@@ -75,10 +75,12 @@ final class SupabaseAuth {
         String access=state.optString("access_token","");
         if(!access.isEmpty()&&state.optLong("expires_at_ms",0)>System.currentTimeMillis()+60000){
             if(state.optString("uid","").isEmpty()) {
-                JSONObject user=request("/auth/v1/user",new JSONObject(),access,"GET");
-                synchronized(STATE_LOCK){state=store(ctx).read();state.put("uid",user.getString("id"));state.put("validated",true);store(ctx).write(state);}
+                try {
+                    JSONObject user=request("/auth/v1/user",new JSONObject(),access,"GET");
+                    synchronized(STATE_LOCK){state=store(ctx).read();state.put("uid",user.getString("id"));state.put("validated",true);store(ctx).write(state);}
+                } catch(ApiFailure rejected) { if(rejected.status!=401&&rejected.status!=403)throw rejected;access=""; }
             }
-            return access;
+            if(!access.isEmpty())return access;
         }
         String refresh=state.optString("refresh_token","");
         if(!refresh.isEmpty())try {
@@ -93,7 +95,13 @@ final class SupabaseAuth {
         JSONObject created=request("/functions/v1/koorix-device-session",device,null,"POST");saveSession(ctx,created);return created.getString("access_token");
     }
     private static JSONObject rpc(Context ctx,String name,JSONObject params) throws Exception {
-        String token=session(ctx);return request("/rest/v1/rpc/"+name,params,token,"POST");
+        String token=session(ctx);
+        try{return request("/rest/v1/rpc/"+name,params,token,"POST");}
+        catch(ApiFailure failure){
+            if(failure.status!=401)throw failure;
+            synchronized(STATE_LOCK){JSONObject state=store(ctx).read();state.put("expires_at_ms",0);store(ctx).write(state);}
+            return request("/rest/v1/rpc/"+name,params,session(ctx),"POST");
+        }
     }
     private static void sync(Context ctx) throws Exception {
         List<String> ids=new ArrayList<>();

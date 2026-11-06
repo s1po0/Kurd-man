@@ -39,6 +39,7 @@ public final class AccountGate {
         if(project.offlineMode){try{callback.ready(SupabaseAuth.localConsume(context,pages,project.quotaJobId),"offline");}catch(Exception unavailable){callback.ready(false,"device");}return;}
         SupabaseAuth.authorizeProject(context,project,(result,error)->callback.ready(result!=null&&result.optBoolean("allowed",false),result==null?error:"limit"));
     }
+    public static void prepareOfflineAllowance(Context context) { SupabaseAuth.fetchStatus(context,null); }
     public static String identity(Context context){return SupabaseAuth.identity(context);}
     public static boolean isJobApproved(Context context,TranslationProject p){return SupabaseAuth.approved(context,p);}
     public static void jobFinished(Context context,TranslationProject p){SupabaseAuth.completed(context,p);}

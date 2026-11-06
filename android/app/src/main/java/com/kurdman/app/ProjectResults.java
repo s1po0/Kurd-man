@@ -21,7 +21,14 @@ final class ProjectResults {
     static File text(TranslationProject p){return new File(directory(p),stem(p)+".txt");}
     static String pairs(TranslationProject p){StringBuilder out=new StringBuilder();for(int i=0;i<p.pages.size();i++){if(p.pages.size()>1)out.append("=== ").append(i+1).append(" / ").append(p.pages.size()).append(" ===\n");for(Segment s:p.pages.get(i).segments)out.append(s.text).append("\n→ ").append(s.ckb==null?"":s.ckb).append("\n\n");}return out.toString().trim();}
     static String binding(TranslationProject p) throws Exception {
-        org.json.JSONObject json=p.toJson();for(String key:new String[]{"job","updatedAt","completed","displayName","baseName"})json.remove(key);
+        org.json.JSONObject json=p.toJson();for(String key:new String[]{"job","updatedAt","completed","displayName","baseName","comicSkill"})json.remove(key);
+        org.json.JSONArray pages=json.getJSONArray("pages");
+        for(int i=0;i<pages.length();i++){
+            org.json.JSONObject page=pages.getJSONObject(i);
+            for(String key:new String[]{"ocrComplete","translationComplete","renderComplete"})page.remove(key);
+            org.json.JSONArray segments=page.getJSONArray("segments");
+            for(int j=0;j<segments.length();j++)for(String key:new String[]{"readerReview","readerReviewBinding","translationWarnings","translationMethod","ocrConfidence","originalCkb"})segments.getJSONObject(j).remove(key);
+        }
         MessageDigest digest=MessageDigest.getInstance("SHA-256");byte[] bytes=digest.digest(json.toString().getBytes(StandardCharsets.UTF_8));StringBuilder out=new StringBuilder();for(byte b:bytes)out.append(String.format(Locale.ROOT,"%02x",b&255));return out.toString();
     }
     static void publish(Context context,TranslationProject p) throws Exception {
@@ -38,7 +45,7 @@ final class ProjectResults {
         File text=text(p);try(OutputStream out=new FileOutputStream(text)){out.write(pairs(p).getBytes(StandardCharsets.UTF_8));}
         List<File> exports=new ArrayList<>();exports.add(result);exports.add(text);
         if(p.createPdf){File pdf=new File(dir,stem(p)+".pdf");PdfExporter.writeImageFiles(pages,pdf,(done,total,pdfPages)->JobRuntime.throwIfStopped());exports.add(pdf);}
-        if(p.imageBatch){for(int i=0;i<pages.size();i++){File page=new File(dir,stem(p)+String.format(Locale.ROOT,"-%04d.jpg",i+1));copy(pages.get(i),page);exports.add(page);}}
+        if(p.imageBatch){for(int i=0;i<pages.size();i++){File page=new File(dir,stem(p)+String.format(Locale.ROOT,"-%04d",i+1)+SavedJobInput.extension(pages.get(i).getName()));copy(pages.get(i),page);exports.add(page);}}
         for(File file:exports){JobRuntime.throwIfStopped();copyToLibrary(context,file);savePublic(context,file,false);}
         if(!p.cbz)savePublic(context,result,true);
         p.exportsComplete=true;p.outputBinding=binding(p);p.save();

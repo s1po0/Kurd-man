@@ -592,7 +592,7 @@ public class MainActivity extends AppCompatActivity {
                 "application/x-comicbook",
                 "application/octet-stream"
         }));
-        downloadOfflineButton.setOnClickListener(v -> downloadOfflineModel());
+        downloadOfflineButton.setOnClickListener(v -> { if(BuildConfig.PUBLIC_EDITION)AccountGate.prepareOfflineAllowance(this); downloadOfflineModel(); });
         deleteOfflineButton.setOnClickListener(v -> confirmDeleteOfflineModel());
         downloadPaddleOcrButton.setOnClickListener(v -> downloadPaddleOcrPack());
         deletePaddleOcrButton.setOnClickListener(v -> confirmDeletePaddleOcrPack());
@@ -758,7 +758,7 @@ public class MainActivity extends AppCompatActivity {
         if (isFinishing() || isDestroyed() || statusText == null) return;
         currentBusy=running; progress.setVisibility(running?View.VISIBLE:View.GONE);
         statusText.setText(message); updateButtons(running); refreshKeepAliveUi(); updateKeepScreenFlag();
-        if (!running && project != null && project.completed && project.exportsComplete) showSavedProjectResult(project);
+        if (!running && project != null && project.completed && project.exportsComplete && project.projectDir.equals(TranslationProjectStore.projectDir(this))) showSavedProjectResult(project);
         if (!running) refreshDownloadsList();
     };
     @Override protected void onStart() { super.onStart(); if(BuildConfig.PUBLIC_EDITION)SavedJobCoordinator.addListener(savedJobListener); }
@@ -776,6 +776,10 @@ public class MainActivity extends AppCompatActivity {
         reloadGlobalTextStyleFromPrefs();
         refreshComicSkillUi();
         refreshKeepAliveUi();
+        if (BuildConfig.PUBLIC_EDITION) {
+            currentBusy=JobRuntime.isRunning();
+            progress.setVisibility(currentBusy?View.VISIBLE:View.GONE);
+        }
         if (JobRuntime.isRunning()) {
             currentBusy = true;
             progress.setVisibility(View.VISIBLE);
@@ -2914,7 +2918,7 @@ public class MainActivity extends AppCompatActivity {
             String story=data.getStringExtra(ProjectLibraryActivity.EXTRA_STORY);
             if(story!=null){try{
                 TranslationProject p=TranslationProjectStore.load(this,story);
-                if(p!=null){sourceSpinner.setSelection(java.util.Arrays.asList(SOURCE_CODES).indexOf(p.sourceLanguage));targetSpinner.setSelection(java.util.Arrays.asList(TARGET_CODES).indexOf(p.targetLanguage));comicControls.useStory(p.sourceLanguage,p.targetLanguage,p.comicConfig);showMainPage(PAGE_TRANSLATE);setStatus(getString(R.string.rel_story_loaded));}
+                if(p!=null && TranslationLanguages.source(p.sourceLanguage) && TranslationLanguages.target(p.targetLanguage)){sourceSpinner.setSelection(java.util.Arrays.asList(SOURCE_CODES).indexOf(p.sourceLanguage));targetSpinner.setSelection(java.util.Arrays.asList(TARGET_CODES).indexOf(p.targetLanguage));comicControls.useStory(p.sourceLanguage,p.targetLanguage,p.comicConfig);showMainPage(PAGE_TRANSLATE);setStatus(getString(R.string.rel_story_loaded));}
             }catch(Exception failure){setStatus(getString(R.string.rel_failed));}return;}
             String resume=data.getStringExtra(ProjectLibraryActivity.EXTRA_RESUME);
             if(resume!=null){try{TranslationProject p=TranslationProjectStore.load(this,resume);
@@ -2930,14 +2934,16 @@ public class MainActivity extends AppCompatActivity {
         updateButtons(currentBusy);
     }
 
+    private long shownProjectUpdatedAt;
     private void showSavedProjectResult(TranslationProject project) {
         File product=ProjectResults.result(project);
         if(!product.isFile())return;
+        if(resultFile!=null&&resultFile.equals(product)&&shownProjectUpdatedAt==project.updatedAt)return;
         try{if(!project.outputBinding.equals(ProjectResults.binding(project)))return;}catch(Exception invalid){return;}
-        if(resultFile!=null&&resultFile.equals(product))return;
+        shownProjectUpdatedAt=project.updatedAt;
         resultFile=product;resultTextFile=ProjectResults.text(project);pairsText=ProjectResults.pairs(project);resultText.setText(pairsText);
         Bitmap thumbnail=null;
-        for(int i=0;i<project.pages.size()&&thumbnail==null;i++)thumbnail=BitmapIo.decodeFile(SavedJobPipeline.renderedPage(project,i));
+        for(int i=0;i<project.pages.size()&&thumbnail==null;i++)thumbnail=BitmapIo.decodePreview(SavedJobPipeline.renderedPage(project,i));
         if(thumbnail!=null){Bitmap oldResult=resultBitmap,oldSource=originalBitmap;resultBitmap=thumbnail;previewImage.setImageBitmap(thumbnail);
             if(selectedImageFile!=null&&selectedImageFile.isFile())originalBitmap=null;
             if(oldResult!=null&&oldResult!=thumbnail&&oldResult!=originalBitmap&&!oldResult.isRecycled())oldResult.recycle();
@@ -4713,12 +4719,12 @@ public class MainActivity extends AppCompatActivity {
                     MediaStore.MediaColumns.RELATIVE_PATH
             };
             String selection = MediaStore.MediaColumns.DISPLAY_NAME + "=?"
-                    + " AND " + MediaStore.MediaColumns.SIZE + "=?";
+                    + " AND " + MediaStore.MediaColumns.SIZE + "=? AND owner_package_name=?";
             cursor = getContentResolver().query(
                     collection,
                     projection,
                     selection,
-                    new String[]{displayName, Long.toString(size)},
+                    new String[]{displayName, Long.toString(size), getPackageName()},
                     null);
             if (cursor != null) {
                 int idIndex = cursor.getColumnIndexOrThrow(
@@ -4727,8 +4733,8 @@ public class MainActivity extends AppCompatActivity {
                         MediaStore.MediaColumns.RELATIVE_PATH);
                 while (cursor.moveToNext()) {
                     String relative = cursor.getString(pathIndex);
-                    if (relative != null && relative.replace('\\', '/')
-                            .contains(expectedRelativePart)) {
+                    if (relative != null && (relative.replace('\\', '/').contains(expectedRelativePart)
+                            || BuildConfig.PUBLIC_EDITION && relative.replace('\\', '/').contains(expectedRelativePart.replace("/KurdMan", "/Koorix")))) {
                         targets.add(ContentUris.withAppendedId(
                                 collection, cursor.getLong(idIndex)));
                     }
