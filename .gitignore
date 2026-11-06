@@ -22,3 +22,6 @@ android/local.properties
 *.keystore
 *.p12
 *-private.pem
+*.pfx
+*.pkcs12
+Koorix-Signing-Recovery-*.zip

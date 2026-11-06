@@ -19,6 +19,7 @@
   .hero h1{font-size:clamp(28px,5vw,46px);line-height:1.25;margin:0 0 14px}
   .hero h1 span{background:linear-gradient(90deg,var(--violet2),#f0abfc);-webkit-background-clip:text;background-clip:text;color:transparent}
   .hero p{color:var(--muted);font-size:18px;line-height:1.8;max-width:720px;margin:0 auto}
+  .hero .migration{font-size:14px;line-height:1.8;margin:22px auto 0;padding:14px 18px;border:1px solid #68426d;border-radius:14px;background:#21152e;color:#ead0ef}
   .cta{margin-top:28px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
   .btn{display:inline-block;text-decoration:none;padding:14px 26px;border-radius:14px;font-weight:800;font-size:16px}
   .btn.main{background:linear-gradient(135deg,var(--violet),var(--violet2));color:#fff;box-shadow:0 10px 30px rgba(124,58,237,.5)}
@@ -49,9 +50,10 @@
     <h1 id="t-h1">باشترین بەرنامە بۆ وەرگێڕانی مانھوا بۆ <span>هەموو زمانەکان</span></h1>
     <p id="t-sub"></p>
     <div class="cta">
-      <a class="btn main" id="t-download" href="https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.2.4/Koorix-v1.2.4.apk">⬇ دابەزاندنی Android</a>
+      <a class="btn main" id="t-download" href="https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.3.1/Koorix-v1.3.1.apk">⬇ دابەزاندنی Android</a>
       <a class="btn ghost" id="t-privacy" href="/privacy.html">تایبەتمەندی</a>
     </div>
+    <p class="migration" id="t-migration" role="note">1.3.1 کلیلی نوێی هەیە. تەنها بۆ وەشانی کۆن: پێش سڕینەوە، ئەنجامەکانت دەربهێنە؛ سڕینەوە داتای ناوخۆ و پاکێجەکانیش دەسڕێتەوە. نوێکارییەکانی دواتر هەمان کلیل بەکاردەهێنن.</p>
   </section>
 
   <section class="grid" id="t-features"></section>
@@ -72,14 +74,16 @@
 const T = {
   ckb:{dir:'rtl',h1:'باشترین بەرنامە بۆ وەرگێڕانی مانھوا بۆ <span>هەموو زمانەکان</span>',
     sub:'وێنەی مانھوا یان تەواوی بەشی CBZ بکە بە کوردی سۆرانی، عەرەبی، ئینگلیزی و زیاتر لە 70 زمان — ئۆنلاین بە خێرایی، یان بە تەواوی ئۆفلاین لەناو مۆبایلەکەتدا بە پاکێجی زمانی بچووک، بێ هیچ مۆدێلێکی گەورە.',
-    download:'⬇ دابەزاندنی Android',privacy:'تایبەتمەندی',
+    download:'⬇ دابەزاندنی Koorix 1.3.1',privacy:'تایبەتمەندی',
+    migration:'کلیلی نوێی 1.3.1 تەنها یەکجار لەگەڵ وەشانی پێشوو ناکۆکە: پێش سڕینەوەی ئەپی کۆن، ئەنجامە گرنگەکانت دەربهێنە؛ سڕینەوە پڕۆژەی ناوخۆ، ڕێکخستن و پاکێجەکانیش دەسڕێتەوە. گواستنەوەی خۆکار نییە. نوێکارییەکانی دواتر لەسەر 1.3.1 بە هەمان کلیل دادەمەزرێن. لینکی GitHub پێویستی بە مۆڵەتی ڕیپۆکە هەیە.',
     feats:[
+      ['📚 دۆخی Manga / Manhwa','جۆری چیرۆک و فەرهەنگی ناو/زاراوە ڕێکبخە؛ دیالۆگی دراوسێ تەنها لە ئۆنلاین پەیوەندی پێدەدرێت. یاسا و فەرهەنگن، نە مۆدێلێکی نوێ.'],
       ['🌍 زیاتر لە 70 زمان','لە ئینگلیزی، کۆری، ژاپۆنی و چینییەوە بۆ کوردی، عەرەبی، ئینگلیزی، فارسی، تورکی و دەیان زمانی تر وەردەگێڕێت.'],
-      ['📴 ئۆفلاین بێ ئینتەرنێت','بۆ هەر زمانێک پاکێجێکی بچووکی 30 MB یەکجار دادەبەزێت؛ دواتر وەرگێڕان لەناو مۆبایلەکەتدا و بێ ئینتەرنێت دەبێت.'],
+      ['📴 ئۆفلاین بێ ئینتەرنێت','سۆرانی: پاکێجی OPUS-MT نزیکەی 143 MB؛ زمانەکانی تر: پاکێجی ML Kit نزیکەی 30 MB. یەکجار دایانبەزێنە؛ دواتر بێ ئینتەرنێت بەکاریان بهێنە. کوالێتی سۆرانی سنووردارە.'],
       ['🎨 ستۆدیۆی دەق','دوای وەرگێڕان هەر دەقێک بجوڵێنە، قەبارە و فۆنت و ڕەنگی بگۆڕە، بیسووڕێنە — پاشان وەک وێنە، CBZ یان PDF دەریبکە.'],
       ['🧼 سڕینەوەی خاوێن','دەقی ڕەسەن بە خاوێنی دەسڕدرێتەوە و وەرگێڕانەکە لەناو هەڵۆکەکە خۆیدا دادەنرێت، بێ چوارگۆشەی سپی.'],
       ['🔎 خوێندنەوەی ورد (OCR)','خوێندنەوەی چەند جار + PP-OCR بۆ وشە قورسەکان و فۆنتە سەرنجڕاکێشەکان.'],
-      ['📱 چوونەژوورەوەی خێرا','بە Google، ئیمەیڵ بە کۆد، یان ژمارەی مۆبایل بە SMS — بێ وشەی نهێنی.']
+      ['📱 چوونەژوورەوەی خێرا','بە Google یان کۆدی ئیمەیڵ — بێ وشەی نهێنی و بێ ژمارەی مۆبایل.']
     ],
     premHead:'💎 Premium — وەرگێڕانی بێسنوور',
     prem:'بەخۆڕایی ڕۆژانە چەند بەشێک وەردەگێڕیت. بە Premium هەموو سنوورەکان لادەبرێن. کۆدی چالاککردن لەناو ئەپەکەدا دەخرێتە ژوورەوە.',
@@ -87,14 +91,16 @@ const T = {
     foot:'Koorix — دروستکراوە بە خۆشەویستی بۆ خوێنەرانی مانھوا'},
   ar:{dir:'rtl',h1:'أفضل تطبيق لترجمة المانهوا إلى <span>جميع اللغات</span>',
     sub:'حوّل صفحات المانهوا أو فصول CBZ كاملة إلى العربية أو الكردية السورانية أو الإنجليزية وأكثر من 70 لغة — بسرعة عبر الإنترنت، أو دون اتصال بالكامل على هاتفك بحزم لغة صغيرة، دون أي نموذج ضخم.',
-    download:'⬇ تنزيل Android',privacy:'الخصوصية',
+    download:'⬇ تنزيل Koorix 1.3.1',privacy:'الخصوصية',
+    migration:'يستخدم 1.3.1 مفتاحًا دائمًا جديدًا: الانتقال مرة واحدة من التطبيق القديم يتطلب تصدير النتائج المهمة قبل إلغاء تثبيته. إلغاء التثبيت يحذف المشاريع الخاصة والإعدادات والحزم؛ لا يوجد نقل تلقائي. التحديثات التالية تثبّت فوق 1.3.1 بالمفتاح نفسه. رابط GitHub يتطلب صلاحية الوصول إلى المستودع.',
     feats:[
+      ['📚 وضع Manga / Manhwa','اختر نوع القصة واضبط أسماء الشخصيات والمصطلحات. سياق الفقاعات المتجاورة متاح عبر الإنترنت فقط. قواعد ومسرد، وليس نموذجًا جديدًا.'],
       ['🌍 أكثر من 70 لغة','يترجم من الإنجليزية والكورية واليابانية والصينية إلى العربية والكردية والإنجليزية والفارسية والتركية وعشرات اللغات الأخرى.'],
-      ['📴 دون اتصال بالإنترنت','حزمة صغيرة بحجم 30 MB لكل لغة تُنزَّل مرة واحدة؛ وبعدها تكون الترجمة على هاتفك بلا إنترنت.'],
+      ['📴 دون اتصال بالإنترنت','السورانية: حزمة OPUS-MT بحجم نحو 143 MB؛ اللغات الأخرى: ML Kit بنحو 30 MB. نزّلها مرة واحدة ثم استخدمها دون اتصال. جودة السورانية محدودة.'],
       ['🎨 استوديو النص','بعد الترجمة حرّك أي نص وغيّر حجمه وخطه ولونه ودوّره — ثم صدّره كصورة أو CBZ أو PDF.'],
       ['🧼 مسح نظيف','يُمسح النص الأصلي بنظافة وتوضع الترجمة داخل الفقاعة نفسها، دون أي مستطيل أبيض.'],
       ['🔎 قراءة دقيقة (OCR)','قراءة بعدة تمريرات + PP-OCR للكلمات الصعبة والخطوط المزخرفة.'],
-      ['📱 تسجيل دخول سريع','باستخدام Google أو البريد برمز أو رقم الهاتف عبر SMS — دون كلمة مرور.']
+      ['📱 تسجيل دخول سريع','باستخدام Google أو رمز البريد الإلكتروني — دون كلمة مرور أو رقم هاتف.']
     ],
     premHead:'💎 Premium — ترجمة غير محدودة',
     prem:'مجانًا تترجم عدة فصول كل يوم. مع Premium تُرفع كل الحدود. يُدخَل رمز التفعيل داخل التطبيق.',
@@ -102,14 +108,16 @@ const T = {
     foot:'Koorix — صُنع بحب لقارئي المانهوا'},
   en:{dir:'ltr',h1:'The best app for translating manhwa into <span>every language</span>',
     sub:'Turn manhwa pages or whole CBZ chapters into English, Arabic, Kurdish Sorani and 70+ more languages — fast online, or fully offline on your phone with tiny language packs and no giant AI model.',
-    download:'⬇ Download for Android',privacy:'Privacy',
+    download:'⬇ Download Koorix 1.3.1',privacy:'Privacy',
+    migration:'1.3.1 uses a new permanent key. One-time migration from old-key Koorix: export needed results before uninstalling the old app. Uninstall deletes private projects, settings and packs; there is no automatic migration. Future updates install over 1.3.1 with the same key. The GitHub link requires repository access.',
     feats:[
+      ['📚 Manga / Manhwa mode','Choose a genre and edit character names and terminology. Neighbouring-bubble context is online only. A rule-and-glossary layer, not a new model.'],
       ['🌍 70+ languages','Translates from English, Korean, Japanese and Chinese into English, Arabic, Kurdish, Persian, Turkish and dozens more.'],
-      ['📴 Fully offline','A small 30 MB pack per language downloads once; after that, translation happens on your phone with no internet.'],
+      ['📴 Fully offline','Sorani: an OPUS-MT pack around 143 MB; other languages: ML Kit packs around 30 MB. Download once, then translate offline. Sorani quality remains limited.'],
       ['🎨 Text Studio','After translating, move any text, change its size, font and colour, rotate it — then export as image, CBZ or PDF.'],
       ['🧼 Clean erase','The original text is erased cleanly and the translation is typeset inside the original balloon — no white boxes.'],
       ['🔎 Accurate OCR','Multi-pass reading + PP-OCR for hard words and fancy fonts.'],
-      ['📱 Fast sign-in','Google, email with a code, or phone number by SMS — no passwords.']
+      ['📱 Fast sign-in','Google or an email code — no passwords and no phone-number section.']
     ],
     premHead:'💎 Premium — unlimited translation',
     prem:'Free users translate a few chapters every day. Premium removes all limits. Activation codes are redeemed inside the app.',
@@ -122,6 +130,7 @@ function apply(l){
   document.documentElement.lang=l; document.documentElement.dir=t.dir;
   $('t-h1').innerHTML=t.h1; $('t-sub').textContent=t.sub;
   $('t-download').textContent=t.download; $('t-privacy').textContent=t.privacy;
+  $('t-migration').textContent=t.migration;
   $('t-features').innerHTML=t.feats.map(f=>`<div class="card"><h3>${f[0]}</h3><p>${f[1]}</p></div>`).join('');
   $('t-premium-h').textContent=t.premHead; $('t-premium').textContent=t.prem;
   $('t-plans').innerHTML=t.plans.map(p=>`<div class="plan">${p}</div>`).join('');

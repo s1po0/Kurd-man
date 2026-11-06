@@ -86,3 +86,16 @@ ciphertext/public-metadata blobs, never a `private/` directory or plaintext ZIP.
 Backups can be deleted, accounts can be lost, and secrets can be rotated; no
 system can promise literally forever or zero future issues. Independent verified
 copies plus fail-closed certificate pinning avoid the previous cache-loss failure.
+
+## Distribution continuity
+
+The permanent release tag retains the encrypted key and public pins even if the
+working branch is later removed. This repository is private: GitHub release URLs
+are stable but require repository access. Chat/Telegram APK files are provided
+separately; no repo-visibility or public-sharing change is implied.
+
+If the owner later enables Google Play App Signing, keep the same **app-signing**
+identity for compatibility with existing v2 installs (do not silently choose a
+new distribution key). A Play upload key is a different role. Google Android
+OAuth clients must use the current release certificate SHA-1 from the manifest,
+not the pre-v2 debug certificate. No Cloud/Play configuration is claimed here.

@@ -1,0 +1,53 @@
+{
+  "android_and_signing_trees_identical_to_tag": true,
+  "application_id": "com.koorix.app",
+  "blob_sha": "2994616f4a2b6676152fe781ce3cc903159832c1",
+  "build_type": "release",
+  "bytes": 33583399,
+  "certificate_sha1": "21209f6f75195cfeb1dcaa7b7d74ad09e4954b6b",
+  "certificate_sha256": "fb304de3cd357f35cf679e2a46befac08f3e97feef28b1b9a8af7b0891d40340",
+  "certificate_valid_until": "2126-11-06T00:00:00+00:00",
+  "debuggable": false,
+  "delivery": {
+    "chat_file_presented": true,
+    "github_regular_release": true,
+    "prerelease": false,
+    "telegram_acknowledged": true
+  },
+  "download_url": "https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.3.1/Koorix-v1.3.1.apk",
+  "file": "Koorix-v1.3.1.apk",
+  "format": 1,
+  "github_repository_access_required": true,
+  "label": "Koorix",
+  "migration": {
+    "automatic_data_migration": false,
+    "export_before_legacy_uninstall": true,
+    "future_updates_must_reuse_v2_signer": true,
+    "legacy_in_place_update_possible": false,
+    "old_certificate_sha256": "48c50cf5a99fcde5bbff27f586d520095e10276b4c705236e708ca261c1cca35",
+    "uninstall_deletes_private_projects_settings_packs": true
+  },
+  "preview": false,
+  "previous_successful_same_signer_ci_run": "42146159673",
+  "private_recovery_record": "signing/recovery-verification.json",
+  "release_tag_commit": "8bba478f2db3762eb7810d599cc94df507f66bc9",
+  "sha256": "4d05d6a6ef9e21bc0a124143e7ced2b3d85352fb400a238685a91d0e5987b51b",
+  "signing_generation": 2,
+  "verification": {
+    "apk_signer_and_badging_verified_in_ci": true,
+    "comic_rule_safety_assertions": 563,
+    "crypto_tests": 18,
+    "curated_lexicon_entries": 204,
+    "independent_local_v2_rsa_signature_verified": true,
+    "local_v2_chunked_content_digests_verified": true,
+    "plaintext_signing_material_absent_from_apk_entries": true,
+    "real_device_visual_semantic_acceptance": "pending",
+    "rule_backends_are_mocks": true,
+    "zip_entries": 608,
+    "zip_integrity_verified": true
+  },
+  "verified_ci_commit": "a83ca1323e79d68dc84f34e9042b6336e3144234",
+  "verified_ci_run": "42146247653",
+  "version": "1.3.1",
+  "version_code": 9
+}

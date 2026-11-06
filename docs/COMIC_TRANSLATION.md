@@ -147,6 +147,26 @@ Private signing material is never put into Git, public releases, chat or
 Actions artifacts. Full storage, wrapper-secret dependency/rotation and
 owner recovery: [`tools/signing/README.md`](../tools/signing/README.md).
 
+### Verified regular APK delivery
+
+CI **42146247653** (`a83ca13`) succeeded: 18 crypto tests, 563 rule/safety
+assertions, two cold signer restores, full release compilation, actual
+package/version/label/non-debuggable and `apksigner` checks, regular GitHub Release,
+and acknowledged Telegram APK upload. The actual APK was also presented in chat.
+
+* `Koorix-v1.3.1.apk`: **33,583,399 bytes**, 608 ZIP entries, ZIP integrity verified.
+* SHA-256: `4d05d6a6ef9e21bc0a124143e7ced2b3d85352fb400a238685a91d0e5987b51b`.
+* Downloaded file independently passed **v2 RSA signature and chunked APK-content
+  digest verification** locally against the pinned public certificate. Entries
+  were checked for the actual private PKCS12/password/recovery PEM: none present.
+* Stable URL: https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.3.1/Koorix-v1.3.1.apk
+  (private repository access required; chat/Telegram files are separate delivery).
+* The tag was first created by successful run `42146159673` at `8bba478`.
+  The final asset above is from `a83ca13`; **Android and signing trees are exactly
+  identical** between those commits, only the CI diagnostic script differs.
+* `koorix/releases/v1.3.1.json` records precise artifact/delivery evidence.
+  Real-page semantic and device visual acceptance are not implied by these checks.
+
 Historical 1.3.0 runs passed compilation/rule tests but were blocked by loss of
 the original cache-only key. The earlier Preview was an unauthorized substitute
 and is superseded, not a claimed solution to the original update requirement.
