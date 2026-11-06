@@ -17,8 +17,9 @@ or a Chinese name. Ask/mark uncertain only when the missing fact is essential.
 
 ## Reader glossary = source of authority
 
-Use the existing screen: Translate -> Configure Manga / Manhwa -> glossary.
-One `original = preferred target` per line. The text exporter does NOT add a new
+Normal use is **Translate**. Optional names/genre expand inline; no mandatory
+setup/save screen. One `original = preferred target` per line. The optional saved
+project library can explicitly reuse a story's glossary for future jobs. The text exporter does NOT add a new
 in-app file-import feature; validated text is pasted into that existing field.
 
 - At most 100 entries; total text <=12,000 Java UTF-16 units.

@@ -163,6 +163,12 @@ jobs:
           fi
           exit $code
 
+      - name: Independently verify public APK v2 digest, manifest, no-login classes and harness exclusion
+        run: |
+          python3 tools/signing/inspect-public-apk.py "$APK_FILE" \
+            --version "$KOORIX_VERSION" --code "$KOORIX_CODE" --no-login
+          echo "::notice::Independent public-only APK signature/content/no-login verification passed"
+
       # Releases/chat delivery do not depend on the repository artifact quota.
       - name: Publish verified APK blob for chat delivery
         if: (github.event_name == 'workflow_dispatch' && inputs.publish) || contains(github.event.head_commit.message, '[release-koorix]')
@@ -195,7 +201,8 @@ jobs:
         run: |
           TAG="koorix-v$KOORIX_VERSION"
           cp "$APK_FILE" "Koorix-v$KOORIX_VERSION.apk"
-          NOTES="Koorix v$KOORIX_VERSION — regular production update, com.koorix.app, arm64, non-debuggable. Koorix Skill is now usable INSIDE the app: per-block on-device checks, original/translation review, story correction memory, exact whole-block corrections and page-editor/export access. No new paid API, Claude backend or translation model. Offline Sorani meaning remains limited; checks and reader declarations are not semantic accuracy scores. Uses the SAME permanent v2 signer as v1.3.1: install over v2-signed Koorix without uninstalling. Only pre-v2/old-certificate installs need the previously explained one-time migration; export important data before any such uninstall."
+          NOTES="Koorix v$KOORIX_VERSION — regular production update, com.koorix.app, arm64, non-debuggable. User login has been REMOVED: no Google/email/phone entry or mandatory account screen. Protected random device entitlements retain the 3-job/60-page daily allowance and optional Premium. New local editable-project library, explicit backups/restores, per-page OCR/translation/render checkpoints, process/reboot recovery respecting STOP, encrypted device state, idempotent saved-job permits, safer deletion and private diagnostics. Skill still runs with normal Translate; all targets and Kurdish/English/Arabic UI remain. Same permanent v2 signer: install over v2-signed Koorix without uninstalling or deleting data. Existing local projects and normal valid subscriber sessions are retained. New device credentials are lost on uninstall/clear-data; retain activation/order references and explicit project backups. No paid API, new model or NLLB. Offline Sorani meaning and real-page/device visual acceptance remain limited/unverified; passing synthetic tests is not an accuracy score. Premium requests do not charge money automatically: publisher payment verification is manual."
+
           if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
             gh release upload "$TAG" "Koorix-v$KOORIX_VERSION.apk" --clobber --repo "${{ github.repository }}"
           else
@@ -222,8 +229,10 @@ jobs:
             exit 1
           fi
           CAPTION="💜 Koorix v$KOORIX_VERSION — وەشانی ئاسایی، نەک Preview.
-          Skillی Koorix ئێستا لەناو ئەپەکەیە: پشکنینی دەق و ناو/ژمارە، چاککردنەوە و فەرهەنگی چیرۆک؛ بەبێ APIی پارەدان.
-          هەمان کلیلی جێگیری v2؛ لەسەر 1.3.1ی v2 دایبمەزرێنە و ئەپی پێشوو مەسڕەوە. ئەمە مۆدێلی Claude یان دڵنیایی مانای هەموو وەرگێڕانێک نییە."
+          Login لابرا؛ بێ Google، ئیمەیڵ و ژمارەی مۆبایل.
+          پڕۆژە کۆنەکان دەمێننەوە؛ Backup و بەردەوامکردنەوە لە هەنگاوی پارێزراو زیاد کراون. Skill لەگەڵ Translate ـی ئاسایی کار دەکات.
+          هەمان کلیلی جێگیری v2؛ لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە. مانای هەموو وەرگێڕانێک یان جوانی هەموو پەڕەیەک بە تەستەکان ناسەلمێنرێت."
+
           RESP=$(curl -fsS --connect-timeout 20 --max-time 180 \
             --form-string "chat_id=$ADMIN" --form-string "caption=$CAPTION" \
             --form "document=@$APK_FILE;filename=Koorix-v$KOORIX_VERSION.apk" \

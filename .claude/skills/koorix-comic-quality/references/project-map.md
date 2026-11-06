@@ -12,7 +12,9 @@ do not hard-code `/home/user` or a branch name into scripts.
 | Settings + language-pair persistence | `ComicSettings.java`, `ComicSettingsActivity.java` in the same Java directory |
 | One-button automatic controls / pre-render integration | `ComicTranslateControls.java`, `ComicTranslationFlow.java`, `MainActivity.java` |
 | Saved JSON / target field | `TranslationProject.java`, `Segment.java`; `ckb` stores the selected target, not necessarily Sorani |
-| Latest phone-private project | `TranslationProjectStore.java`: app-private `files/projects/current/project.json` |
+| Local editable library / explicit backups | `TranslationProjectStore.java`, `ProjectLibraryActivity.java`, `ProjectArchive.java`; `files/projects/p-UUID`, legacy `projects/current` retained |
+| Durable regular-Koorix pipeline | `SavedJobInput.java`, `SavedJobPipeline.java`, `SavedJobBackend.java`, `SavedJobCoordinator.java`, `ProjectResults.java` |
+| No-login device budget / optional Premium | Koorix flavour `AccountGate.java`, `SupabaseAuth.java`, `DeviceStateStore.java`, `DeviceAllowance.java`, `PremiumActivity.java`; `koorix/backend/` |
 | Layout / erasure / SFX | `ManhwaRenderer.java`, `CleanEraser.java`, `EditorActivity.java`; don't guess from JSON counts |
 | Three-language skill UI | `res/values*/comic_strings.xml`, `res/layout/activity_comic_settings.xml` |
 | Actual Java contract tests | `tools/comic-skill/test.sh`, `ComicTranslationSkillTest.java` |
@@ -34,8 +36,8 @@ do not hard-code `/home/user` or a branch name into scripts.
   local rules, explicit glossary, checks and bounded contextual recovery are in
   that pipeline. Optional names/genre expand inline; manual review is optional.
   The Python developer tools still do not translate.
-- The packet adapter accepts an explicitly supplied local JSON copy. The release
-  app does NOT gain a full-project JSON export/import UI from installing a skill.
+- The packet adapter accepts an explicitly supplied local JSON copy. Installing the skill alone never adds an export UI. Koorix 1.5 separately
+  implements explicit source/vector ZIP backups/restores in Saved projects.
   Do not instruct users to uninstall/reinstall or use `run-as` on a non-debuggable
   release to obtain app-private files.
 
@@ -46,3 +48,7 @@ renderer. For a visual defect, inspect the actual page/rendering implementation.
 For an offline error, reproduce with the offline path; do not silently use the
 online route to make a test pass. For release work, read public signing metadata
 and the existing workflow, not secret material.
+
+Since 1.5 the owner explicitly removed reader login. Preserve silent device
+entitlements and optional Premium, never reintroduce Google/email/phone prompts.
+See `docs/KOORIX_1_5.md` for durable checkpoints, STOP and backup boundaries.
