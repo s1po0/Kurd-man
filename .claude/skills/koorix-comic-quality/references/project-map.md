@@ -15,7 +15,7 @@ do not hard-code `/home/user` or a branch name into scripts.
 | Local editable library / explicit backups | `TranslationProjectStore.java`, `ProjectLibraryActivity.java`, `ProjectArchive.java`; `files/projects/p-UUID`, legacy `projects/current` retained |
 | Durable regular-Koorix pipeline | `SavedJobInput.java`, `SavedJobPipeline.java`, `SavedJobBackend.java`, `SavedJobCoordinator.java`, `ProjectResults.java` |
 | Free public edition / one app-capable input chooser | `ComicInputPicker.java`, `MainActivity.java`, `tools/free-edition/check.py`; no runtime account/Premium client |
-| Layout / erasure / SFX | `ManhwaRenderer.java`, `CleanEraser.java`, `EditorActivity.java`; don't guess from JSON counts |
+| Layout / contour / erasure / SFX | `ManhwaRenderer.java`, `StyledTextRenderer.java`, `BubbleBoundary.java`, `CleanEraser.java`, `PageEditorView.java`, `EditorActivity.java`; full unclipped native ink before erasure, not JSON counts |
 | Three-language skill UI | `res/values*/comic_strings.xml`, `res/layout/activity_comic_settings.xml` |
 | Actual Java contract tests | `tools/comic-skill/test.sh`, `ComicTranslationSkillTest.java` |
 | Existing small live smoke probe | `tools/comic-probe/`; advisory, opt-in, synthetic inputs, NOT an accuracy test |
@@ -57,3 +57,8 @@ See `docs/KOORIX_1_5.md` for durable checkpoints, STOP and backup boundaries.
 Since 1.6.1 the owner rejected the split Gallery/Files UI. Keep one input button
 using a system GET_CONTENT */* chooser with compatible installed source apps.
 Do not restore OPEN_DOCUMENT or a photo-only picker for normal public input.
+
+Since 1.7 the regular renderer persists multi-run contours and validates complete
+Android-shaped glyph/effect/rotation pixels before erasure. Studio and export
+must share the same validator; do not restore allowOverflow or detach a contour
+when dragging. See `docs/KOORIX_1_7.md` and the pinned all-topic research report.

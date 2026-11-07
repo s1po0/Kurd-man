@@ -104,7 +104,7 @@ def manifest(data):
     return elements
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('apk');parser.add_argument('--pins',default='signing/koorix-release-v2.json');parser.add_argument('--version',required=True);parser.add_argument('--code',type=int,required=True);parser.add_argument('--no-login',action='store_true');parser.add_argument('--free',action='store_true');args=parser.parse_args()
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('apk');parser.add_argument('--pins',default='signing/koorix-release-v2.json');parser.add_argument('--version',required=True);parser.add_argument('--code',type=int,required=True);parser.add_argument('--no-login',action='store_true');parser.add_argument('--free',action='store_true');parser.add_argument('--contours',action='store_true');args=parser.parse_args()
     path=Path(args.apk);data=path.read_bytes();pins=json.loads(Path(args.pins).read_text());signature=verify_v2(data,pins)
     with zipfile.ZipFile(path) as archive:
         assert archive.testzip() is None,'APK CRC mismatch';names=archive.namelist()
@@ -128,6 +128,12 @@ def main():
                 assert not any(n=='activity' and str(a.get('name','')).endswith('.'+forbidden) for n,a in elements),'Retired billing UI registered'
             assert b'cbkddsztcivllpwzflkx.supabase.co' not in dex,'Entitlement server remains in free runtime'
             assert b'sb_publishable_' not in dex,'Entitlement key remains in free runtime'
-        result={'file':path.name,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),'zip_entries':len(names),'signature':signature,'package':package['package'],'version':package['versionName'],'version_code':package['versionCode'],'label':app['label'],'debuggable':False,'no_login_gate_checked':args.no_login,'free_edition_checked':args.free,'test_harness_and_private_recovery_absent':True}
+        if args.contours:
+            for required in ('BubbleBoundary','StyledTextRenderer','PageEditorView'):
+                assert ('Lcom/kurdman/app/'+required+';').encode() in dex,'Missing native contour class '+required
+            for marker in (b'placementAnchor',b'clipForErase',b'drawUnclipped',b'bubbleBoundary'):
+                assert marker in dex,'Missing native contour implementation marker'
+            assert b'Lcom/kurdman/app/BubbleContainmentAndroidTest;' not in dex,'Synthetic glyph harness packaged in APK'
+        result={'file':path.name,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),'zip_entries':len(names),'signature':signature,'package':package['package'],'version':package['versionName'],'version_code':package['versionCode'],'label':app['label'],'debuggable':False,'no_login_gate_checked':args.no_login,'free_edition_checked':args.free,'test_harness_and_private_recovery_absent':True,'native_contour_classes_checked':args.contours}
     print(json.dumps(result,indent=2))
 if __name__=='__main__':main()

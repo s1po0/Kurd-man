@@ -182,7 +182,7 @@ jobs:
       - name: Independently verify public APK v2 digest, manifest, free-edition classes and harness exclusion
         run: |
           python3 tools/signing/inspect-public-apk.py "$APK_FILE" \
-            --version "$KOORIX_VERSION" --code "$KOORIX_CODE" --no-login --free
+            --version "$KOORIX_VERSION" --code "$KOORIX_CODE" --no-login --free --contours
           echo "::notice::Independent public-only APK signature/content/no-login verification passed"
 
       # Releases/chat delivery do not depend on the repository artifact quota.
@@ -217,7 +217,7 @@ jobs:
         run: |
           TAG="koorix-v$KOORIX_VERSION"
           cp "$APK_FILE" "Koorix-v$KOORIX_VERSION.apk"
-          NOTES="Koorix v$KOORIX_VERSION — regular production update, com.koorix.app, arm64, non-debuggable. Completely FREE for now by the owner's decision: Premium, payments, activation codes, daily job/page quotas and device-registration/entitlement clients have been removed, not just hidden. No login, Google account, email or initial online allowance setup. Corrects the 1.6 split picker: ONE input button opens Android's app-capable GET_CONTENT */* chooser for compatible installed Samsung Gallery, MT Manager, ZArchiver, My Files, cloud/photo/file handlers. No separate Gallery/Files screen, photo-only picker, pinned storage root or MIME whitelist. Apps must be installed and declare compatible content selection; exact OEM lists remain phone-dependent. Existing source validation, 300-page/300-MB import and 1-GB cache safety limits remain; protected Android folders and external provider rate limits are not bypassed. Editable books, legacy projects, backups, frozen settings, STOP, recovery, all 74 target choices and Kurdish/English/Arabic UI are preserved. Same permanent v2 signer: install over v2-signed Koorix without uninstalling or deleting app data. Historical encrypted device/subscriber data is not erased or contacted. No paid API, new model or NLLB. Meaning and real-page/device visual acceptance remain limited/unverified; passing synthetic/JVM tests does not certify every translation, OEM gallery or device."
+          NOTES="Koorix v$KOORIX_VERSION — regular production update, com.koorix.app, arm64, non-debuggable, permanent v2 signer. Native contour-aware lettering: complete Android-shaped glyphs, outlines, shadows, italic/decorations and rotation are checked WITHOUT clipping against a padded multi-run bubble mask before source erasure. Adaptive width/font/contained placement handles circles, rectangles, triangles, quadrilaterals and concave shapes in synthetic native regressions. A final clip is only a guard: raw and clipped glyph output must match in tests. Unplaceable dialogue preserves original pixels and its editable translation in normal rendering, studio and export. Masks persist across projects/reopen; moving a box does not detach its contour, and geometry/effect edits invalidate stale fits. Background/border/erasure antialias clearances protect detected outlines. All three GitHub topic indexes were metadata-screened (499 unique repositories including forks); selected relevant source/license studies are documented, not an audit of every repository. No upstream desktop stack, GPL source, paid API, new model or NLLB was imported. Existing completely free/no-login/no-daily-app-quota operation, single GET_CONTENT */* source-app chooser, all 74 target choices, three UI languages, automatic Skill, saved jobs, STOP, backups, studio, PDF and 300-page/300-MB/1-GB safeguards remain. Install over v2-signed Koorix without uninstalling or clearing data. Real-page/device detection, perfect erasure, optimal typography/performance and translation meaning are NOT guaranteed by synthetic native/JVM tests; Sorani OPUS is unchanged."
 
           # An owner-prepared draft/tag is valid too. Upload verified bytes first,
           # then publish; expose public CLI errors without printing credentials.
@@ -263,9 +263,10 @@ jobs:
             exit 1
           fi
           CAPTION="💜 Koorix v$KOORIX_VERSION — وەشانی ئاسایی، نەک Preview.
-          بە تەواوی خۆڕایی بۆ ئێستا: Premium، کۆدی چالاککردن و سنووری ڕۆژانە لابران؛ Loginیش نییە.
-          یەک دوگمەی هەڵبژاردن: ئەپە گونجاوە دامەزراوەکان وەک Samsung Gallery، MT Manager، ZArchiver و My Files لە یەک هەڵبژێرەردا، نەک دوو بەش. وێنە یان CBZ/ZIP هەڵبژێرە.
-          پڕۆژەکان، Backup، STOP و Skillی خۆکار پارێزراون. هەمان کلیلی v2 ـە؛ لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە."
+          دەق، هێڵی دەور، سێبەر و سووڕان پێش سڕینەوە لە ناو ماسکی بالۆن پشکنین دەکرێن؛ نەک تەنها بڕینی پیتەکان. ئەگەر هەموو دەقەکە نەگونجێت، ڕەسەن دەمێنێت.
+          ستۆدیۆ و پڕۆژەی پاشەکەوتکراویش هەمان سنوور دەپارێزن. هەرسێ لیستی GitHub گەڕاون؛ سەرچاوە پەیوەندیدارەکان بە وردی پشکنراون.
+          خۆڕایی، بێ Login، یەک هەڵبژێرەر، Skill و STOP پارێزراون؛ هیچ مۆدێلی نوێ یان NLLB زیاد نەکراوە.
+          هەمان کلیلی v2 ـە؛ لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە. تاقیکردنەوەکان نموونەی دروستکراون، نەک دڵنیایی هەموو پەڕە و مۆبایلێک."
 
           RESP=$(curl -fsS --connect-timeout 20 --max-time 180 \
             --form-string "chat_id=$ADMIN" --form-string "caption=$CAPTION" \
