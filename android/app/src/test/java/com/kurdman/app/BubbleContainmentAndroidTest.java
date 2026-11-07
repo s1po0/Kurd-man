@@ -394,4 +394,73 @@ public class BubbleContainmentAndroidTest {
         fill.recycle(); paper.recycle();
     }
 
+
+    @Test public void normalAutomaticRendererUsesContourFittingAndDoesNotTouchOutsideArt() {
+        for (String shape : new String[]{"circle", "rectangle", "triangle", "quadrilateral"}) {
+            Bitmap source = shape(shape), allowed = shape(shape);
+            Paint p = new Paint(Paint.ANTI_ALIAS_FLAG); p.setColor(Color.BLACK); p.setTextSize(24);
+            Canvas c = new Canvas(source);
+            c.drawText("WAIT", 190, 170, p); c.drawText("HERE", 190, 202, p);
+            Segment s = new Segment("WAIT HERE", new Rect(186, 145, 294, 208), 2);
+            s.sourceLineHeight = 32; s.ckb = "مەڕۆ، لێرە چاوەڕێمان بکە.";
+            ManhwaRenderer.RenderResult result = ManhwaRenderer.render(source,
+                    Collections.singletonList(s), new TextStyleSettings(), JOINED_FONT);
+            assertEquals(shape + ": normal automatic rendering must actually place the dialogue", 1, result.rendered);
+            assertTrue(s.rendered);
+            assertNotNull(s.bubbleBoundary);
+            for (int y = 0; y < source.getHeight(); y++) for (int x = 0; x < source.getWidth(); x++) {
+                if (allowed.getPixel(x, y) != Color.WHITE) assertEquals(
+                        shape + ": outside artwork/frame pixels must not change",
+                        source.getPixel(x, y), result.bitmap.getPixel(x, y));
+            }
+            StyledTextRenderer.FitResult fit = StyledTextRenderer.createFit(s, JOINED_FONT, false);
+            assertNotNull(fit);
+            Bitmap raster = ink(s, fit);
+            assertEquals(0, outside(raster, allowed));
+            raster.recycle(); source.recycle(); allowed.recycle(); result.bitmap.recycle();
+        }
+    }
+
+    @Test public void blackNarrationKeepsWhiteJoinedTextAndOutsidePixels() {
+        Bitmap allowed = shape("quadrilateral");
+        Bitmap source = allowed.copy(Bitmap.Config.ARGB_8888, true);
+        for (int y = 0; y < source.getHeight(); y++) for (int x = 0; x < source.getWidth(); x++) {
+            if (source.getPixel(x, y) == Color.WHITE) source.setPixel(x, y, Color.BLACK);
+        }
+        Segment s = segment(new Rect(24, 24, 456, 316), "هێشتا چیرۆکەکە تەواو نەبووە.");
+        s.box = new Rect(140, 120, 340, 225);
+        s.sourceLineHeight = 42;
+        s.detectedBackgroundColor = Color.BLACK; s.detectedInkColor = Color.WHITE;
+        Rect body = ManhwaRenderer.computeInteriorSpans(source, s, Collections.singletonList(s));
+        assertNotNull(s.bubbleBoundary);
+        if (body != null) s.renderBox = body;
+        StyledTextRenderer.EditedResult result = StyledTextRenderer.renderEdited(
+                source, Collections.singletonList(s), JOINED_FONT);
+        assertEquals(1, result.rendered);
+        StyledTextRenderer.FitResult fit = StyledTextRenderer.createFit(s, JOINED_FONT, true);
+        assertNotNull(fit);
+        assertEquals(Color.WHITE, fit.paint.getColor());
+        Bitmap raster = ink(s, fit);
+        assertEquals(0, outside(raster, allowed));
+        for (int y = 0; y < source.getHeight(); y++) for (int x = 0; x < source.getWidth(); x++) {
+            if (allowed.getPixel(x, y) != Color.WHITE)
+                assertEquals(source.getPixel(x, y), result.bitmap.getPixel(x, y));
+        }
+        raster.recycle(); allowed.recycle(); source.recycle(); result.bitmap.recycle();
+    }
+
+    @Test public void explicitlyHiddenForceEraseStillWorksWithoutAReplacement() {
+        Bitmap source = rectangularMask(new Rect(24, 24, 440, 300));
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG); p.setColor(Color.BLACK); p.setTextSize(28);
+        new Canvas(source).drawText("WAIT HERE", 170, 175, p);
+        Segment s = segment(new Rect(155, 140, 340, 190), "");
+        s.ensureStyle().visible = false; s.ensureStyle().forceErase = true;
+        StyledTextRenderer.EditedResult result = StyledTextRenderer.renderEdited(
+                source, Collections.singletonList(s), FONT);
+        assertEquals(0, result.rendered);
+        assertFalse("Reader-requested hidden-block erasure is not a failed replacement",
+                source.sameAs(result.bitmap));
+        source.recycle(); result.bitmap.recycle();
+    }
+
 }

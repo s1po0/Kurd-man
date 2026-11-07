@@ -217,6 +217,14 @@ public final class StyledTextRenderer {
                     skipped++;
                     continue;
                 }
+                // Old saved projects may carry only row extremes. Re-trace on
+                // the actual source for direct exports too, without moving the
+                // reader's editable box or requiring a visit to the studio.
+                if (!segment.outsideText && segment.bubbleBoundary == null
+                        && (segment.autoBackgroundReliable || segment.interiorLeft != null)
+                        && !Thread.currentThread().isInterrupted()) {
+                    ManhwaRenderer.computeInteriorSpans(original, segment, segments);
+                }
                 FitResult fit = createFit(segment, resolver, true);
                 if (fit == null) { skipped++; continue; }
                 accepted.add(segment); erase.add(segment); fits.put(segment, fit);
@@ -370,7 +378,8 @@ public final class StyledTextRenderer {
         Rect rect = segment.getRenderBox();
         int shape = effectiveShape(segment, style);
         canvas.save();
-        drawingBoundary(segment).clip(canvas);
+        // One pixel also contains SDK34 clip-mask antialias at staircase edges.
+        drawingBoundary(segment).inset(1).clip(canvas);
         rotateAroundRect(canvas, rect, style.rotationDegrees);
         drawShape(canvas, new RectF(rect), shape,
                 backgroundRadius(style, rect), fill);
@@ -385,7 +394,8 @@ public final class StyledTextRenderer {
         }
         Rect rect = segment.getRenderBox();
         canvas.save();
-        drawingBoundary(segment).clip(canvas);
+        // One pixel also contains SDK34 clip-mask antialias at staircase edges.
+        drawingBoundary(segment).inset(1).clip(canvas);
         rotateAroundRect(canvas, rect, style.rotationDegrees);
         drawBorder(canvas, rect, style, effectiveShape(segment, style));
         canvas.restore();

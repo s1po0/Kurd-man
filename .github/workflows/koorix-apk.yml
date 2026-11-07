@@ -13,6 +13,7 @@ on:
       - "android/**"
       - ".github/workflows/koorix-apk.yml"
       - "tools/comic-skill/**"
+      - "tools/bubble-tests/**"
       - "tools/free-edition/**"
       - "tools/signing/*.py"
       - "tools/signing/*.sh"
@@ -97,7 +98,7 @@ jobs:
                       print('::error::In-app skill UI contract failed: '+test.get('name','test')+' '+detail.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
           print(f'::notice::In-app skill Android/JVM tests: {total} run, {failed} failed, {skipped} skipped; not device/semantic proof')
           print(f'::notice::Native glyph-containment regressions: {native} run on SDK26/34; synthetic shapes, not device acceptance')
-          if total < 164 or native < 28 or failed or skipped:
+          if total < 170 or native < 34 or failed or skipped:
               print('::error::In-app skill tests were missing, failed or skipped; production distribution is blocked')
               raise SystemExit(1)
           PYTEST
