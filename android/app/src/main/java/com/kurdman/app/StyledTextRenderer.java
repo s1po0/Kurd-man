@@ -44,6 +44,7 @@ public final class StyledTextRenderer {
         public boolean overflow;
         private BubbleBoundary boundary;
         private String verifiedSignature;
+        private int verticalOffset = Integer.MIN_VALUE;
     }
 
     public static final class EditedResult {
@@ -130,6 +131,7 @@ public final class StyledTextRenderer {
         float[] widthFractions = (segment.bubbleOval || hasMask || Math.abs(style.rotationDegrees) > .01f)
                 ? new float[]{1f, 0.92f, 0.84f, 0.76f, 0.68f, 0.60f}
                 : new float[]{1f};
+        Rect anchor = null;
         for (int size = startSize; size >= minSize; size--) {
             if (Thread.currentThread().isInterrupted()) return null;
             applyTextSizeAndShadow(paint, style, size);
@@ -145,7 +147,8 @@ public final class StyledTextRenderer {
                                 rect, layout, effectivePad, verticalPadding));
                 boolean fits = layout.getHeight() <= maxHeight
                         && maxLineWidth(layout) <= layoutWidth + widthTolerance
-                        && shapeOk;
+                        && layout.getLineCount() > 0
+                        && layout.getLineEnd(layout.getLineCount() - 1) == segment.ckb.trim().length();
                 if (fits) {
                     int pad = effectivePad;
                     if (hasMask) {
@@ -160,16 +163,29 @@ public final class StyledTextRenderer {
                     fit.textSize = size;
                     fit.overflow = false;
                     fit.boundary = boundary;
-                    if (inkInside(segment, fit, safeArea)) {
+                    if (shapeOk && inkInside(segment, fit, safeArea)) {
                         fit.verifiedSignature = signature;
                         return fit;
                     }
                     // Recentring is optional; never lose an otherwise safe fit.
-                    if (pad != effectivePad) {
+                    if (shapeOk && pad != effectivePad) {
                         fit.horizontalPadding = effectivePad;
                         if (inkInside(segment, fit, safeArea)) {
                             fit.verifiedSignature = signature;
                             return fit;
+                        }
+                    }
+                    if (hasMask) {
+                        if (anchor == null) anchor = safeArea.placementAnchor();
+                        if (!anchor.isEmpty()) {
+                            fit.horizontalPadding = Math.round(anchor.exactCenterX()
+                                    - rect.left - layout.getWidth() / 2f);
+                            fit.verticalOffset = Math.round(anchor.exactCenterY()
+                                    - rect.top - layout.getHeight() / 2f);
+                            if (inkInside(segment, fit, safeArea)) {
+                                fit.verifiedSignature = signature;
+                                return fit;
+                            }
                         }
                     }
                 }
@@ -406,6 +422,7 @@ public final class StyledTextRenderer {
     }
 
     private static int yOffset(Rect rect, FitResult fit) {
+        if (fit.verticalOffset != Integer.MIN_VALUE) return fit.verticalOffset;
         int available = Math.max(0, rect.height() - fit.verticalPadding * 2);
         return fit.verticalPadding + Math.max(0, (available - fit.layout.getHeight()) / 2);
     }

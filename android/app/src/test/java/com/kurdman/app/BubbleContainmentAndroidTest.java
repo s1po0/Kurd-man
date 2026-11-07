@@ -163,4 +163,235 @@ public class BubbleContainmentAndroidTest {
                 0, outside(raster, mask));
         initialInk.recycle(); raster.recycle(); mask.recycle();
     }
+
+    private static final StyledTextRenderer.TypefaceResolver JOINED_FONT =
+            style -> FontCatalog.getTypeface(org.robolectric.RuntimeEnvironment.getApplication(), style);
+
+    private Bitmap shape(String shape) {
+        Bitmap b = rectangularMask(new Rect());
+        Paint p = new Paint(); p.setColor(Color.WHITE);
+        Canvas c = new Canvas(b);
+        android.graphics.Path path = new android.graphics.Path();
+        if (shape.equals("circle")) c.drawCircle(240, 170, 138, p);
+        else if (shape.equals("rectangle")) c.drawRect(40, 38, 440, 302, p);
+        else {
+            if (shape.equals("triangle")) {
+                path.moveTo(240, 32); path.lineTo(442, 302); path.lineTo(38, 302);
+            } else {
+                path.moveTo(72, 62); path.lineTo(400, 28);
+                path.lineTo(442, 274); path.lineTo(32, 242);
+            }
+            path.close(); c.drawPath(path, p);
+        }
+        return b;
+    }
+
+    private Segment trace(Bitmap source, String text) {
+        Segment s = segment(new Rect(24, 24, 456, 316), text);
+        s.box = new Rect(140, 120, 340, 225);
+        s.sourceLineHeight = 42;
+        Rect body = ManhwaRenderer.computeInteriorSpans(source, s, Collections.singletonList(s));
+        assertNotNull("Synthetic shape must have an actual traced component", s.bubbleBoundary);
+        assertFalse(s.bubbleBoundary.isEmpty());
+        if (body != null) s.renderBox = body;
+        return s;
+    }
+
+    private void fixture(String name, Bitmap paper, Bitmap raster) throws Exception {
+        java.io.File dir = new java.io.File(System.getProperty("koorix.bubbleFixtures",
+                "build/outputs/bubble-tests"));
+        assertTrue(dir.isDirectory() || dir.mkdirs());
+        Bitmap visible = paper.copy(Bitmap.Config.ARGB_8888, true);
+        new Canvas(visible).drawBitmap(raster, 0, 0, null);
+        java.io.File file = new java.io.File(dir, name + "-sdk"
+                + android.os.Build.VERSION.SDK_INT + ".png");
+        try (java.io.FileOutputStream out = new java.io.FileOutputStream(file)) {
+            assertTrue(visible.compress(Bitmap.CompressFormat.PNG, 100, out));
+        }
+        visible.recycle();
+    }
+
+    @Test public void completeJoinedSoraniAndLatinFitEveryRequestedShapeWithoutClipping() throws Exception {
+        for (String shape : new String[]{"circle", "rectangle", "triangle", "quadrilateral"}) {
+            for (String language : new String[]{"ckb", "en"}) {
+                Bitmap paper = shape(shape);
+                String text = language.equals("ckb")
+                        ? "هێشتا کاتی ئەوە نەهاتووە؛ لێرە چاوەڕێ بکە."
+                        : "Do not leave. Stay here and wait for us.";
+                Segment s = trace(paper, text);
+                s.ensureStyle().outline = true;
+                s.ensureStyle().outlineWidthRatio = .06f;
+                s.ensureStyle().outlineColor = Color.BLACK;
+                StyledTextRenderer.FitResult fit = StyledTextRenderer.createFit(s, JOINED_FONT, false);
+                assertNotNull(shape + ": complete " + language + " should fit", fit);
+                assertEquals(text, fit.layout.getText().toString());
+                assertFalse(fit.overflow);
+                Bitmap raster = ink(s, fit);
+                fixture(shape + "-" + language, paper, raster);
+                assertEquals(shape + ": raw glyph ink must not leave the actual traced shape", 0,
+                        outside(raster, paper));
+                raster.recycle(); paper.recycle();
+            }
+        }
+    }
+
+    @Test public void concaveRunsKeepTheGapAndAdaptivePlacementFindsTheLowerChamber() throws Exception {
+        Bitmap paper = rectangularMask(new Rect(24, 24, 456, 316));
+        Paint cut = new Paint(); cut.setColor(Color.GRAY);
+        new Canvas(paper).drawRect(184, 24, 296, 200, cut);
+        Segment s = trace(paper, "لێرە چاوەڕێ بکە، من دەگەڕێمەوە.");
+        // Deliberately retain the full editing box, whose centre is in the notch.
+        s.renderBox = new Rect(24, 24, 456, 316);
+        assertFalse(s.bubbleBoundary.contains(240, 120));
+        assertTrue(s.bubbleBoundary.contains(100, 120));
+        assertTrue(s.bubbleBoundary.contains(360, 120));
+        assertTrue(s.interiorLeft[120 - s.interiorTop] < 240
+                && s.interiorRight[120 - s.interiorTop] > 240);
+        Rect anchor = s.bubbleBoundary.inset(3).placementAnchor();
+        assertTrue("Do not anchor text in the concave gap", anchor.top >= 200);
+        StyledTextRenderer.FitResult fit = StyledTextRenderer.createFit(s, JOINED_FONT, false);
+        assertNotNull("Find the wide lower chamber rather than losing the dialogue", fit);
+        assertEquals(s.ckb, fit.layout.getText().toString());
+        Bitmap raster = ink(s, fit);
+        fixture("concave-ckb", paper, raster);
+        assertEquals(0, outside(raster, paper));
+        raster.recycle(); paper.recycle();
+    }
+
+    @Test public void glyphHolesAreFilledButASeparateArtHoleRemainsProtected() {
+        Bitmap paper = rectangularMask(new Rect(24, 24, 456, 316));
+        Paint p = new Paint(); p.setColor(Color.BLACK);
+        Canvas c = new Canvas(paper);
+        c.drawRect(220, 150, 230, 175, p); // within the declared OCR block
+        c.drawRect(80, 60, 105, 85, p); // artwork, outside that block
+        Segment s = trace(paper, "Stay here.");
+        assertTrue("Source glyphs must not become permanent holes in the text area",
+                s.bubbleBoundary.contains(224, 160));
+        assertFalse("Do not bridge a protected art hole using row min/max",
+                s.bubbleBoundary.contains(90, 70));
+        assertFalse(s.bubbleBoundary.inset(3).contains(106, 70));
+        paper.recycle();
+    }
+
+    @Test public void immutableMasksSurviveDuplicateSaveAndReopen() throws Exception {
+        Bitmap paper = shape("quadrilateral");
+        Segment s = trace(paper, "ئاگادار بە، لێرە چاوەڕێمان بکە.");
+        s.ensureStyle().rotationDegrees = 7;
+        assertSame("Sharing an immutable mask does not lose contour data", s.bubbleBoundary,
+                s.duplicate().bubbleBoundary);
+        android.app.Application app = org.robolectric.RuntimeEnvironment.getApplication();
+        TranslationProject project = TranslationProjectStore.createNew(app, false,
+                "Synthetic contour", "Synthetic contour", "en");
+        TranslationProject.Page page = new TranslationProject.Page("pages/0001.png", ".png");
+        try (java.io.FileOutputStream out = new java.io.FileOutputStream(page.sourceFile(project.projectDir))) {
+            assertTrue(paper.compress(Bitmap.CompressFormat.PNG, 100, out));
+        }
+        page.segments.add(s); project.pages.add(page); project.save();
+        Segment reopened = TranslationProject.load(project.projectDir).pages.get(0).segments.get(0);
+        assertNotNull(reopened.bubbleBoundary);
+        assertEquals(s.bubbleBoundary.signature(), reopened.bubbleBoundary.signature());
+        assertEquals(s.ckb, reopened.ckb);
+        assertEquals(s.renderBox, reopened.renderBox);
+        assertEquals(7, reopened.ensureStyle().rotationDegrees, .001f);
+        StyledTextRenderer.FitResult fit = StyledTextRenderer.createFit(reopened, JOINED_FONT, true);
+        assertNotNull(fit);
+        Bitmap raster = ink(reopened, fit);
+        assertEquals(0, outside(raster, paper));
+        raster.recycle(); paper.recycle();
+    }
+
+    @Test public void malformedOrOversizedStoredMaskMustFailClosed() throws Exception {
+        BubbleBoundary valid = BubbleBoundary.rectangle(new Rect(20, 20, 80, 70));
+        for (String key : new String[]{"w", "h", "v"}) {
+            org.json.JSONObject invalid = new org.json.JSONObject(valid.toJson().toString());
+            invalid.put(key, Integer.MAX_VALUE);
+            assertTrue(BubbleBoundary.fromJson(invalid).isEmpty());
+        }
+        org.json.JSONObject invalid = new org.json.JSONObject(valid.toJson().toString());
+        invalid.getJSONArray("runs").put(0, new org.json.JSONArray("[15,10]"));
+        assertTrue(BubbleBoundary.fromJson(invalid).isEmpty());
+        invalid = new org.json.JSONObject(valid.toJson().toString());
+        invalid.getJSONArray("runs").put(0, new org.json.JSONArray("[0,25,12,40]"));
+        assertTrue(BubbleBoundary.fromJson(invalid).isEmpty());
+        assertTrue(BubbleBoundary.fromJson(null).isEmpty());
+        Segment s = segment(new Rect(20, 20, 400, 250), "Keep the source.");
+        s.bubbleBoundary = BubbleBoundary.fromJson(invalid);
+        assertNull("Never replace malformed contour data with an unprotected rectangle",
+                StyledTextRenderer.createFit(s, FONT, true));
+    }
+
+    @Test public void everyPositionRotationOutlineAndGradientEditInvalidatesTheFit() {
+        Segment s = segment(new Rect(38, 42, 438, 280), "Stay here and wait.");
+        StyledTextRenderer.FitResult fit = StyledTextRenderer.createFit(s, FONT, true);
+        assertNotNull(fit);
+        String key = StyledTextRenderer.fitSignature(s);
+        s.renderBox.offset(1, 0);
+        assertNotEquals(key, StyledTextRenderer.fitSignature(s));
+        Bitmap target = Bitmap.createBitmap(480, 340, Bitmap.Config.ARGB_8888);
+        assertFalse("A stale fit must not be drawn after moving a same-size box",
+                StyledTextRenderer.drawText(new Canvas(target), s, fit));
+        key = StyledTextRenderer.fitSignature(s);
+        s.ensureStyle().rotationDegrees = 20;
+        assertNotEquals(key, StyledTextRenderer.fitSignature(s));
+        key = StyledTextRenderer.fitSignature(s);
+        s.ensureStyle().outline = true; s.ensureStyle().outlineWidthRatio = .2f;
+        assertNotEquals(key, StyledTextRenderer.fitSignature(s));
+        key = StyledTextRenderer.fitSignature(s);
+        s.ensureStyle().gradient = true; s.ensureStyle().gradientDirection = 2;
+        assertNotEquals(key, StyledTextRenderer.fitSignature(s));
+        target.recycle();
+    }
+
+    @Test public void studioDoesNotEraseARejectedReplacementEvenWithCachedCleanPatches() {
+        Bitmap source = rectangularMask(new Rect(24, 24, 440, 300));
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG); p.setColor(Color.BLACK); p.setTextSize(32);
+        new Canvas(source).drawText("ORIGINAL SOURCE", 55, 105, p);
+        Segment s = segment(new Rect(45, 65, 365, 115), "Complete dialogue. ".repeat(100));
+        s.renderBox = new Rect(400, 220, 414, 232);
+        PageEditorView view = new PageEditorView(org.robolectric.RuntimeEnvironment.getApplication(), null);
+        view.layout(0, 0, 480, 340);
+        view.setResolver(FONT);
+        view.setShowAllOverlays(false);
+        view.setPage(source, Collections.singletonList(s), -1);
+        try {
+            java.lang.reflect.Field selected = PageEditorView.class.getDeclaredField("selectedIndex");
+            selected.setAccessible(true); selected.setInt(view, -1); // hide UI handles for pixel comparison
+        } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
+        Bitmap originalView = Bitmap.createBitmap(480, 340, Bitmap.Config.ARGB_8888);
+        view.setPeekOriginal(true); view.draw(new Canvas(originalView));
+        Bitmap editedView = Bitmap.createBitmap(480, 340, Bitmap.Config.ARGB_8888);
+        view.setPeekOriginal(false); view.draw(new Canvas(editedView));
+        assertTrue("Studio must retain source pixels until a complete replacement fits",
+                originalView.sameAs(editedView));
+        originalView.recycle(); editedView.recycle(); source.recycle();
+    }
+
+    @Test public void interruptionCannotTurnARejectedFitIntoErasure() {
+        Bitmap source = rectangularMask(new Rect(24, 24, 440, 300));
+        Segment s = trace(source, "لێرە چاوەڕێ بکە.");
+        Thread.currentThread().interrupt();
+        try {
+            StyledTextRenderer.EditedResult result = StyledTextRenderer.renderEdited(
+                    source, Collections.singletonList(s), JOINED_FONT);
+            assertEquals(0, result.rendered);
+            assertTrue(source.sameAs(result.bitmap));
+            result.bitmap.recycle();
+        } finally { Thread.interrupted(); source.recycle(); }
+    }
+
+    @Test public void customRotatedBackgroundAndBorderCannotPaintOutsideATriangle() {
+        Bitmap paper = shape("triangle");
+        Segment s = trace(paper, "لێرە بمێنەوە.");
+        s.ensureStyle().rotationDegrees = 29;
+        s.ensureStyle().backgroundMode = TextStyleSettings.BG_CUSTOM;
+        s.ensureStyle().backgroundColor = Color.MAGENTA;
+        s.ensureStyle().backgroundBorder = true;
+        s.ensureStyle().backgroundBorderWidth = 12;
+        Bitmap fill = Bitmap.createBitmap(480, 340, Bitmap.Config.ARGB_8888);
+        StyledTextRenderer.drawBackground(new Canvas(fill), s);
+        assertEquals("Style backgrounds/borders must obey the same physical contour", 0,
+                outside(fill, paper));
+        fill.recycle(); paper.recycle();
+    }
+
 }

@@ -26,6 +26,7 @@ public final class BubbleBoundary {
     private final int pixels;
     private final long signature;
     private volatile Path clipPath;
+    private volatile Rect anchor;
 
     private BubbleBoundary(Rect bounds, int[][] rows) {
         this.bounds = new Rect(bounds);
@@ -209,6 +210,44 @@ public final class BubbleBoundary {
             if (a[i + 1] < b[j + 1]) i += 2; else j += 2;
         }
         return used == 0 ? NONE : Arrays.copyOf(temp, used);
+    }
+
+    /** Largest real interior rectangle (histogram scan), not a centre/corner sample. */
+    Rect placementAnchor() {
+        Rect cached = anchor;
+        if (cached != null) return new Rect(cached);
+        int w = bounds.width();
+        int[] heights = new int[w + 1], stack = new int[w + 1];
+        Rect best = new Rect();
+        long bestArea = 0;
+        double bestDistance = Double.MAX_VALUE;
+        for (int y = 0; y < rows.length; y++) {
+            if (Thread.currentThread().isInterrupted()) return new Rect();
+            int[] row = rows[y]; int run = 0;
+            for (int x = 0; x < w; x++) {
+                while (run < row.length && x >= row[run + 1]) run += 2;
+                heights[x] = run < row.length && x >= row[run] ? heights[x] + 1 : 0;
+            }
+            int top = -1;
+            for (int x = 0; x <= w; x++) {
+                while (top >= 0 && heights[stack[top]] > heights[x]) {
+                    int height = heights[stack[top--]];
+                    int left = top < 0 ? 0 : stack[top] + 1;
+                    long area = (long) (x - left) * height;
+                    double dx = (left + x) / 2.0 - w / 2.0;
+                    double dy = y + 1 - height / 2.0 - rows.length / 2.0;
+                    double distance = dx * dx + dy * dy;
+                    if (area > bestArea || (area == bestArea && distance < bestDistance)) {
+                        bestArea = area; bestDistance = distance;
+                        best.set(bounds.left + left, bounds.top + y + 1 - height,
+                                bounds.left + x, bounds.top + y + 1);
+                    }
+                }
+                stack[++top] = x;
+            }
+        }
+        anchor = best;
+        return new Rect(best);
     }
 
     void clip(Canvas canvas) {
