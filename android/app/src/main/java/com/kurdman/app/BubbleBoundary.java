@@ -7,6 +7,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import java.util.Arrays;
+import java.lang.ref.WeakReference;
 import java.util.BitSet;
 
 /**
@@ -27,6 +28,7 @@ public final class BubbleBoundary {
     private final long signature;
     private volatile Path clipPath;
     private volatile Rect anchor;
+    private volatile WeakReference<BubbleBoundary> eraseClip;
 
     private BubbleBoundary(Rect bounds, int[][] rows) {
         this.bounds = new Rect(bounds);
@@ -248,6 +250,17 @@ public final class BubbleBoundary {
         }
         anchor = best;
         return new Rect(best);
+    }
+
+    /** Keep detection/clip antialias off the original outline; discard cache under GC. */
+    void clipForErase(Canvas canvas) {
+        WeakReference<BubbleBoundary> reference = eraseClip;
+        BubbleBoundary inner = reference == null ? null : reference.get();
+        if (inner == null) {
+            inner = inset(2);
+            eraseClip = new WeakReference<>(inner);
+        }
+        inner.clip(canvas);
     }
 
     void clip(Canvas canvas) {

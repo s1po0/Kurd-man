@@ -466,8 +466,8 @@ public final class StyledTextRenderer {
     /** Source-space clip, also used by studio's cached clean patches. */
     static void clipSource(Canvas canvas, Segment segment) {
         BubbleBoundary traced = tracedBoundary(segment);
-        if (traced != null) traced.clip(canvas);
-        else if (segment.bubbleOval) BubbleBoundary.ellipse(segment.getEraseBox()).clip(canvas);
+        if (traced != null) traced.clipForErase(canvas);
+        else if (segment.bubbleOval) BubbleBoundary.ellipse(segment.getEraseBox()).clipForErase(canvas);
         else canvas.clipRect(segment.getEraseBox());
     }
 

@@ -43,7 +43,7 @@ def main():
             raise ValueError("Invalid/budget-exceeding native fixture")
         sha = blob(args.repository, data)
         fixtures.append({"name": path.name, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(), "blob": sha})
-        print(f"::notice::SYNTHETIC_BUBBLE_FIXTURE {path.name} blob={sha}")
+        print(f"Synthetic bubble fixture {path.name} blob={sha}")
     evidence = {"scope": "Synthetic native Android/Skia glyph fixtures, NOT device/real-page/semantic acceptance",
                 "commit": args.commit, "run": args.run, "fixtures": fixtures}
     report = blob(args.repository, (json.dumps(evidence, indent=2) + "\n").encode())

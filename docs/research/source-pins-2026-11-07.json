@@ -1,0 +1,117 @@
+{
+  "date": "2026-11-07",
+  "reviews": [
+    {
+      "repo": "meangrinch/MangaTranslator",
+      "commit": "e347a09e024d11702441dd3637f044fdd8990ccb",
+      "metadataLicense": "Apache-2.0",
+      "reviewedPathsOrSections": [
+        "LICENSE",
+        "README.md",
+        "core/text/layout_engine.py",
+        "core/text/drawing_engine.py",
+        "core/text/text_renderer.py",
+        "core/image/image_utils.py"
+      ],
+      "sourceExecuted": false,
+      "runtimeCodeOrWeightsImported": false,
+      "licenseScope": "Root license; no model-weight or dependency import"
+    },
+    {
+      "repo": "ogkalu2/comic-translate",
+      "commit": "8977b91a4f7a40c3917c5a268e9e7d78e1d818da",
+      "metadataLicense": "Apache-2.0",
+      "reviewedPathsOrSections": [
+        "LICENSE",
+        "README.md",
+        "modules/rendering/render.py",
+        "modules/detection/utils/bubbles.py"
+      ],
+      "sourceExecuted": false,
+      "runtimeCodeOrWeightsImported": false,
+      "licenseScope": "Root license only; not a dependency/model-license audit"
+    },
+    {
+      "repo": "Aeonss/BubbleBlaster",
+      "commit": "652bef3b58a53a0e2070431d23ddeed32c58b68b",
+      "metadataLicense": "MIT",
+      "reviewedPathsOrSections": [
+        "LICENSE.md",
+        "README.md",
+        "bubbleblaster.py"
+      ],
+      "sourceExecuted": false,
+      "runtimeCodeOrWeightsImported": false,
+      "licenseScope": "Root license only; not a dependency/model-license audit"
+    },
+    {
+      "repo": "wiryaimd/manga-translator",
+      "commit": "9cdee59ac0a6472a5c4469145472da6667a28940",
+      "metadataLicense": "MIT",
+      "reviewedPathsOrSections": [
+        "README.md",
+        "main.java"
+      ],
+      "sourceExecuted": false,
+      "runtimeCodeOrWeightsImported": false,
+      "licenseScope": "API metadata says MIT but no root license file at inspected pin; do not reuse"
+    },
+    {
+      "repo": "Unheat/Kites",
+      "commit": "12f87ef67610e47ae516e87963c5177d8942d04e",
+      "metadataLicense": "GPL-3.0",
+      "reviewedPathsOrSections": [
+        "LICENSE",
+        "README.md",
+        "src/offscreen/utils/contour/layout.ts",
+        "src/offscreen/utils/contourTypeset.ts"
+      ],
+      "sourceExecuted": false,
+      "runtimeCodeOrWeightsImported": false,
+      "licenseScope": "Root license only; not a dependency/model-license audit"
+    },
+    {
+      "repo": "smnexstudio/Panelglass",
+      "commit": "0a56ddce2b860a45ff461138f9b6f402b5d8c4a8",
+      "metadataLicense": "Apache-2.0",
+      "reviewedPathsOrSections": [
+        "LICENSE",
+        "README.md",
+        "core/render/src/main/kotlin/com/smnexstudio/panelglass/core/render/TextFit.kt",
+        "core/render/src/main/kotlin/com/smnexstudio/panelglass/core/render/PolygonFit.kt",
+        "core/render/src/main/kotlin/com/smnexstudio/panelglass/core/render/BalloonFit.kt",
+        "core/render/src/main/kotlin/com/smnexstudio/panelglass/core/render/RegionRenderer.kt"
+      ],
+      "sourceExecuted": false,
+      "runtimeCodeOrWeightsImported": false,
+      "licenseScope": "Root license only; not a dependency/model-license audit"
+    },
+    {
+      "repo": "marco0antonio0/translate-manga-br",
+      "commit": "9c7e2706d894a53df1a8bb0ccd6270a8196aaad5",
+      "metadataLicense": "MIT",
+      "reviewedPathsOrSections": [
+        "LICENSE",
+        "README.md"
+      ],
+      "sourceExecuted": false,
+      "runtimeCodeOrWeightsImported": false,
+      "licenseScope": "Root license only; not a dependency/model-license audit",
+      "depth": "README/license only, no runtime source audit"
+    },
+    {
+      "repo": "Kyokkei/fukidashi-mcp",
+      "commit": "b600b4263d6173c1f5649f255e5163a3eb7a4af8",
+      "metadataLicense": "Apache-2.0",
+      "reviewedPathsOrSections": [
+        "LICENSE",
+        "LICENSE-Comic-Translate",
+        "README.md",
+        "src/typeset/layout.rs"
+      ],
+      "sourceExecuted": false,
+      "runtimeCodeOrWeightsImported": false,
+      "licenseScope": "Root license only; not a dependency/model-license audit"
+    }
+  ]
+}
