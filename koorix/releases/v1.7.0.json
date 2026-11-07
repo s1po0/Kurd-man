@@ -1,0 +1,242 @@
+{
+  "version": "1.7.0",
+  "versionCode": 15,
+  "applicationId": "com.koorix.app",
+  "label": "Koorix",
+  "debuggable": false,
+  "sourceCommit": "515c626ce7380844b9b1477da45d86024a0636a8",
+  "buildCommit": "515c626ce7380844b9b1477da45d86024a0636a8",
+  "nativeSourceLastChanged": "cfb74c6374df5b55e3333389e33303f4541c5a82",
+  "nativeTreeSha": "085077cc909436d18fbbe5283dc6a04f069fe985",
+  "repositoryPublic": true,
+  "releaseId": 437207406,
+  "assetId": 719075259,
+  "publishedAt": "2026-11-07T00:28:12Z",
+  "downloadUrl": "https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.7.0/Koorix-v1.7.0.apk",
+  "blobSha": "bc0b7124c549c89ac8de7816aae4d638975d7495",
+  "apkBytes": 33501937,
+  "apkSha256": "dd0e0939dea80b230e60d46c9e32272305f1caf7ec00be1d44a600da20f6939a",
+  "zipEntries": 601,
+  "signerSha256": "fb304de3cd357f35cf679e2a46befac08f3e97feef28b1b9a8af7b0891d40340",
+  "signerSha1": "21209f6f75195cfeb1dcaa7b7d74ad09e4954b6b",
+  "signingIdentity": "permanent-v2",
+  "independentLocalVerification": {
+    "file": "Koorix-v1.7.0.apk",
+    "bytes": 33501937,
+    "sha256": "dd0e0939dea80b230e60d46c9e32272305f1caf7ec00be1d44a600da20f6939a",
+    "zip_entries": 601,
+    "signature": {
+      "scheme": "v2",
+      "rsa_bits": 3072,
+      "certificate_sha256": "fb304de3cd357f35cf679e2a46befac08f3e97feef28b1b9a8af7b0891d40340",
+      "algorithm": "0x103",
+      "content_digest_verified": true
+    },
+    "package": "com.koorix.app",
+    "version": "1.7.0",
+    "version_code": 15,
+    "label": "Koorix",
+    "debuggable": false,
+    "no_login_gate_checked": true,
+    "free_edition_checked": true,
+    "test_harness_and_private_recovery_absent": true,
+    "native_contour_classes_checked": true
+  },
+  "mergedApkBroadStorageMediaReadPermissionsAbsent": true,
+  "abis": [
+    "arm64-v8a"
+  ],
+  "minSdk": 26,
+  "targetSdk": 35,
+  "ci": {
+    "runId": 42318077279,
+    "jobId": 128235583450,
+    "status": "success",
+    "cryptoTests": 18,
+    "comicAssertions": 604,
+    "qualityAssertions": 51,
+    "lexiconEntries": 204,
+    "androidJvmExecutions": 170,
+    "nativeGlyphExecutions": 34,
+    "sdks": [
+      26,
+      34
+    ],
+    "failures": 0,
+    "skipped": 0,
+    "signerColdRestores": 2,
+    "entitlementBackendInvoked": false,
+    "staticSiteLanguages": 3,
+    "staticSitePreferenceStorageStates": 6,
+    "candidateVerificationRunId": 42317362461,
+    "candidateVerificationJobId": 128233163065,
+    "nativeFixtures": 18,
+    "nativeFixtureReportBlob": "4b5df67a763805f75d21ba409db0aeb35710ea82"
+  },
+  "developerSkill": {
+    "localPythonTests": 55,
+    "ciRunId": 42318077217,
+    "ciStatus": "success",
+    "jobs": [
+      {
+        "id": 128235582952,
+        "name": "Offline skill tools (Python 3.11)",
+        "conclusion": "success"
+      },
+      {
+        "id": 128235583189,
+        "name": "Match real Koorix Java glossary and rule contracts",
+        "conclusion": "success"
+      },
+      {
+        "id": 128235583254,
+        "name": "Offline skill tools (Python 3.14)",
+        "conclusion": "success"
+      }
+    ],
+    "meaningAccuracyBenchmark": false
+  },
+  "research": {
+    "allThreeTopicsIndexed": true,
+    "date": "2026-11-07",
+    "includeForks": true,
+    "publicResultsVerified": true,
+    "uniqueRepositories": 499,
+    "topicMemberships": 681,
+    "forkRepositories": 14,
+    "coverage": {
+      "manga-translator": {
+        "reported": 76,
+        "indexed": 76,
+        "pages": 1,
+        "incompleteResults": false
+      },
+      "manhua": {
+        "reported": 195,
+        "indexed": 195,
+        "pages": 2,
+        "incompleteResults": false
+      },
+      "manhwa": {
+        "reported": 410,
+        "indexed": 410,
+        "pages": 5,
+        "incompleteResults": false
+      }
+    },
+    "selectedReviews": 8,
+    "functionalImplementationsStudiedInSelectedSections": 6,
+    "stubSourceInspected": 1,
+    "readmeLicenseOnly": 1,
+    "everyRepositoryDeepSourceAudited": false,
+    "sourceReport": "docs/research/COMIC_RENDERING_RESEARCH_2026-11-07.md",
+    "index": "docs/research/github-topic-index-2026-11-07.json",
+    "indexSha256": "2c5cfe5f11d5472efe63c0dc8c5ba09fe37a799ec6c2f9080aaa873c9a987930",
+    "primaryUpstream": "meangrinch/MangaTranslator",
+    "primaryCommit": "e347a09e024d11702441dd3637f044fdd8990ccb",
+    "primaryRootLicense": "Apache-2.0",
+    "upstreamCodeWeightsOrStacksImported": false
+  },
+  "features": {
+    "actualContourInkValidation": true,
+    "completeDialogueNoClip": true,
+    "multiRunContours": true,
+    "adaptiveContainedAnchor": true,
+    "fullOutlineShadowRotationValidation": true,
+    "fitBeforeEraseInAutomaticStudioExport": true,
+    "unplaceableReplacementPreservesSource": true,
+    "masksSurviveSaveDuplicateReopen": true,
+    "dragDoesNotDetachContour": true,
+    "legacyDirectExportRetrace": true,
+    "explicitHiddenForceErasePreserved": true,
+    "userLoginRemoved": true,
+    "premiumRemoved": true,
+    "dailyAppQuotasRemoved": true,
+    "deviceRegistrationRemoved": true,
+    "noInitialOnlineAllowanceRequired": true,
+    "unifiedAppCapableInputChooser": true,
+    "singleInputButton": true,
+    "separateGalleryAndUnfilteredFiles": false,
+    "photoOnlyPickerUsedForPublicInput": false,
+    "sourceAction": "android.intent.action.GET_CONTENT",
+    "mimeType": "*/*",
+    "mimeWhitelist": false,
+    "selectedUriReadAccessOnly": true,
+    "multiSelectRequested": true,
+    "editableProjectsPreserved": true,
+    "backupRestorePreserved": true,
+    "stopAndRecoveryPreserved": true,
+    "automaticSkillWithTranslate": true,
+    "targetLanguageChoices": 74,
+    "uiLanguages": [
+      "ckb",
+      "en",
+      "ar"
+    ],
+    "newTranslationModel": false,
+    "nllbAdded": false
+  },
+  "regressionEvidence": {
+    "baselineCommit": "f1fd6e276c1e57420f638aac1eec8ec682c4a2e2",
+    "baselineRunId": 42315026780,
+    "baselineJobId": 128225412054,
+    "baselineExecutions": 146,
+    "baselineFailures": 10,
+    "baselineSkipped": 0,
+    "unrelatedExistingExecutionsPassed": 136,
+    "baselineRotatedInkOutsidePixelsPerSdk": 2484,
+    "baselineInwardSpikeOutsidePixelsPerSdk": 49,
+    "intermediateBackgroundFringeRunId": 42316380411,
+    "intermediateSourceFringeRunId": 42316786667,
+    "allKnownRegressionsPassedInRelease": true,
+    "clippedAndUnclippedGlyphOutputMustMatch": true,
+    "nativeTypeface": "bundled Vazirmatn in shaped-script fixtures",
+    "syntheticShapes": [
+      "circle",
+      "rectangle",
+      "triangle",
+      "quadrilateral",
+      "concave",
+      "inward-spike"
+    ],
+    "realPageOrDeviceAcceptance": false,
+    "previousSignedApkRejectedByNewContourVerifier": true
+  },
+  "preservedSafetyLimits": {
+    "pages": 300,
+    "importMb": 300,
+    "cacheGb": 1,
+    "componentAndGlyphRasterPixelBudget": 3500000,
+    "androidProtectedFoldersNotBypassed": true,
+    "externalProviderRateLimitsUnchanged": true
+  },
+  "delivery": {
+    "chatFilePresented": true,
+    "telegramApkAcknowledged": true,
+    "publicUnauthenticatedDownloadHead": 302,
+    "releaseAssetDigestMatchesChatFile": true,
+    "completionNotice": "pending"
+  },
+  "historicalData": {
+    "serverRecordsDeleted": false,
+    "localCredentialsDeleted": false,
+    "newRuntimeUsesOldEntitlements": false,
+    "newRuntimeContactsSupabase": false,
+    "backendMutatedByThisTask": false
+  },
+  "hosting": {
+    "status": "not_deployed",
+    "siteSourceUpdatedToVersion": "1.7.0",
+    "previousVercelPagesIntegrationBlockUnchanged": true,
+    "newHostingAttempts": 0
+  },
+  "limitations": {
+    "semanticVisualAccuracyGuarantee": false,
+    "soraniEngine": "unchanged OPUS; meaning quality remains limited",
+    "nativeGraphicsEvidence": "synthetic native Android/Skia under Robolectric, not a physical device",
+    "universalContourDetection": false,
+    "optimalTypographyOrPerformanceForEveryPage": false,
+    "allFontsTargetsOemsVisuallyTested": false,
+    "historicalPreV2SignatureMigrationLimitationUnchanged": true
+  }
+}

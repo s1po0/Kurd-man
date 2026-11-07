@@ -3,7 +3,7 @@ on:
   push:
     branches: ["arena/**"]
     paths:
-      - "koorix/releases/v1.6.1.json"
+      - "koorix/releases/v1.7.0.json"
       - ".github/workflows/koorix-done.yml"
 permissions:
   contents: read
@@ -18,12 +18,20 @@ jobs:
         run: |
           python3 - <<'PY'
           import json
-          record=json.load(open('koorix/releases/v1.6.1.json'))
+          record=json.load(open('koorix/releases/v1.7.0.json'))
           assert record['features']['userLoginRemoved'] is True
           assert record['features']['premiumRemoved'] is True
           assert record['features']['dailyAppQuotasRemoved'] is True
           assert record['features']['unifiedAppCapableInputChooser'] is True
           assert record['features']['separateGalleryAndUnfilteredFiles'] is False
+          assert record['version']=='1.7.0' and record['versionCode']==15
+          assert record['features']['actualContourInkValidation'] is True
+          assert record['features']['completeDialogueNoClip'] is True
+          assert record['research']['allThreeTopicsIndexed'] is True
+          assert record['research']['includeForks'] is True
+          assert record['ci']['androidJvmExecutions']>=170
+          assert record['ci']['nativeGlyphExecutions']>=34
+          assert record['independentLocalVerification']['native_contour_classes_checked'] is True
           assert record['ci']['status']=='success'
           assert record['delivery']['chatFilePresented'] is True
           assert record['delivery']['telegramApkAcknowledged'] is True
@@ -37,10 +45,10 @@ jobs:
         run: |
           test -n "$TOKEN" && test -n "$ADMIN"
           MESSAGE="تەواو بووم ✅
-          Koorix 1.6.1 — بە تەواوی خۆڕایی بۆ ئێستا؛ Premium و سنووری ڕۆژانە لابران، Loginیش نییە.
-          دوو بەشەکە لابران؛ یەک دوگمە و یەک هەڵبژێرەر بۆ ئەپە گونجاوە دامەزراوەکانی Gallery، MT Manager، ZArchiver و My Files.
-          APKی وەشانی ئاسایی بە هەمان کلیلی v2 لە چات و Telegram نێردرا. لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە.
-          https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.6.1/Koorix-v1.6.1.apk"
+          Koorix 1.7.0 — گونجاندنی دەق بە سنووری بالۆن: پیتە لکێنراوەکان، دەور، سێبەر و سووڕان پێش سڕینەوە پشکنین دەکرێن؛ نەک بڕینی وشەکان. ئەگەر هەموو دەقەکە نەگونجێت، ڕەسەن دەمێنێت.
+          هەرسێ لیستی GitHub لەگەڵ فۆرکەکان گەڕاون: ٤٩٩ ریپۆ پۆلێن کراون و سەرچاوە پەیوەندیدارەکان بە وردی پشکنراون. ١٧٠ پشکنین تێپەڕین؛ نموونەی دروستکراون، نەک دڵنیایی هەموو پەڕە و مۆبایلێک.
+          APKی ئاسایی لە چات و Telegram نێردرا؛ خۆڕایی و یەک هەڵبژێرەر و هەمان کلیلی v2 پارێزراون. لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە.
+          https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.7.0/Koorix-v1.7.0.apk"
 
           RESPONSE=$(curl -fsS --connect-timeout 20 --max-time 60 \
             --data-urlencode "chat_id=$ADMIN" --data-urlencode "text=$MESSAGE" \
