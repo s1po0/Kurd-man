@@ -382,14 +382,21 @@ public class PageEditorView extends View {
         canvas.concat(imageMatrix);
         canvas.drawBitmap(bitmap, 0f, 0f, null);
         if (!peekOriginal) {
-            drawCleanPatches(canvas);
-            StyledTextRenderer.eraseOriginals(canvas, segments);
+            List<Segment> accepted = new ArrayList<>();
             for (Segment segment : segments) {
+                TextStyleSettings style = segment.ensureStyle();
+                if ((!style.visible && style.forceErase)
+                        || (style.visible && segment.ckb != null && !segment.ckb.trim().isEmpty()
+                                && fitFor(segment) != null)) accepted.add(segment);
+            }
+            drawCleanPatches(canvas, accepted);
+            StyledTextRenderer.eraseOriginals(canvas, accepted);
+            for (Segment segment : accepted) {
                 if (segment.ensureStyle().visible) {
                     StyledTextRenderer.drawBackground(canvas, segment);
                 }
             }
-            for (Segment segment : segments) {
+            for (Segment segment : accepted) {
                 if (!segment.ensureStyle().visible
                         || segment.ckb == null || segment.ckb.trim().isEmpty()) {
                     continue;
@@ -408,11 +415,11 @@ public class PageEditorView extends View {
     }
 
     /** Draws cached glyph-level inpaint patches for BG_CLEAN segments. */
-    private void drawCleanPatches(Canvas canvas) {
+    private void drawCleanPatches(Canvas canvas, List<Segment> accepted) {
         if (bitmap == null || bitmap.isRecycled()) {
             return;
         }
-        for (Segment segment : segments) {
+        for (Segment segment : accepted) {
             if (segment.ensureStyle().backgroundMode
                     != TextStyleSettings.BG_CLEAN
                     || !StyledTextRenderer.shouldEraseOriginal(segment)) {
@@ -421,8 +428,11 @@ public class PageEditorView extends View {
             CachedPatch cached = cleanPatchFor(segment);
             if (cached != null && cached.patch != null
                     && !cached.patch.isRecycled() && cached.rect != null) {
+                int save = canvas.save();
+                StyledTextRenderer.clipSource(canvas, segment);
                 canvas.drawBitmap(cached.patch,
                         cached.rect.left, cached.rect.top, null);
+                canvas.restoreToCount(save);
             }
         }
     }
@@ -473,19 +483,7 @@ public class PageEditorView extends View {
     }
 
     private String fitSignature(Segment segment) {
-        TextStyleSettings style = segment.ensureStyle();
-        Rect box = segment.getRenderBox();
-        return segment.ckb + "|" + box.width() + "x" + box.height()
-                + "|" + segment.box.width() + "x" + segment.box.height()
-                + "|" + segment.lines
-                + "|" + style.fontId + "|" + style.fontWeight
-                + "|" + style.italic + "|" + style.underline
-                + "|" + style.strikethrough + "|" + style.sizeScale
-                + "|" + style.lineSpacing + "|" + style.alignment
-                + "|" + style.paddingScale + "|" + style.autoTextColor
-                + "|" + style.textColor + "|" + segment.detectedInkColor
-                + "|" + style.textOpacity + "|" + style.shadow
-                + "|" + style.shadowColor + "|" + style.shadowStrength;
+        return StyledTextRenderer.fitSignature(segment);
     }
 
     private void drawOverlays(Canvas canvas) {

@@ -311,6 +311,7 @@ public class TranslationProject {
         json.put("detectedInkColor", segment.detectedInkColor);
         json.put("autoBackgroundReliable", segment.autoBackgroundReliable);
         json.put("bubbleOval", segment.bubbleOval);
+        if (segment.bubbleBoundary != null) json.put("bubbleBoundary", segment.bubbleBoundary.toJson());
         json.put("outsideText", segment.outsideText);
         json.put("outsideBrightInk", segment.outsideBrightInk);
         if (segment.interiorLeft != null && segment.interiorRight != null
@@ -353,6 +354,8 @@ public class TranslationProject {
         segment.bubbleOval = json.optBoolean("bubbleOval", false);
         segment.outsideText = json.optBoolean("outsideText", false);
         segment.outsideBrightInk = json.optBoolean("outsideBrightInk", true);
+        if (json.has("bubbleBoundary")) segment.bubbleBoundary =
+                BubbleBoundary.fromJson(json.optJSONObject("bubbleBoundary"));
         segment.interiorTop = json.optInt("interiorTop", -1);
         segment.interiorLeft = intsFromJson(json.optJSONArray("interiorLeft"));
         segment.interiorRight = intsFromJson(json.optJSONArray("interiorRight"));

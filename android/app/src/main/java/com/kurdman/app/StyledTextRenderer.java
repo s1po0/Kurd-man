@@ -4,6 +4,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -14,7 +15,11 @@ import android.text.StaticLayout;
 import android.text.TextDirectionHeuristics;
 import android.text.TextPaint;
 
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Draws Kurdish text with the global style or a block's edited style.
@@ -35,7 +40,10 @@ public final class StyledTextRenderer {
         public int horizontalPadding;
         public int verticalPadding;
         public float textSize;
+        /** Kept for source compatibility; rejected layouts are no longer returned. */
         public boolean overflow;
+        private BubbleBoundary boundary;
+        private String verifiedSignature;
     }
 
     public static final class EditedResult {
@@ -73,16 +81,17 @@ public final class StyledTextRenderer {
         int width = Math.max(16, rect.width() - horizontalPadding * 2);
         int maxHeight = Math.max(12, rect.height() - verticalPadding * 2);
 
-        // The bubble's real outline (traced per row by the renderer) is
-        // the strongest fit constraint: it follows connected double
-        // balloons and tails that no rectangle or ellipse model
-        // matches. It only applies while the text box still sits over
-        // the detected bubble; a box the user dragged elsewhere in the
-        // editor is unconstrained. Computed early because the starting
-        // font size may grow when it is present.
-        boolean hasMask = segment.interiorLeft != null
-                && segment.interiorRight != null
-                && segment.getEraseBox().contains(rect.centerX(), rect.centerY());
+        // A moved/styled box never detaches the actual contour. Intersect it
+        // with the editable box; fit the complete glyph raster BEFORE erasure.
+        BubbleBoundary traced = tracedBoundary(segment);
+        boolean hasMask = traced != null;
+        BubbleBoundary boundary = (hasMask ? traced : segment.bubbleOval
+                ? BubbleBoundary.ellipse(rect) : BubbleBoundary.rectangle(rect)).intersect(rect);
+        int safety = Math.min(128, Math.max(2, Math.round(
+                Math.min(rect.width(), rect.height()) * .015f * style.paddingScale)));
+        BubbleBoundary safeArea = boundary.inset(safety);
+        if (safeArea.isEmpty()) return null;
+        String signature = fitSignature(segment);
 
         // Measured line pitch from the OCR line boxes when available;
         // box/lines is only a fallback because ML Kit pads block boxes
@@ -94,10 +103,9 @@ public final class StyledTextRenderer {
         if (sourceLineHeight <= 0f) {
             sourceLineHeight = Math.max(12f, rect.height());
         }
-        // With a traced outline the fit below is exact, so the font may
-        // start somewhat larger than the source lines and only shrink
-        // if a line would truly cross the border. Without this, text in
-        // big bubbles used to come out needlessly small.
+        // Start near the source's measured line pitch. Bounds/three-row
+        // heuristics below only reject obvious failures; native styled ink
+        // (including rotation/effects) is the final authority.
         float startFactor = (hasMask && !allowOverflow) ? 1.20f : 0.97f;
         int startSize = clampInt(Math.round(
                 sourceLineHeight * startFactor * style.sizeScale), 8, 220);
@@ -119,20 +127,17 @@ public final class StyledTextRenderer {
         // top and bottom. Narrow the layout step by step (recentring it via
         // the padding, like real scanlation typesetting) until every line
         // stays inside the bubble; only then fall back to a smaller font.
-        float[] widthFractions = (segment.bubbleOval || hasMask)
+        float[] widthFractions = (segment.bubbleOval || hasMask || Math.abs(style.rotationDegrees) > .01f)
                 ? new float[]{1f, 0.92f, 0.84f, 0.76f, 0.68f, 0.60f}
                 : new float[]{1f};
         for (int size = startSize; size >= minSize; size--) {
+            if (Thread.currentThread().isInterrupted()) return null;
             applyTextSizeAndShadow(paint, style, size);
-            StaticLayout fallbackLayout = null;
-            int fallbackPad = horizontalPadding;
             for (float fraction : widthFractions) {
                 int layoutWidth = Math.max(16, Math.round(width * fraction));
                 int effectivePad = horizontalPadding + (width - layoutWidth) / 2;
                 StaticLayout layout = buildLayout(
                         segment.ckb.trim(), paint, layoutWidth, style);
-                fallbackLayout = layout;
-                fallbackPad = effectivePad;
                 boolean shapeOk = hasMask
                         ? linesInsideInterior(segment, rect, layout,
                                 effectivePad, verticalPadding)
@@ -154,23 +159,26 @@ public final class StyledTextRenderer {
                     fit.verticalPadding = verticalPadding;
                     fit.textSize = size;
                     fit.overflow = false;
-                    return fit;
+                    fit.boundary = boundary;
+                    if (inkInside(segment, fit, safeArea)) {
+                        fit.verifiedSignature = signature;
+                        return fit;
+                    }
+                    // Recentring is optional; never lose an otherwise safe fit.
+                    if (pad != effectivePad) {
+                        fit.horizontalPadding = effectivePad;
+                        if (inkInside(segment, fit, safeArea)) {
+                            fit.verifiedSignature = signature;
+                            return fit;
+                        }
+                    }
                 }
                 if (layout.getHeight() > maxHeight) {
                     // Narrower layouts only get taller; shrink the font.
                     break;
                 }
             }
-            if (allowOverflow && size == minSize && fallbackLayout != null) {
-                FitResult fit = new FitResult();
-                fit.layout = fallbackLayout;
-                fit.paint = paint;
-                fit.horizontalPadding = fallbackPad;
-                fit.verticalPadding = verticalPadding;
-                fit.textSize = size;
-                fit.overflow = true;
-                return fit;
-            }
+
         }
         return null;
     }
@@ -179,40 +187,33 @@ public final class StyledTextRenderer {
                                             TypefaceResolver resolver) {
         Bitmap output = original.copy(Bitmap.Config.ARGB_8888, true);
         Canvas canvas = new Canvas(output);
-        eraseOriginals(canvas, original, segments);
-
-        int rendered = 0;
-        int skipped = 0;
+        List<Segment> accepted = new ArrayList<>();
+        List<Segment> erase = new ArrayList<>();
+        Map<Segment, FitResult> fits = new IdentityHashMap<>();
+        int rendered = 0, skipped = 0;
         if (segments != null) {
             for (Segment segment : segments) {
                 segment.rendered = false;
-                if (!segment.ensureStyle().visible
-                        || segment.ckb == null || segment.ckb.trim().isEmpty()) {
+                TextStyleSettings style = segment.ensureStyle();
+                if (!style.visible || segment.ckb == null || segment.ckb.trim().isEmpty()) {
+                    // Preserve the studio's explicit hidden-block erase control.
+                    if (!style.visible && style.forceErase) erase.add(segment);
                     skipped++;
-                }
-            }
-            // Paint all backgrounds before all text so a moved box cannot
-            // cover a neighbour's already-drawn Kurdish words.
-            for (Segment segment : segments) {
-                if (segment.ensureStyle().visible
-                        && segment.ckb != null && !segment.ckb.trim().isEmpty()) {
-                    drawBackground(canvas, segment);
-                }
-            }
-            for (Segment segment : segments) {
-                if (!segment.ensureStyle().visible
-                        || segment.ckb == null || segment.ckb.trim().isEmpty()) {
                     continue;
                 }
                 FitResult fit = createFit(segment, resolver, true);
-                if (fit == null) {
-                    skipped++;
-                    continue;
-                }
-                drawText(canvas, segment, fit);
-                segment.rendered = true;
-                rendered++;
+                if (fit == null) { skipped++; continue; }
+                accepted.add(segment); erase.add(segment); fits.put(segment, fit);
             }
+        }
+        // Resolve ALL fits first. An unplaceable translation must not leave a
+        // blank balloon in exports; keep the source and the full editable text.
+        eraseOriginals(canvas, original, erase);
+        for (Segment segment : accepted) drawBackground(canvas, segment);
+        for (Segment segment : accepted) {
+            if (drawText(canvas, segment, fits.get(segment))) {
+                segment.rendered = true; rendered++;
+            } else skipped++;
         }
         return new EditedResult(output, rendered, skipped);
     }
@@ -267,8 +268,11 @@ public final class StyledTextRenderer {
                 Color.red(eraseColor), Color.green(eraseColor), Color.blue(eraseColor)));
         Rect erase = segment.getEraseBox();
         float radius = backgroundRadius(style, erase);
+        int save = canvas.save();
+        clipSource(canvas, segment);
         drawShape(canvas, new RectF(erase),
                 effectiveShape(segment, style), radius, fill);
+        canvas.restoreToCount(save);
     }
 
     /**
@@ -325,7 +329,10 @@ public final class StyledTextRenderer {
                 : CleanEraser.createPatch(
                         source, erase, segment.detectedBackgroundColor);
         if (patch != null) {
+            int save = canvas.save();
+            clipSource(canvas, segment);
             canvas.drawBitmap(patch, erase.left, erase.top, null);
+            canvas.restoreToCount(save);
             patch.recycle();
         }
     }
@@ -347,6 +354,7 @@ public final class StyledTextRenderer {
         Rect rect = segment.getRenderBox();
         int shape = effectiveShape(segment, style);
         canvas.save();
+        drawingBoundary(segment).clip(canvas);
         rotateAroundRect(canvas, rect, style.rotationDegrees);
         drawShape(canvas, new RectF(rect), shape,
                 backgroundRadius(style, rect), fill);
@@ -361,6 +369,7 @@ public final class StyledTextRenderer {
         }
         Rect rect = segment.getRenderBox();
         canvas.save();
+        drawingBoundary(segment).clip(canvas);
         rotateAroundRect(canvas, rect, style.rotationDegrees);
         drawBorder(canvas, rect, style, effectiveShape(segment, style));
         canvas.restore();
@@ -384,21 +393,120 @@ public final class StyledTextRenderer {
     }
 
     public static boolean drawText(Canvas canvas, Segment segment, FitResult fit) {
-        if (fit == null || fit.layout == null || fit.paint == null) {
-            return false;
-        }
-        TextStyleSettings style = segment.ensureStyle();
-        Rect rect = segment.getRenderBox();
-        int availableHeight = Math.max(0, rect.height() - fit.verticalPadding * 2);
-        int yOffset = fit.verticalPadding
-                + Math.max(0, (availableHeight - fit.layout.getHeight()) / 2);
-
-        canvas.save();
-        rotateAroundRect(canvas, rect, style.rotationDegrees);
-        canvas.translate(rect.left + fit.horizontalPadding, rect.top + yOffset);
-        drawLayout(canvas, segment, fit);
-        canvas.restore();
+        if (fit == null || fit.layout == null || fit.paint == null
+                || fit.verifiedSignature == null
+                || !fit.verifiedSignature.equals(fitSignature(segment))) return false;
+        int save = canvas.save();
+        // Defence in depth only: acceptance already checked the UNCLIPPED ink.
+        // This clip is not used to hide/truncate overflowing dialogue.
+        fit.boundary.clip(canvas);
+        drawUnclipped(canvas, segment, fit);
+        canvas.restoreToCount(save);
         return true;
+    }
+
+    private static int yOffset(Rect rect, FitResult fit) {
+        int available = Math.max(0, rect.height() - fit.verticalPadding * 2);
+        return fit.verticalPadding + Math.max(0, (available - fit.layout.getHeight()) / 2);
+    }
+
+    static void drawUnclipped(Canvas canvas, Segment segment, FitResult fit) {
+        Rect rect = segment.getRenderBox();
+        int save = canvas.save();
+        rotateAroundRect(canvas, rect, segment.ensureStyle().rotationDegrees);
+        canvas.translate(rect.left + fit.horizontalPadding, rect.top + yOffset(rect, fit));
+        drawLayout(canvas, segment, fit);
+        canvas.restoreToCount(save);
+    }
+
+    private static BubbleBoundary tracedBoundary(Segment segment) {
+        if (segment.outsideText) return null;
+        if (segment.bubbleBoundary != null) return segment.bubbleBoundary;
+        if (segment.interiorLeft != null || segment.interiorRight != null) {
+            return BubbleBoundary.fromSpans(segment.interiorTop,
+                    segment.interiorLeft, segment.interiorRight);
+        }
+        return null;
+    }
+
+    private static BubbleBoundary drawingBoundary(Segment segment) {
+        BubbleBoundary traced = tracedBoundary(segment);
+        Rect rect = segment.getRenderBox();
+        return (traced != null ? traced : segment.bubbleOval
+                ? BubbleBoundary.ellipse(rect) : BubbleBoundary.rectangle(rect)).intersect(rect);
+    }
+
+    /** Source-space clip, also used by studio's cached clean patches. */
+    static void clipSource(Canvas canvas, Segment segment) {
+        BubbleBoundary traced = tracedBoundary(segment);
+        if (traced != null) traced.clip(canvas);
+        else if (segment.bubbleOval) BubbleBoundary.ellipse(segment.getEraseBox()).clip(canvas);
+        else canvas.clipRect(segment.getEraseBox());
+    }
+
+    /** Shared by studio and final drawing; every geometry/ink-affecting edit invalidates fits. */
+    static String fitSignature(Segment segment) {
+        TextStyleSettings s = segment.ensureStyle();
+        Rect rect = segment.getRenderBox();
+        return segment.ckb + "|" + rect.toShortString() + "|" + segment.box.height()
+                + "|" + segment.sourceLineHeight + "|" + segment.lines
+                + "|" + segment.bubbleOval + "|" + segment.outsideText
+                + "|" + (segment.bubbleBoundary == null ? "legacy" : segment.bubbleBoundary.signature())
+                + "|" + segment.interiorTop + "|" + Arrays.hashCode(segment.interiorLeft)
+                + "|" + Arrays.hashCode(segment.interiorRight)
+                + "|" + s.fontId + "|" + s.fontWeight + "|" + s.italic
+                + "|" + s.underline + "|" + s.strikethrough + "|" + s.sizeScale
+                + "|" + s.lineSpacing + "|" + s.alignment + "|" + s.paddingScale
+                + "|" + s.rotationDegrees + "|" + s.autoTextColor + "|" + s.textColor
+                + "|" + segment.detectedInkColor + "|" + s.textOpacity
+                + "|" + s.shadow + "|" + s.shadowColor + "|" + s.shadowStrength
+                + "|" + s.outline + "|" + s.outlineColor + "|" + s.outlineWidthRatio
+                + "|" + s.gradient + "|" + s.gradientColor + "|" + s.gradientDirection;
+    }
+
+    /** Rasterize exactly the shaped StaticLayout/effects used for final painting. */
+    private static boolean inkInside(Segment segment, FitResult fit, BubbleBoundary safeArea) {
+        Rect rect = segment.getRenderBox();
+        float margin = Math.max(12f, fit.textSize * 2f + 8f);
+        RectF area = new RectF(rect.left + fit.horizontalPadding,
+                rect.top + yOffset(rect, fit),
+                rect.left + fit.horizontalPadding + fit.layout.getWidth(),
+                rect.top + yOffset(rect, fit) + fit.layout.getHeight());
+        area.inset(-margin, -margin);
+        Matrix rotation = new Matrix();
+        rotation.setRotate(segment.ensureStyle().rotationDegrees, rect.exactCenterX(), rect.exactCenterY());
+        rotation.mapRect(area);
+        int left = (int) Math.floor(area.left), top = (int) Math.floor(area.top);
+        int width = (int) Math.ceil(area.right) - left, height = (int) Math.ceil(area.bottom) - top;
+        if (width <= 0 || height <= 0 || (long) width * height > BubbleBoundary.MAX_PIXELS
+                || Thread.currentThread().isInterrupted()) return false;
+        Bitmap raster = null;
+        try {
+            raster = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            Canvas ink = new Canvas(raster);
+            ink.translate(-left, -top);
+            drawUnclipped(ink, segment, fit);
+            int[] row = new int[width];
+            boolean painted = false;
+            for (int y = 0; y < height; y++) {
+                if (Thread.currentThread().isInterrupted()) return false;
+                raster.getPixels(row, 0, width, 0, y, width, 1);
+                for (int x = 0; x < width; x++) {
+                    if (Color.alpha(row[x]) == 0) continue;
+                    painted = true;
+                    // Unlike the upstream 128-alpha threshold, keep even the
+                    // antialias/blur fringe inside our padded safe region.
+                    if (x == 0 || y == 0 || x == width - 1 || y == height - 1
+                            || !safeArea.contains(left + x, top + y)) return false;
+                }
+            }
+            return painted || segment.ensureStyle().textOpacity == 0;
+        } catch (OutOfMemoryError | RuntimeException unavailable) {
+            // Fail closed. Never erase source text on an unverified raster.
+            return false;
+        } finally {
+            if (raster != null) raster.recycle();
+        }
     }
 
     private static void drawLayout(Canvas canvas, Segment segment, FitResult fit) {
@@ -591,7 +699,8 @@ public final class StyledTextRenderer {
     }
 
     /**
-     * Checks every laid-out line against the traced bubble interior: at
+     * Cheap prefilter only (NOT proof of containment). The final full styled
+     * raster above validates every nontransparent pixel. At
      * the top, middle and bottom of each line's glyph band, the line's
      * left and right ends must stay between that row's interior edges
      * (minus a small safety margin). Coordinates are absolute page

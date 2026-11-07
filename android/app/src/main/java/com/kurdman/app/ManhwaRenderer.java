@@ -786,6 +786,10 @@ public class ManhwaRenderer {
             Segment segment = work.get(workIndex);
             segment.rendered = false;
             segment.outsideText = false;
+            segment.bubbleBoundary = null;
+            segment.interiorTop = -1;
+            segment.interiorLeft = null;
+            segment.interiorRight = null;
             segment.style = new TextStyleSettings(initialStyle);
             segment.ensureStyle().visible = true;
             if (segment.originalCkb == null || segment.originalCkb.trim().isEmpty()) {
@@ -847,7 +851,8 @@ public class ManhwaRenderer {
 
             StyledTextRenderer.FitResult fit = StyledTextRenderer.createFit(
                     segment, resolver, false);
-            if (fit == null && !segment.outsideText
+            if (fit == null && !segment.outsideText && !segment.bubbleOval
+                    && segment.bubbleBoundary == null && segment.interiorLeft == null
                     && prepareOutsideText(original, segment)) {
                 // The bubble assumptions failed for this block; it may
                 // be lettering over artwork after all.
@@ -896,10 +901,11 @@ public class ManhwaRenderer {
 
         int rendered = 0;
         for (Placement placement : placements) {
-            StyledTextRenderer.drawText(canvas, placement.segment, placement.fit);
-            placement.segment.rendered = true;
-            placement.segment.ensureStyle().visible = true;
-            rendered++;
+            if (StyledTextRenderer.drawText(canvas, placement.segment, placement.fit)) {
+                placement.segment.rendered = true;
+                placement.segment.ensureStyle().visible = true;
+                rendered++;
+            } else skippedFit++;
         }
         return new RenderResult(output, rendered, skippedBackground,
                 skippedFit, skippedNoTranslation, work);
@@ -1148,6 +1154,7 @@ public class ManhwaRenderer {
             }
 
             segment.outsideText = true;
+            segment.bubbleBoundary = null;
             segment.outsideBrightInk = brightInk;
             segment.bubbleOval = false;
             segment.interiorTop = -1;
@@ -1343,8 +1350,9 @@ public class ManhwaRenderer {
      * the real outline, even for connected double balloons whose grown
      * rectangle covers two circles) and the bubble "body" rectangle —
      * the interior bounds with narrow tail rows trimmed — is returned.
-     * Returns {@code null} (and stores nothing) when the trace looks
-     * unreliable, leaving the caller with the previous rectangle logic.
+     * Returns {@code null} when no reliable body rectangle is found. A valid
+     * traced mask is still kept even if body selection fails; callers must not
+     * silently relax that contour into an unconstrained rectangle.
      *
      * <p>The body rectangle is taken from the band of rows that belongs
      * to this text's own balloon (see {@link #bubbleBandBody}); the full
@@ -1490,6 +1498,15 @@ public class ManhwaRenderer {
                 }
             }
         }
+
+        // Keep the real connected component, including disjoint row runs.
+        // Source-letter holes can be filled, but exterior notches/concavities
+        // must never be bridged by the legacy per-row extremes.
+        segment.bubbleBoundary = BubbleBoundary.fromComponent(
+                region, labels, interior, segment.box, queue);
+        segment.interiorTop = region.top;
+        segment.interiorLeft = left;
+        segment.interiorRight = right;
 
         Rect body = bubbleBandBody(
                 left, right, height, region, segment, allSegments);

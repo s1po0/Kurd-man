@@ -48,6 +48,8 @@ public class Segment {
     public int interiorTop = -1;
     public int[] interiorLeft = null;
     public int[] interiorRight = null;
+    /** Exact, immutable multi-run mask; shared safely by snapshots/duplicates. */
+    public BubbleBoundary bubbleBoundary = null;
     /** True when this block is lettering drawn over artwork (SFX outside
      * any speech bubble). Such blocks are erased glyph-by-glyph against
      * the artwork and re-typeset in the original ink colour. Only set
@@ -117,6 +119,7 @@ public class Segment {
         copy.detectedInkColor = detectedInkColor;
         copy.autoBackgroundReliable = autoBackgroundReliable;
         copy.bubbleOval = bubbleOval;
+        copy.bubbleBoundary = bubbleBoundary;
         copy.interiorTop = interiorTop;
         copy.interiorLeft = interiorLeft == null ? null : interiorLeft.clone();
         copy.interiorRight = interiorRight == null ? null : interiorRight.clone();

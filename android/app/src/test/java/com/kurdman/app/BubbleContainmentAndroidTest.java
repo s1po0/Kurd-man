@@ -37,7 +37,13 @@ public class BubbleContainmentAndroidTest {
 
     private Bitmap ink(Segment s, StyledTextRenderer.FitResult fit) {
         Bitmap b = Bitmap.createBitmap(480, 340, Bitmap.Config.ARGB_8888);
-        assertTrue(StyledTextRenderer.drawText(new Canvas(b), s, fit));
+        // Assert on UNCLIPPED production painting, then check the defensive
+        // final clip discards no pixels. A clip-only "fix" must fail this suite.
+        StyledTextRenderer.drawUnclipped(new Canvas(b), s, fit);
+        Bitmap finalInk = Bitmap.createBitmap(480, 340, Bitmap.Config.ARGB_8888);
+        assertTrue(StyledTextRenderer.drawText(new Canvas(finalInk), s, fit));
+        assertTrue("Fitting must work without cutting any glyph pixels", b.sameAs(finalInk));
+        finalInk.recycle();
         return b;
     }
 

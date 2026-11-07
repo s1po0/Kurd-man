@@ -386,12 +386,10 @@ public class EditorActivity extends AppCompatActivity
                 segment.bubbleOval = true;
                 changed = true;
             }
-            if (segment.interiorLeft == null && !segment.outsideText
-                    && ManhwaRenderer.computeInteriorSpans(
-                            bitmap, segment, segments) != null) {
-                // Spans only: the editor keeps the user's own box, but the
-                // fit now keeps lines inside the traced bubble outline.
-                changed = true;
+            if (segment.bubbleBoundary == null && !segment.outsideText) {
+                ManhwaRenderer.computeInteriorSpans(bitmap, segment, segments);
+                // Upgrade legacy spans without moving the reader's edited box.
+                if (segment.bubbleBoundary != null) changed = true;
             }
         }
         return changed;
