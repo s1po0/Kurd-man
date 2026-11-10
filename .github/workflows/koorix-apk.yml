@@ -194,7 +194,7 @@ jobs:
       - name: Independently verify public APK v2 digest, manifest, free-edition classes and harness exclusion
         run: |
           python3 tools/signing/inspect-public-apk.py "$APK_FILE" \
-            --version "$KOORIX_VERSION" --code "$KOORIX_CODE" --no-login --free --contours --reading-studio
+            --version "$KOORIX_VERSION" --code "$KOORIX_CODE" --no-login --free --contours --reading-studio --triad-theme
           echo "::notice::Independent public-only APK signature/content/no-login verification passed"
 
       # Releases/chat delivery do not depend on the repository artifact quota.
@@ -229,7 +229,7 @@ jobs:
         run: |
           TAG="koorix-v$KOORIX_VERSION"
           cp "$APK_FILE" "Koorix-v$KOORIX_VERSION.apk"
-          NOTES="Koorix v$KOORIX_VERSION — full native Reading Studio UI/UX redesign using the owner-requested, pinned MIT UI/UX Pro Max skill (not a web mockup or new model). Paper & Forest semantic light/dark/system themes, bundled joined-script UI type, import-first single GET_CONTENT */* source-app chooser, thumb-reachable normal Translate, localized headings/language access, predictable Back, retained tab scroll state and large-text destination navigation. Searchable local projects with one Open/Resume action and contextual backup/rename/reuse/delete; refined studio, style, results, settings, diagnostics and optional story/review. Completed imported pages survive appearance/locale recreation using bounded private metadata, no duplicate import or bitmap IPC. Native 48dp controls, matching vector icons, readable measures, RTL and system/IME inset handling. Existing free/no-login/no-daily-app-quota operation, automatic translation Skill, 74 targets, three UI languages, contour-safe complete glyph fitting, saved jobs/STOP/recovery/backups/PDF and 300-page/300-MB/1-GB safeguards remain. No paid API, NLLB, large model, new runtime UI framework or network font. Same com.koorix.app, permanent v2 signer, non-debuggable ARM64: install over v2 Koorix without uninstalling or clearing data. Native SDK26/34 synthetic UI/glyph regressions and captures are not physical-device/TalkBack/IME or universal visual/semantic certification. Sorani translation model is unchanged. Design/provenance and validation boundaries are documented in docs/KOORIX_1_8.md."
+          NOTES="Koorix v$KOORIX_VERSION — owner-requested muted three-colour mix and discoverable Dark mode. Replaces green-led chrome with blue/violet/peach, quiet neutral light/dark surfaces, a restrained three-stop hero/ribbon, violet status and peach highlights. Persistent header moon/sun button actually switches Light/Dark; Settings shares saved System/Light/Dark preference. Choice survives recreation/relaunch, imported pages remain and protected jobs keep STOP. Fixed stale appearance-spinner restoration and resolved programmatic studio button labels against active theme. Teal studio selection handles are now semantic non-green UI overlays, not exported art. Existing regular native Reading Studio, all language resources/74 targets, single original GET_CONTENT */* input chooser, automatic translation Skill, free/no-login/no-commercial-quota operation, projects/backup/recovery/Reports/studio/PDF and 300-page/300-MB/1-GB safeguards remain. No new model, paid API, NLLB, hidden fallback, web wrapper or remote font. Same com.koorix.app and permanent production v2 signer; install over v2 Koorix without uninstalling or clearing data. Native SDK26/34 regressions, real theme actions, contrast checks and synthetic screenshots do not certify physical devices, TalkBack, universal visual/semantic quality or medical eye comfort. See docs/KOORIX_1_8_1.md and design-system/koorix/MASTER.md."
 
           # An owner-prepared draft/tag is valid too. Upload verified bytes first,
           # then publish; expose public CLI errors without printing credentials.
@@ -274,10 +274,10 @@ jobs:
             echo "::error::APK exceeds Telegram's upload budget"
             exit 1
           fi
-          CAPTION="💚 Koorix v$KOORIX_VERSION — ڕووکار و UXی نوێی ئەپی ئاسایی، نەک Preview.
-          ڕووکاری کاغەزی/سەوز، مۆدی ڕوون/تاریک، فۆنتی لکێنراو، هەڵبژاردنی پەڕە لە پێشەوە و Translate لە خوارەوە. گەڕانی پڕۆژە، لیستی کردارەکان، ستۆدیۆ و ڕێکخستنی نوێ.
-          بە Skillی UI/UX Pro Max لە سەرچاوەی داواکراو؛ هیچ مۆدێلی نوێ یان APIی پارەدار زیاد نەکراوە. پڕۆژەکان، یەک هەڵبژێرەر، خۆڕایی، Skillی خۆکار و STOP پارێزراون.
-          هەمان package و کلیلی v2 ـە؛ لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە. وێنەکانی پشکنین ناتیڤ و نموونەی دروستکراون، نەک دڵنیایی هەموو مۆبایلێک."
+          CAPTION="Koorix v$KOORIX_VERSION — سێ ڕەنگی کاڵ و Dark mode.
+          سەوزی ڕووکار لابراوە؛ شین + مۆر + هەڵۆیی کاڵ بە هاوسەنگی تێکەڵن. دوگمەی مانگ/خۆر لە سەرەوە بە یەک لێدان دۆخی تاریک/ڕوون دەگۆڕێت و هەڵبژاردنەکەت پاشەکەوت دەکرێت.
+          یەک هەڵبژێرەر، خۆڕایی، پڕۆژەکان، ستۆدیۆ و STOP پارێزراون؛ هیچ مۆدێلی نوێ زیاد نەکراوە.
+          ئەپی ئاسایی و هەمان package/کلیلی v2؛ لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە. پشکنینەکان ناتیڤ و نموونەی دروستکراون، نەک دڵنیایی هەموو مۆبایلێک."
 
           RESP=$(curl -fsS --connect-timeout 20 --max-time 180 \
             --form-string "chat_id=$ADMIN" --form-string "caption=$CAPTION" \

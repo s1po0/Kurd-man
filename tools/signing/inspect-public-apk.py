@@ -104,7 +104,7 @@ def manifest(data):
     return elements
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('apk');parser.add_argument('--pins',default='signing/koorix-release-v2.json');parser.add_argument('--version',required=True);parser.add_argument('--code',type=int,required=True);parser.add_argument('--no-login',action='store_true');parser.add_argument('--free',action='store_true');parser.add_argument('--contours',action='store_true');parser.add_argument('--reading-studio',action='store_true');args=parser.parse_args()
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('apk');parser.add_argument('--pins',default='signing/koorix-release-v2.json');parser.add_argument('--version',required=True);parser.add_argument('--code',type=int,required=True);parser.add_argument('--no-login',action='store_true');parser.add_argument('--free',action='store_true');parser.add_argument('--contours',action='store_true');parser.add_argument('--reading-studio',action='store_true');parser.add_argument('--triad-theme',action='store_true');args=parser.parse_args()
     path=Path(args.apk);data=path.read_bytes();pins=json.loads(Path(args.pins).read_text());signature=verify_v2(data,pins)
     with zipfile.ZipFile(path) as archive:
         assert archive.testzip() is None,'APK CRC mismatch';names=archive.namelist()
@@ -142,6 +142,12 @@ def main():
             assert b'ux_home_title' in archive.read('resources.arsc'),'Native reading-studio resources missing'
             assert b'Lcom/kurdman/app/ReadingStudioNativeUiTest;' not in dex,'Native UI capture harness packaged'
             assert not any(n.startswith('.claude/') or 'ui-ux-pro-max/data/' in n for n in names),'Developer skill data packaged as runtime'
-        result={'file':path.name,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),'zip_entries':len(names),'signature':signature,'package':package['package'],'version':package['versionName'],'version_code':package['versionCode'],'label':app['label'],'debuggable':False,'no_login_gate_checked':args.no_login,'free_edition_checked':args.free,'test_harness_and_private_recovery_absent':True,'native_contour_classes_checked':args.contours,'native_reading_studio_ui_checked':args.reading_studio}
+        if args.triad_theme:
+            resources=archive.read('resources.arsc')
+            for marker in (b'ui_brand_blue',b'ui_brand_violet',b'ui_brand_peach',b'quickThemeButton',b'ux_enable_dark_mode'):
+                assert marker in resources,'Missing real triad/dark-mode resource '+marker.decode()
+            assert b'toggleTheme' in dex and b'Lcom/kurdman/app/KoorixDesign;' in dex,'Missing native persistent theme-switch implementation'
+            assert b'Lcom/kurdman/app/ThemeTriadAndroidTest;' not in dex,'Theme capture/test harness packaged'
+        result={'file':path.name,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),'zip_entries':len(names),'signature':signature,'package':package['package'],'version':package['versionName'],'version_code':package['versionCode'],'label':app['label'],'debuggable':False,'no_login_gate_checked':args.no_login,'free_edition_checked':args.free,'test_harness_and_private_recovery_absent':True,'native_contour_classes_checked':args.contours,'native_reading_studio_ui_checked':args.reading_studio,'native_triad_dark_mode_checked':args.triad_theme}
     print(json.dumps(result,indent=2))
 if __name__=='__main__':main()

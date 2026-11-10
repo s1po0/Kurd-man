@@ -18,6 +18,11 @@ web mockup, Compose rewrite or new model. Preserve real handlers/IDs/data; use
 semantic light/dark tokens and bundled script-capable fonts. UI captures are
 synthetic native evidence, not physical-device acceptance.
 
+Since 1.8.1 the owner explicitly rejected the green-led brand. Keep the muted
+blue/violet/peach triad, neutral day/night surfaces and persistent header moon/sun
+action. Settings and shortcut must share saved System/Light/Dark state. Do not
+recolour reader art/text or make medical eye-comfort promises.
+
 ## Owner constraints
 
 - Regular **Koorix** only. No new Preview app or automatic KurdMan delivery.

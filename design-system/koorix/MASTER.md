@@ -1,270 +1,91 @@
-# Design System Master File
+# Koorix — Soft Triad native design system
 
-> **LOGIC:** When building a specific page, first check `design-system/pages/[page-name].md`.
-> If that file exists, its rules **override** this Master file.
-> If not, strictly follow the rules below.
+**Current owner direction, 1.8.1:** replace the green-led 1.8.0 interface with
+**three balanced, muted colours: blue, violet and peach**. Green is not an app
+brand/accent choice. The owner finds it uncomfortable; do not reintroduce it
+or claim that a palette change medically treats/prevents eye strain.
 
----
+This supersedes the earlier generated teal/forest palette. Historical 1.8.0
+implementation/evidence is retained in `docs/KOORIX_1_8.md`, not a current spec.
 
-**Project:** Koorix
-**Generated:** 2026-11-10 17:09:10
-**Category:** Productivity Tool
+## Source and scope
 
----
+- Requested skill: `nextlevelbuilder/ui-ux-pro-max-skill`, exact reviewed revision
+  `6ae86f61f520d6ca229d2f40e070410638c908c5`, MIT; local license/provenance under
+  `.claude/skills/ui-ux-pro-max/`.
+- Local searches: reading/low-saturation colour, dark theme native contrast,
+  flat design and RTL-safe styles. The book result was warm brown/amber, not this
+  custom triad; Nature Distilled/clay results included green/extra decoration and
+  were not blindly adopted. Native semantic contrast and the already selected
+  functional flat style are the useful recommendations.
+- **Actual stack:** Android Java Views/XML + AppCompat. No Compose/React rewrite,
+  network font, UI dependency, AI model, paid API or global installer.
+- Existing bundled **Vazirmatn 400/700** for joined Sorani/Arabic/English chrome.
+  Never apply chrome fonts/colours to actual comic lettering or selected swatches.
 
-## Global Rules
+## Palette: three complementary roles, not a three-colour rainbow everywhere
 
-### Color Palette
+| Role | Light | Dark | Use |
+|---|---|---|---|
+| Blue | `#6674B7` | `#AEBBEF` | Primary family, navigation, import, selected overlays |
+| Violet | `#9A79B3` | `#CDB2E3` | Secondary family, status surface, soft centre blend |
+| Peach | `#E9BFA9` | `#EBC1AC` | Warm small highlights, theme button, badge/end blend |
+| Primary action fill | `#545E9E` | `#B5BEF3` | Measured action-label contrast |
+| On primary | `#FFFFFF` | `#20223B` | Labels, including pressed-state checks |
+| Page | `#F5F4FA` | `#151621` | Large quiet surface; no green cast |
+| Card | `#FFFDFB` | `#202230` | Neutral, readable surfaces |
 
-| Role | Hex | CSS Variable |
-|------|-----|--------------|
-| Primary | `#0D9488` | `--color-primary` |
-| On Primary | `#000000` | `--color-on-primary` |
-| Secondary | `#14B8A6` | `--color-secondary` |
-| On Secondary | `#0F172A` | `--color-on-secondary` |
-| Accent/CTA | `#EA580C` | `--color-accent` |
-| On Accent/CTA | `#000000` | `--color-on-accent` |
-| Background | `#F0FDFA` | `--color-background` |
-| Foreground | `#134E4A` | `--color-foreground` |
-| Card | `#FFFFFF` | `--color-card` |
-| Card Foreground | `#134E4A` | `--color-card-foreground` |
-| Muted | `#E8F1F4` | `--color-muted` |
-| Muted Foreground | `#475569` | `--color-muted-foreground` |
-| Border | `#99F6E4` | `--color-border` |
-| Destructive | `#DC2626` | `--color-destructive` |
-| On Destructive | `#FFFFFF` | `--color-on-destructive` |
-| Ring | `#0D9488` | `--color-ring` |
+Actual semantic tokens live in `android/app/src/koorix/res/values{,-night}/colors.xml`.
+The hero and thin ribbon blend blue → violet → peach, while controls stay solid
+and legible. Large backgrounds stay neutral. Both modes are deliberately muted;
+no fluorescent/neon fills or animated colour cycling.
 
-**Color Notes:** Teal focus + action orange [Accent adjusted from #F97316]
+- All normal primary/secondary text and action labels: measured **>=4.5:1**.
+- Meaningful control boundaries/icons: **>=3:1** where checked.
+- Gradient text is checked against **each colour stop**, not a single endpoint.
+- Distinct accent hues with saturation below 0.72. Status/error/danger retain
+  explicit wording; colour is never the only signal.
+- Dark selection badges/handles use an appropriate on-accent colour. Reader art
+  and reader-selected green text remain unchanged: the no-green rule is chrome,
+  not permission to recolour a comic or remove palette choices.
 
-### Typography
+## Dark mode: visible, one tap, genuinely persistent
 
-- **Heading Font:** Plus Jakarta Sans
-- **Body Font:** Plus Jakarta Sans
-- **Mood:** friendly, modern, saas, clean, approachable, professional
-- **Google Fonts:** [Plus Jakarta Sans + Plus Jakarta Sans](https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap)
+- A native **moon / sun button in the persistent workspace header** switches to
+  Dark / Light. It names the next action and exposes the current mode to assistive
+  tools, rather than relying on an unlabeled decorative icon.
+- Settings retains **System / Light / Dark**, using the same stored `koorix_ui`
+  preference and AppCompat night resources. Existing choices remain respected;
+  a header tap makes a deliberate manual override. No reset on relaunch.
+- On narrow/large-type screens header actions use their vector icons, with full
+  accessible names/tooltips; the current-screen heading remains readable.
+- Appearance/language recreation stays disabled during an active protected
+  import/job. STOP, page navigation and reports remain available. Completed input,
+  draft story options and reader data survive Activity recreation.
+- Shared themes apply across library, studio, optional story/review and dialogs,
+  not just one mock homepage. No new mandatory setup step.
 
-**CSS Import:**
-```css
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
-```
+## Preserved native UX
 
-### Spacing Variables
+- One input button, original GET_CONTENT `*/*` compatible source chooser.
+- Import first, labeled source/target/mode and thumb-reachable normal Translate.
+- Five labeled destinations, selected state, Back-to-home, retained tab scroll.
+- At large text a named destination menu replaces cramped/orphaned tab labels.
+- 48dp touch targets, 4/8dp rhythm, logical start/end, tablet max measure, dynamic
+  content heights and narrow/large-text field stacking. No nonessential motion.
+- Native system/cutout/IME insets; buttons must stay clear of OS/keyboard chrome.
+- Local project search; one Open/Resume action with explicit Backup/Reuse/Rename/
+  Delete menu. Existing confirmation, recovery and backup data remain.
+- Artwork-first studio and actual contour-safe prefit/undo/autosave/export remain
+  untouched. UI overlays must never be exported into the page.
+- Free/no login/no daily commercial quotas; all 74 targets and ckb/en/ar UI;
+  automatic translation Skill, STOP, backups, PDF and safety budgets unchanged.
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--space-xs` | `4px` / `0.25rem` | Tight gaps |
-| `--space-sm` | `8px` / `0.5rem` | Icon gaps, inline spacing |
-| `--space-md` | `16px` / `1rem` | Standard padding |
-| `--space-lg` | `24px` / `1.5rem` | Section padding |
-| `--space-xl` | `32px` / `2rem` | Large gaps |
-| `--space-2xl` | `48px` / `3rem` | Section margins |
-| `--space-3xl` | `64px` / `4rem` | Hero padding |
+## Evidence discipline
 
-### Shadow Depths
-
-| Level | Value | Usage |
-|-------|-------|-------|
-| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)` | Subtle lift |
-| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.1)` | Cards, buttons |
-| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.1)` | Modals, dropdowns |
-| `--shadow-xl` | `0 20px 25px rgba(0,0,0,0.15)` | Hero images, featured cards |
-
----
-
-## Component Specs
-
-### Buttons
-
-```css
-/* Primary Button */
-.btn-primary {
-  background: #EA580C;
-  color: #000000;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.btn-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-/* Secondary Button */
-.btn-secondary {
-  background: transparent;
-  color: #134E4A;
-  border: 2px solid #0D9488;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-```
-
-### Cards
-
-```css
-.card {
-  background: #F0FDFA;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: var(--shadow-md);
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
-}
-```
-
-### Inputs
-
-```css
-.input {
-  padding: 12px 16px;
-  border: 1px solid #E2E8F0;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: border-color 200ms ease;
-}
-
-.input:focus {
-  border-color: #0D9488;
-  outline: none;
-  box-shadow: 0 0 0 3px #0D948820;
-}
-```
-
-### Modals
-
-```css
-.modal-overlay {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-}
-
-.modal {
-  background: white;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: var(--shadow-xl);
-  max-width: 500px;
-  width: 90%;
-}
-```
-
----
-
-## Style Guidelines
-
-**Style:** Flat Design
-
-**Keywords:** 2D, minimalist, bold colors, no shadows, clean lines, simple shapes, typography-focused, modern, icon-heavy
-
-**Best For:** Web apps, mobile apps, cross-platform, startup MVPs, user-friendly, SaaS, dashboards, corporate
-
-**Key Effects:** No gradients/shadows, simple hover (color/opacity shift), fast loading, clean transitions (150-200ms ease), minimal icons
-
-### Page Pattern
-
-**Pattern Name:** Product Demo + Features
-
-- **Conversion Strategy:** Use an interactive demo only when it explains value better than static media. Provide captions, transcript, visible play/pause controls, and a non-video fallback; do not autoplay under reduced motion. Pause media when offscreen or hidden and keep the final product state available as static content.
-- **CTA Placement:** Video center + CTA right/bottom
-- **Section Order:** Hero > Product video/mockup (center) > Feature breakdown per section > Comparison (optional) > CTA
-
----
-
-## Anti-Patterns (Do NOT Use)
-
-- ❌ Complex onboarding
-- ❌ Slow performance
-
-### Additional Forbidden Patterns
-
-- ❌ **Emojis as icons** — Use SVG icons (Heroicons, Lucide, Simple Icons)
-- ❌ **Missing cursor:pointer** — All clickable elements must have cursor:pointer
-- ❌ **Layout-shifting hovers** — Avoid scale transforms that shift layout
-- ❌ **Low contrast text** — Maintain 4.5:1 minimum contrast ratio
-- ❌ **Instant state changes** — Always use transitions (150-300ms)
-- ❌ **Invisible focus states** — Focus states must be visible for a11y
-
----
-
-## Pre-Delivery Checklist
-
-Before delivering any UI code, verify:
-
-- [ ] No emojis used as icons (use SVG instead)
-- [ ] All icons from consistent icon set (Heroicons/Lucide)
-- [ ] `cursor-pointer` on all clickable elements
-- [ ] Hover states with smooth transitions (150-300ms)
-- [ ] Light mode: text contrast 4.5:1 minimum
-- [ ] Focus states visible for keyboard navigation
-- [ ] `prefers-reduced-motion` respected
-- [ ] Responsive: 375px, 768px, 1024px, 1440px
-- [ ] No content hidden behind fixed navbars
-- [ ] No horizontal scroll on mobile
-
-## Koorix native implementation decisions (override generic web examples)
-
-- **Requested source:** nextlevelbuilder/ui-ux-pro-max-skill at
-  `6ae86f61f520d6ca229d2f40e070410638c908c5`, MIT; see the vendored PROVENANCE.md.
-- **Actual stack:** Android Java Views/XML, AppCompat; not Compose, React or a
-  web landing page. No framework migration, network fonts or new runtime library.
-- The first reader query matched News/Media and its breaking-news red palette;
-  it was rejected. The narrower creative-editor query matched **Productivity
-  Tool / Flat Design**, a relevant verified basis. Exact book-product searches
-  returned no verified match, so no book-specific database result is claimed.
-- **Direction:** Paper & Forest reading studio. The primary teal is darkened
-  from the recommendation to #087452 so white action labels meet 4.5:1. Use the
-  actual semantic palette in `src/koorix/res/values{,-night}/colors.xml`; all
-  checked primary/body/secondary/control pairs pass their contrast thresholds.
-- **Type:** existing, bundled Vazirmatn 400/700 for app chrome and joined Sorani /
-  Arabic; do not fetch suggested Latin-only fonts. Never theme the reader's
-  selected lettering preview, source artwork, colour swatches or rendered ink.
-- **Modes:** follow device, explicit light or explicit dark, stored locally.
-- **Flow:** Import first; source/target/mode next; normal Translate stays in a
-  thumb-reachable action dock. One GET_CONTENT */* chooser, no Gallery/Files split.
-- **Navigation:** five labeled destinations (Translate, Style, My work, Settings,
-  Reports); persistent current-screen heading; Back returns from a tab to home;
-  preserve scroll state. Put language choice in the header and Settings.
-- **Progressive disclosure:** optional OCR detail and names/terms; no Skill setup,
-  Save step, login, quota, activation code or hidden online fallback.
-- **Projects:** local search, one Open/Resume primary action per project, contextual
-  Backup/Reuse/Rename/Delete menu; deletion and backup disclosure stay explicit.
-- **Studio:** original artwork remains central, clear icon tools >=48dp, four
-  labeled sections, compact scrollable panels, original undo/export/autosave and
-  contour-safe lettering unchanged.
-- **Accessibility:** 48dp native targets, logical start/end, 4/8dp rhythm, readable
-  measures, content-driven heights, large-text/narrow-width stacking, explicit
-  labels and native semantics, system/IME insets, no nonessential animation.
-- **Scope:** all regular-app surfaces, optional story settings, review, library,
-  file/result cards and dialogs; not merely an imported skill or palette edit.
-- **Evidence:** actual SDK26/34 native Robolectric UI contracts/captures plus the
-  existing 170 regression executions. These do not certify physical devices,
-  TalkBack, OEM content apps or every possible font scale/keyboard.
-
-## Native review findings incorporated
-
-- Use a script-capable TextView subclass for spinner rows; font-sample adapters
-  retain their own selected font. Selected rows are transparent so rounded
-  input boundaries are not obscured by square white adapter backgrounds.
-- Keep the established Translate action name. Remove unsupported best-app
-  marketing wording and decorative emoji from mode labels.
-- Do not auto-focus/auto-scroll a story glossary or open its keyboard on entry.
-- At 200% text, replace cramped five-label navigation with a named screen menu,
-  not smaller text or truncated/orphaned labels. All destinations remain available.
-- Preserve pending private-file input metadata across appearance/locale recreation
-  and reject traversal/missing/oversized restored paths without deleting files.
-- Explicit view-start alignment keeps localized headings and the wordmark aligned
-  correctly in RTL, independent of mixed Latin/script text.
-- Candidate 42865259663: 190/190 passed, 50 real native captures, SDK26/34. Physical
-  phone, TalkBack and real IME acceptance remain unverified.
+Before distribution run the actual native SDK26/34 suite, contrast/locale/XML
+checks, allowlisted native captures and public-only same-key APK verifier.
+New tests exercise actual theme actions, persistence, pending input, protected
+jobs and non-green distinct hue roles. Inspect real native output, not an AI
+mockup or source-code counts. Synthetic Skia/Robolectric output does not certify
+physical phones, TalkBack, real keyboards, every font/OEM or semantic accuracy.

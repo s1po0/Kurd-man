@@ -7,4 +7,4 @@ await mkdir(output,{recursive:true});
 for(const name of ['index.html','privacy.html','site.css','app.js','admin.html']){
  await copyFile(new URL(name,root),new URL(name,output));
 }
-console.log('Koorix 1.8.0 free-edition static site built from this checkout; no deployment performed.');
+console.log('Koorix 1.8.1 free-edition static site built from this checkout; no deployment performed.');
