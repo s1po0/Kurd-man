@@ -1,0 +1,272 @@
+{
+  "version": "1.8.0",
+  "versionCode": 16,
+  "applicationId": "com.koorix.app",
+  "label": "Koorix",
+  "debuggable": false,
+  "sourceCommit": "815fbbce5f310ff3f5fdd85342f17bdd976487d7",
+  "buildCommit": "815fbbce5f310ff3f5fdd85342f17bdd976487d7",
+  "nativeSourceLastChanged": "815fbbce5f310ff3f5fdd85342f17bdd976487d7",
+  "nativeTreeSha": "d5fadac95b568f2eb597f2864cca84b6e83cf306",
+  "repositoryPublic": true,
+  "releaseId": 440693803,
+  "assetId": 732360589,
+  "publishedAt": "2026-11-10T17:43:25Z",
+  "downloadUrl": "https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.8.0/Koorix-v1.8.0.apk",
+  "blobSha": "d88804463cfff101493129881faf1d0337cdce42",
+  "apkBytes": 33581105,
+  "apkSha256": "cde650aab624642d4c9b7199e10f3a2d3866adc115025705165a8a8c19a4dda8",
+  "zipEntries": 629,
+  "signerSha256": "fb304de3cd357f35cf679e2a46befac08f3e97feef28b1b9a8af7b0891d40340",
+  "signerSha1": "21209f6f75195cfeb1dcaa7b7d74ad09e4954b6b",
+  "signingIdentity": "permanent-v2",
+  "independentLocalVerification": {
+    "file": "Koorix-v1.8.0.apk",
+    "bytes": 33581105,
+    "sha256": "cde650aab624642d4c9b7199e10f3a2d3866adc115025705165a8a8c19a4dda8",
+    "zip_entries": 629,
+    "signature": {
+      "scheme": "v2",
+      "rsa_bits": 3072,
+      "certificate_sha256": "fb304de3cd357f35cf679e2a46befac08f3e97feef28b1b9a8af7b0891d40340",
+      "algorithm": "0x103",
+      "content_digest_verified": true
+    },
+    "package": "com.koorix.app",
+    "version": "1.8.0",
+    "version_code": 16,
+    "label": "Koorix",
+    "debuggable": false,
+    "no_login_gate_checked": true,
+    "free_edition_checked": true,
+    "test_harness_and_private_recovery_absent": true,
+    "native_contour_classes_checked": true,
+    "native_reading_studio_ui_checked": true
+  },
+  "mergedApkBroadStorageMediaReadPermissionsAbsent": true,
+  "abis": [
+    "arm64-v8a"
+  ],
+  "minSdk": 26,
+  "targetSdk": 35,
+  "ci": {
+    "runId": 42867222826,
+    "jobId": 130008683383,
+    "status": "success",
+    "androidJvmExecutions": 190,
+    "nativeGlyphExecutions": 34,
+    "nativeUiExecutions": 20,
+    "failures": 0,
+    "skipped": 0,
+    "sdks": [
+      26,
+      34
+    ],
+    "uiCaptures": 50,
+    "uiCaptureReportBlob": "94bde0af7d962fc3796d2a0473407a874d3dab29",
+    "bubbleFixtures": 18,
+    "bubbleFixtureReportBlob": "155794156914c020ebd60d10b4401d80c44dcd6c",
+    "cryptoTests": 18,
+    "comicAssertions": 604,
+    "qualityAssertions": 51,
+    "lexiconEntries": 204,
+    "signerColdRestores": 2,
+    "staticSiteLanguages": 3,
+    "staticSitePreferenceStorageStates": 6,
+    "readingStudioLocaleParity": 3,
+    "lightAndDarkSemanticContrastChecked": true,
+    "candidateRunId": 42865259663,
+    "candidateJobId": 130001776576,
+    "candidateStatus": "success",
+    "candidateSourceCommit": "9e2f3fdd9a41b567f8f720f9ce14f9689a47aab4",
+    "entitlementBackendInvoked": false
+  },
+  "uiUxSkill": {
+    "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+    "commit": "6ae86f61f520d6ca229d2f40e070410638c908c5",
+    "license": "MIT",
+    "copyright": "2024 Next Level Builder",
+    "vendoredPath": ".claude/skills/ui-ux-pro-max",
+    "sourceReviewedBeforeExecution": true,
+    "standardLibraryLocalSearchExecuted": true,
+    "globalInstallerExecuted": false,
+    "verifiedDesignCategory": "Productivity Tool",
+    "verifiedStyle": "Flat Design",
+    "initialNewsMediaRecommendationRejected": true,
+    "exactBookProductMatchClaimed": false,
+    "nativeTouchSafeAreaGuidanceUsed": true,
+    "actualStack": "Android Java Views/XML + AppCompat",
+    "composeOrReactRewrite": false,
+    "runtimeModelOrUiFrameworkAdded": false,
+    "remoteFontDownloadAdded": false,
+    "bundledUiTypeface": "Vazirmatn",
+    "designSystem": "design-system/koorix/MASTER.md",
+    "designSystemSha256": "17b7b45f5c16c2a269abbf7d8675ad7668e1617bdd4494a9e5880f124ad49c7c",
+    "fullSourceAndLicenseNoticeRetained": true
+  },
+  "features": {
+    "nativeReadingStudioUi": true,
+    "appearanceModes": [
+      "system",
+      "light",
+      "dark"
+    ],
+    "nativeJoinedScriptUiTypography": true,
+    "semanticDayNightTokens": true,
+    "nativeVectorIconFamily": true,
+    "importFirstWorkspace": true,
+    "thumbReachableTranslateDock": true,
+    "localizedWorkspaceHeadings": true,
+    "predictableTabBack": true,
+    "perTabScrollState": true,
+    "largeTextDestinationMenu": true,
+    "narrowAndLargeTextStacking": true,
+    "readableTabletMeasure": true,
+    "nativeSystemImeInsets": true,
+    "searchableLocalProjects": true,
+    "compactProjectActionMenu": true,
+    "explicitBackupAndDeleteConfirmationPreserved": true,
+    "libraryListingOffMainThread": true,
+    "pendingImportsSurviveAppearanceLocaleRecreation": true,
+    "scopedRestorePathValidation": true,
+    "uiRestorationDoesNotCopyOrDeleteFiles": true,
+    "appearanceLocaleDisabledDuringProtectedJobs": true,
+    "allMainStudioLibraryStoryReviewSurfacesRedesigned": true,
+    "readerFontAndColourSwatchesNotOverridden": true,
+    "existingArtworkAndLetteringDataUnchanged": true,
+    "actualContourInkValidation": true,
+    "completeDialogueNoClip": true,
+    "fitBeforeEraseInAutomaticStudioExport": true,
+    "unplaceableReplacementPreservesSource": true,
+    "userLoginRemoved": true,
+    "premiumRemoved": true,
+    "dailyAppQuotasRemoved": true,
+    "deviceRegistrationRemoved": true,
+    "noInitialOnlineAllowanceRequired": true,
+    "unifiedAppCapableInputChooser": true,
+    "singleInputButton": true,
+    "separateGalleryAndUnfilteredFiles": false,
+    "photoOnlyPickerUsedForPublicInput": false,
+    "sourceAction": "android.intent.action.GET_CONTENT",
+    "mimeType": "*/*",
+    "mimeWhitelist": false,
+    "selectedUriReadAccessOnly": true,
+    "multiSelectRequested": true,
+    "editableProjectsPreserved": true,
+    "backupRestorePreserved": true,
+    "stopAndRecoveryPreserved": true,
+    "automaticSkillWithTranslate": true,
+    "targetLanguageChoices": 74,
+    "uiLanguages": [
+      "ckb",
+      "en",
+      "ar"
+    ],
+    "newTranslationModel": false,
+    "nllbAdded": false
+  },
+  "regressionEvidence": {
+    "baselineCommit": "f769e4233fba282bb0e9ac18b913a6b26036879a",
+    "baselineRunId": 42857557966,
+    "baselineJobId": 129974633160,
+    "baselineExecutions": 180,
+    "baselineUiFailures": 10,
+    "baselineSkipped": 0,
+    "priorExecutionsPassed": 170,
+    "resourceStyleNamespaceFailureRunId": 42861948772,
+    "partialCaptureRunId": 42862801646,
+    "partialCaptureCount": 38,
+    "partialRunFailures": 3,
+    "partialRunIssues": [
+      "Translate action label retained to satisfy automatic-flow contract",
+      "SDK34 native fixture supplies actual locale qualifiers; RTL assertions retained"
+    ],
+    "knownRegressionsPassedInRelease": true,
+    "pendingInputRecreationAndTraversalTests": true,
+    "largestCapturedTextScale": 2.0,
+    "smallPhoneLogicalSize": [
+      320,
+      740
+    ],
+    "landscapeLogicalSize": [
+      800,
+      393
+    ],
+    "tabletLogicalSize": [
+      800,
+      1100
+    ],
+    "syntheticSystemInsetTest": true,
+    "realDeviceTalkBackImeAcceptance": false
+  },
+  "developerSkill": {
+    "localPythonTests": 55,
+    "ciRunId": 42867222795,
+    "ciStatus": "success",
+    "jobs": [
+      {
+        "id": 130008683116,
+        "name": "Offline skill tools (Python 3.11)",
+        "conclusion": "success"
+      },
+      {
+        "id": 130008683699,
+        "name": "Offline skill tools (Python 3.14)",
+        "conclusion": "success"
+      },
+      {
+        "id": 130008683740,
+        "name": "Match real Koorix Java glossary and rule contracts",
+        "conclusion": "success"
+      }
+    ],
+    "allUpstreamUiSkillTestsClaimed": false,
+    "meaningAccuracyBenchmark": false
+  },
+  "security": {
+    "readOnlyKnownCredentialFormatHistoryScanBlobs": 1042,
+    "knownFormatFindings": 0,
+    "exhaustiveSecrecyGuarantee": false,
+    "privateRecoveryOpened": false,
+    "signerRotated": false,
+    "testHarnessAndDeveloperSkillNotPackaged": true
+  },
+  "preservedSafetyLimits": {
+    "pages": 300,
+    "importMb": 300,
+    "cacheGb": 1,
+    "componentAndGlyphRasterPixelBudget": 3500000,
+    "androidProtectedFoldersNotBypassed": true,
+    "externalProviderRateLimitsUnchanged": true
+  },
+  "delivery": {
+    "chatFilePresented": true,
+    "telegramApkAcknowledged": true,
+    "publicUnauthenticatedDownloadHead": 302,
+    "releaseAssetDigestMatchesChatFile": true,
+    "completionNotice": "pending"
+  },
+  "historicalData": {
+    "serverRecordsDeleted": false,
+    "localCredentialsDeleted": false,
+    "backendMutatedByThisTask": false,
+    "newRuntimeContactsSupabase": false,
+    "phoneAppUninstalledOrStorageCleared": false
+  },
+  "hosting": {
+    "status": "not_deployed_by_this_task",
+    "siteSourceUpdatedToVersion": "1.8.0",
+    "deploymentRequested": false,
+    "newHostingAttempts": 0
+  },
+  "limitations": {
+    "physicalDeviceAcceptance": false,
+    "talkBackImeAcceptance": false,
+    "everyLocaleFontSizeCombinationVisuallyTested": false,
+    "all74TargetsVisuallyTested": false,
+    "semanticVisualAccuracyGuarantee": false,
+    "soraniEngine": "unchanged OPUS; meaning quality remains limited",
+    "nativeGraphicsEvidence": "actual Views/XML under native Robolectric/Skia with synthetic data, not physical-device screenshots",
+    "historicalPreV2SignatureMigrationLimitationUnchanged": true
+  }
+}
