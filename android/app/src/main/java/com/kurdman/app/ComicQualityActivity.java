@@ -63,6 +63,8 @@ public final class ComicQualityActivity extends AppCompatActivity {
     }
     @Override protected void onCreate(Bundle state){
         super.onCreate(state);setContentView(R.layout.activity_comic_quality);
+        KoorixDesign.apply(this,findViewById(R.id.qualityRoot));
+        KoorixDesign.icon(findViewById(R.id.qualityBack),R.drawable.ic_ui_back,R.string.comic_back);
         stats=findViewById(R.id.qualityStats);empty=findViewById(R.id.qualityEmpty);
         pageSelector=findViewById(R.id.qualityPage);filter=findViewById(R.id.qualityFilter);
         setup=findViewById(R.id.qualitySettings);export=findViewById(R.id.qualityExport);
@@ -215,7 +217,7 @@ public final class ComicQualityActivity extends AppCompatActivity {
         label(body,getString(R.string.q_name_target),true);EditText target=input(body,160,true);target.setId(R.id.qualityMemoryTarget);
         String normalized=ComicTranslationSkill.clean(candidate);
         if(normalized.length()<=160)target.setText(normalized);
-        CheckBox exact=new CheckBox(this);exact.setId(R.id.qualityMemoryExact);exact.setText(R.string.q_apply_exact);exact.setTextColor(Color.WHITE);body.addView(exact);
+        CheckBox exact=new CheckBox(this);exact.setId(R.id.qualityMemoryExact);exact.setText(R.string.q_apply_exact);exact.setTextColor(getColor(R.color.text_primary));body.addView(exact);
         CheckBox future=new CheckBox(this);future.setId(R.id.qualityMemoryFuture);future.setText(R.string.q_future);future.setTextColor(Color.WHITE);body.addView(future);
         label(body,getString(R.string.q_memory_help),false);
         ScrollView scroll=new ScrollView(this);scroll.addView(body);
@@ -266,10 +268,10 @@ public final class ComicQualityActivity extends AppCompatActivity {
     private void adapter(Spinner spinner,String[] values){ArrayAdapter<String> a=new ArrayAdapter<>(this,R.layout.spinner_item,values);a.setDropDownViewResource(R.layout.spinner_dropdown_item);spinner.setAdapter(a);}
     private LinearLayout column(){LinearLayout layout=new LinearLayout(this);layout.setOrientation(LinearLayout.VERTICAL);layout.setPadding(dp(18),dp(10),dp(18),dp(16));return layout;}
     private LinearLayout.LayoutParams match(){LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.topMargin=dp(8);return p;}
-    private TextView label(LinearLayout parent,String value,boolean bold){TextView t=text(parent,value,false);t.setTextSize(bold?14:12);if(bold)t.setTypeface(null,android.graphics.Typeface.BOLD);else t.setTextColor(0xFFB9C2D6);return t;}
-    private TextView text(LinearLayout parent,String value,boolean selectable){TextView t=new TextView(this);t.setText(value);t.setTextSize(15);t.setTextColor(Color.WHITE);t.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);t.setTextIsSelectable(selectable);parent.addView(t,match());return t;}
-    private EditText input(LinearLayout parent,int max,boolean single){EditText t=new EditText(this);t.setTextColor(Color.WHITE);t.setBackgroundResource(R.drawable.bg_input);t.setPadding(dp(12),dp(10),dp(12),dp(10));t.setTextSize(15);t.setSingleLine(single);t.setMinLines(single?1:3);t.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS|(single?0:InputType.TYPE_TEXT_FLAG_MULTI_LINE));t.setFilters(new InputFilter[]{new InputFilter.LengthFilter(max)});t.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);parent.addView(t,match());return t;}
-    private Button button(LinearLayout parent,int text){Button b=new Button(this);b.setText(text);b.setAllCaps(false);b.setTextColor(Color.WHITE);b.setTextSize(13);b.setBackgroundResource(R.drawable.bg_button_secondary);LinearLayout.LayoutParams p=match();p.height=dp(56);parent.addView(b,p);return b;}
+    private TextView label(LinearLayout parent,String value,boolean bold){TextView t=text(parent,value,false);t.setTextSize(bold?14:12);if(bold)t.setTypeface(null,android.graphics.Typeface.BOLD);else t.setTextColor(getColor(R.color.text_secondary));return t;}
+    private TextView text(LinearLayout parent,String value,boolean selectable){TextView t=new TextView(this);t.setText(value);t.setTextSize(15);t.setTextColor(getColor(R.color.text_primary));t.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);t.setTextIsSelectable(selectable);t.setTypeface(KoorixDesign.font(this,false));t.setIncludeFontPadding(true);parent.addView(t,match());return t;}
+    private EditText input(LinearLayout parent,int max,boolean single){EditText t=new EditText(this);t.setTextColor(getColor(R.color.text_primary));t.setBackgroundResource(R.drawable.bg_input);t.setPadding(dp(12),dp(10),dp(12),dp(10));t.setTextSize(15);t.setSingleLine(single);t.setMinLines(single?1:3);t.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS|(single?0:InputType.TYPE_TEXT_FLAG_MULTI_LINE));t.setFilters(new InputFilter[]{new InputFilter.LengthFilter(max)});t.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);t.setTypeface(KoorixDesign.font(this,false));t.setIncludeFontPadding(true);parent.addView(t,match());return t;}
+    private Button button(LinearLayout parent,int text){Button b=new Button(this);b.setText(text);b.setAllCaps(false);b.setTextColor(getColor(R.color.text_primary));b.setTextSize(13);b.setBackgroundResource(R.drawable.bg_button_secondary);LinearLayout.LayoutParams p=match();p.height=LinearLayout.LayoutParams.WRAP_CONTENT;b.setMinHeight(dp(48));b.setPadding(dp(16),dp(12),dp(16),dp(12));KoorixDesign.primary(b,false);b.setTypeface(KoorixDesign.font(this,true));parent.addView(b,p);return b;}
     private int dp(int value){return Math.round(value*getResources().getDisplayMetrics().density);}
     private abstract static class Selection implements AdapterView.OnItemSelectedListener{public void onItemSelected(AdapterView<?> p,View v,int i,long id){chosen(i);}public void onNothingSelected(AdapterView<?> p){}abstract void chosen(int i);}
 
@@ -282,9 +284,9 @@ public final class ComicQualityActivity extends AppCompatActivity {
             else{card=column();card.setBackgroundResource(R.drawable.bg_card);title=label(card,"",true);source=text(card,"",false);target=text(card,"",false);hints=label(card,"",false);source.setMaxLines(2);target.setMaxLines(2);source.setEllipsize(TextUtils.TruncateAt.END);target.setEllipsize(TextUtils.TruncateAt.END);hints.setMaxLines(3);hints.setEllipsize(TextUtils.TruncateAt.END);card.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);}
             ComicQualityReview.Item item=visible.get(position);Segment segment=segment(item);
             title.setText(getString(R.string.q_block,item.page+1,item.segment+1)+" • "+decisionLabel(item.decision));
-            source.setText(getString(R.string.q_source)+": "+segment.text);source.setTextColor(0xFFB9C2D6);
+            source.setText(getString(R.string.q_source)+": "+segment.text);source.setTextColor(getColor(R.color.text_secondary));
             target.setText("→ "+segment.ckb);String warning=ComicSettings.warnings(ComicQualityActivity.this,item.codes);
-            hints.setText(warning.isEmpty()?getString(R.string.q_no_hints):warning);hints.setTextColor(warning.isEmpty()?0xFF94A3B8:0xFFFACC15);
+            hints.setText(warning.isEmpty()?getString(R.string.q_no_hints):warning);hints.setTextColor(getColor(warning.isEmpty()?R.color.text_secondary:R.color.warning));
             return card;
         }
     }

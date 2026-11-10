@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <item type="id" name="librarySearch" />
+    <item type="id" name="libraryProjectMenu" />
+    <item type="id" name="libraryProjectList" />
+    <item type="id" name="libraryMessage" />
+</resources>

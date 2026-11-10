@@ -9,6 +9,15 @@ before changing the pipeline. This is an Agent Skills instruction bundle, not
 an Android translator/model. Other agents can follow it explicitly; Claude Code
 can discover it under the project's `.claude/skills/` directory.
 
+## UI/UX work
+
+For interface work also read `.claude/skills/ui-ux-pro-max/SKILL.md` and
+`design-system/koorix/MASTER.md`. The owner requested this pinned MIT design skill.
+Use its relevant native guidance with the existing Java Views/XML stack, not a
+web mockup, Compose rewrite or new model. Preserve real handlers/IDs/data; use
+semantic light/dark tokens and bundled script-capable fonts. UI captures are
+synthetic native evidence, not physical-device acceptance.
+
 ## Owner constraints
 
 - Regular **Koorix** only. No new Preview app or automatic KurdMan delivery.

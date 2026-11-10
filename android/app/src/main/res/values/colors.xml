@@ -1,6 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <!-- Midnight emerald / cyan / violet premium palette -->
     <color name="primary">#14B8A6</color>
     <color name="primary_dark">#0F766E</color>
     <color name="primary_mid">#2563EB</color>
@@ -10,7 +9,6 @@
     <color name="accent_soft">#2A2410</color>
     <color name="telegram">#229ED9</color>
     <color name="telegram_dark">#1677AC</color>
-
     <color name="page">#070D18</color>
     <color name="page_end">#0D1626</color>
     <color name="card">#111A29</color>
@@ -22,7 +20,6 @@
     <color name="border_dark">#3B587C</color>
     <color name="glass_white">#24FFFFFF</color>
     <color name="glass_border">#38FFFFFF</color>
-
     <color name="text_primary">#F8FAFC</color>
     <color name="text_secondary">#A8B6C8</color>
     <color name="text_muted">#7D8CA3</color>
@@ -35,4 +32,12 @@
     <color name="warning">#FBBF24</color>
     <color name="ic_launcher_background">#0B3B39</color>
     <color name="white">#FFFFFF</color>
+    <color name="ui_on_disabled">#ABC1B0</color>
+    <color name="ui_tint">#203F2D</color>
+    <color name="ui_danger">#FFB4A8</color>
+    <color name="ui_danger_tint">#4B2520</color>
+    <color name="ui_canvas_scrim">#EB13231A</color>
+    <color name="ui_hero">#203A2B</color>
+    <color name="ui_nav">#14211A</color>
+    <color name="ui_focus">#79D8AF</color>
 </resources>

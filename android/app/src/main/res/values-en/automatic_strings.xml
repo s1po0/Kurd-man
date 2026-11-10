@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="auto_skill_ready">"✦ Skill runs automatically — just tap Translate."</string>
-    <string name="auto_story_toggle">"⌄ Names / terms (optional)"</string>
+    <string name="auto_skill_ready">"Skill runs automatically — just tap Translate."</string>
+    <string name="auto_story_toggle">"Names / terms (optional)"</string>
     <string name="auto_story_help">"No setup needed. Leave Auto and an empty glossary if you prefer. These optional choices are applied by the same Translate button; saved projects are not changed. Clear names when starting another story."</string>
     <string name="auto_translate_button">"Translate"</string>
     <string name="auto_skill_progress">"Automatic Skill"</string>
-    <string name="auto_result_summary">"✦ Skill ran with Translate: %1$d blocks • %2$d hints.\nYour result is ready; manual review is optional. Local checks do not guarantee every meaning."</string>
+    <string name="auto_result_summary">"Skill ran with Translate: %1$d blocks • %2$d hints.\nYour result is ready; manual review is optional. Local checks do not guarantee every meaning."</string>
     <string name="auto_review_optional">"Review hints (optional)"</string>
 </resources>

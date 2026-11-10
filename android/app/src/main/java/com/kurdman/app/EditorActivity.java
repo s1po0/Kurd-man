@@ -235,6 +235,7 @@ public class EditorActivity extends AppCompatActivity
         buildPanels();
         wireTopButtons();
         wireEditorTools();
+        applyReadingStudioChrome();
 
         getOnBackPressedDispatcher().addCallback(this,
                 new OnBackPressedCallback(true) {
@@ -616,7 +617,7 @@ public class EditorActivity extends AppCompatActivity
             boolean selected = advanced && i == index - PANEL_ADVANCED_FIRST;
             tab.setBackgroundResource(selected
                     ? R.drawable.bg_button_primary : R.drawable.bg_button_secondary);
-            tab.setTextColor(selected ? Color.WHITE : Color.rgb(94, 234, 212));
+            tab.setTextColor(selected ? getColor(R.color.text_on_primary) : getColor(R.color.text_primary));
         }
         if (tabsScroll != null) {
             tabsScroll.setVisibility(advanced ? View.VISIBLE : View.GONE);
@@ -682,6 +683,31 @@ public class EditorActivity extends AppCompatActivity
         return PANEL_STYLE;
     }
 
+    private void applyReadingStudioChrome() {
+        View root=findViewById(R.id.editorRoot);
+        KoorixDesign.apply(this,root);
+        int[][] icons={
+            {R.id.editorBackButton,R.drawable.ic_ui_back,R.string.ks_0207},
+            {R.id.editorUndoButton,R.drawable.ic_ui_undo,R.string.ks_0360},
+            {R.id.editorRedoButton,R.drawable.ic_ui_redo,R.string.ks_0213},
+            {R.id.editorSaveButton,R.drawable.ic_ui_check,R.string.ks_0404},
+            {R.id.editorPagePrevButton,R.drawable.ic_ui_back,R.string.ks_0305},
+            {R.id.editorPageNextButton,R.drawable.ic_ui_chevron_next,R.string.ks_0304},
+            {R.id.editorBlockListButton,R.drawable.ic_ui_list,R.string.ks_0308},
+            {R.id.editorFitButton,R.drawable.ic_ui_fit,R.string.ks_0462},
+            {R.id.editorBlockPrevButton,R.drawable.ic_ui_back,R.string.ks_0230},
+            {R.id.editorBlockNextButton,R.drawable.ic_ui_chevron_next,R.string.ks_0226},
+            {R.id.editorZoomOutButton,R.drawable.ic_ui_minus,R.string.ks_0244},
+            {R.id.editorZoomInButton,R.drawable.ic_ui_plus,R.string.ks_0245},
+            {R.id.editorPeekButton,R.drawable.ic_ui_eye,R.string.ks_0419}};
+        for(int[] item:icons)KoorixDesign.icon(findViewById(item[0]),item[1],item[2]);
+        if(panelScroll!=null){
+            ViewGroup.LayoutParams p=panelScroll.getLayoutParams();
+            int heightDp=Math.round(getResources().getDisplayMetrics().heightPixels/getResources().getDisplayMetrics().density);
+            p.height=dp(Math.min(232,Math.max(104,Math.round(heightDp*.28f))));panelScroll.setLayoutParams(p);
+        }
+    }
+
     private void updateStudioSectionButton(Button button, boolean selected) {
         if (button == null) {
             return;
@@ -689,7 +715,7 @@ public class EditorActivity extends AppCompatActivity
         button.setSelected(selected);
         button.setBackgroundResource(selected
                 ? R.drawable.bg_button_primary : R.drawable.bg_button_secondary);
-        button.setTextColor(selected ? Color.WHITE : Color.rgb(226, 232, 240));
+        button.setTextColor(selected ? getColor(R.color.text_on_primary) : getColor(R.color.text_primary));
     }
 
     private void setEditorPanelCollapsed(boolean collapsed) {
@@ -789,7 +815,7 @@ public class EditorActivity extends AppCompatActivity
         button.setSelected(selected);
         button.setBackgroundResource(selected
                 ? R.drawable.bg_button_primary : R.drawable.bg_button_secondary);
-        button.setTextColor(selected ? Color.WHITE : Color.rgb(94, 234, 212));
+        button.setTextColor(selected ? getColor(R.color.text_on_primary) : getColor(R.color.text_primary));
     }
 
     private void buildSimpleTextsPanel() {
@@ -891,7 +917,7 @@ public class EditorActivity extends AppCompatActivity
                 v -> adjustSimpleTextSize(-0.10f))).setTextSize(16f);
         simpleSizeLabel = new TextView(this);
         simpleSizeLabel.setText(getString(R.string.ks_0292));
-        simpleSizeLabel.setTextColor(Color.WHITE);
+        simpleSizeLabel.setTextColor(getColor(R.color.text_primary));
         simpleSizeLabel.setTextSize(13f);
         simpleSizeLabel.setGravity(android.view.Gravity.CENTER);
         simpleSizeLabel.setLayoutParams(new LinearLayout.LayoutParams(
@@ -1016,12 +1042,12 @@ public class EditorActivity extends AppCompatActivity
         label(panel, getString(R.string.ks_0231));
         originalTextView = textBox(panel, "—");
         translationReviewView = textBox(panel, "");
-        translationReviewView.setTextColor(0xFFFACC15);
+        translationReviewView.setTextColor(getColor(R.color.warning));
         translationReviewView.setVisibility(View.GONE);
         label(panel, getString(R.string.ks_0374));
         translatedEdit = new EditText(this);
         translatedEdit.setBackgroundResource(R.drawable.bg_input);
-        translatedEdit.setTextColor(Color.WHITE);
+        translatedEdit.setTextColor(getColor(R.color.text_primary));
         translatedEdit.setTextSize(15f);
         translatedEdit.setMinLines(2);
         translatedEdit.setPadding(dp(12), dp(10), dp(12), dp(10));
@@ -1200,9 +1226,9 @@ public class EditorActivity extends AppCompatActivity
         snapCheck = new CheckBox(this);
         snapCheck.setText(getString(R.string.ks_0307));
         snapCheck.setChecked(true);
-        snapCheck.setTextColor(Color.rgb(203, 213, 225));
+        snapCheck.setTextColor(getColor(R.color.text_primary));
         snapCheck.setButtonTintList(android.content.res.ColorStateList.valueOf(
-                Color.rgb(45, 212, 191)));
+                getColor(R.color.primary)));
         snapCheck.setLayoutParams(matchWrap(dp(8)));
         snapCheck.setOnCheckedChangeListener((buttonView, isChecked) ->
                 canvas.setSnapEnabled(isChecked));
@@ -2294,7 +2320,7 @@ public class EditorActivity extends AppCompatActivity
     private void heading(LinearLayout panel, String text) {
         TextView view = new TextView(this);
         view.setText(text);
-        view.setTextColor(Color.WHITE);
+        view.setTextColor(getColor(R.color.text_primary));
         view.setTextSize(16f);
         view.setTypeface(view.getTypeface(), android.graphics.Typeface.BOLD);
         view.setLayoutParams(matchWrap(dp(10)));
@@ -2304,7 +2330,7 @@ public class EditorActivity extends AppCompatActivity
     private TextView label(LinearLayout panel, String text) {
         TextView view = new TextView(this);
         view.setText(text);
-        view.setTextColor(Color.rgb(203, 213, 225));
+        view.setTextColor(getColor(R.color.text_secondary));
         view.setTextSize(13f);
         view.setLayoutParams(matchWrap(dp(8)));
         panel.addView(view);
@@ -2314,7 +2340,7 @@ public class EditorActivity extends AppCompatActivity
     private TextView textBox(LinearLayout panel, String text) {
         TextView view = new TextView(this);
         view.setText(text);
-        view.setTextColor(Color.rgb(226, 232, 240));
+        view.setTextColor(getColor(R.color.text_primary));
         view.setTextSize(13f);
         view.setBackgroundResource(R.drawable.bg_preview);
         view.setPadding(dp(12), dp(10), dp(12), dp(10));
@@ -2326,7 +2352,7 @@ public class EditorActivity extends AppCompatActivity
     private void hint(LinearLayout panel, String text) {
         TextView view = new TextView(this);
         view.setText(text);
-        view.setTextColor(Color.rgb(100, 116, 139));
+        view.setTextColor(getColor(R.color.text_muted));
         view.setTextSize(12f);
         view.setLineSpacing(0f, 1.2f);
         view.setLayoutParams(matchWrap(dp(10)));
@@ -2334,7 +2360,7 @@ public class EditorActivity extends AppCompatActivity
     }
 
     private LinearLayout row(LinearLayout panel) {
-        LinearLayout row = new LinearLayout(this);
+        LinearLayout row = new ReadingPairLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setLayoutParams(matchWrap(dp(8)));
         panel.addView(row);
@@ -2351,16 +2377,19 @@ public class EditorActivity extends AppCompatActivity
         button.setMinHeight(dp(48));
         button.setBackgroundResource(primary
                 ? R.drawable.bg_button_primary : R.drawable.bg_button_secondary);
-        button.setTextColor(primary ? Color.WHITE : Color.rgb(94, 234, 212));
+        button.setTextColor(primary ? getColor(R.color.text_on_primary) : getColor(R.color.text_primary));
         LinearLayout.LayoutParams params;
         if (parent.getOrientation() == LinearLayout.HORIZONTAL) {
-            params = new LinearLayout.LayoutParams(0, dp(48), 1f);
+            params = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
             params.setMargins(dp(3), 0, dp(3), 0);
         } else {
             params = matchWrap(dp(7));
-            params.height = dp(48);
+            params.height = ViewGroup.LayoutParams.WRAP_CONTENT;
         }
         button.setLayoutParams(params);
+        button.setPadding(dp(12),dp(12),dp(12),dp(12));
+        KoorixDesign.primary(button,primary);
+        button.setTypeface(KoorixDesign.font(this,true));
         if (listener != null) {
             button.setOnClickListener(listener);
         }
@@ -2377,10 +2406,10 @@ public class EditorActivity extends AppCompatActivity
         CheckBox check = new CheckBox(this);
         check.setText(text);
         check.setTag(tag);
-        check.setTextColor(Color.rgb(203, 213, 225));
+        check.setTextColor(getColor(R.color.text_primary));
         check.setTextSize(13f);
         check.setButtonTintList(android.content.res.ColorStateList.valueOf(
-                Color.rgb(45, 212, 191)));
+                getColor(R.color.primary)));
         check.setLayoutParams(matchWrap(dp(5)));
         check.setOnCheckedChangeListener(checkListener);
         panel.addView(check);
@@ -2407,11 +2436,13 @@ public class EditorActivity extends AppCompatActivity
         FrameLayout frame = new FrameLayout(this);
         frame.setBackgroundResource(R.drawable.bg_input);
         LinearLayout.LayoutParams frameParams = matchWrap(dp(6));
-        frameParams.height = dp(54);
+        frameParams.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+        frame.setMinimumHeight(dp(56));
         frame.setLayoutParams(frameParams);
         Spinner spinner = new Spinner(this);
         spinner.setTag(tag);
         spinner.setBackground(null);
+        spinner.setMinimumHeight(dp(56));
         spinner.setPopupBackgroundDrawable(new android.graphics.drawable.ColorDrawable(
                 getColor(R.color.card_elevated)));
         if (adapter != null) {
@@ -2420,11 +2451,11 @@ public class EditorActivity extends AppCompatActivity
         spinner.setOnItemSelectedListener(spinnerListener);
         frame.addView(spinner, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT));
-        TextView arrow = new TextView(this);
-        arrow.setText("▾");
-        arrow.setTextColor(Color.rgb(45, 212, 191));
-        arrow.setTextSize(18f);
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        android.widget.ImageView arrow = new android.widget.ImageView(this);
+        arrow.setImageResource(R.drawable.ic_ui_chevron_down);
+        arrow.setImageTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.text_secondary)));
+        arrow.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         FrameLayout.LayoutParams arrowParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,

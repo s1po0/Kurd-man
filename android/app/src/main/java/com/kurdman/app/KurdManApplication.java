@@ -8,6 +8,7 @@ public class KurdManApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        KoorixDesign.initialize(this);
         DiagnosticLog.installUncaughtHandler(this);
         DiagnosticLog.info(this, "app",
                 "KurdMan process started, pid=" + Process.myPid());

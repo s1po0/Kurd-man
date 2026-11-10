@@ -40,6 +40,8 @@ public final class ComicSettingsActivity extends AppCompatActivity {
     }
     @Override protected void onCreate(Bundle state){
         super.onCreate(state);setContentView(R.layout.activity_comic_settings);
+        KoorixDesign.apply(this,findViewById(R.id.storySettingsRoot));
+        KoorixDesign.icon(findViewById(R.id.comicBack),R.drawable.ic_ui_back,R.string.comic_back);
         if(getIntent().getBooleanExtra(EXTRA_PROJECT,false)){
             project=TranslationProjectStore.load(this);
             if(project==null||!project.completed||JobRuntime.isRunning()){finish();return;}

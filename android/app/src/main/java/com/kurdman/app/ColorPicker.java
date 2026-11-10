@@ -57,7 +57,7 @@ final class ColorPicker {
         root.addView(preview);
 
         TextView hexLabel = new TextView(context);
-        hexLabel.setTextColor(Color.WHITE);
+        hexLabel.setTextColor(context.getColor(R.color.text_primary));
         hexLabel.setPadding(0, dp(context, 8), 0, dp(context, 4));
         root.addView(hexLabel);
 

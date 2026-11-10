@@ -76,3 +76,12 @@ the downloaded models on the phone.
 - License: MIT
 - Full license text in the APK:
   `android/app/src/main/assets/licenses/ONNXRuntime-MIT.txt`
+
+## UI/UX Pro Max (developer design guidance)
+
+Requested upstream: https://github.com/nextlevelbuilder/ui-ux-pro-max-skill,
+revision `6ae86f61f520d6ca229d2f40e070410638c908c5`. Copyright (c) 2024 Next Level
+Builder, MIT. Full license and provenance are retained in
+`.claude/skills/ui-ux-pro-max/`. This local search/design bundle is not packaged
+as an APK model, network service or runtime UI framework. Existing font licenses
+remain unchanged; the redesign uses already bundled Vazirmatn.

@@ -231,6 +231,7 @@ public class MainActivity extends AppCompatActivity {
     private ActivityResultLauncher<String[]> importFontLauncher;
     private ActivityResultLauncher<String> notificationPermissionLauncher;
     private ActivityResultLauncher<Intent> editorLauncher;
+    private final int[] readingScrollPositions = new int[5];
     private Bitmap originalBitmap;
     private Bitmap resultBitmap;
     private File resultFile;
@@ -631,6 +632,7 @@ public class MainActivity extends AppCompatActivity {
         refreshDownloadsList();
         refreshReportUi();
         applyEditionUi();
+        initializeReadingStudio(savedInstanceState);
         if (savedInstanceState == null) {
             handleIncomingShareIntent(getIntent());
         }
@@ -675,31 +677,31 @@ public class MainActivity extends AppCompatActivity {
             }
             TextView settingsSubtitle = findViewById(R.id.settingsSubtitle);
             if (settingsSubtitle != null) {
-                settingsSubtitle.setText(R.string.kx_settings_subtitle);
+                settingsSubtitle.setText(R.string.ux_settings_subtitle);
             }
             if (navTranslateButton != null) {
-                navTranslateButton.setText(R.string.kx_nav_translate);
+                navTranslateButton.setText(R.string.ux_translate);
             }
             Button navStyle = findViewById(R.id.navStyleButton);
             if (navStyle != null) {
-                navStyle.setText(R.string.kx_nav_style);
+                navStyle.setText(R.string.ux_style);
             }
             if (navResultsButton != null) {
-                navResultsButton.setText(R.string.kx_nav_results);
+                navResultsButton.setText(R.string.ux_results);
             }
             if (navSettingsButton != null) {
-                navSettingsButton.setText(R.string.kx_nav_settings);
+                navSettingsButton.setText(R.string.ux_settings);
             }
             if (navReportsButton != null) {
-                navReportsButton.setText(R.string.kx_nav_reports);
+                navReportsButton.setText(R.string.ux_reports);
             }
             Button pick = findViewById(R.id.pickButton);
             if (pick != null) {
-                pick.setText(R.string.kx_pick_btn);
+                pick.setText(R.string.ux_pick);
             }
             Button translate = findViewById(R.id.translateButton);
             if (translate != null) {
-                translate.setText(R.string.kx_translate_btn);
+                translate.setText(R.string.ux_start);
             }
             View languageRow = findViewById(R.id.languageRow);
             if (languageRow != null) {
@@ -900,6 +902,9 @@ public class MainActivity extends AppCompatActivity {
         if (page < PAGE_TRANSLATE || page > PAGE_REPORTS) {
             page = PAGE_TRANSLATE;
         }
+        if (mainScrollView != null && currentMainPage >= 0 && currentMainPage < 5) {
+            readingScrollPositions[currentMainPage] = mainScrollView.getScrollY();
+        }
         currentMainPage = page;
         pageTranslate.setVisibility(page == PAGE_TRANSLATE ? View.VISIBLE : View.GONE);
         pageStyle.setVisibility(page == PAGE_STYLE ? View.VISIBLE : View.GONE);
@@ -915,8 +920,16 @@ public class MainActivity extends AppCompatActivity {
             prefs.edit().putInt(PREF_MAIN_PAGE, page).apply();
         }
         if (mainScrollView != null) {
-            mainScrollView.post(() -> mainScrollView.scrollTo(0, 0));
+            final int destination = page;
+            mainScrollView.post(() -> mainScrollView.scrollTo(0, readingScrollPositions[destination]));
         }
+        TextView workspace = findViewById(R.id.workspaceTitle);
+        if (workspace != null) {
+            int[] titles = {R.string.ux_translate,R.string.ux_style,R.string.ux_results,R.string.ux_settings,R.string.ux_reports};
+            workspace.setText(titles[page]);
+        }
+        View dock = findViewById(R.id.translateActionDock);
+        if (dock != null) dock.setVisibility(page == PAGE_TRANSLATE ? View.VISIBLE : View.GONE);
         if (page == PAGE_RESULTS) {
             refreshDownloadsList();
         } else if (page == PAGE_SETTINGS) {
@@ -929,16 +942,103 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateMainNavButton(Button button, boolean selected) {
-        if (button == null) {
-            return;
+        KoorixDesign.nav(button, selected);
+    }
+
+    private void initializeReadingStudio(Bundle state) {
+        if (state != null) {
+            int[] saved = state.getIntArray("koorix.ui.scroll");
+            if (saved != null && saved.length == 5) System.arraycopy(saved,0,readingScrollPositions,0,5);
         }
-        button.setSelected(selected);
-        button.setAlpha(1f);
-        button.setBackgroundResource(selected
-                ? R.drawable.bg_button_primary
-                : R.drawable.bg_button_secondary);
-        button.setTextColor(ContextCompat.getColor(
-                this, selected ? R.color.white : R.color.text_primary));
+        View root = findViewById(R.id.mainRoot);
+        KoorixDesign.apply(this, root);
+        androidx.core.view.ViewCompat.setAccessibilityHeading(findViewById(R.id.workspaceTitle),true);
+        Button language = findViewById(R.id.workspaceLanguageButton);
+        String code = getResources().getConfiguration().getLocales().get(0).getLanguage();
+        language.setText("en".equals(code)?"English":"ar".equals(code)?"العربية":"کوردی");
+        language.setContentDescription(getString(R.string.ux_ui_language));
+        language.setOnClickListener(v -> {
+            android.widget.PopupMenu menu = new android.widget.PopupMenu(this,v);
+            menu.getMenu().add(0,1,0,"کوردی سۆرانی");
+            menu.getMenu().add(0,2,1,"English");
+            menu.getMenu().add(0,3,2,"العربية");
+            menu.setOnMenuItemClickListener(item -> {
+                setAppLanguage(item.getItemId()==1?"ckb":item.getItemId()==2?"en":"ar"); return true;
+            });
+            menu.show();
+        });
+        Spinner appearance = findViewById(R.id.appearanceSpinner);
+        ArrayAdapter<String> modes = new ArrayAdapter<>(this,R.layout.spinner_item,new String[]{
+                getString(R.string.ux_theme_system),getString(R.string.ux_theme_light),getString(R.string.ux_theme_dark)});
+        modes.setDropDownViewResource(R.layout.spinner_dropdown_item);appearance.setAdapter(modes);
+        appearance.setSelection(KoorixDesign.themeMode(this),false);
+        appearance.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
+            @Override public void onItemSelected(AdapterView<?> p,View v,int position,long id){KoorixDesign.setTheme(MainActivity.this,position);}
+            @Override public void onNothingSelected(AdapterView<?> p){}
+        });
+        View options = findViewById(R.id.translationOptionsContent);
+        if(state!=null)options.setVisibility(state.getBoolean("koorix.ui.options")?View.VISIBLE:View.GONE);
+        findViewById(R.id.optionsToggle).setOnClickListener(v->{
+            boolean open=options.getVisibility()!=View.VISIBLE;options.setVisibility(open?View.VISIBLE:View.GONE);v.setSelected(open);
+            if(android.os.Build.VERSION.SDK_INT>=30)v.setStateDescription(getString(open?R.string.ux_expanded:R.string.ux_collapsed));
+            else v.setContentDescription(getString(R.string.ux_options)+", "+getString(open?R.string.ux_expanded:R.string.ux_collapsed));
+        });
+        findViewById(R.id.homeLibraryButton).setOnClickListener(v->{
+            if(!JobRuntime.isRunning())editorLauncher.launch(new Intent(this,ProjectLibraryActivity.class));
+        });
+        getOnBackPressedDispatcher().addCallback(this,new androidx.activity.OnBackPressedCallback(true){
+            @Override public void handleOnBackPressed(){
+                if(currentMainPage!=PAGE_TRANSLATE){showMainPage(PAGE_TRANSLATE);return;}
+                View story=findViewById(R.id.comicInlinePanel);
+                if(story.getVisibility()==View.VISIBLE){story.setVisibility(View.GONE);return;}
+                setEnabled(false);getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
+        root.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,orr,ob)->{
+            if(r-l!=orr-ol||b-t!=ob-ot)updateCompactReadingChrome();
+        });
+        refreshReadingSelection();
+        updateCompactReadingChrome();
+        KoorixDesign.nav(navTranslateButton,currentMainPage==PAGE_TRANSLATE);
+        KoorixDesign.nav(navStyleButton,currentMainPage==PAGE_STYLE);
+        KoorixDesign.nav(navResultsButton,currentMainPage==PAGE_RESULTS);
+        KoorixDesign.nav(navSettingsButton,currentMainPage==PAGE_SETTINGS);
+        KoorixDesign.nav(navReportsButton,currentMainPage==PAGE_REPORTS);
+    }
+
+    private void updateCompactReadingChrome() {
+        boolean compact=getResources().getConfiguration().orientation==android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                &&getResources().getConfiguration().screenHeightDp<480;
+        View intro=findViewById(R.id.homeIntro);
+        if(intro!=null)intro.setVisibility(compact?View.GONE:View.VISIBLE);
+        Button[] buttons={navTranslateButton,navStyleButton,navResultsButton,navSettingsButton,navReportsButton};
+        int[] icons={R.drawable.ic_ui_translate,R.drawable.ic_ui_palette,R.drawable.ic_ui_projects,R.drawable.ic_ui_settings,R.drawable.ic_ui_report};
+        for(int i=0;i<buttons.length;i++)if(buttons[i]!=null){
+            buttons[i].setCompoundDrawablesRelativeWithIntrinsicBounds(compact?icons[i]:0,compact?0:icons[i],0,0);
+            buttons[i].setMinHeight(dp(compact?48:68));
+            buttons[i].setCompoundDrawablePadding(dp(compact?8:4));
+        }
+        View strip=findViewById(R.id.jobStatusStrip);
+        if(strip!=null&&statusText!=null){
+            String status=statusText.getText().toString();
+            boolean ready=status.isEmpty()||status.equals(getString(R.string.ux_ready))||status.equals(getString(R.string.ks_0604));
+            strip.setVisibility(compact&&ready&&!currentBusy?View.GONE:View.VISIBLE);
+        }
+    }
+
+    private void refreshReadingSelection() {
+        TextView title = findViewById(R.id.selectedInputTitle),meta = findViewById(R.id.selectedInputMeta);
+        if(title==null||meta==null)return;
+        int pages=selectedCbzFile!=null?selectedCbzPages:!selectedBatchFiles.isEmpty()?selectedBatchFiles.size():selectedImageFile!=null?1:0;
+        String name=selectedName==null?"":selectedName;
+        if(name.isEmpty()&&!selectedBatchLabel.isEmpty())name=selectedBatchLabel;
+        title.setText(name.isEmpty()?getString(R.string.ux_import_empty):name);
+        meta.setText(pages>0?getString(R.string.ux_selected_pages,pages):getString(R.string.ux_import_hint));
+        View empty=findViewById(R.id.resultEmptyHint);
+        boolean noResult=resultBitmap==null&&resultFile==null;
+        if(empty!=null)empty.setVisibility(noResult?View.VISIBLE:View.GONE);
+        View illustration=findViewById(R.id.resultEmptyIcon);
+        if(illustration!=null)illustration.setVisibility(noResult?View.VISIBLE:View.GONE);
     }
 
     // ------------------------------------------------------------------
@@ -1772,6 +1872,10 @@ public class MainActivity extends AppCompatActivity {
 
     @Override protected void onSaveInstanceState(Bundle outState) {
         if (comicControls != null) comicControls.saveState(outState);
+        if(mainScrollView!=null)readingScrollPositions[currentMainPage]=mainScrollView.getScrollY();
+        outState.putIntArray("koorix.ui.scroll",readingScrollPositions);
+        View options=findViewById(R.id.translationOptionsContent);
+        outState.putBoolean("koorix.ui.options",options!=null&&options.getVisibility()==View.VISIBLE);
         super.onSaveInstanceState(outState);
     }
 
@@ -4544,7 +4648,7 @@ public class MainActivity extends AppCompatActivity {
         detail.setLayoutParams(detailParams);
         row.addView(detail);
 
-        LinearLayout actions = new LinearLayout(this);
+        LinearLayout actions = new ReadingPairLayout(this);
         actions.setOrientation(LinearLayout.HORIZONTAL);
         LinearLayout.LayoutParams actionsParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -4569,7 +4673,7 @@ public class MainActivity extends AppCompatActivity {
 
         Button delete = createSmallButton(getString(R.string.ks_0669), false);
         delete.setBackgroundResource(R.drawable.bg_button_danger);
-        delete.setTextColor(getColor(R.color.white));
+        delete.setTextColor(getColor(R.color.ui_danger));
         LinearLayout.LayoutParams deleteParams = new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         deleteParams.setMarginStart(dp(8));
@@ -4589,16 +4693,15 @@ public class MainActivity extends AppCompatActivity {
         button.setTypeface(android.graphics.Typeface.create("sans-serif-medium",
                 android.graphics.Typeface.BOLD));
         button.setStateListAnimator(null);
-        button.setMinHeight(dp(46));
+        button.setMinHeight(dp(48));
         button.setMinWidth(0);
         button.setMinimumWidth(0);
-        button.setPadding(dp(8), 0, dp(8), 0);
+        button.setPadding(dp(12), dp(12), dp(12), dp(12));
         button.setBackgroundResource(primary
                 ? R.drawable.bg_button_primary
                 : R.drawable.bg_button_secondary);
-        button.setTextColor(getColor(primary
-                ? R.color.text_on_primary
-                : R.color.primary));
+        KoorixDesign.primary(button,primary);
+        button.setTypeface(KoorixDesign.font(this,true));
         return button;
     }
 
@@ -4997,7 +5100,7 @@ public class MainActivity extends AppCompatActivity {
     private void setStatus(final String text) {
         DiagnosticLog.status(getApplicationContext(), text);
         JobRuntime.setStatus(text);
-        runOnUiThread(() -> statusText.setText(text));
+        runOnUiThread(() -> { statusText.setText(text); refreshReadingSelection(); updateCompactReadingChrome(); });
         if (KeepAliveService.isServiceRunning()) {
             KeepAliveService.updateNotification(this);
         }

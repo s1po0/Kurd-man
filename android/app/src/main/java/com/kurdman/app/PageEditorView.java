@@ -370,7 +370,7 @@ public class PageEditorView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        canvas.drawColor(Color.rgb(2, 6, 23));
+        canvas.drawColor(getContext().getColor(R.color.preview_bg));
         if (bitmap == null || bitmap.isRecycled()) {
             return;
         }
