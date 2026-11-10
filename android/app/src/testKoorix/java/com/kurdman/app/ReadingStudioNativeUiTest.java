@@ -117,7 +117,7 @@ public class ReadingStudioNativeUiTest {
             } finally {close(controller);}
             for(String locale:new String[]{"ckb","ar"}) {
                 device(locale,night,393,852,1);controller=Robolectric.buildActivity(MainActivity.class).setup();
-                try {MainActivity a=controller.get();a.findViewById(R.id.navTranslateButton).performClick();capture(a,"main-home-"+locale+"-"+mode,393,852);assertEquals(View.LAYOUT_DIRECTION_RTL,root(a).getLayoutDirection());}
+                try {MainActivity a=controller.get();a.findViewById(R.id.navTranslateButton).performClick();capture(a,"main-home-"+locale+"-"+mode,393,852);assertEquals(View.LAYOUT_DIRECTION_RTL,root(a).getLayoutDirection());assertEquals(View.TEXT_ALIGNMENT_VIEW_START,a.findViewById(R.id.workspaceTitle).getTextAlignment());}
                 finally {close(controller);}
             }
         }

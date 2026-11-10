@@ -11,6 +11,6 @@ public class KurdManApplication extends Application {
         KoorixDesign.initialize(this);
         DiagnosticLog.installUncaughtHandler(this);
         DiagnosticLog.info(this, "app",
-                "KurdMan process started, pid=" + Process.myPid());
+                (BuildConfig.PUBLIC_EDITION ? "Koorix" : "KurdMan") + " process started, pid=" + Process.myPid());
     }
 }

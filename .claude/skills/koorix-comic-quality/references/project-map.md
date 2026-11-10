@@ -62,3 +62,10 @@ Since 1.7 the regular renderer persists multi-run contours and validates complet
 Android-shaped glyph/effect/rotation pixels before erasure. Studio and export
 must share the same validator; do not restore allowOverflow or detach a contour
 when dragging. See `docs/KOORIX_1_7.md` and the pinned all-topic research report.
+
+Since public 1.8 the native Reading Studio UI uses KoorixDesign / ReadingColumn /
+ReadingPairLayout / ReadingTextView, semantic day/night resources, a searchable
+local library and scoped PendingInputState restoration. Read
+`design-system/koorix/MASTER.md` and the owner-requested UI/UX Pro Max skill for
+interface work. Never apply chrome colours/fonts to actual lettering/swatch data
+or reintroduce a mandatory Skill setup, login or split source chooser.

@@ -194,7 +194,7 @@ jobs:
       - name: Independently verify public APK v2 digest, manifest, free-edition classes and harness exclusion
         run: |
           python3 tools/signing/inspect-public-apk.py "$APK_FILE" \
-            --version "$KOORIX_VERSION" --code "$KOORIX_CODE" --no-login --free --contours
+            --version "$KOORIX_VERSION" --code "$KOORIX_CODE" --no-login --free --contours --reading-studio
           echo "::notice::Independent public-only APK signature/content/no-login verification passed"
 
       # Releases/chat delivery do not depend on the repository artifact quota.
@@ -229,7 +229,7 @@ jobs:
         run: |
           TAG="koorix-v$KOORIX_VERSION"
           cp "$APK_FILE" "Koorix-v$KOORIX_VERSION.apk"
-          NOTES="Koorix v$KOORIX_VERSION — regular production update, com.koorix.app, arm64, non-debuggable, permanent v2 signer. Native contour-aware lettering: complete Android-shaped glyphs, outlines, shadows, italic/decorations and rotation are checked WITHOUT clipping against a padded multi-run bubble mask before source erasure. Adaptive width/font/contained placement handles circles, rectangles, triangles, quadrilaterals and concave shapes in synthetic native regressions. A final clip is only a guard: raw and clipped glyph output must match in tests. Unplaceable dialogue preserves original pixels and its editable translation in normal rendering, studio and export. Masks persist across projects/reopen; moving a box does not detach its contour, and geometry/effect edits invalidate stale fits. Background/border/erasure antialias clearances protect detected outlines. All three GitHub topic indexes were metadata-screened (499 unique repositories including forks); selected relevant source/license studies are documented, not an audit of every repository. No upstream desktop stack, GPL source, paid API, new model or NLLB was imported. Existing completely free/no-login/no-daily-app-quota operation, single GET_CONTENT */* source-app chooser, all 74 target choices, three UI languages, automatic Skill, saved jobs, STOP, backups, studio, PDF and 300-page/300-MB/1-GB safeguards remain. Install over v2-signed Koorix without uninstalling or clearing data. Real-page/device detection, perfect erasure, optimal typography/performance and translation meaning are NOT guaranteed by synthetic native/JVM tests; Sorani OPUS is unchanged."
+          NOTES="Koorix v$KOORIX_VERSION — full native Reading Studio UI/UX redesign using the owner-requested, pinned MIT UI/UX Pro Max skill (not a web mockup or new model). Paper & Forest semantic light/dark/system themes, bundled joined-script UI type, import-first single GET_CONTENT */* source-app chooser, thumb-reachable normal Translate, localized headings/language access, predictable Back, retained tab scroll state and large-text destination navigation. Searchable local projects with one Open/Resume action and contextual backup/rename/reuse/delete; refined studio, style, results, settings, diagnostics and optional story/review. Completed imported pages survive appearance/locale recreation using bounded private metadata, no duplicate import or bitmap IPC. Native 48dp controls, matching vector icons, readable measures, RTL and system/IME inset handling. Existing free/no-login/no-daily-app-quota operation, automatic translation Skill, 74 targets, three UI languages, contour-safe complete glyph fitting, saved jobs/STOP/recovery/backups/PDF and 300-page/300-MB/1-GB safeguards remain. No paid API, NLLB, large model, new runtime UI framework or network font. Same com.koorix.app, permanent v2 signer, non-debuggable ARM64: install over v2 Koorix without uninstalling or clearing data. Native SDK26/34 synthetic UI/glyph regressions and captures are not physical-device/TalkBack/IME or universal visual/semantic certification. Sorani translation model is unchanged. Design/provenance and validation boundaries are documented in docs/KOORIX_1_8.md."
 
           # An owner-prepared draft/tag is valid too. Upload verified bytes first,
           # then publish; expose public CLI errors without printing credentials.
@@ -274,11 +274,10 @@ jobs:
             echo "::error::APK exceeds Telegram's upload budget"
             exit 1
           fi
-          CAPTION="💜 Koorix v$KOORIX_VERSION — وەشانی ئاسایی، نەک Preview.
-          دەق، هێڵی دەور، سێبەر و سووڕان پێش سڕینەوە لە ناو ماسکی بالۆن پشکنین دەکرێن؛ نەک تەنها بڕینی پیتەکان. ئەگەر هەموو دەقەکە نەگونجێت، ڕەسەن دەمێنێت.
-          ستۆدیۆ و پڕۆژەی پاشەکەوتکراویش هەمان سنوور دەپارێزن. هەرسێ لیستی GitHub گەڕاون؛ سەرچاوە پەیوەندیدارەکان بە وردی پشکنراون.
-          خۆڕایی، بێ Login، یەک هەڵبژێرەر، Skill و STOP پارێزراون؛ هیچ مۆدێلی نوێ یان NLLB زیاد نەکراوە.
-          هەمان کلیلی v2 ـە؛ لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە. تاقیکردنەوەکان نموونەی دروستکراون، نەک دڵنیایی هەموو پەڕە و مۆبایلێک."
+          CAPTION="💚 Koorix v$KOORIX_VERSION — ڕووکار و UXی نوێی ئەپی ئاسایی، نەک Preview.
+          ڕووکاری کاغەزی/سەوز، مۆدی ڕوون/تاریک، فۆنتی لکێنراو، هەڵبژاردنی پەڕە لە پێشەوە و Translate لە خوارەوە. گەڕانی پڕۆژە، لیستی کردارەکان، ستۆدیۆ و ڕێکخستنی نوێ.
+          بە Skillی UI/UX Pro Max لە سەرچاوەی داواکراو؛ هیچ مۆدێلی نوێ یان APIی پارەدار زیاد نەکراوە. پڕۆژەکان، یەک هەڵبژێرەر، خۆڕایی، Skillی خۆکار و STOP پارێزراون.
+          هەمان package و کلیلی v2 ـە؛ لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە. وێنەکانی پشکنین ناتیڤ و نموونەی دروستکراون، نەک دڵنیایی هەموو مۆبایلێک."
 
           RESP=$(curl -fsS --connect-timeout 20 --max-time 180 \
             --form-string "chat_id=$ADMIN" --form-string "caption=$CAPTION" \

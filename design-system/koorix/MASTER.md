@@ -251,3 +251,20 @@ Before delivering any UI code, verify:
 - **Evidence:** actual SDK26/34 native Robolectric UI contracts/captures plus the
   existing 170 regression executions. These do not certify physical devices,
   TalkBack, OEM content apps or every possible font scale/keyboard.
+
+## Native review findings incorporated
+
+- Use a script-capable TextView subclass for spinner rows; font-sample adapters
+  retain their own selected font. Selected rows are transparent so rounded
+  input boundaries are not obscured by square white adapter backgrounds.
+- Keep the established Translate action name. Remove unsupported best-app
+  marketing wording and decorative emoji from mode labels.
+- Do not auto-focus/auto-scroll a story glossary or open its keyboard on entry.
+- At 200% text, replace cramped five-label navigation with a named screen menu,
+  not smaller text or truncated/orphaned labels. All destinations remain available.
+- Preserve pending private-file input metadata across appearance/locale recreation
+  and reject traversal/missing/oversized restored paths without deleting files.
+- Explicit view-start alignment keeps localized headings and the wordmark aligned
+  correctly in RTL, independent of mixed Latin/script text.
+- Candidate 42865259663: 190/190 passed, 50 real native captures, SDK26/34. Physical
+  phone, TalkBack and real IME acceptance remain unverified.
