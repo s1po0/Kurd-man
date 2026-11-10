@@ -3,7 +3,7 @@ on:
   push:
     branches: ["arena/**"]
     paths:
-      - "koorix/releases/v1.8.0.json"
+      - "koorix/releases/v1.8.1.json"
       - ".github/workflows/koorix-done.yml"
 permissions:
   contents: read
@@ -18,22 +18,26 @@ jobs:
         run: |
           python3 - <<'PY'
           import json
-          record=json.load(open('koorix/releases/v1.8.0.json'))
+          record=json.load(open('koorix/releases/v1.8.1.json'))
           assert record['features']['userLoginRemoved'] is True
           assert record['features']['premiumRemoved'] is True
           assert record['features']['dailyAppQuotasRemoved'] is True
           assert record['features']['unifiedAppCapableInputChooser'] is True
           assert record['features']['separateGalleryAndUnfilteredFiles'] is False
-          assert record['version']=='1.8.0' and record['versionCode']==16
+          assert record['version']=='1.8.1' and record['versionCode']==17
           assert record['features']['actualContourInkValidation'] is True
           assert record['features']['completeDialogueNoClip'] is True
           assert record['features']['nativeReadingStudioUi'] is True
+          assert record['features']['greenBrandRemoved'] is True
+          assert record['features']['softBlueVioletPeachTriad'] is True
+          assert record['features']['persistentHeaderDarkLightShortcut'] is True
+          assert record['independentLocalVerification']['native_triad_dark_mode_checked'] is True
           assert record['uiUxSkill']['source']=='nextlevelbuilder/ui-ux-pro-max-skill'
           assert record['uiUxSkill']['license']=='MIT'
-          assert record['ci']['androidJvmExecutions']>=190
+          assert record['ci']['androidJvmExecutions']>=208
           assert record['ci']['nativeGlyphExecutions']>=34
-          assert record['ci']['nativeUiExecutions']>=20
-          assert record['ci']['uiCaptures']>=50
+          assert record['ci']['nativeUiExecutions']>=38
+          assert record['ci']['uiCaptures']>=54
           assert record['independentLocalVerification']['native_reading_studio_ui_checked'] is True
           assert record['independentLocalVerification']['native_contour_classes_checked'] is True
           assert record['ci']['status']=='success'
@@ -49,11 +53,11 @@ jobs:
         run: |
           test -n "$TOKEN" && test -n "$ADMIN"
           MESSAGE="تەواو بووم ✅
-          Koorix 1.8.0 — UI و UXی نوێی ئەپی ئاسایی بە ڕێنمایی UI/UX Pro Max، نەک Preview.
-          ڕووکارێکی کاغەزی/سەوز، مۆدی ڕوون/تاریک، فۆنتی لکێنراو، هەڵبژاردنی پەڕە لە پێشەوە، Translate لە خوارەوە، گەڕانی پڕۆژە و ستۆدیۆ/ڕێکخستنی نوێ. هەڵبژاردنی تەواوبووی پەڕەکان لە گۆڕینی ڕووکاردا دەمێنێت.
-          ١٩٠ پشکنین و ٥٠ وێنەی ناتیڤی نموونە تێپەڕین؛ ئەمە دڵنیایی کارکردن لە هەموو مۆبایلێک نییە. هیچ مۆدێلێکی نوێ یان APIی پارەدار زیاد نەکراوە.
-          APK لە چات و Telegram نێردرا. هەمان package و کلیلی v2؛ خۆڕایی، یەک هەڵبژێرەر و پڕۆژەکان پارێزراون. لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە.
-          https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.8.0/Koorix-v1.8.0.apk"
+          Koorix 1.8.1 — سێ ڕەنگی کاڵی شین + مۆر + هەڵۆیی؛ سەوزی ڕووکار لابراوە.
+          دوگمەی مانگ/خۆر لە سەرەوەی هەموو بەشەکان بە یەک لێدان Dark/Light دەگۆڕێت؛ هەڵبژاردنەکەت پاشەکەوت دەکرێت. لە ڕێکخستنیش System / Light / Dark بەردەستن.
+          ٢٠٨ پشکنین تێپەڕین و ٥٤ وێنەی ناتیڤی نموونە هەیە؛ ئەمە دڵنیایی هەموو مۆبایلێک نییە. پڕۆژە، ڕەنگی نووسینەکانی خۆت، یەک هەڵبژێرەر، خۆڕایی و STOP پارێزراون.
+          APK لە چات و Telegram نێردرا. هەمان package و کلیلی v2؛ لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە.
+          https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.8.1/Koorix-v1.8.1.apk"
 
           RESPONSE=$(curl -fsS --connect-timeout 20 --max-time 60 \
             --data-urlencode "chat_id=$ADMIN" --data-urlencode "text=$MESSAGE" \
