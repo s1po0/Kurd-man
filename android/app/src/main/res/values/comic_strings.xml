@@ -1,6 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="comic_title">"دۆخی مانگا / مانهوا"</string>
+    <string name="comic_title">ناو و زاراوەکانی چیرۆک</string>
     <string name="comic_back">"گەڕانەوە"</string>
     <string name="comic_enable">"چالاککردنی دۆخی مانگا / مانهوا"</string>
     <string name="comic_intro">"دەربڕینی سروشتیی دیالۆگ، زاراوەی چیرۆک و یەکگرتوویی ناوەکان. لە ئۆنلاین، چەند دیالۆگی دراوسێ پێکەوە وەردەگێڕدرێن، بەڵام هەر یەکەیان بە جیاوازی دەمێنێتەوە."</string>
@@ -21,7 +21,7 @@
     <string name="comic_clear">"پاککردنەوەی لیستی چیرۆک"</string>
     <string name="comic_clear_title">"لیستەکە پاک بکرێتەوە؟"</string>
     <string name="comic_clear_message">"پڕۆژە پاشەکەوتکراوەکان ناگۆڕدرێن. بۆ جێبەجێکردنی گۆڕانکارییەکە، پاشەکەوت بکە."</string>
-    <string name="comic_save">"پاشەکەوتکردنی دۆخ و فەرهەنگ"</string>
+    <string name="comic_save">پاشەکەوتکردنی ناو و زاراوەکان</string>
     <string name="comic_saved">"دۆخی مانگا / مانهوا پاشەکەوت کرا."</string>
     <string name="comic_other_targets">"فەرهەنگی ناوخۆی سۆرانی تەنها بۆ ئامانجی سۆرانییە. پەیوەندیی دیالۆگەکانی ئۆنلاین و فەرهەنگی تایبەتی خۆت بۆ زمانەکانی تریش کار دەکەن؛ دەقی سۆرانی بەسەریاندا ناسەپێنرێت."</string>
     <string name="comic_limits">"ئەمە چینێکی یاسا و فەرهەنگە، نە مۆدێلێکی نوێ. ئۆفلاین هەر پاکێجەکانی ئێستا بەکاردەهێنێت و کوالێتییەکەی سنووردارە. نیشانەی ⚠ بۆ پێداچوونەوەی ژمارە/زاراوەیە؛ نەبوونی نیشانەکە دڵنیایی لە ڕاستیی ماناکە نادات."</string>

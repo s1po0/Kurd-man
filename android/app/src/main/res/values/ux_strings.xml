@@ -21,7 +21,7 @@
     <string name="ux_ocr_help">بۆ نووسینی سەخت؛ پاکێجی ئیختیاری PP-OCR لە ڕێکخستن دابەزێنە.</string>
     <string name="ux_story_title">ناو و زاراوەکان — ئیختیاری</string>
     <string name="ux_auto_ready">ڕێنماییەکانی وەرگێڕان خۆکارن؛ هەنگاوی جیاواز ناوێت.</string>
-    <string name="ux_start">دەستپێکردنی وەرگێڕان</string>
+    <string name="ux_start">وەرگێڕان</string>
     <string name="ux_import_limits">پاراستنی هاوردەکردن: ٣٠٠ پەڕە / ٣٠٠ MB</string>
     <string name="ux_home_library">پڕۆژە پاشەکەوتکراوەکان</string>
     <string name="ux_selected_pages">%1$d پەڕە ئامادەیە</string>
@@ -47,7 +47,7 @@
     <string name="ux_refresh">نوێکردنەوە</string>
     <string name="ux_folder">کردنەوەی فۆڵدەر</string>
     <string name="ux_download_help">فایلێک بکەرەوە، هاوبەشی بکە یان خۆت بیسڕەوە؛ پڕۆژەی سەرچاوە دەمێنێت.</string>
-    <string name="ux_settings_title">بەپێی شێوازی کارت</string>
+    <string name="ux_settings_title">ڕێکخستنەکانت</string>
     <string name="ux_settings_subtitle">ڕووکار، دەرکردن، پاکێجەکان و کاری پاشبنەما.</string>
     <string name="ux_appearance">ڕووکار</string>
     <string name="ux_theme">ڕەنگی ڕووکار</string>
@@ -92,4 +92,15 @@
     <string name="ux_selected">هەڵبژێردراو</string>
     <string name="ux_expanded">کراوە</string>
     <string name="ux_collapsed">داخراو</string>
+    <string name="ux_switch_screen">گۆڕینی بەش: %1$s</string>
+    <plurals name="ux_pages">
+        <item quantity="one">%1$d پەڕە</item>
+        <item quantity="other">%1$d پەڕە</item>
+    </plurals>
+    <plurals name="ux_pages_ready">
+        <item quantity="one">%1$d پەڕە ئامادەیە</item>
+        <item quantity="other">%1$d پەڕە ئامادەیە</item>
+    </plurals>
+    <string name="ux_mode_online">ئۆنلاین</string>
+    <string name="ux_mode_offline">بێ ئینتەرنێت</string>
 </resources>

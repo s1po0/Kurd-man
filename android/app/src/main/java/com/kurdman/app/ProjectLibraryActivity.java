@@ -39,6 +39,8 @@ public class ProjectLibraryActivity extends AppCompatActivity {
         restore=registerForActivityResult(new ActivityResultContracts.OpenDocument(),uri->{if(uri!=null)task(()->{File temp=File.createTempFile("koorix-import-",".zip",getCacheDir());try{try(InputStream in=getContentResolver().openInputStream(uri);OutputStream out=new FileOutputStream(temp)){if(in==null)throw new IOException("Input missing");ProjectArchive.copy(in,out,ProjectArchive.MAX_BYTES);}ProjectArchive.importProject(this,temp);setResult(RESULT_OK,new Intent().putExtra(EXTRA_CHANGED,true));}finally{temp.delete();}});});
         editor=registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),result->{if(result.getResultCode()==RESULT_OK&&result.getData()!=null&&result.getData().getBooleanExtra(EditorActivity.EXTRA_EXPORT,false)){setResult(RESULT_OK,new Intent().putExtra(EditorActivity.EXTRA_EXPORT,true).putExtra(EXTRA_CHANGED,true));finish();}else refresh();});
         root=KoorixUi.page(this,getString(R.string.rel_library),getString(R.string.ux_library_sub));
+        root.setFocusableInTouchMode(true);root.requestFocus();
+        getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN|android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         search=new EditText(this);search.setId(R.id.librarySearch);search.setSingleLine(true);search.setHint(R.string.ux_library_search);search.setContentDescription(getString(R.string.ux_library_search));
         search.setBackgroundResource(R.drawable.bg_input);search.setTextColor(getColor(R.color.text_primary));search.setHintTextColor(getColor(R.color.text_muted));search.setTextSize(15);search.setTypeface(KoorixDesign.font(this,false));search.setPadding(dp(16),dp(12),dp(16),dp(12));search.setMinHeight(dp(56));
         root.addView(search,new LinearLayout.LayoutParams(-1,-2));
@@ -72,7 +74,7 @@ public class ProjectLibraryActivity extends AppCompatActivity {
             row.addView(title,new LinearLayout.LayoutParams(0,-2,1));
             Button menu=new Button(this,null,0);menu.setId(R.id.libraryProjectMenu);menu.setBackgroundResource(R.drawable.bg_nav_item);row.addView(menu,new LinearLayout.LayoutParams(dp(48),dp(48)));
             KoorixDesign.icon(menu,R.drawable.ic_ui_more,R.string.ux_library_menu);menu.setContentDescription(getString(R.string.ux_library_menu)+": "+name);menu.setOnClickListener(v->projectMenu(menu,p));
-            KoorixUi.text(this,card,getString(R.string.rel_page_count,p.pages.size(),p.sourceLanguage,p.targetLanguage),13,false);
+            KoorixUi.text(this,card,getResources().getQuantityString(R.plurals.ux_pages,p.pages.size(),p.pages.size())+" • "+p.sourceLanguage+" → "+p.targetLanguage,13,false);
             TextView status=KoorixUi.text(this,card,getString(p.completed?R.string.rel_finished:R.string.rel_paused),12,false);status.setTextColor(getColor(R.color.primary));
             if(p.completed)KoorixDesign.primary(KoorixUi.button(this,card,getString(R.string.rel_open_studio),()->select(p,false)),true);
             else if(p.resumable)KoorixDesign.primary(KoorixUi.button(this,card,getString(R.string.rel_resume),()->select(p,true)),true);

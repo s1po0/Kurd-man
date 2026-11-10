@@ -78,4 +78,26 @@ public class ReadingStudioUiTest {
             assertNotNull(screen.findViewById(id));
         } finally { library.pause().stop().destroy(); }
     }
+
+    @Test public void completedPendingInputSurvivesAnAppearanceOrLocaleRecreation() throws Exception {
+        java.io.File image=new java.io.File(activity.getCacheDir(),"pending-ui.png");
+        android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(12,12,android.graphics.Bitmap.Config.ARGB_8888);
+        try(java.io.FileOutputStream out=new java.io.FileOutputStream(image)){bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out);}bitmap.recycle();
+        org.robolectric.util.ReflectionHelpers.setField(activity,"selectedImageFile",image);
+        org.robolectric.util.ReflectionHelpers.setField(activity,"selectedName","My pending page.png");
+        controller.recreate();activity=controller.get();
+        java.io.File restored=org.robolectric.util.ReflectionHelpers.getField(activity,"selectedImageFile");
+        assertNotNull("Changing appearance must not discard already imported pages",restored);
+        assertEquals(image.getCanonicalFile(),restored.getCanonicalFile());
+        assertEquals("My pending page.png",org.robolectric.util.ReflectionHelpers.getField(activity,"selectedName"));
+        assertTrue("UI restoration must not copy or delete the source",image.isFile());
+    }
+    @Test public void pendingInputStateRejectsTraversalWithoutReadingOrDeletingTheFile() throws Exception {
+        java.io.File outside=new java.io.File(activity.getFilesDir(),"outside-cache.png");
+        try(java.io.FileOutputStream out=new java.io.FileOutputStream(outside)){out.write(new byte[]{1,2,3});}
+        android.os.Bundle values=new android.os.Bundle();values.putInt("v",1);values.putString("image","cache:../files/outside-cache.png");
+        android.os.Bundle state=new android.os.Bundle();state.putBundle(PendingInputState.KEY,values);
+        assertNull(PendingInputState.restore(activity,state).image);
+        assertTrue(outside.isFile());
+    }
 }

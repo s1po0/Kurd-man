@@ -224,7 +224,7 @@ Before delivering any UI code, verify:
   Tool / Flat Design**, a relevant verified basis. Exact book-product searches
   returned no verified match, so no book-specific database result is claimed.
 - **Direction:** Paper & Forest reading studio. The primary teal is darkened
-  from the recommendation to #087F5B so white action labels meet 4.5:1. Use the
+  from the recommendation to #087452 so white action labels meet 4.5:1. Use the
   actual semantic palette in `src/koorix/res/values{,-night}/colors.xml`; all
   checked primary/body/secondary/control pairs pass their contrast thresholds.
 - **Type:** existing, bundled Vazirmatn 400/700 for app chrome and joined Sorani /

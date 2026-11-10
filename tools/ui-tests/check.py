@@ -21,6 +21,6 @@ for p in RES.glob('layout/*.xml'):
     assert all(A+'style'not in e.attrib for e in root.iter()),'style must be unqualified: '+str(p)
 for folder in ('values','values-night'):
     colors={e.get('name'):e.text for e in E.parse(ROOT/'android/app/src/koorix/res'/folder/'colors.xml').getroot()}
-    for ink,bg,target in [('text_primary','page',4.5),('text_secondary','card',4.5),('text_muted','card',4.5),('text_on_primary','primary',4.5),('text_on_primary','primary_dark',4.5),('primary','card',3),('border_dark','input_bg',3)]:
+    for ink,bg,target in [('text_primary','page',4.5),('text_secondary','card',4.5),('text_muted','card',4.5),('text_on_primary','primary',4.5),('text_on_primary','primary_dark',4.5),('primary','card',3),('primary','ui_tint',4.5),('text_secondary','card_soft',4.5),('text_secondary','ui_tint',4.5),('border_dark','input_bg',3)]:
         actual=contrast(colors[ink],colors[bg]);assert actual>=target,(folder,ink,bg,actual)
 print('Native reading studio: 3-locale copy parity, XML styles and measured semantic light/dark contrast pairs passed; not physical-device or TalkBack proof.')

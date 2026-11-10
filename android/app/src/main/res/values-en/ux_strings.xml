@@ -21,7 +21,7 @@
     <string name="ux_ocr_help">For difficult lettering. The optional PP-OCR pack is in Settings.</string>
     <string name="ux_story_title">Names &amp; terms — optional</string>
     <string name="ux_auto_ready">Translation guidance runs automatically. No extra setup.</string>
-    <string name="ux_start">Translate pages</string>
+    <string name="ux_start">Translate</string>
     <string name="ux_import_limits">Import safeguard: 300 pages / 300 MB</string>
     <string name="ux_home_library">Open saved projects</string>
     <string name="ux_selected_pages">%1$d pages ready</string>
@@ -47,7 +47,7 @@
     <string name="ux_refresh">Refresh</string>
     <string name="ux_folder">Open folder</string>
     <string name="ux_download_help">Open, share or explicitly delete an export. Your source project stays.</string>
-    <string name="ux_settings_title">Settle into your workflow</string>
+    <string name="ux_settings_title">Your preferences</string>
     <string name="ux_settings_subtitle">Appearance, export, downloads and background work.</string>
     <string name="ux_appearance">Appearance</string>
     <string name="ux_theme">Colour theme</string>
@@ -92,4 +92,15 @@
     <string name="ux_selected">Selected</string>
     <string name="ux_expanded">Expanded</string>
     <string name="ux_collapsed">Collapsed</string>
+    <string name="ux_switch_screen">Switch screen: %1$s</string>
+    <plurals name="ux_pages">
+        <item quantity="one">%1$d page</item>
+        <item quantity="other">%1$d pages</item>
+    </plurals>
+    <plurals name="ux_pages_ready">
+        <item quantity="one">%1$d page ready</item>
+        <item quantity="other">%1$d pages ready</item>
+    </plurals>
+    <string name="ux_mode_online">Online</string>
+    <string name="ux_mode_offline">Offline — on-device pack</string>
 </resources>

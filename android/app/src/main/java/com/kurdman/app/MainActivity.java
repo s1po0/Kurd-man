@@ -99,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String[] SOURCE_CODES = TranslationLanguages.SOURCES;
     private String[] translationModeLabels() {
         return new String[]{
-                getString(R.string.ks_0694), getString(R.string.ks_0695)};
+                getString(R.string.ux_mode_online), getString(R.string.ux_mode_offline)};
     }
 
     /** Target languages (autonym labels; codes are Google/ML Kit tags). */
@@ -302,6 +302,13 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        if(BuildConfig.PUBLIC_EDITION&&savedInstanceState!=null&&!JobRuntime.isRunning()) {
+            PendingInputState.Selection pending=PendingInputState.restore(this,savedInstanceState);
+            selectedImageFile=pending.image;selectedCbzFile=pending.cbz;
+            selectedBatchFiles.addAll(pending.batch);selectedBatchNames.addAll(pending.names);
+            selectedName=pending.title;selectedCbzPages=pending.pages;
+            selectedBatchLabel=pending.label;selectedBatchBase=pending.base;
+        }
         tokenInput = findViewById(R.id.tokenInput);
         chatInput = findViewById(R.id.chatInput);
         pasteTokenButton = findViewById(R.id.pasteTokenButton);
@@ -739,6 +746,7 @@ public class MainActivity extends AppCompatActivity {
 
     /** Koorix language picker: ckb (Sorani), en, ar. Recreated by AppCompat. */
     private void setAppLanguage(String tag) {
+        if(currentBusy||JobRuntime.isRunning())return;
         LocaleListCompat locales = LocaleListCompat.forLanguageTags(tag);
         if (!locales.equals(AppCompatDelegate.getApplicationLocales())) {
             AppCompatDelegate.setApplicationLocales(locales);
@@ -928,6 +936,11 @@ public class MainActivity extends AppCompatActivity {
             int[] titles = {R.string.ux_translate,R.string.ux_style,R.string.ux_results,R.string.ux_settings,R.string.ux_reports};
             workspace.setText(titles[page]);
         }
+        Button largeNavigation=findViewById(R.id.largeTypeNavigationButton);
+        if(largeNavigation!=null&&workspace!=null) {
+            largeNavigation.setText(workspace.getText());
+            largeNavigation.setContentDescription(getString(R.string.ux_switch_screen,workspace.getText()));
+        }
         View dock = findViewById(R.id.translateActionDock);
         if (dock != null) dock.setVisibility(page == PAGE_TRANSLATE ? View.VISIBLE : View.GONE);
         if (page == PAGE_RESULTS) {
@@ -976,6 +989,12 @@ public class MainActivity extends AppCompatActivity {
             @Override public void onItemSelected(AdapterView<?> p,View v,int position,long id){KoorixDesign.setTheme(MainActivity.this,position);}
             @Override public void onNothingSelected(AdapterView<?> p){}
         });
+        findViewById(R.id.largeTypeNavigationButton).setOnClickListener(v->{
+            android.widget.PopupMenu menu=new android.widget.PopupMenu(this,v);
+            int[] titles={R.string.ux_translate,R.string.ux_style,R.string.ux_results,R.string.ux_settings,R.string.ux_reports};
+            for(int i=0;i<titles.length;i++)menu.getMenu().add(0,i+1,i,titles[i]);
+            menu.setOnMenuItemClickListener(item->{showMainPage(item.getItemId()-1);return true;});menu.show();
+        });
         View options = findViewById(R.id.translationOptionsContent);
         if(state!=null)options.setVisibility(state.getBoolean("koorix.ui.options")?View.VISIBLE:View.GONE);
         findViewById(R.id.optionsToggle).setOnClickListener(v->{
@@ -1009,6 +1028,10 @@ public class MainActivity extends AppCompatActivity {
     private void updateCompactReadingChrome() {
         boolean compact=getResources().getConfiguration().orientation==android.content.res.Configuration.ORIENTATION_LANDSCAPE
                 &&getResources().getConfiguration().screenHeightDp<480;
+        boolean largeType=getResources().getConfiguration().fontScale>1.3f;
+        View standard=findViewById(R.id.standardNavigation),large=findViewById(R.id.largeTypeNavigationButton);
+        if(standard!=null)standard.setVisibility(largeType?View.GONE:View.VISIBLE);
+        if(large!=null)large.setVisibility(largeType?View.VISIBLE:View.GONE);
         View intro=findViewById(R.id.homeIntro);
         if(intro!=null)intro.setVisibility(compact?View.GONE:View.VISIBLE);
         Button[] buttons={navTranslateButton,navStyleButton,navResultsButton,navSettingsButton,navReportsButton};
@@ -1033,7 +1056,7 @@ public class MainActivity extends AppCompatActivity {
         String name=selectedName==null?"":selectedName;
         if(name.isEmpty()&&!selectedBatchLabel.isEmpty())name=selectedBatchLabel;
         title.setText(name.isEmpty()?getString(R.string.ux_import_empty):name);
-        meta.setText(pages>0?getString(R.string.ux_selected_pages,pages):getString(R.string.ux_import_hint));
+        meta.setText(pages>0?getResources().getQuantityString(R.plurals.ux_pages_ready,pages,pages):getString(R.string.ux_import_hint));
         View empty=findViewById(R.id.resultEmptyHint);
         boolean noResult=resultBitmap==null&&resultFile==null;
         if(empty!=null)empty.setVisibility(noResult?View.VISIBLE:View.GONE);
@@ -1872,6 +1895,8 @@ public class MainActivity extends AppCompatActivity {
 
     @Override protected void onSaveInstanceState(Bundle outState) {
         if (comicControls != null) comicControls.saveState(outState);
+        if(BuildConfig.PUBLIC_EDITION)PendingInputState.save(this,outState,selectedImageFile,selectedCbzFile,
+                selectedBatchFiles,selectedBatchNames,selectedName,selectedCbzPages,selectedBatchLabel,selectedBatchBase);
         if(mainScrollView!=null)readingScrollPositions[currentMainPage]=mainScrollView.getScrollY();
         outState.putIntArray("koorix.ui.scroll",readingScrollPositions);
         View options=findViewById(R.id.translationOptionsContent);
@@ -2980,7 +3005,7 @@ public class MainActivity extends AppCompatActivity {
         }
         TextView heroSubtitle = findViewById(R.id.heroSubtitle);
         if (heroSubtitle != null) {
-            heroSubtitle.setText(R.string.kx_hero_subtitle);
+            heroSubtitle.setText(R.string.ux_home_subtitle);
         }
     }
 
@@ -5130,6 +5155,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateButtons(boolean busy) {
         boolean enabled = !busy;
+        // Do not restart the input screen halfway through a cache import or
+        // protected job. Completed pending selections survive configuration changes.
+        for(int id:new int[]{R.id.appearanceSpinner,R.id.workspaceLanguageButton,R.id.langKuButton,R.id.langEnButton,R.id.langArButton}) {
+            View control=findViewById(id);if(control!=null)control.setEnabled(enabled);
+        }
         pasteTokenButton.setEnabled(enabled);
         pasteChatButton.setEnabled(enabled);
         showTokenCheck.setEnabled(enabled);

@@ -71,6 +71,10 @@ public final class ComicSettingsActivity extends AppCompatActivity {
                 .setPositiveButton(R.string.comic_clear,(dialog,which)->glossary.setText(""))
                 .setNegativeButton(R.string.ks_0358,null).show());
         findViewById(R.id.comicOtherTargetsNote).setVisibility("ckb".equals(target)?View.GONE:View.VISIBLE);
+        // Enter at the beginning of the optional form, not scrolled to an
+        // auto-focused glossary. Explicit taps/errors still focus that field.
+        getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN|android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+        findViewById(R.id.storySettingsRoot).requestFocus();
     }
     private void save(){
         if(saving||JobRuntime.isRunning())return;

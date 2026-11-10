@@ -101,7 +101,7 @@ jobs:
           print(f'::notice::In-app skill Android/JVM tests: {total} run, {failed} failed, {skipped} skipped; not device/semantic proof')
           print(f'::notice::Native glyph-containment regressions: {native} run on SDK26/34; synthetic shapes, not device acceptance')
           print(f'::notice::Native reading-studio UI regressions: {ui} run; actual Views/XML with synthetic data')
-          if total < 186 or native < 34 or ui < 16 or failed or skipped:
+          if total < 190 or native < 34 or ui < 20 or failed or skipped:
               print('::error::In-app skill tests were missing, failed or skipped; production distribution is blocked')
               raise SystemExit(1)
           PYTEST
@@ -131,6 +131,7 @@ jobs:
       - name: Verify free public edition has no payment, registration or allowance service
         run: |
           python3 tools/free-edition/check.py
+          python3 tools/ui-tests/check.py
           node tools/free-edition/site-test.mjs
           node koorix/site/build.mjs
 

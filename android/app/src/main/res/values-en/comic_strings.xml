@@ -1,6 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="comic_title">"Manga / Manhwa skill"</string>
+    <string name="comic_title">Story preferences</string>
     <string name="comic_back">"Back"</string>
     <string name="comic_enable">"Enable Manga / Manhwa skill"</string>
     <string name="comic_intro">"Natural dialogue idioms, comic terminology and consistent names. Online, neighbouring dialogue is translated together, but each bubble stays separate."</string>
@@ -21,7 +21,7 @@
     <string name="comic_clear">"Clear story glossary"</string>
     <string name="comic_clear_title">"Clear the glossary?"</string>
     <string name="comic_clear_message">"Saved projects are not changed. Tap Save to apply this change to future translations."</string>
-    <string name="comic_save">"Save skill &amp; glossary"</string>
+    <string name="comic_save">Save names &amp; terms</string>
     <string name="comic_saved">"Manga / Manhwa settings saved."</string>
     <string name="comic_other_targets">"The built-in Sorani lexicon applies only to Sorani. Online context windows and your own glossary also work with other targets; Sorani text is never forced into another language."</string>
     <string name="comic_limits">"This is a rule-and-glossary layer, not a newly trained model. Offline uses the existing packs and remains limited. A ⚠ hint asks you to review numbers/terms; no warning does NOT guarantee correct meaning."</string>

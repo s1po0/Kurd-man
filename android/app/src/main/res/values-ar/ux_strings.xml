@@ -21,7 +21,7 @@
     <string name="ux_ocr_help">للكتابة الصعبة؛ حزمة PP-OCR الاختيارية في الإعدادات.</string>
     <string name="ux_story_title">الأسماء والمصطلحات — اختياري</string>
     <string name="ux_auto_ready">إرشادات الترجمة تلقائية؛ لا تحتاج إعدادًا منفصلًا.</string>
-    <string name="ux_start">ترجمة الصفحات</string>
+    <string name="ux_start">ترجمة</string>
     <string name="ux_import_limits">حماية الاستيراد: ٣٠٠ صفحة / ٣٠٠ MB</string>
     <string name="ux_home_library">فتح المشاريع المحفوظة</string>
     <string name="ux_selected_pages">%1$d صفحة جاهزة</string>
@@ -47,7 +47,7 @@
     <string name="ux_refresh">تحديث</string>
     <string name="ux_folder">فتح المجلد</string>
     <string name="ux_download_help">افتح التصدير أو شاركه أو احذفه باختيارك؛ يبقى المشروع الأصلي.</string>
-    <string name="ux_settings_title">إعدادات تناسب عملك</string>
+    <string name="ux_settings_title">تفضيلاتك</string>
     <string name="ux_settings_subtitle">المظهر والتصدير والتنزيلات والعمل في الخلفية.</string>
     <string name="ux_appearance">المظهر</string>
     <string name="ux_theme">سمة الألوان</string>
@@ -92,4 +92,15 @@
     <string name="ux_selected">محدد</string>
     <string name="ux_expanded">موسّع</string>
     <string name="ux_collapsed">مطوي</string>
+    <string name="ux_switch_screen">تغيير القسم: %1$s</string>
+    <plurals name="ux_pages">
+        <item quantity="one">%1$d صفحة</item>
+        <item quantity="other">%1$d صفحة</item>
+    </plurals>
+    <plurals name="ux_pages_ready">
+        <item quantity="one">%1$d صفحة جاهزة</item>
+        <item quantity="other">%1$d صفحة جاهزة</item>
+    </plurals>
+    <string name="ux_mode_online">متصل بالإنترنت</string>
+    <string name="ux_mode_offline">بلا إنترنت — حزمة محلية</string>
 </resources>

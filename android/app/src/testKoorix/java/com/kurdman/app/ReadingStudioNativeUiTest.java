@@ -53,7 +53,7 @@ public class ReadingStudioNativeUiTest {
         TranslationProjectStore.deleteRecursive(TranslationProjectStore.root(app));
     }
     private void device(String locale,boolean night,int width,int height,float scale) {
-        RuntimeEnvironment.setQualifiers("w"+width+"dp-h"+height+"dp"+(width>height?"-land":"-port")+(night?"-night":"-notnight")+"-mdpi");
+        RuntimeEnvironment.setQualifiers(("ckb".equals(locale)?"b+ckb":locale)+"-w"+width+"dp-h"+height+"dp"+(width>height?"-land":"-port")+(night?"-night":"-notnight")+"-mdpi");
         Configuration c=new Configuration(app.getResources().getConfiguration());c.fontScale=scale;
         app.getResources().updateConfiguration(c,app.getResources().getDisplayMetrics());
         AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(locale));
@@ -128,7 +128,7 @@ public class ReadingStudioNativeUiTest {
             try {controller.get().findViewById(R.id.navTranslateButton).performClick();capture(controller.get(),"main-home-"+labels[i],sizes[i][0],sizes[i][1]);}
             finally {close(controller);}
         }
-        device("en",true,393,852,1.6f);ActivityController<MainActivity> big=Robolectric.buildActivity(MainActivity.class).setup();
+        device("en",true,393,852,2f);ActivityController<MainActivity> big=Robolectric.buildActivity(MainActivity.class).setup();
         try {big.get().findViewById(R.id.navSettingsButton).performClick();capture(big.get(),"main-settings-large-type",393,852);}
         finally {close(big);}
     }
