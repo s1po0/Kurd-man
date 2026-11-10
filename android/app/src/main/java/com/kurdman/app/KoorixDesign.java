@@ -133,7 +133,13 @@ final class KoorixDesign {
     }
     static void primary(Button button,boolean primary) {
         button.setBackgroundResource(primary?R.drawable.bg_button_primary:R.drawable.bg_button_secondary);
-        button.setTextColor(androidx.core.content.ContextCompat.getColorStateList(button.getContext(),primary?R.color.ui_primary_text:R.color.ui_secondary_text));
+        // Resolve against THIS themed Activity. Reusing an inflated/cached
+        // state list across manual night-mode changes can leave white on a
+        // pale dark-mode CTA (or dark labels on a dark secondary surface).
+        button.setTextColor(new ColorStateList(new int[][]{
+                new int[]{-android.R.attr.state_enabled},new int[]{}
+        },new int[]{color(button.getContext(),R.color.ui_on_disabled),
+                color(button.getContext(),primary?R.color.text_on_primary:R.color.text_primary)}));
         button.setBackgroundTintList(null);if(button instanceof AppCompatButton)((AppCompatButton)button).setSupportBackgroundTintList(null);
         button.setCompoundDrawableTintList(button.getTextColors());
         button.setAllCaps(false);button.setMinHeight(dp(button.getContext(),48));

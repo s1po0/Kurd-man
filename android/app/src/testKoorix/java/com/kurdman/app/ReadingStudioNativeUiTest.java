@@ -146,6 +146,12 @@ public class ReadingStudioNativeUiTest {
             ActivityController<EditorActivity> editor=Robolectric.buildActivity(EditorActivity.class).setup();
             try {
                 await(ReflectionHelpers.getField(editor.get(),"executor"));
+                LinearLayout texts=(LinearLayout)((LinearLayout)editor.get().findViewById(R.id.editorPanelContainer)).getChildAt(0);
+                LinearLayout textNavigation=(LinearLayout)texts.getChildAt(1);
+                android.widget.Button previous=(android.widget.Button)textNavigation.getChildAt(0);
+                android.widget.Button edit=(android.widget.Button)texts.getChildAt(2);
+                assertEquals("Studio text navigation must be readable in the actual captured theme",editor.get().getColor(R.color.text_primary),previous.getCurrentTextColor());
+                if(edit.isEnabled())assertEquals("Studio edit CTA must match its dark/light fill",editor.get().getColor(R.color.text_on_primary),edit.getCurrentTextColor());
                 capture(editor.get(),"studio-"+mode,393,852);
                 for(int id:new int[]{R.id.editorBackButton,R.id.editorUndoButton,R.id.editorRedoButton,R.id.editorPagePrevButton,R.id.editorPeekButton}) {
                     View control=editor.get().findViewById(id);assertTrue(control.getWidth()>=48);assertTrue(control.getHeight()>=48);assertNotNull(control.getContentDescription());

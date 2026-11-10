@@ -127,6 +127,15 @@ public class ThemeTriadAndroidTest {
             activity.findViewById(id).performClick();assertTrue(quick().isShown());assertTrue(quick().isEnabled());
         }
     }
+    @Test public void programmaticButtonsUseTheActiveNightResourcesNotAStaleColourList() {
+        quick().performClick();controller.recreate();activity=controller.get();shadowOf(Looper.getMainLooper()).idle();
+        for(boolean primary:new boolean[]{false,true}) {
+            Button button=new Button(activity);
+            KoorixDesign.primary(button,primary);button.setEnabled(true);
+            assertEquals("Programmatic studio/library labels must follow the active theme",activity.getColor(primary?R.color.text_on_primary:R.color.text_primary),button.getCurrentTextColor());
+            assertTrue(ColorUtils.calculateContrast(button.getCurrentTextColor(),activity.getColor(primary?R.color.primary:R.color.card))>=4.5);
+        }
+    }
     @Test public void activeJobDisablesThemeRecreationButKeepsStopAvailable() {
         quick();ReflectionHelpers.setField(activity,"currentBusy",true);
         ReflectionHelpers.callInstanceMethod(activity,"refreshKeepAliveUi");
