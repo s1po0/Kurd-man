@@ -92,7 +92,7 @@ jobs:
               root=ET.parse(file).getroot()
               total+=int(root.get('tests',0));failed+=int(root.get('failures',0))+int(root.get('errors',0));skipped+=int(root.get('skipped',0))
               if root.get('name','').endswith('.BubbleContainmentAndroidTest'): native+=int(root.get('tests',0))
-              if root.get('name','').endswith(('.ReadingStudioUiTest','.ReadingStudioNativeUiTest')): ui+=int(root.get('tests',0))
+              if root.get('name','').endswith(('.ReadingStudioUiTest','.ReadingStudioNativeUiTest','.ThemeTriadAndroidTest')): ui+=int(root.get('tests',0))
               for test in root.findall('testcase'):
                   issue=test.find('failure')
                   if issue is not None:
@@ -101,7 +101,7 @@ jobs:
           print(f'::notice::In-app skill Android/JVM tests: {total} run, {failed} failed, {skipped} skipped; not device/semantic proof')
           print(f'::notice::Native glyph-containment regressions: {native} run on SDK26/34; synthetic shapes, not device acceptance')
           print(f'::notice::Native reading-studio UI regressions: {ui} run; actual Views/XML with synthetic data')
-          if total < 190 or native < 34 or ui < 20 or failed or skipped:
+          if total < 206 or native < 34 or ui < 36 or failed or skipped:
               print('::error::In-app skill tests were missing, failed or skipped; production distribution is blocked')
               raise SystemExit(1)
           PYTEST

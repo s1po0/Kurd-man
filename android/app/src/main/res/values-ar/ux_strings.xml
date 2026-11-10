@@ -103,4 +103,9 @@
     </plurals>
     <string name="ux_mode_online">متصل بالإنترنت</string>
     <string name="ux_mode_offline">بلا إنترنت — حزمة محلية</string>
+    <string name="ux_enable_dark_mode">تفعيل الوضع الداكن</string>
+    <string name="ux_enable_light_mode">تفعيل الوضع الفاتح</string>
+    <string name="ux_theme_shortcut_hint">استخدم زر القمر/الشمس في الأعلى للوضع الداكن أو الفاتح. يُحفَظ اختيارك تلقائيًا.</string>
+    <string name="ux_current_theme">المظهر الحالي: %1$s</string>
+    <string name="ux_theme_job_hint">يمكنك تغيير المظهر بعد اكتمال المهمة أو إيقافها.</string>
 </resources>

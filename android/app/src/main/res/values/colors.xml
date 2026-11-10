@@ -40,4 +40,14 @@
     <color name="ui_hero">#203A2B</color>
     <color name="ui_nav">#14211A</color>
     <color name="ui_focus">#79D8AF</color>
+    <color name="ui_brand_blue">#AEBBEF</color>
+    <color name="ui_brand_violet">#CDB2E3</color>
+    <color name="ui_brand_peach">#EBC1AC</color>
+    <color name="ui_blue_tint">#262D48</color>
+    <color name="ui_violet_tint">#322840</color>
+    <color name="ui_peach_tint">#3D2E2D</color>
+    <color name="ui_violet_ink">#D3BCE8</color>
+    <color name="ui_peach_ink">#EDC6B1</color>
+    <color name="ui_overlay_accent">#9CAAE6</color>
+    <color name="ui_overlay_text">#181C35</color>
 </resources>

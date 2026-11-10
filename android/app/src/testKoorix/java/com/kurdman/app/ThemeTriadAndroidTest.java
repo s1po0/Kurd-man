@@ -51,6 +51,16 @@ public class ThemeTriadAndroidTest {
         assertTrue("A real semantic colour token is required: "+name,id!=0);
         return activity.getColor(id);
     }
+    private void capture(String name) throws Exception {
+        View root=activity.findViewById(R.id.mainRoot);
+        root.measure(View.MeasureSpec.makeMeasureSpec(393,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(852,View.MeasureSpec.EXACTLY));
+        root.layout(0,0,393,852);shadowOf(Looper.getMainLooper()).idle();
+        android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(393,852,android.graphics.Bitmap.Config.ARGB_8888);
+        root.draw(new android.graphics.Canvas(bitmap));
+        java.io.File dir=new java.io.File(System.getProperty("koorix.uiFixtures","build/outputs/ui-tests"));assertTrue(dir.isDirectory()||dir.mkdirs());
+        try(java.io.FileOutputStream out=new java.io.FileOutputStream(new java.io.File(dir,name+"-sdk"+android.os.Build.VERSION.SDK_INT+".png"))){assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out));}
+        bitmap.recycle();
+    }
     private Button quick() {
         int id=activity.getResources().getIdentifier("quickThemeButton","id",activity.getPackageName());
         assertTrue("Dark mode must be reachable in the persistent header, not hidden in settings",id!=0);
@@ -75,7 +85,7 @@ public class ThemeTriadAndroidTest {
         assertTrue(button.getMinimumWidth()>=48);assertTrue(button.getMinimumHeight()>=48);
         assertNotNull(button.getCompoundDrawablesRelative()[0]);
     }
-    @Test public void headerActuallyEnablesPersistentDarkModeAndSettingsShowTheSameChoice() {
+    @Test public void headerActuallyEnablesPersistentDarkModeAndSettingsShowTheSameChoice() throws Exception {
         quick().performClick();shadowOf(Looper.getMainLooper()).idle();
         assertEquals(2,KoorixDesign.themeMode(activity));
         assertEquals(AppCompatDelegate.MODE_NIGHT_YES,AppCompatDelegate.getDefaultNightMode());
@@ -84,13 +94,16 @@ public class ThemeTriadAndroidTest {
         assertEquals(2,((Spinner)activity.findViewById(R.id.appearanceSpinner)).getSelectedItemPosition());
         assertTrue("Dark page is actually dark",ColorUtils.calculateLuminance(activity.getColor(R.color.page))<.04);
         assertTrue(ColorUtils.calculateContrast(activity.getColor(R.color.text_primary),activity.getColor(R.color.page))>=4.5);
+        KoorixDesign.initialize(app);assertEquals(AppCompatDelegate.MODE_NIGHT_YES,AppCompatDelegate.getDefaultNightMode());
+        capture("quick-theme-dark");
     }
-    @Test public void headerCanReturnToLightWithoutTrappingTheReaderInNightMode() {
+    @Test public void headerCanReturnToLightWithoutTrappingTheReaderInNightMode() throws Exception {
         quick().performClick();controller.recreate();activity=controller.get();shadowOf(Looper.getMainLooper()).idle();
         quick().performClick();shadowOf(Looper.getMainLooper()).idle();
         assertEquals(1,KoorixDesign.themeMode(activity));
         assertEquals(AppCompatDelegate.MODE_NIGHT_NO,AppCompatDelegate.getDefaultNightMode());
         controller.recreate();activity=controller.get();assertFalse(KoorixDesign.dark(activity));
+        capture("quick-theme-light");
     }
     @Test public void settingsRetainSystemModeRatherThanOverwritingExistingPreferences() {
         assertEquals(0,KoorixDesign.themeMode(activity));
@@ -107,6 +120,11 @@ public class ThemeTriadAndroidTest {
         quick().performClick();controller.recreate();activity=controller.get();
         assertEquals(source.getCanonicalFile(),((java.io.File)ReflectionHelpers.getField(activity,"selectedImageFile")).getCanonicalFile());
         assertEquals("My selected page.png",ReflectionHelpers.getField(activity,"selectedName"));assertTrue(source.isFile());
+    }
+    @Test public void quickModeShortcutIsPresentOnEveryWorkspaceDestination() {
+        for(int id:new int[]{R.id.navTranslateButton,R.id.navStyleButton,R.id.navResultsButton,R.id.navSettingsButton,R.id.navReportsButton}) {
+            activity.findViewById(id).performClick();assertTrue(quick().isShown());assertTrue(quick().isEnabled());
+        }
     }
     @Test public void activeJobDisablesThemeRecreationButKeepsStopAvailable() {
         quick();ReflectionHelpers.callInstanceMethod(activity,"updateButtons",ReflectionHelpers.ClassParameter.from(boolean.class,true));

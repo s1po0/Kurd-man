@@ -40,6 +40,10 @@ final class KoorixDesign {
         c.getSharedPreferences(PREFS,0).edit().putInt("theme",value).apply();
         AppCompatDelegate.setDefaultNightMode(nightMode(value));
     }
+    static void toggleTheme(Context c) {
+        // Keep a manual override explicit. Settings can always return to System.
+        setTheme(c,dark(c)?1:2);
+    }
     static Typeface font(Context c,boolean bold) {
         TextStyleSettings s=new TextStyleSettings();s.fontId=FontCatalog.FONT_VAZIRMATN;s.fontWeight=bold?700:400;
         return FontCatalog.getTypeface(c,s);

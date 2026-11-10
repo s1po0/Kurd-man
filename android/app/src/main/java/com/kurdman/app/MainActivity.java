@@ -970,6 +970,14 @@ public class MainActivity extends AppCompatActivity {
         String code = getResources().getConfiguration().getLocales().get(0).getLanguage();
         language.setText("en".equals(code)?"English":"ar".equals(code)?"العربية":"کوردی");
         language.setContentDescription(getString(R.string.ux_ui_language));
+        Button theme=findViewById(R.id.quickThemeButton);
+        theme.setOnClickListener(v->{
+            if(currentBusy||JobRuntime.isRunning())return;
+            // One tap, same saved preference as Settings. Normal Activity state
+            // restores pending input/options; no cache copies or model changes.
+            KoorixDesign.toggleTheme(MainActivity.this);
+        });
+        refreshThemeShortcut();
         language.setOnClickListener(v -> {
             android.widget.PopupMenu menu = new android.widget.PopupMenu(this,v);
             menu.getMenu().add(0,1,0,"کوردی سۆرانی");
@@ -1025,10 +1033,34 @@ public class MainActivity extends AppCompatActivity {
         KoorixDesign.nav(navReportsButton,currentMainPage==PAGE_REPORTS);
     }
 
+    private void refreshThemeShortcut() {
+        Button theme=findViewById(R.id.quickThemeButton);
+        if(theme==null)return;
+        boolean dark=KoorixDesign.dark(this);
+        boolean compact=getResources().getConfiguration().screenWidthDp<360
+                ||getResources().getConfiguration().fontScale>1.3f;
+        theme.setText(compact?"":getString(dark?R.string.ux_theme_light:R.string.ux_theme_dark));
+        theme.setContentDescription(getString(dark?R.string.ux_enable_light_mode:R.string.ux_enable_dark_mode));
+        theme.setTooltipText(theme.getContentDescription());
+        theme.setCompoundDrawablesRelativeWithIntrinsicBounds(dark?R.drawable.ic_ui_sun:R.drawable.ic_ui_moon,0,0,0);
+        theme.setCompoundDrawableTintList(theme.getTextColors());
+        theme.setCompoundDrawablePadding(dp(compact?0:6));
+        if(android.os.Build.VERSION.SDK_INT>=30)theme.setStateDescription(getString(R.string.ux_current_theme,
+                getString(dark?R.string.ux_theme_dark:R.string.ux_theme_light)));
+    }
+
     private void updateCompactReadingChrome() {
         boolean compact=getResources().getConfiguration().orientation==android.content.res.Configuration.ORIENTATION_LANDSCAPE
                 &&getResources().getConfiguration().screenHeightDp<480;
         boolean largeType=getResources().getConfiguration().fontScale>1.3f;
+        refreshThemeShortcut();
+        Button language=findViewById(R.id.workspaceLanguageButton);
+        if(language!=null){
+            boolean compactActions=getResources().getConfiguration().screenWidthDp<360||largeType;
+            String code=getResources().getConfiguration().getLocales().get(0).getLanguage();
+            language.setText(compactActions?"":"en".equals(code)?"English":"ar".equals(code)?"العربية":"کوردی");
+            language.setCompoundDrawablePadding(dp(compactActions?0:8));
+        }
         View standard=findViewById(R.id.standardNavigation),large=findViewById(R.id.largeTypeNavigationButton);
         if(standard!=null)standard.setVisibility(largeType?View.GONE:View.VISIBLE);
         if(large!=null)large.setVisibility(largeType?View.VISIBLE:View.GONE);
@@ -5157,7 +5189,7 @@ public class MainActivity extends AppCompatActivity {
         boolean enabled = !busy;
         // Do not restart the input screen halfway through a cache import or
         // protected job. Completed pending selections survive configuration changes.
-        for(int id:new int[]{R.id.appearanceSpinner,R.id.workspaceLanguageButton,R.id.langKuButton,R.id.langEnButton,R.id.langArButton}) {
+        for(int id:new int[]{R.id.appearanceSpinner,R.id.quickThemeButton,R.id.workspaceLanguageButton,R.id.langKuButton,R.id.langEnButton,R.id.langArButton}) {
             View control=findViewById(id);if(control!=null)control.setEnabled(enabled);
         }
         pasteTokenButton.setEnabled(enabled);

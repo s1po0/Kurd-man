@@ -103,4 +103,9 @@
     </plurals>
     <string name="ux_mode_online">Online</string>
     <string name="ux_mode_offline">Offline — on-device pack</string>
+    <string name="ux_enable_dark_mode">Enable dark mode</string>
+    <string name="ux_enable_light_mode">Enable light mode</string>
+    <string name="ux_theme_shortcut_hint">Use the moon/sun button at the top for dark or light mode. Your choice is saved automatically.</string>
+    <string name="ux_current_theme">Current theme: %1$s</string>
+    <string name="ux_theme_job_hint">Change appearance after this job finishes or is stopped.</string>
 </resources>

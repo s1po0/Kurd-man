@@ -103,4 +103,9 @@
     </plurals>
     <string name="ux_mode_online">ئۆنلاین</string>
     <string name="ux_mode_offline">بێ ئینتەرنێت</string>
+    <string name="ux_enable_dark_mode">چالاککردنی دۆخی تاریک</string>
+    <string name="ux_enable_light_mode">چالاککردنی دۆخی ڕوون</string>
+    <string name="ux_theme_shortcut_hint">لە سەرەوەش بە دوگمەی مانگ/خۆر دۆخی تاریک و ڕوون بگۆڕە. هەڵبژاردنەکەت خۆکار پاشەکەوت دەکرێت.</string>
+    <string name="ux_current_theme">دۆخی ئێستا: %1$s</string>
+    <string name="ux_theme_job_hint">گۆڕینی ڕووکار دوای تەواوبوون یان وەستاندنی کار بەردەست دەبێت.</string>
 </resources>

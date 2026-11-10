@@ -124,13 +124,13 @@ public class PageEditorView extends View {
         overlayPaint.setStrokeWidth(dp(1.4f));
         selectedPaint.setStyle(Paint.Style.STROKE);
         selectedPaint.setStrokeWidth(dp(2.6f));
-        selectedPaint.setColor(Color.rgb(45, 212, 191));
+        selectedPaint.setColor(getContext().getColor(R.color.ui_overlay_accent));
         handlePaint.setStyle(Paint.Style.FILL);
         handleStrokePaint.setStyle(Paint.Style.STROKE);
         handleStrokePaint.setStrokeWidth(dp(2f));
         handleStrokePaint.setColor(Color.WHITE);
         badgePaint.setStyle(Paint.Style.FILL);
-        badgeTextPaint.setColor(Color.WHITE);
+        badgeTextPaint.setColor(getContext().getColor(R.color.ui_overlay_text));
         badgeTextPaint.setTextAlign(Paint.Align.CENTER);
         badgeTextPaint.setTextSize(dp(11f));
         badgeTextPaint.setFakeBoldText(true);
@@ -528,7 +528,7 @@ public class PageEditorView extends View {
         PointF topLeft = corners.get(0);
         float radius = dp(11f);
         badgePaint.setColor(selected
-                ? Color.rgb(13, 148, 136)
+                ? getContext().getColor(R.color.ui_overlay_accent)
                 : (style.visible ? Color.rgb(71, 85, 105)
                         : Color.rgb(194, 65, 12)));
         canvas.drawCircle(topLeft.x, topLeft.y, radius, badgePaint);
@@ -540,7 +540,7 @@ public class PageEditorView extends View {
             // Simple tools show only the one handle that can be dragged now.
             PointF resize = resizeHandle(segment);
             float half = dp(16f);
-            handlePaint.setColor(Color.rgb(45, 212, 191));
+            handlePaint.setColor(getContext().getColor(R.color.ui_overlay_accent));
             RectF handleRect = new RectF(
                     resize.x - half, resize.y - half, resize.x + half, resize.y + half);
             canvas.drawRoundRect(handleRect, dp(7f), dp(7f), handlePaint);

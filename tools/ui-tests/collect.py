@@ -15,7 +15,7 @@ NAMES={f"main-{tab}-en-{mode}" for tab in ("home","style","work","settings","rep
 NAMES|={f"main-home-{lang}-{mode}" for lang in ("ckb","ar") for mode in ("light","dark")}
 NAMES|={"main-home-small","main-home-landscape","main-home-tablet","main-settings-large-type"}
 NAMES|={f"{page}-{mode}" for page in ("library","studio","story-settings") for mode in ("light","dark")}
-NAMES|={"review-light"}
+NAMES|={"review-light","quick-theme-dark","quick-theme-light"}
 EXPECTED={f"{name}-sdk{sdk}.png" for name in NAMES for sdk in (26,34)}
 
 def blob(repo,data):
