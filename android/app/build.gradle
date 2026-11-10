@@ -121,6 +121,7 @@ android {
         unitTests.includeAndroidResources = true
         unitTests.all {
             systemProperty 'koorix.bubbleFixtures', file("$buildDir/outputs/bubble-tests").absolutePath
+            systemProperty 'koorix.uiFixtures', file("$buildDir/outputs/ui-tests").absolutePath
             jvmArgs '--add-opens=java.base/java.lang=ALL-UNNAMED',
                     '--add-opens=java.base/java.util=ALL-UNNAMED',
                     '--add-opens=java.base/java.lang.reflect=ALL-UNNAMED'
