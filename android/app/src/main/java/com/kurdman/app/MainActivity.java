@@ -989,6 +989,10 @@ public class MainActivity extends AppCompatActivity {
             menu.show();
         });
         Spinner appearance = findViewById(R.id.appearanceSpinner);
+        // This is a persisted app preference, not an unfinished form field.
+        // Restoring an old spinner hierarchy selection after a header switch
+        // would overwrite the newly chosen mode during Activity recreation.
+        appearance.setSaveEnabled(false);
         ArrayAdapter<String> modes = new ArrayAdapter<>(this,R.layout.spinner_item,new String[]{
                 getString(R.string.ux_theme_system),getString(R.string.ux_theme_light),getString(R.string.ux_theme_dark)});
         modes.setDropDownViewResource(R.layout.spinner_dropdown_item);appearance.setAdapter(modes);

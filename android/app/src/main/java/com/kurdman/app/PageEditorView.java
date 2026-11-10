@@ -531,6 +531,7 @@ public class PageEditorView extends View {
                 ? getContext().getColor(R.color.ui_overlay_accent)
                 : (style.visible ? Color.rgb(71, 85, 105)
                         : Color.rgb(194, 65, 12)));
+        badgeTextPaint.setColor(selected?getContext().getColor(R.color.ui_overlay_text):Color.WHITE);
         canvas.drawCircle(topLeft.x, topLeft.y, radius, badgePaint);
         Paint.FontMetrics fm = badgeTextPaint.getFontMetrics();
         float textY = topLeft.y - (fm.ascent + fm.descent) / 2f;

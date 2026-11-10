@@ -87,11 +87,12 @@ public class ThemeTriadAndroidTest {
     }
     @Test public void headerActuallyEnablesPersistentDarkModeAndSettingsShowTheSameChoice() throws Exception {
         quick().performClick();shadowOf(Looper.getMainLooper()).idle();
-        assertEquals(2,KoorixDesign.themeMode(activity));
+        assertEquals("Header tap must persist the explicit Dark choice",2,KoorixDesign.themeMode(activity));
         assertEquals(AppCompatDelegate.MODE_NIGHT_YES,AppCompatDelegate.getDefaultNightMode());
         controller.recreate();activity=controller.get();shadowOf(Looper.getMainLooper()).idle();
         assertTrue("Real native night resources must be active",KoorixDesign.dark(activity));
-        assertEquals(2,((Spinner)activity.findViewById(R.id.appearanceSpinner)).getSelectedItemPosition());
+        assertEquals("Recreated Settings must reflect the saved Dark choice, not restore stale System",2,((Spinner)activity.findViewById(R.id.appearanceSpinner)).getSelectedItemPosition());
+        assertEquals("Hierarchy restoration must not write System over an explicit Dark choice",2,KoorixDesign.themeMode(activity));
         assertTrue("Dark page is actually dark",ColorUtils.calculateLuminance(activity.getColor(R.color.page))<.04);
         assertTrue(ColorUtils.calculateContrast(activity.getColor(R.color.text_primary),activity.getColor(R.color.page))>=4.5);
         KoorixDesign.initialize(app);assertEquals(AppCompatDelegate.MODE_NIGHT_YES,AppCompatDelegate.getDefaultNightMode());
@@ -127,7 +128,9 @@ public class ThemeTriadAndroidTest {
         }
     }
     @Test public void activeJobDisablesThemeRecreationButKeepsStopAvailable() {
-        quick();ReflectionHelpers.callInstanceMethod(activity,"updateButtons",ReflectionHelpers.ClassParameter.from(boolean.class,true));
+        quick();ReflectionHelpers.setField(activity,"currentBusy",true);
+        ReflectionHelpers.callInstanceMethod(activity,"refreshKeepAliveUi");
+        ReflectionHelpers.callInstanceMethod(activity,"updateButtons",ReflectionHelpers.ClassParameter.from(boolean.class,true));
         assertFalse(quick().isEnabled());
         assertEquals(View.VISIBLE,activity.findViewById(R.id.stopJobButton).getVisibility());
         assertTrue(activity.findViewById(R.id.stopJobButton).isEnabled());
