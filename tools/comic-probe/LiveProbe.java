@@ -43,6 +43,21 @@ public final class LiveProbe {
         } catch (Exception unavailable) {
             System.out.println("::warning::Advisory live route probe unavailable: " + safe(unavailable.toString()));
         }
+        try {
+            ComicTranslationSkill panelSkill=new ComicTranslationSkill(new ComicTranslationSkill.Config(true,
+                    ComicTranslationSkill.Genre.AUTO,""),ComicTranslationSkill.readLexicon(Files.newBufferedReader(
+                    Path.of("android/app/src/main/assets/comic-lexicon-v1.tsv"),StandardCharsets.UTF_8)));
+            List<String> panel=Arrays.asList("ASPECT: Stone Keeper","ASPECT DESCRIPTION:",
+                    "This rare trait grants two abilities and one skill.");
+            ComicTranslationSkill.PageResult result=panelSkill.translatePage(panel,"en","ckb",false,backend,null);
+            if(result.results.size()!=3||!result.results.get(0).text.startsWith("تایبەتمەندی:")
+                    ||!result.results.get(1).text.equals("وەسفی تایبەتمەندی:"))throw new IllegalStateException("Field label contract failed");
+            notice("LIVE_SYNTHETIC_PANEL_LABELS_PASSED; no reader text; NOT a general meaning benchmark");
+            notice("SYNTHETIC_PANEL_TITLE="+result.results.get(0).text);
+            notice("SYNTHETIC_PANEL_BODY="+result.results.get(2).text+" method="+result.results.get(2).method+" review="+result.results.get(2).warnings);
+        }catch(Exception unavailable){
+            System.out.println("::warning::Advisory synthetic system-panel probe unavailable: "+safe(unavailable.toString()));
+        }
     }
     private static String safe(String value) {
         return value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A");

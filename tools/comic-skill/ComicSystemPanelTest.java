@@ -70,6 +70,12 @@ public final class ComicSystemPanelTest {
             skill(ComicTranslationSkill.Genre.AUTO,"").translatePage(Arrays.asList(TITLE,DESCRIPTION,BODY),"en","ckb",true,(s,a,b)->{calls.incrementAndGet();return s;},(d,t)->{throw new InterruptedException("stop");});
             throw new AssertionError("STOP must interrupt local field planning too");
         }catch(InterruptedException expected){check(calls.get()==0,"No backend after STOP");}
+        AtomicInteger completed=new AtomicInteger();
+        skill(ComicTranslationSkill.Genre.AUTO,"").translatePage(Arrays.asList(TITLE,DESCRIPTION,BODY),"en","ckb",true,normal(new ArrayList<>()),(done,total)->{
+            equal(3,total,"Progress total remains original block count, not field count");
+            check(done>=completed.get()&&done<=total,"Structured field progress is monotonic");completed.set(done);
+        });
+        equal(3,completed.get(),"Structured fields complete original block progress");
         ComicTranslationSkill reused=skill(ComicTranslationSkill.Genre.AUTO,"");
         reused.translatePage(Arrays.asList(TITLE,DESCRIPTION,BODY),"en","ckb",true,normal(new ArrayList<>()),null);
         sent.clear();reused.translatePage(Collections.singletonList("A new aspect of everyday life."),"en","ckb",true,normal(sent),null);

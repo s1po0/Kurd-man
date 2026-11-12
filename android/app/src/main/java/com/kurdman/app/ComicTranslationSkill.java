@@ -440,14 +440,18 @@ public final class ComicTranslationSkill {
         for(int i=0;i<blocks.size();i++)for(SystemPart part:blocks.get(i))if(!part.value.isEmpty()){
             part.translated=values.size();values.add(part.value);owners.add(i);
         }
-        Progress bounded=(done,total)->check(progress,done>=owners.size()?sources.size():owners.get(done),sources.size());
+        final int[] reported={0};
+        Progress bounded=(done,total)->{
+            reported[0]=Math.max(reported[0],done>=owners.size()?sources.size():owners.get(done));
+            check(progress,reported[0],sources.size());
+        };
         PageResult translated=translatePlainPage(values,source,target,offline,backend,bounded,Genre.FANTASY);
         PageResult result=new PageResult();result.genre=Genre.FANTASY;
         result.localRules=translated.localRules;result.contextRequests=translated.contextRequests;
         result.contextFallbacks=translated.contextFallbacks;result.glossaryFallbacks=translated.glossaryFallbacks;
         result.qualityRetries=translated.qualityRetries;result.qualityRecoveries=translated.qualityRecoveries;
         for(int i=0;i<blocks.size();i++) {
-            check(progress,i,sources.size());
+            check(progress,Math.max(reported[0],i),sources.size());
             StringBuilder out=new StringBuilder();String warnings="",method="comic_system_fields";boolean local=false;
             for(SystemPart part:blocks.get(i)) {
                 if(!part.label.isEmpty()){
@@ -463,7 +467,8 @@ public final class ComicTranslationSkill {
             String finalText=clean(out.toString());
             warnings=ComicQualityChecks.merge(warnings,reviewHints(sources.get(i),finalText,source,target));
             result.results.add(new Result(finalText,method,warnings));
-            check(progress,i+1,sources.size());
+            reported[0]=Math.max(reported[0],i+1);
+            check(progress,reported[0],sources.size());
         }
         return result;
     }

@@ -76,10 +76,10 @@ android {
             dimension "edition"
             applicationId "com.koorix.app"
             manifestPlaceholders = [applicationLabel: "Koorix"]
-            versionCode 17
+            versionCode 18
             // Double quotes on purpose: the KurdMan release job greps the
             // first single-quoted versionName in this file.
-            versionName "1.8.1"
+            versionName "1.8.2"
             // Release signing is flavour-scoped: never signs the personal edition.
             if (koorixReleaseKeystore) {
                 signingConfig signingConfigs.koorixRelease
