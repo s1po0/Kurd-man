@@ -324,6 +324,7 @@ public class ManhwaRenderer {
                 applyBlockOcr(original, selected, blockOcr, progress);
             }
 
+            selected = groupCandidates(original,mergeCandidates(selected));
             List<Segment> result = new ArrayList<>();
             for (OcrCandidate candidate : selected) {
                 candidate.segment.ocrConfidence = candidate.confidence;
@@ -2440,6 +2441,11 @@ public class ManhwaRenderer {
         if (overlapOfSmaller < 0.52) {
             return false;
         }
+        // A short re-read of a real paragraph line is not a second block.
+        // Whole-block similarity and centre distance miss first/last rows of
+        // long blocks. Require actual line geometry AND covered words, not
+        // just a substring elsewhere on the page.
+        if (coveredCandidateLines(a,b) || coveredCandidateLines(b,a)) return true;
         double similarity = textSimilarity(a.segment.text, b.segment.text);
         if (similarity >= 0.52) {
             return true;
@@ -2449,6 +2455,39 @@ public class ManhwaRenderer {
         return overlapOfSmaller >= 0.82
                 && centerDistanceY <= Math.max(18f,
                         Math.min(first.height(), second.height()) * 0.75f);
+    }
+
+    private static boolean coveredCandidateLines(OcrCandidate smaller, OcrCandidate larger) {
+        if(smaller.lines.isEmpty() || larger.lines.size()<=smaller.lines.size()) return false;
+        for(OcrLineData line:smaller.lines) {
+            if(line.box==null || line.box.isEmpty())return false;
+            String text=lineWords(line.text);
+            if(text.length()<8)return false;
+            boolean covered=false;
+            for(OcrLineData other:larger.lines) {
+                if(other.box==null || other.box.isEmpty())continue;
+                Rect overlap=new Rect(line.box);
+                if(!overlap.intersect(other.box))continue;
+                float minHeight=Math.min(line.box.height(),other.box.height());
+                float minWidth=Math.min(line.box.width(),other.box.width());
+                if(overlap.height()<minHeight*.80f || overlap.width()<minWidth*.80f
+                        || Math.abs(line.box.exactCenterY()-other.box.exactCenterY())>Math.max(3,minHeight*.35f))continue;
+                String existing=lineWords(other.text);
+                // No guessed spelling/number/negation changes. A longer line
+                // can cover a multiword fragment only at complete word edges.
+                if(existing.equals(text) || (text.length()>=12 && text.indexOf(' ')>=0
+                        && (" "+existing+" ").contains(" "+text+" "))) {
+                    covered=true;break;
+                }
+            }
+            if(!covered)return false;
+        }
+        return true;
+    }
+
+    private static String lineWords(String text) {
+        return text==null?"":text.toLowerCase(Locale.ROOT)
+                .replaceAll("[^\\p{L}\\p{N}]+"," ").trim();
     }
 
     private static void mergeIntoCandidate(OcrCandidate existing,

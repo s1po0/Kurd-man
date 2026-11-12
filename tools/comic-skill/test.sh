@@ -14,8 +14,12 @@ fi
   "$ROOT/android/app/src/main/java/com/kurdman/app/ComicTranslationSkill.java" \
   "$ROOT/android/app/src/main/java/com/kurdman/app/ComicQualityChecks.java" \
   "$ROOT/tools/comic-skill/ComicQualityChecksTest.java" \
+  "$ROOT/tools/comic-skill/ComicSystemPanelTest.java" \
   "$ROOT/tools/comic-skill/ComicTranslationSkillTest.java"
 "$JAVA" -cp "$WORK" com.kurdman.app.ComicTranslationSkillTest \
   "$ROOT/android/app/src/main/assets/comic-lexicon-v1.tsv"
 
 "$JAVA" -cp "$WORK" com.kurdman.app.ComicQualityChecksTest
+
+"$JAVA" -cp "$WORK" com.kurdman.app.ComicSystemPanelTest \
+  "$ROOT/android/app/src/main/assets/comic-lexicon-v1.tsv"

@@ -77,7 +77,7 @@ public class NarrationPanelAndroidTest {
         ManhwaRenderer.RenderResult rendered=ManhwaRenderer.render(page,new ArrayList<>(Arrays.asList(s)),new TextStyleSettings(),style->Typeface.create(Typeface.SANS_SERIF,Typeface.BOLD));
         assertEquals(1,rendered.segments.size());assertEquals(TARGET,s.ckb);assertEquals(1,rendered.rendered);assertEquals(Color.WHITE,s.detectedInkColor);
         for(int y=0;y<page.getHeight();y++)for(int x=0;x<page.getWidth();x++)if(x<32||x>=568||y<40||y>=400)assertEquals("Surrounding artwork retained",page.getPixel(x,y),rendered.bitmap.getPixel(x,y));
-        java.io.File dir=new java.io.File(System.getProperty("koorix.panelFixtures","build/outputs/panel-tests"));assertTrue(dir.isDirectory()||dir.mkdirs());
+        java.io.File dir=new java.io.File(System.getProperty("koorix.bubbleFixtures","build/outputs/bubble-tests"));assertTrue(dir.isDirectory()||dir.mkdirs());
         try(java.io.FileOutputStream out=new java.io.FileOutputStream(new java.io.File(dir,"dark-panel-ckb-sdk"+android.os.Build.VERSION.SDK_INT+".png"))){assertTrue(rendered.bitmap.compress(Bitmap.CompressFormat.PNG,100,out));}
         page.recycle();rendered.bitmap.recycle();
     }

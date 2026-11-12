@@ -12,7 +12,7 @@ import re
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
-ALLOWED = re.compile(r"(?:(?:circle|rectangle|triangle|quadrilateral)-(?:ckb|en)|concave-ckb)-sdk(?:26|34)\.png\Z")
+ALLOWED = re.compile(r"(?:(?:circle|rectangle|triangle|quadrilateral)-(?:ckb|en)|concave-ckb|dark-panel-ckb)-sdk(?:26|34)\.png\Z")
 
 
 def blob(repository, data):
@@ -52,6 +52,7 @@ def main():
     expected = {f"{shape}-{lang}-sdk{sdk}.png" for shape in ("circle", "rectangle", "triangle", "quadrilateral")
                 for lang in ("ckb", "en") for sdk in (26, 34)}
     expected |= {f"concave-ckb-sdk{sdk}.png" for sdk in (26, 34)}
+    expected |= {f"dark-panel-ckb-sdk{sdk}.png" for sdk in (26, 34)}
     if {f["name"] for f in fixtures} != expected:
         raise SystemExit("Synthetic fixture set incomplete; production distribution is blocked")
 

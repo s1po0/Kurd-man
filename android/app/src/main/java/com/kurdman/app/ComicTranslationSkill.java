@@ -203,8 +203,15 @@ public final class ComicTranslationSkill {
     public PageResult translatePage(List<String> sources, String sourceLanguage,
                                    String targetLanguage, boolean offline,
                                    Backend backend, Progress progress) throws Exception {
+        check(progress,0,sources.size());
+        PageResult fields=translateSystemPanel(sources,sourceLanguage,targetLanguage,offline,backend,progress);
+        return fields!=null?fields:translatePlainPage(sources,sourceLanguage,targetLanguage,offline,backend,progress,null);
+    }
+
+    private PageResult translatePlainPage(List<String> sources,String sourceLanguage,
+            String targetLanguage,boolean offline,Backend backend,Progress progress,Genre forcedGenre) throws Exception {
         PageResult page = new PageResult();
-        page.genre = config.genre == Genre.AUTO ? inferGenre(sources) : config.genre;
+        page.genre = forcedGenre!=null?forcedGenre:config.genre == Genre.AUTO ? inferGenre(sources) : config.genre;
         List<Plan> plans = new ArrayList<>();
         for (String source : sources) {
             String text = clean(source);
@@ -368,6 +375,106 @@ public final class ComicTranslationSkill {
             start = end;
         }
         return page;
+    }
+
+    private static final Pattern SYSTEM_FIELD = Pattern.compile(
+            "(?im)^[\t ]*(ASPECT DESCRIPTION|ASPECT)[\t ]*[:：][\t ]*");
+
+    private static final class SystemPart {
+        final String label,value;
+        int translated=-1;
+        SystemPart(String label,String value){this.label=label;this.value=value;}
+    }
+
+    /**
+     * Two explicit field labels plus independent game-system vocabulary are
+     * evidence for a trait panel, not permission to replace ordinary 'aspect'.
+     * Only labels are local. Every nonempty value/body still goes through the
+     * SAME chosen translator, its glossary contracts, bounded context and STOP.
+     */
+    private PageResult translateSystemPanel(List<String> sources,String source,String target,
+            boolean offline,Backend backend,Progress progress) throws Exception {
+        if(!config.enabled || !"en".equals(baseLanguage(source)) || !"ckb".equals(target)
+                || (config.genre!=Genre.AUTO && config.genre!=Genre.FANTASY))return null;
+        String pageText=String.join("\n",sources);
+        if(RESERVED.matcher(pageText).find())return null;
+        int cues=0;
+        for(String cue:new String[]{"skills?","abilit(?:y|ies)","ranks?","traits?","powers?",
+                "rarity|rare|rarer|uncommon|dormant|awakened|ascended"}) {
+            if(Pattern.compile("\\b(?:"+cue+")\\b",Pattern.CASE_INSENSITIVE).matcher(pageText).find())cues++;
+        }
+        if(cues<2)return null;
+        boolean named=false,description=false;
+        int fieldCount=0;
+        List<List<SystemPart>> blocks=new ArrayList<>();
+        for(String raw:sources) {
+            check(progress,0,sources.size());
+            String normalized=Normalizer.normalize(raw==null?"":raw,Normalizer.Form.NFKC).replace('\r','\n');
+            Matcher matcher=SYSTEM_FIELD.matcher(normalized);
+            List<Integer> starts=new ArrayList<>(),ends=new ArrayList<>();
+            List<String> labels=new ArrayList<>();
+            while(matcher.find()){
+                if(++fieldCount>64)return null;
+                starts.add(matcher.start());ends.add(matcher.end());labels.add(matcher.group(1));
+            }
+            List<SystemPart> parts=new ArrayList<>();
+            if(starts.isEmpty())parts.add(new SystemPart("",clean(normalized)));
+            else {
+                String prefix=clean(normalized.substring(0,starts.get(0)));
+                if(!prefix.isEmpty())parts.add(new SystemPart("",prefix));
+                for(int i=0;i<starts.size();i++) {
+                    String value=clean(normalized.substring(ends.get(i),i+1<starts.size()?starts.get(i+1):normalized.length()));
+                    boolean desc=labels.get(i).equalsIgnoreCase("ASPECT DESCRIPTION");
+                    description|=desc;named|=!desc&&!value.isEmpty()&&value.length()<=100;
+                    parts.add(new SystemPart(systemFieldLabel(desc),value));
+                }
+                // An exact reader-authored whole-block override always wins.
+                for(Entry entry:custom)if(lineKey(entry.source).equals(lineKey(normalized))){
+                    parts.clear();parts.add(new SystemPart("",clean(normalized)));break;
+                }
+            }
+            blocks.add(parts);
+        }
+        if(!named||!description)return null;
+        List<String> values=new ArrayList<>();List<Integer> owners=new ArrayList<>();
+        for(int i=0;i<blocks.size();i++)for(SystemPart part:blocks.get(i))if(!part.value.isEmpty()){
+            part.translated=values.size();values.add(part.value);owners.add(i);
+        }
+        Progress bounded=(done,total)->check(progress,done>=owners.size()?sources.size():owners.get(done),sources.size());
+        PageResult translated=translatePlainPage(values,source,target,offline,backend,bounded,Genre.FANTASY);
+        PageResult result=new PageResult();result.genre=Genre.FANTASY;
+        result.localRules=translated.localRules;result.contextRequests=translated.contextRequests;
+        result.contextFallbacks=translated.contextFallbacks;result.glossaryFallbacks=translated.glossaryFallbacks;
+        result.qualityRetries=translated.qualityRetries;result.qualityRecoveries=translated.qualityRecoveries;
+        for(int i=0;i<blocks.size();i++) {
+            check(progress,i,sources.size());
+            StringBuilder out=new StringBuilder();String warnings="",method="comic_system_fields";boolean local=false;
+            for(SystemPart part:blocks.get(i)) {
+                if(!part.label.isEmpty()){
+                    if(out.length()>0)out.append(' ');out.append(part.label);local=true;
+                }
+                if(part.translated>=0){
+                    Result value=translated.results.get(part.translated);
+                    if(out.length()>0)out.append(' ');out.append(value.text);
+                    warnings=ComicQualityChecks.merge(warnings,value.warnings);method=value.method;
+                }
+            }
+            if(local){method="comic_system_fields";result.localRules++;}
+            String finalText=clean(out.toString());
+            warnings=ComicQualityChecks.merge(warnings,reviewHints(sources.get(i),finalText,source,target));
+            result.results.add(new Result(finalText,method,warnings));
+            check(progress,i+1,sources.size());
+        }
+        return result;
+    }
+
+    private String systemFieldLabel(boolean description) {
+        String source=description?"Aspect Description":"Aspect";
+        for(Entry entry:custom){
+            if(lineKey(entry.source).equals(lineKey(source+":")))return entry.target;
+            if(lineKey(entry.source).equals(lineKey(source)))return entry.target.endsWith(":")?entry.target:entry.target+":";
+        }
+        return description?"وەسفی تایبەتمەندی:":"تایبەتمەندی:";
     }
 
     /** Keep explicit reader spellings intact during final script/name cleanup.
