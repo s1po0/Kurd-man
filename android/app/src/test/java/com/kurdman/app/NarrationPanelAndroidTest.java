@@ -58,6 +58,20 @@ public class NarrationPanelAndroidTest {
         List<Object> selected=merge(candidate(new String[]{LINES[0]},140,3,.99f),candidate(LINES,140,0,.60f));
         assertEquals(1,selected.size());Segment s=segment(selected.get(0));assertEquals(4,s.lines);for(String line:LINES)assertTrue(s.text.contains(line));
     }
+    @Test public void aHigherConfidenceFragmentCannotLoseTheRestOfItsSourceRow()throws Exception {
+        List<Object> selected=merge(candidate(new String[]{"carries a small lantern."},140,3,.99f),candidate(LINES,140,0,.60f));
+        assertEquals(1,selected.size());Segment source=segment(selected.get(0));
+        for(String line:LINES)assertTrue("A covered fragment is not permission to drop words: "+line,source.text.contains(line));
+        assertEquals(4,source.lines);
+    }
+    @Test public void aFragmentRereadCannotOverwriteTheFullRowOfASelectedParagraph()throws Exception {
+        Object full=candidate(LINES,140,0,.60f),fragment=candidate(new String[]{"carries a small lantern."},140,3,.99f);
+        // Candidate rank can reflect other passes/rows; line confidence still
+        // differs. Exercise the opposite merge order explicitly.
+        Field score=full.getClass().getDeclaredField("score");score.setAccessible(true);score.setDouble(full,200d);
+        List<Object> selected=merge(full,fragment);assertEquals(1,selected.size());
+        for(String line:LINES)assertTrue("A high-confidence partial row cannot replace its complete reading",segment(selected.get(0)).text.contains(line));
+    }
     @Test public void genuinelyRepeatedTextOnAnotherRowRemainsIndependent()throws Exception {
         List<Object> selected=merge(candidate(LINES,140,0,.94f),candidate(new String[]{LINES[0]},390,4,.92f));assertEquals(2,selected.size());
     }
