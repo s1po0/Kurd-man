@@ -15,6 +15,7 @@ on:
       - "tools/comic-skill/**"
       - "tools/bubble-tests/**"
       - "tools/ui-tests/**"
+      - "tools/emulator-tests/**"
       - "tools/free-edition/**"
       - "tools/signing/*.py"
       - "tools/signing/*.sh"
@@ -32,7 +33,7 @@ jobs:
   build:
     name: Verify and publish regular Koorix release APK
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     permissions:
       contents: write
     steps:
@@ -103,7 +104,7 @@ jobs:
           print(f'::notice::Native glyph-containment regressions: {native} run on SDK26/34; synthetic shapes, not device acceptance')
           print(f'::notice::Native narration duplicate regressions: {panel} run on SDK26/34; synthetic, not reader-page OCR proof')
           print(f'::notice::Native reading-studio UI regressions: {ui} run; actual Views/XML with synthetic data')
-          if total < 222 or native < 34 or ui < 38 or panel < 14 or failed or skipped:
+          if total < 226 or native < 34 or ui < 38 or panel < 18 or failed or skipped:
               print('::error::In-app skill tests were missing, failed or skipped; production distribution is blocked')
               raise SystemExit(1)
           PYTEST
@@ -196,8 +197,27 @@ jobs:
       - name: Independently verify public APK v2 digest, manifest, free-edition classes and harness exclusion
         run: |
           python3 tools/signing/inspect-public-apk.py "$APK_FILE" \
-            --version "$KOORIX_VERSION" --code "$KOORIX_CODE" --no-login --free --contours --reading-studio --triad-theme
+            --version "$KOORIX_VERSION" --code "$KOORIX_CODE" --no-login --free --contours --reading-studio --triad-theme --system-panels
           echo "::notice::Independent public-only APK signature/content/no-login verification passed"
+
+      - name: Remove plaintext signing material before real APK execution
+        run: |
+          rm -rf "$RUNNER_TEMP/koorix-key-a" "$RUNNER_TEMP/koorix-key-b"
+          for key in KOORIX_RELEASE_KEYSTORE KOORIX_RELEASE_ALIAS KOORIX_RELEASE_STORE_PASSWORD KOORIX_RELEASE_KEY_PASSWORD; do
+            echo "$key=" >> "$GITHUB_ENV"
+          done
+
+      - name: Open the actual verified regular APK on Android and translate a synthetic panel
+        id: emulator_check
+        run: bash tools/emulator-tests/run.sh
+
+      - name: Save only allowlisted synthetic installed-APK captures and exports
+        if: always() && steps.emulator_check.outcome != 'skipped'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 tools/emulator-tests/collect.py --repository "${{ github.repository }}" \
+            --commit "${{ github.sha }}" --run "${{ github.run_id }}"
 
       # Releases/chat delivery do not depend on the repository artifact quota.
       - name: Publish verified APK blob for chat delivery
@@ -231,7 +251,7 @@ jobs:
         run: |
           TAG="koorix-v$KOORIX_VERSION"
           cp "$APK_FILE" "Koorix-v$KOORIX_VERSION.apk"
-          NOTES="Koorix v$KOORIX_VERSION — owner-requested muted three-colour mix and discoverable Dark mode. Replaces green-led chrome with blue/violet/peach, quiet neutral light/dark surfaces, a restrained three-stop hero/ribbon, violet status and peach highlights. Persistent header moon/sun button actually switches Light/Dark; Settings shares saved System/Light/Dark preference. Choice survives recreation/relaunch, imported pages remain and protected jobs keep STOP. Fixed stale appearance-spinner restoration and resolved programmatic studio button labels against active theme. Teal studio selection handles are now semantic non-green UI overlays, not exported art. Existing regular native Reading Studio, all language resources/74 targets, single original GET_CONTENT */* input chooser, automatic translation Skill, free/no-login/no-commercial-quota operation, projects/backup/recovery/Reports/studio/PDF and 300-page/300-MB/1-GB safeguards remain. No new model, paid API, NLLB, hidden fallback, web wrapper or remote font. Same com.koorix.app and permanent production v2 signer; install over v2 Koorix without uninstalling or clearing data. Native SDK26/34 regressions, real theme actions, contrast checks and synthetic screenshots do not certify physical devices, TalkBack, universal visual/semantic quality or medical eye comfort. See docs/KOORIX_1_8_1.md and design-system/koorix/MASTER.md."
+          NOTES="Koorix v$KOORIX_VERSION — covered narration OCR becomes one coherent source block, not overlapping duplicate translations. Actual line geometry and complete word coverage are required; higher-confidence fragments cannot replace the rest of a full row, in either score order. Final normalization runs after OCR re-reads. Guarded paired Aspect/Aspect Description system fields use contextual Sorani trait labels only for EN-to-ckb Auto/Fantasy with independent game cues; ordinary meanings, other targets, reader overrides and the complete body stay on the same selected translator. No supplied chapter text hardcoded. Uses reviewed Java/code-review and rendered-build QA guidance from the owner-supplied alirezarezvani/claude-skills, not a new model. Release also requires installing this exact non-debuggable ARM64 APK on an Android emulator and exercising real UI/OCR/selected MT/render/export/studio with an unrelated synthetic panel; screenshots and source-word checks do not prove physical-device or general meaning quality. Muted blue/violet/peach, persistent Dark/Light shortcut, 74 targets, ckb/en/ar UI, one original GET_CONTENT */* input chooser, free/no-login/no-commercial-quota operation, automatic Skill, projects/backup/recovery/Reports/studio/PDF and 300-page/300-MB/1-GB safeguards remain. No paid API, NLLB, large model or hidden fallback. Same com.koorix.app and permanent v2 signer; install over v2 without uninstalling/clearing data. Translate the original page again; installing does not repair a flattened old JPEG. The exact historic reader OCR/device job and general Sorani semantics remain unverified. See docs/KOORIX_1_8_2.md."
 
           # An owner-prepared draft/tag is valid too. Upload verified bytes first,
           # then publish; expose public CLI errors without printing credentials.
@@ -276,10 +296,11 @@ jobs:
             echo "::error::APK exceeds Telegram's upload budget"
             exit 1
           fi
-          CAPTION="Koorix v$KOORIX_VERSION — سێ ڕەنگی کاڵ و Dark mode.
-          سەوزی ڕووکار لابراوە؛ شین + مۆر + هەڵۆیی کاڵ بە هاوسەنگی تێکەڵن. دوگمەی مانگ/خۆر لە سەرەوە بە یەک لێدان دۆخی تاریک/ڕوون دەگۆڕێت و هەڵبژاردنەکەت پاشەکەوت دەکرێت.
-          یەک هەڵبژێرەر، خۆڕایی، پڕۆژەکان، ستۆدیۆ و STOP پارێزراون؛ هیچ مۆدێلی نوێ زیاد نەکراوە.
-          ئەپی ئاسایی و هەمان package/کلیلی v2؛ لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە. پشکنینەکان ناتیڤ و نموونەی دروستکراون، نەک دڵنیایی هەموو مۆبایلێک."
+          CAPTION="Koorix v$KOORIX_VERSION — چاکسازی دەقی دووبارە و زاراوەی پانێڵ.
+          خوێندنەوەی دووبارەی هەمان هێڵ یەک دەکرێتەوە؛ پارچەی کورت نابێت وشەکانی دیکە بسڕێتەوە. Aspect لە پانێڵی سیستەمی گونجاودا دەبێتە «تایبەتمەندی»؛ نەک لە هەموو ڕستەیەکدا. دەقی ناوەڕۆک هەر بە هەمان وەرگێڕەڕە.
+          ئەم APKی ئاساییە لە ئەمولەیتەردا بە وێنەی نموونە تاقی کراوەتەوە؛ نەک پەڕە تایبەتییەکەت یان هەموو مۆبایلێک. مۆدێلی نوێ نییە؛ Dark mode و سێ ڕەنگەکە پارێزراون.
+          هەمان کلیلی v2؛ لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە. پەڕە ڕەسەنەکە دووبارە Translate بکە.
+          https://github.com/${{ github.repository }}/releases/download/koorix-v$KOORIX_VERSION/Koorix-v$KOORIX_VERSION.apk"
 
           RESP=$(curl -fsS --connect-timeout 20 --max-time 180 \
             --form-string "chat_id=$ADMIN" --form-string "caption=$CAPTION" \

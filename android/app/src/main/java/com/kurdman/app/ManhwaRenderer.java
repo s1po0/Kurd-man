@@ -2458,31 +2458,33 @@ public class ManhwaRenderer {
     }
 
     private static boolean coveredCandidateLines(OcrCandidate smaller, OcrCandidate larger) {
-        if(smaller.lines.isEmpty() || larger.lines.size()<=smaller.lines.size()) return false;
-        for(OcrLineData line:smaller.lines) {
-            if(line.box==null || line.box.isEmpty())return false;
-            String text=lineWords(line.text);
-            if(text.length()<8)return false;
-            boolean covered=false;
-            for(OcrLineData other:larger.lines) {
-                if(other.box==null || other.box.isEmpty())continue;
-                Rect overlap=new Rect(line.box);
-                if(!overlap.intersect(other.box))continue;
-                float minHeight=Math.min(line.box.height(),other.box.height());
-                float minWidth=Math.min(line.box.width(),other.box.width());
-                if(overlap.height()<minHeight*.80f || overlap.width()<minWidth*.80f
-                        || Math.abs(line.box.exactCenterY()-other.box.exactCenterY())>Math.max(3,minHeight*.35f))continue;
-                String existing=lineWords(other.text);
-                // No guessed spelling/number/negation changes. A longer line
-                // can cover a multiword fragment only at complete word edges.
-                if(existing.equals(text) || (text.length()>=12 && text.indexOf(' ')>=0
-                        && (" "+existing+" ").contains(" "+text+" "))) {
-                    covered=true;break;
-                }
+        if (smaller.lines.isEmpty() || larger.lines.size() <= smaller.lines.size()) return false;
+        for (OcrLineData line : smaller.lines) {
+            boolean covered = false;
+            for (OcrLineData other : larger.lines) {
+                if (coveredLine(line, other)) { covered = true; break; }
             }
-            if(!covered)return false;
+            if (!covered) return false;
         }
         return true;
+    }
+
+    private static boolean coveredLine(OcrLineData fragment, OcrLineData complete) {
+        if (fragment.box == null || complete.box == null
+                || fragment.box.isEmpty() || complete.box.isEmpty()) return false;
+        Rect overlap = new Rect(fragment.box);
+        if (!overlap.intersect(complete.box)) return false;
+        float minHeight = Math.min(fragment.box.height(), complete.box.height());
+        float minWidth = Math.min(fragment.box.width(), complete.box.width());
+        if (overlap.height() < minHeight * .80f || overlap.width() < minWidth * .80f
+                || Math.abs(fragment.box.exactCenterY() - complete.box.exactCenterY())
+                > Math.max(3, minHeight * .35f)) return false;
+        String text = lineWords(fragment.text), existing = lineWords(complete.text);
+        // Preserve spelling, numbers and negation. A longer reading covers a
+        // fragment only at complete word boundaries in the very same row.
+        return text.length() >= 8 && (existing.equals(text)
+                || (text.length() >= 12 && text.indexOf(' ') >= 0
+                && (" " + existing + " ").contains(" " + text + " ")));
     }
 
     private static String lineWords(String text) {
@@ -2503,8 +2505,9 @@ public class ManhwaRenderer {
                     : Math.max(existing.pass, challenger.pass);
         }
         existing.refined = existing.refined || challenger.refined;
-        if (!coveredCandidateLines(existing,challenger) && !coveredCandidateLines(challenger,existing)
-                && textSimilarity(existing.segment.text, challenger.segment.text) < 0.92) {
+        boolean coveredReading = coveredCandidateLines(existing, challenger)
+                || coveredCandidateLines(challenger, existing);
+        if (!coveredReading && textSimilarity(existing.segment.text, challenger.segment.text) < 0.92) {
             existing.disagreement = true;
         }
         boolean linesChanged = false;
@@ -2551,7 +2554,13 @@ public class ManhwaRenderer {
                         challenger.pass);
                 double existingScore = lineScore(
                         existingLine.text, existingLine.confidence, existing.pass);
-                if (challengerScore >= existingScore + 3.0) {
+                boolean sameWords = lineWords(existingLine.text).equals(lineWords(challengerLine.text));
+                boolean fullerReading = !sameWords && coveredLine(existingLine, challengerLine);
+                boolean partialReading = !sameWords && coveredLine(challengerLine, existingLine);
+                // Candidate/line confidence must never delete the rest of an
+                // exactly covered row. Keep the complete reading in either
+                // score order, without guessing at contradictory OCR words.
+                if (fullerReading || (!partialReading && challengerScore >= existingScore + 3.0)) {
                     existing.lines.set(bestIndex, challengerLine.copy());
                     linesChanged = true;
                 } else if (comparisonText(existingLine.text).equals(
@@ -2567,7 +2576,7 @@ public class ManhwaRenderer {
             }
         }
 
-        if (!linesChanged && challenger.score >= existing.score + 5.0) {
+        if (!linesChanged && !coveredReading && challenger.score >= existing.score + 5.0) {
             int existingLength = letterOrDigitCount(existing.segment.text);
             int challengerLength = letterOrDigitCount(challenger.segment.text);
             double lengthRatio = existingLength == 0 ? 0

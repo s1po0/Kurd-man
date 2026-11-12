@@ -23,6 +23,18 @@ blue/violet/peach triad, neutral day/night surfaces and persistent header moon/s
 action. Settings and shortcut must share saved System/Light/Dark state. Do not
 recolour reader art/text or make medical eye-comfort promises.
 
+## Direct APK debugging / reviewed QA skills
+
+For a request to open/inspect the actual app, also read
+`.claude/skills/koorix-native-qa/SKILL.md`. It adapts the owner's supplied
+alirezarezvani/claude-skills Java review and rendered-build QA guidance; those
+Skills are not Android runtimes. The sandbox has no SDK/KVM by default. Use the
+existing regular APK CI's empty hosted emulator, identical verified release APK,
+public UI and fixed synthetic source. Never substitute a web mockup/debug app,
+read app-private storage, expose signing material, or upload a reader page.
+Installed-APK emulator evidence is separate from Robolectric and physical-device
+or semantic acceptance. Keep failures/unavailable checks explicit.
+
 ## Owner constraints
 
 - Regular **Koorix** only. No new Preview app or automatic KurdMan delivery.
