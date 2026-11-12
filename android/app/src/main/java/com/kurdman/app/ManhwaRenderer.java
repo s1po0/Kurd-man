@@ -2503,7 +2503,8 @@ public class ManhwaRenderer {
                     : Math.max(existing.pass, challenger.pass);
         }
         existing.refined = existing.refined || challenger.refined;
-        if (textSimilarity(existing.segment.text, challenger.segment.text) < 0.92) {
+        if (!coveredCandidateLines(existing,challenger) && !coveredCandidateLines(challenger,existing)
+                && textSimilarity(existing.segment.text, challenger.segment.text) < 0.92) {
             existing.disagreement = true;
         }
         boolean linesChanged = false;

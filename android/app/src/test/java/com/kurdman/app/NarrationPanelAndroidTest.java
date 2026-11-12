@@ -47,6 +47,8 @@ public class NarrationPanelAndroidTest {
         List<Object> selected=merge(candidate(LINES,140,0,.94f),candidate(new String[]{LINES[0]},140,4,.92f));
         assertEquals("A fully covered source line must not survive as duplicate lettering on its paragraph",1,selected.size());
         Segment s=segment(selected.get(0));for(String line:LINES)assertTrue(s.text.contains(line));assertEquals(4,s.lines);
+        Field flag=selected.get(0).getClass().getDeclaredField("disagreement");flag.setAccessible(true);
+        assertFalse("A covered equal reading is not an OCR disagreement",flag.getBoolean(selected.get(0)));
     }
     @Test public void subsetOnTheLastRowMustAlsoBeRemoved()throws Exception {
         List<Object> selected=merge(candidate(LINES,140,0,.93f),candidate(new String[]{LINES[3]},278,4,.9f));
