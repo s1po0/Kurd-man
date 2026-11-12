@@ -2486,7 +2486,7 @@ public class ManhwaRenderer {
     }
 
     private static String lineWords(String text) {
-        return text==null?"":text.toLowerCase(Locale.ROOT)
+        return text==null?"":text.toLowerCase(java.util.Locale.ROOT)
                 .replaceAll("[^\\p{L}\\p{N}]+"," ").trim();
     }
 
