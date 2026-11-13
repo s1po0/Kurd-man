@@ -65,6 +65,26 @@ reason to add another paid/network/model route.
    truthful receipt, then acknowledged completion. Do not call a new Skill a new
    translation engine or claim a historic phone JPEG was repaired by installing.
 
+## Direct observe-act-observe session (not just the scripted release test)
+
+For an owner request to **open the app and look around**, a green release test
+alone is insufficient. See `tools/direct-apk/README.md` and the reviewed MIT
+`references/adb-android-control/PROVENANCE.md`. The topic yielded
+`hah23255/adb-android-control`, pinned to
+`cc1cb29de0adc581e260842b36c198217bfab0b2`; its ADB screencap/public-UI gesture
+guidance is applied without executing its installers/destructive examples.
+
+`.github/workflows/koorix-direct-apk.yml` can open the **existing verified**
+regular 1.8.2 release on the same empty official hosted Android34 emulator,
+without building/publishing an APK or loading signing/Telegram secrets.
+Download each hash-verified actual frame with the local observation client,
+**view it**, select the next bounded public-UI action, commit only the tiny
+control JSON on the current branch, then view the next frame. Keep screenshots
+in ignored cache, retain a scoped evidence receipt, and end the bounded session.
+Never describe an unseen future frame as inspected. There is no open ADB port,
+reader upload, phone connection, mock app, model replacement or automatic
+quality-pass verdict. This manual session is separate from the release driver.
+
 ## Evidence boundaries
 
 - Unit/native regressions: bounded code/shape/UI contracts, not device semantics.

@@ -1,0 +1,60 @@
+name: Koorix direct APK inspection
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["arena/d0574002-kurd-man"]
+    paths:
+      - ".github/workflows/koorix-direct-apk.yml"
+      - "tools/direct-apk/worker.py"
+      - "tools/direct-apk/run.sh"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: koorix-direct-inspection-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[inspect-koorix-apk]')
+    name: Open existing regular 1.8.2 · manual public-UI actions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write # Bounded synthetic PNG/XML blobs only; no refs/release changes.
+      checks: write # Live session mailbox, not an APK quality-pass verdict.
+    steps:
+      - name: Checkout current inspection code without persisting credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Java for the authored synthetic PNG only
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Fetch and independently verify the already delivered regular APK
+        run: |
+          mkdir -p "$RUNNER_TEMP/koorix-direct"
+          APK_FILE="$RUNNER_TEMP/koorix-direct/Koorix-v1.8.2.apk"
+          curl --fail --location --silent --show-error --retry 3 --connect-timeout 20 --max-time 180 \
+            'https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.8.2/Koorix-v1.8.2.apk' \
+            --output "$APK_FILE"
+          echo "d03ee91ff681e21e2e4cf4938106415f9e5e43d7837a03af976c62e3be97a300  $APK_FILE" | sha256sum --check --strict
+          python3 -m pip install -r tools/signing/requirements.txt --disable-pip-version-check
+          python3 tools/signing/inspect-public-apk.py "$APK_FILE" --version 1.8.2 --code 18 \
+            --no-login --free --contours --reading-studio --triad-theme --system-panels
+          echo "APK_FILE=$APK_FILE" >> "$GITHUB_ENV"
+
+      - name: Observe actual Android screens and wait for manually selected next gestures
+        timeout-minutes: 26
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash tools/direct-apk/run.sh
+
+      # No build, key restore, release, Telegram delivery, private-file collector,
+      # broad ADB network endpoint or automatic completion notification exists here.
