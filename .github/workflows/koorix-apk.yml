@@ -230,6 +230,7 @@ jobs:
           python3 tools/emulator-tests/collect.py --repository "${{ github.repository }}" \
             --commit "${{ github.sha }}" --run "${{ github.run_id }}"
 
+      # Release/chat delivery starts only on an explicit release marker or publish dispatch.
       # Releases/chat delivery do not depend on the repository artifact quota.
       - name: Publish verified APK blob for chat delivery
         if: (github.event_name == 'workflow_dispatch' && inputs.publish) || contains(github.event.head_commit.message, '[release-koorix]')

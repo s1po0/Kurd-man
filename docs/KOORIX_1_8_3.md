@@ -91,6 +91,19 @@ including **20 publication** and **22 completion/STOP/Undo/Studio** executions,
 plus the existing contour/narration/UI/crypto/comic/quality gates. Counts test
 covered contracts, not physical devices or general translation quality.
 
+Final implementation candidate **a0234c7**, run **43435326161 / job131920839279**,
+passed **268 native/JVM, 0 failed, 0 skipped**, 20 publication and 22 completion
+executions, plus all existing gates. Its exact regular signed candidate APK
+SHA256 was `409dc0468b6bcc470cc6e37cf13789f02ce56669983069aa6a4928955d0d2581`.
+All 22 installed-APK synthetic files were downloaded, length/SHA256/Git-blob
+verified (index `159efa178cef7c581e11c8b27ef78017b80af7b9`); actual result,
+Studio Undo, manual STOP label and Studio JPEG were visually reviewed by the
+same agent. The synthetic PNG words, selected live translator and UI text were
+observed. The public one-row/no-TXT, selected real PDF, Studio same-row export,
+process restart and actual manual service shutdown checks passed on API34; no
+physical Samsung Gallery or native-human acceptance is inferred. The production
+release must independently repeat the gates on its own delivered bytes.
+
 The installed-APK driver was updated instead of retaining unwanted app TXT for
 QA: it reads source/target pairs from the normal public result TextView into a
 local synthetic JSON evidence file. It requires one app-owned public image and
