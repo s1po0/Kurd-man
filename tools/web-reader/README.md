@@ -30,9 +30,10 @@ requires a successful non-opaque CORS-readable image response, enforces both
 announced and streamed byte caps, and aborts after a timeout. Its synthetic
 Node tests are not a WebView implementation. Its returned typed arrays are
 not directly transferable via Android's `evaluateJavascript`. `transport.js`
-experiments with 48 KiB base64 chunks and cancellation, but it is not connected
-to a native receiver or tested against Android IPC. It needs a host wrapper that
-passes its AbortSignal into the capture experiment's fifth argument. A hostile
+uses 48 KiB base64 chunks and cancellation. The candidate native receiver
+passes an AbortSignal into the capture function, validates byte limits and image
+bounds, and aborts on navigation. Android emulator checks are required; this is
+not a general security audit. A hostile
 page can tamper with JS and its output: the native host must never trust MIME,
 length, origin, bytes or claimed state without independent verification. This
 experiment does not validate private network addresses, prevent DNS rebinding,

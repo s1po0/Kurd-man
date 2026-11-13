@@ -1,4 +1,4 @@
-/* Experiment only. Not a native bridge and not included in the APK.
+/* Unreleased candidate. Polling data is not a native bridge.
  * Page state and all returned values are untrusted. Install only in the
  * explicitly selected top-level page. Native code must validate every result.
  */

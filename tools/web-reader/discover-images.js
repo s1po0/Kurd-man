@@ -1,5 +1,5 @@
 /*
- * Prototype only — this file is NOT wired into Koorix or distributed in its APK.
+ * Unreleased candidate — copied into the Android web reader assets.
  * Evaluated explicitly by the host on the top-level page after a reader action.
  * It does not contact the network, read cookies or alter the document.
  * The host must treat the whole result (including all URLs) as untrusted data.

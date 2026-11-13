@@ -99,7 +99,7 @@ jobs:
           import json
           failure_summary=[]
           files=list(Path('android/app/build/test-results/testKoorixReleaseUnitTest').glob('TEST-*.xml'))
-          total=failed=skipped=native=ui=panel=publication=completion=0
+          total=failed=skipped=native=ui=panel=publication=completion=web=0
           for file in files:
               root=ET.parse(file).getroot()
               total+=int(root.get('tests',0));failed+=int(root.get('failures',0))+int(root.get('errors',0));skipped+=int(root.get('skipped',0))
@@ -107,6 +107,7 @@ jobs:
               if root.get('name','').endswith('.NarrationPanelAndroidTest'): panel+=int(root.get('tests',0))
               if root.get('name','').endswith('.ProjectResultsPublicationTest'): publication+=int(root.get('tests',0))
               if root.get('name','').endswith('.CompletedResultUiTest'): completion+=int(root.get('tests',0))
+              if root.get('name','').endswith(('.WebReaderSecurityTest','.WebImportBudgetTest')): web+=int(root.get('tests',0))
               if root.get('name','').endswith(('.ReadingStudioUiTest','.ReadingStudioNativeUiTest','.ThemeTriadAndroidTest')): ui+=int(root.get('tests',0))
               for test in root.findall('testcase'):
                   issue=test.find('failure')
@@ -121,7 +122,8 @@ jobs:
           print(f'::notice::Native narration duplicate regressions: {panel} run on SDK26/34; synthetic, not reader-page OCR proof')
           print(f'::notice::Native reading-studio UI regressions: {ui} run; actual Views/XML with synthetic data')
           print(f'::notice::Single-publication/no-TXT regressions: {publication} run; completed UI/STOP/Undo/Studio: {completion} run')
-          if total < 268 or publication < 20 or completion < 22 or native < 34 or ui < 38 or panel < 18 or failed or skipped:
+          print(f'::notice::Browser URL and cache safety tests: {web} run; device website compatibility is separately tested')
+          if total < 282 or publication < 24 or completion < 26 or web < 6 or native < 34 or ui < 38 or panel < 18 or failed or skipped:
               print('::error::In-app skill tests were missing, failed or skipped; production distribution is blocked')
               raise SystemExit(1)
           PYTEST
@@ -270,7 +272,7 @@ jobs:
         run: |
           TAG="koorix-v$KOORIX_VERSION"
           cp "$APK_FILE" "Koorix-v$KOORIX_VERSION.apk"
-          NOTES="Koorix v$KOORIX_VERSION — one public image per translated page, no automatic TXT sidecars. Translation, image batches and Studio share the stable owner-scoped Download/Koorix export route; repeat exports update the same result rather than creating a second Pictures copy. CBZ and selected PDF outputs remain. Original/translated text, geometry and edits stay in saved projects and explicit backups. Existing reader images/TXT are not deleted. Completed previews no longer retain the empty hint/book overlay. Idle automatic-service shutdown no longer presents STOP as active work; actual jobs, pending recovery and explicit manual protection still have STOP. STOP dispatch and pending-recovery cancellation are covered. Studio Undo/Redo refreshes its status with the restored size. Same APK is installed and exercised on official Android34 with an authored synthetic input, public MediaStore uniqueness/no-TXT queries, Studio size/Undo/export and process reopen. Native contracts and emulator observations are not Samsung Gallery/physical-phone/general meaning acceptance. Existing guarded Sorani terms, OCR whole-word preservation, blue/violet/peach and Dark mode, all74 targets, ckb/en/ar UI, one unified source chooser, automatic Skill, free/no-login/no-quota, offline, Reports, project backup and 300-page/300-MB/1-GB safeguards remain. No new model, NLLB, paid API or hidden fallback. Same com.koorix.app and permanent v2 signer; update over v2 without uninstalling or clearing data. See docs/KOORIX_1_8_3.md."
+          NOTES="Koorix v$KOORIX_VERSION — Adds a secure in-app HTTPS browser with website/search navigation and explicit capture of accessible same-origin page images. Images are processed using the existing translation/Skill pipeline and viewed privately in a page reader with original/translated toggle; explicit export uses the existing one-public-copy route without TXT sidecars. Websites using inaccessible cross-origin CDN images, protected content, canvas or unusual lazy loaders may not work; scrolling may be needed before capture. This version does not translate progressively while scrolling or replace the image inside the website. No DRM bypass, new model, paid API or hidden fallback. The same signed APK is exercised on API34 with a public MDN no-text image for browser capture and a separately authored synthetic translation fixture; that is not physical-device, Samsung Gallery, real manhwa or general meaning proof. Existing unified file chooser, free/no-login edition, 74 targets, three UI languages, offline route, STOP, projects, backups, PDF, blue/violet/peach and dark mode remain. Safety limits: 300 pages, 300MB import, 1GB cache, and 32MB per browser image. Existing reader files are never automatically deleted. Same com.koorix.app and permanent v2 signer; update over v2 without uninstalling or clearing data. See docs/KOORIX_WEB_READER.md."
 
           # An owner-prepared draft/tag is valid too. Upload verified bytes first,
           # then publish; expose public CLI errors without printing credentials.
@@ -315,10 +317,10 @@ jobs:
             echo "::error::APK exceeds Telegram's upload budget"
             exit 1
           fi
-          CAPTION="Koorix v$KOORIX_VERSION — چاکسازی پاشەکەوتکردن و ڕووکار.
-          هەر وێنەیەکی وەرگێڕدراو تەنها یەک کۆپیی گشتی هەیە؛ TXT خۆکار دروست ناکرێت. دەق و دەستکارییەکان لە پڕۆژەکاندا دەمێننەوە؛ فایلە کۆنەکانت ناسڕدرێنەوە.
-          پیشاندانی ئەنجام، STOPی بێکار، Undo و هەناردەی Studio چاک کراون. APKی ئاسایی لە ئەمولەیتەردا بە وێنەی نموونە تاقی کراوەتەوە؛ نەک Galleryی مۆبایلەکەت.
-          هەمان کلیلی v2؛ لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە. Dark mode و سێ ڕەنگەکە پارێزراون.
+          CAPTION="Koorix v$KOORIX_VERSION — گەڕۆکی وێب و خوێنەر.
+          چەپتەرەکە بکەرەوە و دوگمەی وەرگێڕان دابگرە؛ وێنە بەردەستەکانی هەمان ماڵپەڕ وەردەگیرێن و لە خوێنەرەکەدا وەرگێڕان و ڕەسەن پیشان دەدرێن. وێنەی پارێزراو یان لە سەرچاوەی تر هەموو جار کار ناکات؛ لەوانەیە پێویست بێت سکرۆڵ بکەیت. وەرگێڕان بە شێوەی ڕاستەوخۆ لە ناو خودی پەڕەکە نییە.
+          تا خۆت هەناردە نەکەیت وێنەی گشتی دروست ناکرێت؛ TXT خۆکار نییە. فایلە کۆنەکانت ناسڕدرێنەوە.
+          تاقیکردنەوەی ئەمولەیتەر بە ماڵپەڕی نموونە و وێنەی ساختە بوو، نەک هەموو ماڵپەڕەکان یان مۆبایلەکەت. هەمان کلیلی v2؛ لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە.
           https://github.com/${{ github.repository }}/releases/download/koorix-v$KOORIX_VERSION/Koorix-v$KOORIX_VERSION.apk"
 
           RESP=$(curl -fsS --connect-timeout 20 --max-time 180 \

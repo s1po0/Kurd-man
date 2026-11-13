@@ -1,4 +1,4 @@
-/* Standalone experiment; not shipped in Koorix. The host must validate all
+/* Unreleased Android web-reader candidate. The host must validate all
  * returned bytes, URL/destination, navigation state and aggregate limits.
  * Evaluating untrusted page JavaScript is not a trust boundary. */
 (async (candidate, maxBytes, fetchImpl = fetch, timeoutMs = 15000, externalSignal = null) => {
