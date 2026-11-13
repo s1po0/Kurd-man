@@ -1,7 +1,7 @@
 {
   "session": "koorix-regular-182-observe-1",
-  "sequence": 1,
+  "sequence": 2,
   "action": "tap_id",
-  "expectedFrame": "ccd4b65c092651ff59d8a88e1f3ebc290860c6b300061c4bc992c8f9b3ae3fe4",
-  "id": "navSettingsButton"
+  "expectedFrame": "daef8b8f8288e7da1ef1b602b1f18adeedbd69378996b2ebcbcb95649621a37a",
+  "id": "quickThemeButton"
 }
