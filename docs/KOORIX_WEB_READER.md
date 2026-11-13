@@ -97,7 +97,10 @@ dialogue. A public-site success is not a network isolation, physical-phone,
 or Sorani-quality review. Ordinary CI does not require the external site.
 The first opt-in attempt, run `43526283758`, passed the synthetic tests but
 failed before opening the comic because the driver scrolled the wrong way to
-reach the browser button. It did not test the site; the driver was corrected.
+reach the browser button. Run `43527624762` opened the public site and returned
+to the app, but no readable checkpoint was observed within 420 seconds; the
+cause is not established. Report blob `a38d26eb338fc3b36346353a1016200bc28bea8d`.
+Fixed-label-only progress diagnostics have been added for the next probe.
 
 Research: GitHub raw's sandbox response policy is documented in
 https://github.com/nvm-sh/nvm/issues/2392, and the test image's text/URL format

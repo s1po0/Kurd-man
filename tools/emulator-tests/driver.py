@@ -104,6 +104,19 @@ def source_chooser_focused(window_dump):
                           r"com\.(?:google\.android|android)\.documentsui/|com\.android\.intentresolver/)", window_dump))
 
 
+def public_comic_status(text):
+    """Map UI state to fixed labels only; never retain comic text or arbitrary errors."""
+    for prefix, category in (("Preparing and saving source", "preparing"),
+                             ("OCR • page", "ocr"), ("Translation • page", "translation"),
+                             ("Typesetting • page", "typesetting"), ("Visible pages are ready", "visible-ready"),
+                             ("Complete;", "complete"), ("Processing finished,", "complete-with-retained-text"),
+                             ("No clear text found", "no-text"), ("The job did not finish.", "job-failed"),
+                             ("Stopped.", "stopped")):
+        if text.startswith(prefix):
+            return category
+    return "other"
+
+
 def node(root, identifier=None, text=None):
     for item in root.iter("node"):
         if identifier is not None and not item.get("resource-id", "").endswith(":id/" + identifier):
@@ -317,9 +330,17 @@ class Device:
         self.click("webReaderTranslate")
         self.control("workspaceLanguageButton", timeout=180)
         def readable():
-            item = node(self.ui(), identifier="readWebResultButton")
+            root = self.ui()
+            status = node(root, identifier="statusText")
+            category = public_comic_status(status.get("text", "") if status is not None else "")
+            seen = self.report.setdefault("publicComicJobStates", [])
+            if category not in seen:
+                seen.append(category)
+            item = node(root, identifier="readWebResultButton")
             if item is not None and item.get("enabled") == "true":
                 return item
+            if category in ("no-text", "job-failed", "stopped"):
+                raise AssertionError("Public comic job ended without a readable page: " + category)
             self.shell("input", "swipe", "540", "1400", "540", "650", "350")
             return None
         self.wait(readable, "Public comic has a readable durable page", timeout=420)

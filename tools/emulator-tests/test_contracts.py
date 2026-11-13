@@ -19,6 +19,11 @@ collector = load("collect")
 
 
 class Contracts(unittest.TestCase):
+    def test_public_comic_status_never_retains_dialogue_or_errors(self):
+        self.assertEqual("ocr", driver.public_comic_status("OCR • page 1 / 4"))
+        self.assertEqual("job-failed", driver.public_comic_status("The job did not finish. private detail"))
+        self.assertEqual("other", driver.public_comic_status("secret comic dialogue or URL"))
+
     def test_public_comic_mode_never_captures_page_pixels(self):
         with tempfile.TemporaryDirectory() as folder:
             device = driver.Device(Path(folder))
