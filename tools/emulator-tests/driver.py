@@ -305,11 +305,11 @@ class Device:
         This verifies one site's ordinary public flow, not site compatibility,
         translation quality, browser isolation, or physical-device behavior.
         """
-        self.public_comic_open = True
         self.click("navTranslateButton")
-        self.tap(self.reveal("webReaderButton", direction="up"))
+        self.tap(self.reveal("webReaderButton"))
         self.control("webReaderAddress", enabled=True)
         self.click("webReaderAddress")
+        self.public_comic_open = True
         self.shell("input", "text", "https://www.peppercarrot.com/en/webcomic/ep01_Potion-of-Flight.html")
         self.click("webReaderGo")
         self.wait(lambda: self.control("webReaderStatus", timeout=5).get("text", "").startswith("Page loaded."),

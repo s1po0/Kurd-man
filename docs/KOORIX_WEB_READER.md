@@ -95,6 +95,9 @@ probe on the regular installed APK. It opens David Revoy's CC-BY Pepper&Carrot
 Episode 1 and retains only counts/check outcomes, never comic screenshots or
 dialogue. A public-site success is not a network isolation, physical-phone,
 or Sorani-quality review. Ordinary CI does not require the external site.
+The first opt-in attempt, run `43526283758`, passed the synthetic tests but
+failed before opening the comic because the driver scrolled the wrong way to
+reach the browser button. It did not test the site; the driver was corrected.
 
 Research: GitHub raw's sandbox response policy is documented in
 https://github.com/nvm-sh/nvm/issues/2392, and the test image's text/URL format
