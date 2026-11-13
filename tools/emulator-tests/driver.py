@@ -21,7 +21,7 @@ EXPECTED_SOURCE = ("ASPECT: STONE KEEPER ASPECT DESCRIPTION: This rare trait gra
 CAPTURES = {"home-ckb.png", "home-en-light.png", "home-en-dark.png", "source-chooser.png",
             "source-selected.png", "translating.png", "results.png", "results-text.png", "studio.png",
             "studio-size-90.png", "studio-undo-100.png", "studio-export.png", "reopened-result.png",
-            "manual-keep-alive.png", "manual-stopped.png", "pdf-export.png", "web-no-text.png", "failure.png"}
+            "manual-keep-alive.png", "manual-stopped.png", "pdf-export.png", "web-browser.png", "web-no-text.png", "failure.png"}
 PRODUCT = re.compile(r"Koorix-koorix-qa-source-p-[a-f0-9-]{36}\.ckb\.jpg\Z")
 
 
@@ -340,6 +340,7 @@ class Device:
         self.click("webReaderGo")
         self.wait(lambda: any("Let's look at some creatures" in x.get("text", "")
                               for x in self.ui().iter("node")), "MDN example page loaded", timeout=90)
+        self.capture("web-browser.png")
         self.click("webReaderTranslate")
         self.control("workspaceLanguageButton", timeout=150)
         self.wait(lambda: "No clear text found" in self.control("statusText").get("text", ""),

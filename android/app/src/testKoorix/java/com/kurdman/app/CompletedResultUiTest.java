@@ -80,6 +80,26 @@ public class CompletedResultUiTest {
         p.privateResults=false;p.save();ReflectionHelpers.callInstanceMethod(a,"updateButtons",ReflectionHelpers.ClassParameter.from(boolean.class,false));
         assertEquals(View.GONE,read.getVisibility());
     }
+    @Test public void privateWebReaderNavigatesTogglesAndOnlyExportsOnExplicitAction() throws Exception {
+        TranslationProject p=project();p.privateResults=true;
+        TranslationProject.Page page=new TranslationProject.Page("pages/0002.png",".png");
+        ProjectResults.copy(p.pages.get(0).sourceFile(p.projectDir),page.sourceFile(p.projectDir));
+        p.pages.add(page);ProjectResults.copy(SavedJobPipeline.renderedPage(p,0),SavedJobPipeline.renderedPage(p,1));p.save();
+        Intent intent=new Intent(app,WebResultActivity.class).putExtra(WebResultActivity.EXTRA_PROJECT,p.projectDir.getName());
+        ActivityController<WebResultActivity> reader=Robolectric.buildActivity(WebResultActivity.class,intent).setup();
+        try {
+            ExecutorService worker=ReflectionHelpers.getField(reader.get(),"decoder");worker.submit(()->{}).get(15,TimeUnit.SECONDS);shadowOf(Looper.getMainLooper()).idle();
+            assertNotNull(((ImageView)reader.get().findViewById(R.id.webResultImage)).getDrawable());
+            reader.get().findViewById(R.id.webResultNext).performClick();
+            reader.get().findViewById(R.id.webResultToggle).performClick();
+            worker.submit(()->{}).get(15,TimeUnit.SECONDS);shadowOf(Looper.getMainLooper()).idle();
+            assertTrue(((TextView)reader.get().findViewById(R.id.webResultPageLabel)).getText().toString().contains("2 / 2"));
+            assertEquals(reader.get().getString(R.string.web_original),reader.get().findViewById(R.id.webResultImage).getContentDescription());
+            reader.get().findViewById(R.id.webResultExport).performClick();
+            assertEquals(android.app.Activity.RESULT_OK,shadowOf(reader.get()).getResultCode());
+            assertTrue(shadowOf(reader.get()).getResultIntent().getBooleanExtra(EditorActivity.EXTRA_EXPORT,false));
+        } finally {reader.pause().stop().destroy();}
+    }
     @Test public void aRealSelectedSourcePreviewIsNotCoveredByTheEmptyBookEither() {
         MainActivity a=main.get();
         assertEquals(View.VISIBLE,a.findViewById(R.id.resultEmptyIcon).getVisibility());

@@ -5,4 +5,9 @@
     <item type="id" name="webReaderTranslate" />
     <item type="id" name="webReaderStop" />
     <item type="id" name="webReaderGo" />
+    <item type="id" name="webResultImage" />
+    <item type="id" name="webResultPageLabel" />
+    <item type="id" name="webResultNext" />
+    <item type="id" name="webResultToggle" />
+    <item type="id" name="webResultExport" />
 </resources>
