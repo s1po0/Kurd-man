@@ -244,7 +244,7 @@ public class TranslationProject {
             targetLanguage = restored.targetLanguage;
             comicConfig = restored.comicConfig;
             offlineMode = restored.offlineMode; accurateOcr = restored.accurateOcr;
-            createPdf = restored.createPdf; imageBatch = restored.imageBatch;
+            createPdf = restored.createPdf; imageBatch = restored.imageBatch; privateResults = restored.privateResults;
             resumable = restored.resumable; autoResume = restored.autoResume;
             quotaJobId = restored.quotaJobId; jobOwner = restored.jobOwner; quotaPages = restored.quotaPages; exportsComplete = restored.exportsComplete; outputBinding = restored.outputBinding;
             jobStyle = restored.jobStyle;

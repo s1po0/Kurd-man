@@ -44,6 +44,8 @@ public final class WebResultActivity extends AppCompatActivity {
     private void show(){
         final File file=original?project.pages.get(page).sourceFile(project.projectDir):SavedJobPipeline.renderedPage(project,page);
         final int request=++generation;
+        Bitmap previousBitmap=displayed;displayed=null;image.setImageDrawable(null);
+        if(previousBitmap!=null&&!previousBitmap.isRecycled())previousBitmap.recycle();
         label.setText(getString(R.string.web_page,page+1,project.pages.size()));toggle.setText(original?R.string.web_translated:R.string.web_original);
         image.setContentDescription(getString(original?R.string.web_original:R.string.web_translated));
         previous.setEnabled(page>0);next.setEnabled(page+1<project.pages.size());scroll.post(()->scroll.scrollTo(0,0));

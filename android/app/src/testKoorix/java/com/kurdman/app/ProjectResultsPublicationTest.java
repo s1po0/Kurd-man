@@ -81,6 +81,11 @@ public class ProjectResultsPublicationTest {
         assertTrue(TranslationProject.load(p.projectDir).privateResults);
         noNewTextFiles(ProjectResults.directory(p));noNewTextFiles(ProjectResults.library(app));
     }
+    @Test public void privacyFlagSurvivesUndoSnapshotAndCannotAccidentallyPublish() throws Exception {
+        TranslationProject p=sample(1,false,false,false);p.privateResults=true;String snapshot=p.snapshotJson();
+        p.privateResults=false;p.restoreSnapshot(snapshot);assertTrue(p.privateResults);
+        ProjectResults.publish(app,p);assertTrue(media.rows.isEmpty());assertFalse(ProjectResults.library(app).exists());
+    }
     @Test public void oldProjectWithoutPrivacyFlagRemainsPublic() throws Exception {
         TranslationProject p=sample(1,false,false,false);
         org.json.JSONObject root=p.toJson();root.getJSONObject("job").remove("privateResults");
