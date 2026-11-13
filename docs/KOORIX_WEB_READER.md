@@ -70,11 +70,16 @@ APK on API34: the generated text reached OCR and translation, the private
 reader and original toggle worked, and no public file was created automatically.
 It also passed 288 native/JVM tests. Evidence index:
 `c92b3beb4f98c0c96548e740d757a947b48a7cd9`; report:
-`06bc075ed77801c7cecf8becdf09001ff5933bb3`. The visible-first reader changes
-made after that run have not yet been verified on Android. These synthetic
-results do not prove that translated comics, other sites, physical phones, or
-the latest candidate work end-to-end. No 1.8.4 release is authorized by this
-evidence.
+`06bc075ed77801c7cecf8becdf09001ff5933bb3`. A later run `43467020141` on
+`807ea86` passed 292 native/JVM tests and the installed signed-APK single-image
+browser flow, including the protected-page notice, generated text OCR/translation,
+private reader, toggle and no automatic public export. Its installed-APK evidence
+index is `69a0653b71f8de5e2464ee55ef085d622ae1071f` and report is
+`023571d7b456bfe71803c47ead8fc48cccae57f3`. The visible-first checkpoint behavior
+is covered by JVM tests but was not exercised with a multi-page live website on
+Android. These synthetic results do not prove real comic translation quality,
+other sites, physical phones or the unresolved browser security properties. No
+1.8.4 release is authorized by this evidence.
 
 Research: GitHub raw's sandbox response policy is documented in
 https://github.com/nvm-sh/nvm/issues/2392, and the test image's text/URL format
