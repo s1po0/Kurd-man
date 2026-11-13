@@ -98,6 +98,12 @@ node. Cookies are not copied into project metadata, but WebView's normal cookie
 store is a separate consideration. Do not treat this candidate as independently
 security-reviewed or ready for release.
 
+Chromium's Local Network Access trial explicitly stated that WebView grants that
+permission unconditionally rather than prompting users; Android's separate
+app-level local-network permission is not a blanket mitigation on older devices.
+See https://groups.google.com/a/chromium.org/g/blink-dev/c/D4nqAa3FUN8. The
+API34 emulator test does not prove isolation of private-network devices.
+
 Do not claim a `shouldInterceptRequest` denylist solves this: Android documents
 that redirect follow-ups are not all delivered to that callback, and it does not
 provide request bodies for transparent replay. References:
