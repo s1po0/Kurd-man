@@ -47,7 +47,7 @@ public final class WebReaderActivity extends AppCompatActivity {
     private FileOutputStream out;
     private long total,currentBytes,deadline,importLimit;
     private int epoch,index,failed,jsId;
-    private boolean capturing,transferred;
+    private boolean capturing,transferred,truncated;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -90,12 +90,12 @@ public final class WebReaderActivity extends AppCompatActivity {
     }
     private void beginCapture(){if(capturing||!secureUrl(web.getUrl())){status.setText(R.string.web_invalid);return;}
         topUrl=web.getUrl();int token=++epoch;capturing=true;translate.setEnabled(false);stop.setEnabled(true);status.setText(R.string.web_discover);
-        candidates.clear();files.clear();index=0;failed=0;total=0;transferred=false;
+        candidates.clear();files.clear();index=0;failed=0;total=0;transferred=false;truncated=false;
         try{importLimit=WebImportBudget.allowance(getCacheDir());if(importLimit<1)throw new java.io.IOException("Cache full");}
         catch(Exception full){cancelCapture();status.setText(R.string.web_cache_full);return;}
         session=new File(getCacheDir(),"web-reader/"+UUID.randomUUID());if(!session.mkdirs()){cancelCapture();status.setText(R.string.web_error);return;}
         web.evaluateJavascript(discovery,raw->{if(!valid(token))return;try{
-            JSONObject obj=new JSONObject(raw);JSONArray imgs=obj.getJSONArray("images");LinkedHashSet<String> unique=new LinkedHashSet<>();
+            JSONObject obj=new JSONObject(raw);truncated=obj.optBoolean("truncated",false);JSONArray imgs=obj.getJSONArray("images");LinkedHashSet<String> unique=new LinkedHashSet<>();
             for(int i=0;i<imgs.length()&&unique.size()<MAX_PAGES;i++){String u=imgs.getJSONObject(i).optString("url","");if(u.length()<=8192&&sameOrigin(topUrl,u))unique.add(u);}
             candidates.addAll(unique);if(candidates.isEmpty()){cancelCapture();status.setText(R.string.web_empty);return;}
             String install="window.__koorixWebCapture=("+transport+")((u,m,s)=>("+capture+")(u,m,fetch,15000,s),btoa.bind(window));true";
@@ -103,7 +103,9 @@ public final class WebReaderActivity extends AppCompatActivity {
         }catch(Exception e){cancelCapture();status.setText(R.string.web_error);}});
     }
     private boolean valid(int token){return capturing&&epoch==token&&topUrl!=null&&topUrl.equals(web.getUrl());}
-    private void next(int token){if(!valid(token))return;if(index>=candidates.size()||total>=importLimit){finishCapture();return;}
+    private void next(int token){if(!valid(token))return;
+        if(index>=candidates.size()){finishCapture();return;}
+        if(total>=importLimit){failed+=candidates.size()-index;finishCapture();return;}
         status.setText(getString(R.string.web_capture,index+1,candidates.size()));current=new File(session,String.format(Locale.ROOT,"%04d.part",index+1));currentBytes=0;
         try{out=new FileOutputStream(current);}catch(Exception failure){cancelCapture();status.setText(R.string.web_error);return;}
         long limit=Math.min(MAX_IMAGE,importLimit-total);deadline=android.os.SystemClock.elapsedRealtime()+30000;
@@ -124,7 +126,8 @@ public final class WebReaderActivity extends AppCompatActivity {
     }
     private void skip(int token){try{if(out!=null)out.close();}catch(Exception ignored){}out=null;if(current!=null)current.delete();current=null;failed++;index++;web.evaluateJavascript("window.__koorixWebCapture.cancel()",null);next(token);}
     private void finishCapture(){capturing=false;stop.setEnabled(false);translate.setEnabled(true);if(files.isEmpty()){deleteSession();status.setText(R.string.web_empty);return;}
-        if(failed>0)Toast.makeText(this,getString(R.string.web_partial,failed),Toast.LENGTH_LONG).show();transferred=true;setResult(RESULT_OK,new Intent().putStringArrayListExtra(EXTRA_FILES,files));finish();}
+        if(truncated)Toast.makeText(this,getString(R.string.web_capped),Toast.LENGTH_LONG).show();
+        else if(failed>0)Toast.makeText(this,getString(R.string.web_partial,failed),Toast.LENGTH_LONG).show();transferred=true;setResult(RESULT_OK,new Intent().putStringArrayListExtra(EXTRA_FILES,files));finish();}
     private void deleteSession(){if(session!=null)TranslationProjectStore.deleteRecursive(session);session=null;}
     private void cancelCapture(){if(!capturing)return;capturing=false;epoch++;stop.setEnabled(false);translate.setEnabled(true);try{if(out!=null)out.close();}catch(Exception ignored){}out=null;web.evaluateJavascript("if(window.__koorixWebCapture)window.__koorixWebCapture.cancel()",null);deleteSession();status.setText(R.string.web_hint);}
     @Override protected void onDestroy(){cancelCapture();if(!transferred)deleteSession();if(web!=null){web.stopLoading();web.destroy();}super.onDestroy();}

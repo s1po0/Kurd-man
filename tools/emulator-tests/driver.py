@@ -130,7 +130,7 @@ class Device:
     def __init__(self, output, emulator_pid=None):
         self.output = output
         self.emulator_pid = emulator_pid
-        self.report = {"scope": "Installed regular signed APK on API34 Android emulator; synthetic source only; NOT physical-device/reader-page/general semantic acceptance",
+        self.report = {"scope": "Installed regular signed APK on API34 Android emulator; authored synthetic translation fixture and public MDN example image; NOT physical-device/reader-page/general semantic acceptance",
                        "status": "running", "checks": [], "meaningReviewedByNativeHuman": False,
                        "readerDataUsed": False, "alternateAppOrDebugVariant": False}
 

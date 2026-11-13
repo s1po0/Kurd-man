@@ -23,4 +23,5 @@
     <string name="web_page">پەڕەی %1$d / %2$d</string>
     <string name="web_save">هەناردەکردنی ئەنجام</string>
     <string name="web_cache_full">شوێنی کاشی بەس نییە بۆ ئەم چەپتەرە.</string>
+    <string name="web_capped">هەندێک وێنە بەهۆی سنووری پەڕە پشکنین نەکران.</string>
 </resources>

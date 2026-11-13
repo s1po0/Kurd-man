@@ -23,4 +23,5 @@
     <string name="web_page">الصفحة %1$d / %2$d</string>
     <string name="web_save">تصدير النتيجة</string>
     <string name="web_cache_full">لا توجد مساحة كافية في ذاكرة التخزين المؤقت لهذا الفصل.</string>
+    <string name="web_capped">لم يتم فحص بعض الصور بسبب حد الصفحة.</string>
 </resources>
