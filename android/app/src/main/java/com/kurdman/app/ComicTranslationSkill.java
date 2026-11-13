@@ -380,17 +380,26 @@ public final class ComicTranslationSkill {
     private static final Pattern SYSTEM_FIELD = Pattern.compile(
             "(?im)^[\t ]*(ASPECT DESCRIPTION|ASPECT)[\t ]*[:：][\t ]*");
 
+    private static final Pattern SYSTEM_KEEPER = Pattern.compile("([a-z]{3,24})[\\t ]+keeper",Pattern.CASE_INSENSITIVE);
+    private static final Pattern SPORTS_CONTEXT = Pattern.compile(
+            "\\b(?:football|soccer|hockey|handball|lacrosse|goals?|goalkeepers?|goalkeeping|balls?|teams?|matches|pitch)\\b",
+            Pattern.CASE_INSENSITIVE);
+
     private static final class SystemPart {
         final String label,value;
+        final boolean title;
+        String valuePrefix="";
         int translated=-1;
-        SystemPart(String label,String value){this.label=label;this.value=value;}
+        SystemPart(String label,String value){this(label,value,false);}
+        SystemPart(String label,String value,boolean title){this.label=label;this.value=value;this.title=title;}
     }
 
     /**
      * Two explicit field labels plus independent game-system vocabulary are
      * evidence for a trait panel, not permission to replace ordinary 'aspect'.
-     * Only labels are local. Every nonempty value/body still goes through the
-     * SAME chosen translator, its glossary contracts, bounded context and STOP.
+     * Labels and a conservative, description-supported Keeper role head are
+     * local. Every noun modifier and the complete body still use the SAME
+     * chosen translator, glossary contracts, bounded context and STOP.
      */
     private PageResult translateSystemPanel(List<String> sources,String source,String target,
             boolean offline,Backend backend,Progress progress) throws Exception {
@@ -426,7 +435,7 @@ public final class ComicTranslationSkill {
                     String value=clean(normalized.substring(ends.get(i),i+1<starts.size()?starts.get(i+1):normalized.length()));
                     boolean desc=labels.get(i).equalsIgnoreCase("ASPECT DESCRIPTION");
                     description|=desc;named|=!desc&&!value.isEmpty()&&value.length()<=100;
-                    parts.add(new SystemPart(systemFieldLabel(desc),value));
+                    parts.add(new SystemPart(systemFieldLabel(desc),value,!desc));
                 }
                 // An exact reader-authored whole-block override always wins.
                 for(Entry entry:custom)if(lineKey(entry.source).equals(lineKey(normalized))){
@@ -436,9 +445,13 @@ public final class ComicTranslationSkill {
             blocks.add(parts);
         }
         if(!named||!description)return null;
+        String roleContext=systemRoleContext(blocks,pageText);
         List<String> values=new ArrayList<>();List<Integer> owners=new ArrayList<>();
         for(int i=0;i<blocks.size();i++)for(SystemPart part:blocks.get(i))if(!part.value.isEmpty()){
-            part.translated=values.size();values.add(part.value);owners.add(i);
+            check(progress,0,sources.size());
+            String modifier=part.title?systemKeeperModifier(part.value,roleContext):null;
+            if(modifier!=null)part.valuePrefix="پارێزەری ";
+            part.translated=values.size();values.add(modifier==null?part.value:modifier);owners.add(i);
         }
         final int[] reported={0};
         Progress bounded=(done,total)->{
@@ -459,7 +472,7 @@ public final class ComicTranslationSkill {
                 }
                 if(part.translated>=0){
                     Result value=translated.results.get(part.translated);
-                    if(out.length()>0)out.append(' ');out.append(value.text);
+                    if(out.length()>0)out.append(' ');out.append(part.valuePrefix).append(value.text);
                     warnings=ComicQualityChecks.merge(warnings,value.warnings);method=value.method;
                 }
             }
@@ -471,6 +484,37 @@ public final class ComicTranslationSkill {
             check(progress,reported[0],sources.size());
         }
         return result;
+    }
+
+    /** Only one unambiguous field pair; body evidence never comes from its title. */
+    private static String systemRoleContext(List<List<SystemPart>> blocks,String pageText) {
+        if(SPORTS_CONTEXT.matcher(pageText).find())return "";
+        int titles=0,descriptions=0;
+        boolean inDescription=false;
+        StringBuilder body=new StringBuilder();
+        for(List<SystemPart> block:blocks)for(SystemPart part:block) {
+            if(part.title){titles++;inDescription=false;}
+            else if(!part.label.isEmpty()){descriptions++;inDescription=true;}
+            if(inDescription&&!part.value.isEmpty())body.append(part.value).append(' ');
+        }
+        return titles==1&&descriptions==1?body.toString():"";
+    }
+
+    /**
+     * A description-referenced object + Keeper is a custodian role here, not
+     * an invented goalkeeper. Do not rewrite an arbitrary title or dialogue,
+     * infer a personal name, or override any reader term in that value.
+     * Only a single short English noun and its regular plural are supported;
+     * unsupported/ambiguous forms stay with the selected translator.
+     */
+    private String systemKeeperModifier(String value,String description) {
+        if(description.isEmpty())return null;
+        Matcher keeper=SYSTEM_KEEPER.matcher(value);
+        if(!keeper.matches())return null;
+        for(Entry entry:custom)if(entry.pattern.matcher(value).find())return null;
+        String noun=keeper.group(1);
+        Pattern reference=Pattern.compile("\\b"+Pattern.quote(noun)+"s?\\b",Pattern.CASE_INSENSITIVE);
+        return reference.matcher(description).find()?noun:null;
     }
 
     private String systemFieldLabel(boolean description) {

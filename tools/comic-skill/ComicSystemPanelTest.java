@@ -106,6 +106,14 @@ public final class ComicSystemPanelTest {
                 check(requests.stream().anyMatch(s->s.contains(body)),"Complete original body must reach the selected backend");
                 check(requests.stream().noneMatch(s->s.contains(noun+" Keeper")),"Only a justified role head is local; noun still translated");
             }
+            String body=BODY+" Nearby stones remain still.";
+            String combined=TITLE.toUpperCase(Locale.ROOT)+"\n"+DESCRIPTION+"\n"+body;
+            ComicTranslationSkill.PageResult result=skill(ComicTranslationSkill.Genre.AUTO,"")
+                    .translatePage(Collections.singletonList(combined),"en","ckb",offline,
+                            (text,a,b)->text.replace(body,TARGET).replace("STONE KEEPER","گۆڵپارێزی هەڵە").replace("STONE","بەرد"),null);
+            equal(1,result.results.size(),"Uppercase combined OCR block retains one result");
+            equal("تایبەتمەندی: پارێزەری بەرد وەسفی تایبەتمەندی: "+TARGET,result.results.get(0).text,
+                    "Combined field/body structure supports the same justified role grammar");
         }
         for(String body:new String[]{BODY, BODY+" Nearby stones are used in soccer.",BODY+" Nearby stones cover the goal."}) {
             List<String> requests=new ArrayList<>();
@@ -129,5 +137,22 @@ public final class ComicSystemPanelTest {
         skill(ComicTranslationSkill.Genre.AUTO,"").translatePage(Collections.singletonList("Stone Keeper walks near the stones."),"en","ckb",true,
                 (text,a,b)->{requests.add(text);return text;},null);
         check(requests.stream().anyMatch(s->s.contains("Stone Keeper")),"Ordinary dialogue is never a role field");
+        for(ComicTranslationSkill.Genre genre:new ComicTranslationSkill.Genre[]{ComicTranslationSkill.Genre.EVERYDAY,ComicTranslationSkill.Genre.MARTIAL}) {
+            requests.clear();skill(genre,"").translatePage(Arrays.asList(TITLE,DESCRIPTION,body),"en","ckb",true,
+                    (text,a,b)->{requests.add(text);return text;},null);
+            check(requests.stream().anyMatch(s->s.contains("Stone Keeper")),"Explicit non-fantasy genre disables role grammar");
+        }
+        requests.clear();
+        skill(ComicTranslationSkill.Genre.AUTO,"").translatePage(Arrays.asList(TITLE,DESCRIPTION,body,TITLE,DESCRIPTION,body),"en","ckb",true,
+                (text,a,b)->{requests.add(text);return text;},null);
+        check(requests.stream().anyMatch(s->s.contains("Stone Keeper")),"Ambiguous multiple field pairs must not share inferred role context");
+        requests.clear();
+        skill(ComicTranslationSkill.Genre.AUTO,"").translatePage(Arrays.asList("ASPECT: Shopkeeper",DESCRIPTION,body),"en","ckb",true,
+                (text,a,b)->{requests.add(text);return text;},null);
+        check(requests.stream().anyMatch(s->s.contains("Shopkeeper")),"A word suffix is not the separate Keeper role");
+        requests.clear();
+        new ComicTranslationSkill(new ComicTranslationSkill.Config(false,ComicTranslationSkill.Genre.AUTO,""),lexicon)
+                .translatePage(Arrays.asList(TITLE,DESCRIPTION,body),"en","ckb",true,(text,a,b)->{requests.add(text);return text;},null);
+        check(requests.stream().anyMatch(s->s.contains("Stone Keeper")),"Disabled Skill never applies role grammar");
     }
 }

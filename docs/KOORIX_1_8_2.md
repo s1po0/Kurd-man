@@ -49,11 +49,21 @@ In that narrow context:
 - `Aspect:` → `تایبەتمەندی:`
 - `Aspect Description:` → `وەسفی تایبەتمەندی:`
 
-Only those field labels are local. Names/values and the **complete body** still
-use the reader's same selected online/offline engine, existing terminology,
-quality hints and bounded contextual requests. The body is not hardcoded for a
-chapter, sent to chat, pivoted through the supplied Arabic output or replaced
-with an invented “better model”. Reader glossary/whole-block overrides win.
+Those field labels are local. The installed-APK review also exposed an unrelated
+synthetic title being mistranslated with the sports sense of “Keeper”. A second,
+conservative role guard handles **one** unambiguous title/description pair only:
+for a short `object + Keeper` title, the description must independently mention
+that object (or its regular English plural), with no sports cues and no reader
+term in the title. Only this custodian role head becomes `پارێزەری`; its noun
+modifier still uses the same engine. Unknown forms, unreferenced objects,
+multiple field pairs, sports, ordinary dialogue and reader choices are not
+rewritten. No full synthetic title or supplied chapter title is hardcoded.
+
+Other names/values and the **complete body** still use the reader's same selected
+online/offline engine, existing terminology, quality hints and bounded contextual
+requests. The body is not hardcoded for a chapter, sent to chat, pivoted through
+the supplied Arabic output or replaced with an invented “better model”. Reader
+glossary/whole-block overrides win.
 
 Original block count, ordering and progress are preserved when fields are in
 one OCR block or several. STOP remains checked during planning/requests; no
@@ -163,6 +173,20 @@ hidden network fallback is added for offline. Final script cleanup is unchanged.
   and taps its real DocumentsUI row, obtaining the same selected-URI read grant
   as a normal reader. It does not grant broad media access or change the app.
   This input correction must still pass the hosted end-to-end test.
+- Run **43344151462 / job 131619307783** was the first **successful installed
+  regular APK OCR → selected live MT → rendered public export → native studio**
+  run. All source words and their order survived as one source/target block,
+  real chooser/theme/STOP-protection actions passed, and all 12 named artifacts
+  were hash-verified (`e927e9e0b9a98338927a6a0f5cb16976570e2092`). The actual
+  JPEG/studio/busy/chooser captures were viewed: complete joined white lettering
+  on black, no duplicated smaller text run. **That does not make its meaning
+  perfect:** same-agent review found “Keeper” had the unrelated goalkeeper sense.
+  This candidate was not published/delivered. Baseline **c09bb99**, run
+  **43345791834 / job 131624724682**, then reproduced that wrong-role failure
+  in the actual Java code, while prior 605 comic/51 quality assertions passed.
+  The conservative description-supported role guard, adversarial cases and the
+  stricter real-export fixture check address that observed defect; a new hosted
+  run and visual/meaning review are required, not reuse of the earlier green icon.
 - The actual delivered old 1.8.1 APK was downloaded and independently hash/signature
   verified locally; it passes the old UI gates but **correctly fails** the new
   narration/system-field implementation gate. A stale APK cannot be relabelled

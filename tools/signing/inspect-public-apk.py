@@ -149,7 +149,8 @@ def main():
             assert b'toggleTheme' in dex and b'Lcom/kurdman/app/KoorixDesign;' in dex,'Missing native persistent theme-switch implementation'
             assert b'Lcom/kurdman/app/ThemeTriadAndroidTest;' not in dex,'Theme capture/test harness packaged'
         if args.system_panels:
-            for marker in (b'coveredCandidateLines',b'coveredLine',b'translateSystemPanel',b'comic_system_fields'):
+            for marker in (b'coveredCandidateLines',b'coveredLine',b'translateSystemPanel',b'comic_system_fields',
+                           b'systemRoleContext',b'systemKeeperModifier'):
                 assert marker in dex,'Missing narration/system-field implementation marker'
             assert b'Lcom/kurdman/app/NarrationPanelAndroidTest;' not in dex,'Synthetic OCR regression harness packaged'
         result={'file':path.name,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),'zip_entries':len(names),'signature':signature,'package':package['package'],'version':package['versionName'],'version_code':package['versionCode'],'label':app['label'],'debuggable':False,'no_login_gate_checked':args.no_login,'free_edition_checked':args.free,'test_harness_and_private_recovery_absent':True,'native_contour_classes_checked':args.contours,'native_reading_studio_ui_checked':args.reading_studio,'native_triad_dark_mode_checked':args.triad_theme,'native_ocr_system_fields_checked':args.system_panels}

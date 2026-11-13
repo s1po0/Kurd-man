@@ -36,6 +36,15 @@ class Contracts(unittest.TestCase):
             self.assertNotEqual(expected, driver.words(changed))
         self.assertEqual(expected, driver.words(driver.EXPECTED_SOURCE.upper().replace(":", " : ")))
 
+    def test_fixture_labels_alone_do_not_approve_the_wrong_role_or_lost_inability(self):
+        target="تایبەتمەندی: پارێزەری بەرد وەسفی تایبەتمەندی: هەڵگرەکە ناتوانێت بیانجوڵێنێت."
+        driver.verify_fixture_targets(target)
+        for invalid in (target.replace("پارێزەری بەرد","گۆڵپارێزی بەرد"),
+                        target.replace("ناتوانێت","دەتوانێت"),
+                        target.replace("تایبەتمەندی: پارێزەری بەرد ",""), target+" وەسفی تایبەتمەندی:"):
+            with self.subTest(invalid=invalid), self.assertRaises(AssertionError):
+                driver.verify_fixture_targets(invalid)
+
     def test_media_query_requires_one_exact_public_image_id(self):
         self.assertEqual("content://media/external/images/media/123",
                          driver.media_query_uri("Row: 0 _id=123\n"))

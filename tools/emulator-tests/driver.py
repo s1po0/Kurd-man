@@ -41,6 +41,18 @@ def pairs(text):
     return result
 
 
+def verify_fixture_targets(targets):
+    # This authored fixture has a description-supported custodian, no sports.
+    # Label substrings alone hid an observed goalkeeper mistranslation; these
+    # assertions are fixture contracts, not a general Sorani semantic score.
+    if targets.count("تایبەتمەندی:") != 2 or targets.count("وەسفی تایبەتمەندی:") != 1:
+        raise AssertionError("Expected both distinct guarded field labels exactly once")
+    if "تایبەتمەندی: پارێزەری بەرد" not in targets:
+        raise AssertionError("Description-supported fixture role did not reach real translation/export")
+    if "ناتوان" not in targets:
+        raise AssertionError("The fixture's explicit inability is not present in the Sorani result")
+
+
 def media_query_uri(output):
     # Android14's content insert is silent, even on success. Query only the
     # exact authored image; reject zero/multiple rows or unexpected columns.
@@ -197,8 +209,7 @@ class Device:
         if words(" ".join(source for source, _ in exported)) != words(EXPECTED_SOURCE):
             raise AssertionError("Real OCR omitted, duplicated, reordered or changed synthetic source words")
         targets = " ".join(target for _, target in exported)
-        if "تایبەتمەندی:" not in targets or "وەسفی تایبەتمەندی:" not in targets:
-            raise AssertionError("Guarded field labels did not reach real translation/export")
+        verify_fixture_targets(targets)
         self.report["sourceBlocks"] = len(exported)
         self.report["targetBlocks"] = len(exported)
         self.check("real_ocr_complete_source_no_duplicate_words")
