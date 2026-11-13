@@ -369,7 +369,7 @@ class Device:
                               for x in self.ui().iter("node")), "Synthetic HTTPS image document", timeout=90)
         self.click("webReaderTranslate")
         self.control("workspaceLanguageButton", timeout=150)
-        self.wait(lambda: node(self.ui(), identifier="readWebResultButton"),
+        self.wait(lambda: self.control("statusText").get("text", "").startswith(("Complete;", "Processing finished,")),
                   "Web synthetic image translated into private reader", timeout=300)
         text_item = self.reveal("resultText")
         synthetic_pairs = pairs(text_item.get("text", ""))
