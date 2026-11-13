@@ -314,7 +314,9 @@
     "telegramApkRunId": 43347383485,
     "publicUnauthenticatedDownloadHead": 302,
     "releaseAssetDigestMatchesChatFile": true,
-    "completionNotice": "pending"
+    "completionNotice": "acknowledged",
+    "completionRunId": 43348708339,
+    "completionJobId": 131634239901
   },
   "limitations": {
     "actualSuppliedPageOcrRerun": false,

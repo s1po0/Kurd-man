@@ -232,8 +232,10 @@ Local public-only verification rechecked its complete v2 content digest, RSA3072
 signature/permanent certificate, manifest and implementation/harness exclusions.
 Release asset **741871196** reports the same SHA256; its unauthenticated stable
 URL returned HTTP302. The APK file was presented in chat and Telegram acknowledged
-the actual APK upload. Receipt: `koorix/releases/v1.8.2.json` (completion-message
-acknowledgement is recorded separately after that step, never inferred).
+the actual APK upload. Receipt: `koorix/releases/v1.8.2.json`. Completion run
+**43348708339 / job 131634239901** then passed its delivery/evidence gate and
+Telegram acknowledged the separate **تەواو بووم** message. This acknowledgement
+was observed after the step, not inferred from starting a workflow.
 
 ## Preserved
 
