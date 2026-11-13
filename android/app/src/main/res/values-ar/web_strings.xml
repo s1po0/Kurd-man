@@ -11,6 +11,8 @@
     <string name="web_loading">جارٍ تحميل الصفحة…</string>
     <string name="web_ready">تم تحميل الصفحة. مرّر إذا لزم الأمر، ثم ترجم الصور المتاحة.</string>
     <string name="web_image_loading">جارٍ تحميل الصورة…</string>
+    <string name="web_partial_reader_hint">تظهر الصفحات المكتملة فقط. ارجع وافتح القارئ لرؤية الصفحات الجديدة؛ يتاح التصدير بعد اكتمال المهمة.</string>
+    <string name="web_first_ready">الصفحات الظاهرة جاهزة للقراءة؛ جارٍ تجهيز البقية.</string>
     <string name="web_discover">جارٍ البحث عن الصور…</string>
     <string name="web_capture">جارٍ تجهيز الصورة %1$d / %2$d…</string>
     <string name="web_empty">لم يتم العثور على صور متاحة. مرّر لتحميلها أو جرّب صفحة أخرى.</string>

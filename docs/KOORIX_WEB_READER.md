@@ -21,11 +21,14 @@ been safely copied into the new project.
   canvas, protected resources and some lazy loaders are not supported. Scroll
   first if the site only adds images while scrolling. Some ads or unrelated
   same-origin images can be included. The user is told when images are skipped.
-- Translation occurs after capture via the existing job. Images visible at the
-  time of capture are processed first within each OCR, translation and render
-  phase, while final chapter order stays unchanged. It does **not** yet replace
-  images inside the website, automatically translate while scrolling, or show
-  the first translated page before the whole job completes.
+- Translation occurs after capture via the existing job. The unreleased
+  candidate processes the initially visible pages through OCR, translation and
+  rendering first, then exposes their durable private checkpoints in the native
+  reader while the remaining pages continue. Chapter order is unchanged. A
+  partially opened reader shows only finished pages; reopen it to see new pages,
+  and export is disabled until the whole job completes. This new path still
+  needs Android verification. It does **not** replace images inside the website,
+  translate images added while scrolling, or start before capture finishes.
 - Per-browser-image limit 32 MB, 300 pages, 300 MB aggregate import, and 1 GB
   app-cache budget. Decoding very long images is bounded; no promise of perfect
   layout or legibility for every webtoon. Search and browsing require network;
@@ -62,8 +65,14 @@ resources commonly send a restrictive CSP sandbox, a possible explanation;
 this is not proven by the diagnostic alone. The candidate now explains that the
 page may be protected or unsupported rather than attempting a bypass. The
 updated installed-APK driver tests this explanation and separately attempts a
-generated HTTPS text image; neither new path has yet passed on Android. Passing
-the MDN photograph check is not proof that translated comics, other sites, or
+generated HTTPS text image. Run `43463298444` passed both on the real signed
+APK on API34: the generated text reached OCR and translation, the private
+reader and original toggle worked, and no public file was created automatically.
+It also passed 288 native/JVM tests. Evidence index:
+`c92b3beb4f98c0c96548e740d757a947b48a7cd9`; report:
+`06bc075ed77801c7cecf8becdf09001ff5933bb3`. The visible-first reader changes
+made after that run have not yet been verified on Android. These synthetic
+results do not prove that translated comics, other sites, physical phones, or
 the latest candidate work end-to-end. No 1.8.4 release is authorized by this
 evidence.
 

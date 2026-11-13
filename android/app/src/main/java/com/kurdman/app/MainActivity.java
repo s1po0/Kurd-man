@@ -322,8 +322,8 @@ public class MainActivity extends AppCompatActivity {
         comicControls = new ComicTranslateControls(this, findViewById(android.R.id.content), savedInstanceState);
         findViewById(R.id.resultQualityButton).setOnClickListener(v -> openComicQuality());
         findViewById(R.id.readWebResultButton).setOnClickListener(v -> {
-            TranslationProject project=TranslationProjectStore.load(this);
-            if(project!=null&&project.completed&&project.privateResults&&!JobRuntime.isRunning())
+            TranslationProject project=WebResultActivity.snapshot(TranslationProjectStore.load(this));
+            if(project!=null&&project.privateResults&&!WebResultActivity.readyPages(project).isEmpty())
                 editorLauncher.launch(new Intent(this,WebResultActivity.class).putExtra(WebResultActivity.EXTRA_PROJECT,project.projectDir.getName()));
         });
         offlineModelStatus = findViewById(R.id.offlineModelStatus);
@@ -5319,10 +5319,10 @@ public class MainActivity extends AppCompatActivity {
         ComicTranslationFlow.bindSummary(this, findViewById(android.R.id.content),
                 resultFile != null ? TranslationProjectStore.load(this) : null, busy);
         findViewById(R.id.resultQualityButton).setEnabled(enabled);
-        TranslationProject webProject=BuildConfig.PUBLIC_EDITION?TranslationProjectStore.load(this):null;
+        TranslationProject webProject=BuildConfig.PUBLIC_EDITION?WebResultActivity.snapshot(TranslationProjectStore.load(this)):null;
         View webRead=findViewById(R.id.readWebResultButton);
-        boolean readable=webProject!=null&&webProject.privateResults&&webProject.completed&&webProject.exportsComplete;
-        webRead.setVisibility(readable?View.VISIBLE:View.GONE);webRead.setEnabled(enabled&&readable);
+        boolean readable=webProject!=null&&webProject.privateResults&&!WebResultActivity.readyPages(webProject).isEmpty();
+        webRead.setVisibility(readable?View.VISIBLE:View.GONE);webRead.setEnabled(readable);
         if (accurateOcrCheck != null) {
             accurateOcrCheck.setEnabled(enabled);
         }

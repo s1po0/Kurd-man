@@ -84,12 +84,13 @@ public class CompletedResultUiTest {
         TranslationProject p=project();p.privateResults=true;
         TranslationProject.Page page=new TranslationProject.Page("pages/0002.png",".png");
         ProjectResults.copy(p.pages.get(0).sourceFile(p.projectDir),page.sourceFile(p.projectDir));
-        p.pages.add(page);ProjectResults.copy(SavedJobPipeline.renderedPage(p,0),SavedJobPipeline.renderedPage(p,1));p.save();
+        p.pages.add(page);ProjectResults.copy(SavedJobPipeline.renderedPage(p,0),SavedJobPipeline.renderedPage(p,1));page.renderComplete=true;p.save();
         Intent intent=new Intent(app,WebResultActivity.class).putExtra(WebResultActivity.EXTRA_PROJECT,p.projectDir.getName());
         ActivityController<WebResultActivity> reader=Robolectric.buildActivity(WebResultActivity.class,intent).setup();
         try {
             ExecutorService worker=ReflectionHelpers.getField(reader.get(),"decoder");worker.submit(()->{}).get(15,TimeUnit.SECONDS);shadowOf(Looper.getMainLooper()).idle();
             assertNotNull(((ImageView)reader.get().findViewById(R.id.webResultImage)).getDrawable());
+            assertEquals(reader.get().getString(R.string.web_next),reader.get().findViewById(R.id.webResultNext).getContentDescription());
             reader.get().findViewById(R.id.webResultNext).performClick();
             reader.get().findViewById(R.id.webResultToggle).performClick();
             worker.submit(()->{}).get(15,TimeUnit.SECONDS);shadowOf(Looper.getMainLooper()).idle();
@@ -99,6 +100,25 @@ public class CompletedResultUiTest {
             assertEquals(android.app.Activity.RESULT_OK,shadowOf(reader.get()).getResultCode());
             assertTrue(shadowOf(reader.get()).getResultIntent().getBooleanExtra(EditorActivity.EXTRA_EXPORT,false));
         } finally {reader.pause().stop().destroy();}
+    }
+    @Test public void unfinishedPrivateReaderOnlyShowsDurablePagesAndCannotExport() throws Exception {
+        TranslationProject p=project();p.privateResults=true;p.completed=false;p.exportsComplete=false;
+        TranslationProject.Page pending=new TranslationProject.Page("pages/0002.png",".png");
+        ProjectResults.copy(p.pages.get(0).sourceFile(p.projectDir),pending.sourceFile(p.projectDir));p.pages.add(pending);p.save();
+        assertTrue(JobRuntime.tryBeginJob());
+        SavedJobCoordinator.Listener listener=ReflectionHelpers.getField(main.get(),"savedJobListener");listener.changed(p,"Working",true);
+        View read=main.get().findViewById(R.id.readWebResultButton);assertEquals(View.VISIBLE,read.getVisibility());assertTrue(read.isEnabled());
+        assertEquals(java.util.Arrays.asList(0),WebResultActivity.readyPages(p));
+        TranslationProject snapshot=WebResultActivity.snapshot(p);assertNotSame(p,snapshot);
+        p.pages.get(0).renderComplete=false;
+        assertEquals(java.util.Arrays.asList(0),WebResultActivity.readyPages(WebResultActivity.snapshot(p)));
+        p.pages.get(0).renderComplete=true;
+        Intent intent=new Intent(app,WebResultActivity.class).putExtra(WebResultActivity.EXTRA_PROJECT,p.projectDir.getName());
+        ActivityController<WebResultActivity> reader=Robolectric.buildActivity(WebResultActivity.class,intent).setup();
+        try {
+            assertFalse(reader.get().findViewById(R.id.webResultNext).isEnabled());
+            assertFalse(reader.get().findViewById(R.id.webResultExport).isEnabled());
+        } finally {reader.pause().stop().destroy();JobRuntime.endJob();}
     }
     @Test public void aRealSelectedSourcePreviewIsNotCoveredByTheEmptyBookEither() {
         MainActivity a=main.get();

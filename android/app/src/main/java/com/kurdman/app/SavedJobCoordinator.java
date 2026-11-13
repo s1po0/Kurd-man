@@ -38,6 +38,19 @@ final class SavedJobCoordinator {
                 if(!TranslationProjectStore.hasSources(project))throw new IOException("Saved source is missing");
                 ManhwaRenderer.i18nContext=context;ManhwaRenderer.activeTargetLanguage=project.targetLanguage;
                 SavedJobPipeline.Progress progress=(phase,page,total)->status(context,context.getString(phase==0?R.string.rel_ocr_progress:phase==1?R.string.rel_translate_progress:R.string.rel_render_progress,page,total));
+                // A visible browser page can complete before the rest of the
+                // chapter. Preserve chapter order and the same durable page
+                // checkpoints; ordinary file/CBZ jobs retain three phases.
+                List<Integer> visible=SavedJobPipeline.visibleWebOrder(project);
+                if(!visible.isEmpty()) {
+                    SavedJobPipeline.ocr(project,backend,progress,visible);
+                    int visibleSegments=0;for(int i:visible)visibleSegments+=project.pages.get(i).segments.size();
+                    if(visibleSegments>0) {
+                        SavedJobPipeline.translate(project,backend,progress,visible);
+                        SavedJobPipeline.render(project,backend,progress,visible);
+                        status(context,context.getString(R.string.web_first_ready));
+                    }
+                }
                 SavedJobPipeline.ocr(project,backend,progress);
                 if(project.totalSegments()==0){for(TranslationProject.Page page:project.pages)if(!page.unreadable){page.ocrComplete=false;page.translationComplete=false;}project.autoResume=false;project.save();throw new NoText();}
                 if(SavedJobPipeline.needsTranslation(project)) {

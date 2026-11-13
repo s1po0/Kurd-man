@@ -42,6 +42,17 @@ public class SavedJobPipelineTest {
         String before=ProjectResults.binding(saved);saved.pages.get(1).webPriority=false;assertEquals(before,ProjectResults.binding(saved));
         saved.privateResults=false;saved.pages.get(2).webPriority=true;assertEquals(Arrays.asList(0,1,2),SavedJobPipeline.workOrder(saved));
     }
+    @Test public void visibleBrowserCheckpointCanFinishBeforeOtherPagesAndResume()throws Exception{
+        TranslationProject p=sample(3);p.privateResults=true;p.pages.get(1).webPriority=true;p.save();
+        Fake first=new Fake();List<Integer> visible=SavedJobPipeline.visibleWebOrder(p);assertEquals(Arrays.asList(1),visible);
+        SavedJobPipeline.ocr(p,first,progress,visible);SavedJobPipeline.translate(p,first,progress,visible);SavedJobPipeline.render(p,first,progress,visible);
+        assertFalse(p.pages.get(0).ocrComplete);assertTrue(p.pages.get(1).renderComplete);assertFalse(p.pages.get(2).ocrComplete);
+        assertTrue(SavedJobPipeline.renderedPage(p,1).isFile());assertFalse(SavedJobPipeline.renderedPage(p,0).isFile());
+        TranslationProject saved=TranslationProject.load(p.projectDir);Fake rest=new Fake();
+        SavedJobPipeline.ocr(saved,rest,progress);SavedJobPipeline.translate(saved,rest,progress);SavedJobPipeline.render(saved,rest,progress);
+        assertEquals(2,rest.ocr);assertEquals(2,rest.translations);assertEquals(2,rest.renders);
+        assertEquals("pages/0002.png",saved.pages.get(1).sourcePath);
+    }
     @Test public void emptyOcrDoesNotCallATranslator()throws Exception{TranslationProject p=sample(1);Fake backend=new Fake();backend.empty=true;SavedJobPipeline.ocr(p,backend,progress);assertEquals(0,p.totalSegments());assertFalse(SavedJobPipeline.needsTranslation(p));SavedJobPipeline.translate(p,backend,progress);assertEquals(0,backend.translations);}
     @Test public void renderedPageCheckpointIsNotRenderedTwice()throws Exception{TranslationProject p=sample(1);Fake backend=new Fake();SavedJobPipeline.ocr(p,backend,progress);SavedJobPipeline.translate(p,backend,progress);SavedJobPipeline.render(p,backend,progress);assertTrue(p.pages.get(0).layoutPrepared);assertEquals(1,backend.renders);TranslationProject saved=TranslationProject.load(p.projectDir);Fake replacement=new Fake();SavedJobPipeline.render(saved,replacement,progress);assertEquals(0,replacement.renders);assertTrue(SavedJobPipeline.renderedPage(saved,0).isFile());}
     @Test public void missingRenderCacheDoesNotRequireAnotherTranslation()throws Exception{TranslationProject p=sample(1);Fake backend=new Fake();SavedJobPipeline.ocr(p,backend,progress);SavedJobPipeline.translate(p,backend,progress);SavedJobPipeline.render(p,backend,progress);assertTrue(SavedJobPipeline.renderedPage(p,0).delete());Fake next=new Fake();SavedJobPipeline.translate(p,next,progress);SavedJobPipeline.render(p,next,progress);assertEquals(0,next.translations);assertEquals(1,next.renders);}
