@@ -1,11 +1,7 @@
 {
   "session": "koorix-regular-182-observe-1",
-  "sequence": 6,
-  "action": "swipe",
-  "expectedFrame": "37f483749e985a3420cf19c4ee1f1ec73d08aa15c4870ff4d3501b1ff3330b10",
-  "x": 540,
-  "y": 1460,
-  "toX": 540,
-  "toY": 600,
-  "durationMs": 350
+  "sequence": 7,
+  "action": "tap_id",
+  "expectedFrame": "ab7f489e61326323676920a8ded23a23ec9fc9615ed3b92ef37e75885239a2da",
+  "id": "navTranslateButton"
 }
