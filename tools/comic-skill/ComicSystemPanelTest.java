@@ -80,6 +80,54 @@ public final class ComicSystemPanelTest {
         reused.translatePage(Arrays.asList(TITLE,DESCRIPTION,BODY),"en","ckb",true,normal(new ArrayList<>()),null);
         sent.clear();reused.translatePage(Collections.singletonList("A new aspect of everyday life."),"en","ckb",true,normal(sent),null);
         equal(Collections.singletonList("A new aspect of everyday life."),sent,"Panel context never leaks to a later page");
+        keeperRoleContracts();
         System.out.println("Comic system fields: "+checks+" synthetic terminology/boundary assertions passed; NOT a general meaning benchmark.");
+    }
+
+    private static void keeperRoleContracts() throws Exception {
+        // Real installed-APK run 43344151462 exposed the sports sense of Keeper.
+        // Exercise a general guarded role pattern, not a hardcoded full title.
+        for(boolean offline:new boolean[]{true,false}) {
+            for(String noun:new String[]{"Stone","Gate"}) {
+                String body=BODY+" Nearby "+noun.toLowerCase(Locale.ROOT)+"s remain still.";
+                List<String> requests=new ArrayList<>();
+                ComicTranslationSkill.Backend backend=(text,source,target)->{
+                    requests.add(text);
+                    return text.replace(body,TARGET).replace(noun+" Keeper","گۆڵپارێزی هەڵە")
+                            .replace(noun,noun.equals("Stone")?"بەرد":"دەروازە");
+                };
+                List<String> input=Arrays.asList("ASPECT: "+noun+" Keeper",DESCRIPTION,body);
+                ComicTranslationSkill.PageResult result=skill(ComicTranslationSkill.Genre.AUTO,"")
+                        .translatePage(input,"en","ckb",offline,backend,null);
+                equal("تایبەتمەندی: پارێزەری "+(noun.equals("Stone")?"بەرد":"دەروازە"),
+                        result.results.get(0).text,"Referenced fantasy role is not a football goalkeeper");
+                equal(TARGET,result.results.get(2).text,"Entire description still uses the same engine");
+                equal(3,result.results.size(),"Role planning does not change source/result identity");
+                check(requests.stream().anyMatch(s->s.contains(body)),"Complete original body must reach the selected backend");
+                check(requests.stream().noneMatch(s->s.contains(noun+" Keeper")),"Only a justified role head is local; noun still translated");
+            }
+        }
+        for(String body:new String[]{BODY, BODY+" Nearby stones are used in soccer.",BODY+" Nearby stones cover the goal."}) {
+            List<String> requests=new ArrayList<>();
+            skill(ComicTranslationSkill.Genre.AUTO,"").translatePage(Arrays.asList(TITLE,DESCRIPTION,body),"en","ckb",true,
+                    (text,a,b)->{requests.add(text);return text;},null);
+            check(requests.stream().anyMatch(s->s.contains("Stone Keeper")),"Unreferenced/sports role stays with the engine");
+        }
+        String body=BODY+" Nearby stones remain still.";
+        ComicTranslationSkill.PageResult custom=skill(ComicTranslationSkill.Genre.AUTO,"Stone Keeper = ناوی خوێنەر")
+                .translatePage(Arrays.asList(TITLE,DESCRIPTION,body),"en","ckb",true,(text,a,b)->text,null);
+        equal("تایبەتمەندی: ناوی خوێنەر",custom.results.get(0).text,"Reader whole-title spelling wins over role grammar");
+        custom=skill(ComicTranslationSkill.Genre.AUTO,"Keeper = سەرپەرشتیار")
+                .translatePage(Arrays.asList(TITLE,DESCRIPTION,body),"en","ckb",true,(text,a,b)->text,null);
+        check(custom.results.get(0).text.contains("سەرپەرشتیار")&&!custom.results.get(0).text.contains("پارێزەری"),
+                "Reader role choice wins over built-in grammar");
+        List<String> requests=new ArrayList<>();
+        skill(ComicTranslationSkill.Genre.AUTO,"").translatePage(Arrays.asList(TITLE,DESCRIPTION,body),"en","ar",true,
+                (text,a,b)->{requests.add(text);return text;},null);
+        check(requests.stream().anyMatch(s->s.contains("Stone Keeper")),"Role grammar never forces Sorani into another target");
+        requests.clear();
+        skill(ComicTranslationSkill.Genre.AUTO,"").translatePage(Collections.singletonList("Stone Keeper walks near the stones."),"en","ckb",true,
+                (text,a,b)->{requests.add(text);return text;},null);
+        check(requests.stream().anyMatch(s->s.contains("Stone Keeper")),"Ordinary dialogue is never a role field");
     }
 }
