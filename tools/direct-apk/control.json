@@ -1,7 +1,8 @@
 {
   "session": "koorix-regular-182-observe-1",
-  "sequence": 16,
-  "action": "tap_id",
-  "expectedFrame": "343f4d9266cb7ccb0511867854a0b92599590a3e619f2f194a4fc120b509c4f6",
-  "id": "editorSectionStyleButton"
+  "sequence": 17,
+  "action": "tap",
+  "expectedFrame": "6bc32a00d7bf255310143218b425dc55a781109d749f5e1eda15ff5cb1019e48",
+  "x": 194,
+  "y": 1423
 }
