@@ -337,7 +337,6 @@ class Device:
         self.control("webReaderAddress", enabled=True)
         self.click("webReaderAddress")
         self.shell("input", "text", "https://mdn.github.io/dom-examples/history-api/index.html")
-        self.shell("input", "keyevent", "4")  # dismiss keyboard
         self.click("webReaderGo")
         self.wait(lambda: any("Let's look at some creatures" in x.get("text", "")
                               for x in self.ui().iter("node")), "MDN example page loaded", timeout=90)

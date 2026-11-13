@@ -83,7 +83,10 @@ public final class WebReaderActivity extends AppCompatActivity {
         else if(text.contains("://")){status.setText(R.string.web_invalid);return;}
         else if(!text.contains(" ")&&text.contains("."))url="https://"+text;
         else url="https://www.google.com/search?q="+Uri.encode(text);
-        if(!secureUrl(url)){status.setText(R.string.web_invalid);return;}web.loadUrl(url);
+        if(!secureUrl(url)){status.setText(R.string.web_invalid);return;}
+        android.view.inputmethod.InputMethodManager keyboard=(android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);
+        if(keyboard!=null)keyboard.hideSoftInputFromWindow(address.getWindowToken(),0);
+        address.clearFocus();web.loadUrl(url);
     }
     private void beginCapture(){if(capturing||!secureUrl(web.getUrl())){status.setText(R.string.web_invalid);return;}
         topUrl=web.getUrl();int token=++epoch;capturing=true;translate.setEnabled(false);stop.setEnabled(true);status.setText(R.string.web_discover);
