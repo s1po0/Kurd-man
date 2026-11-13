@@ -160,7 +160,7 @@ class Device:
         self.wait(lambda: self.control("quickThemeButton").get("content-desc") == expected,
                   "Native theme action did not change", timeout=30)
 
-    def import_source(self):
+    def publish_source(self):
         query = ("content", "query", "--uri", "content://media/external/images/media", "--projection", "_id",
                  "--where", "_display_name='koorix-qa-source.png' AND relative_path='Pictures/Koorix-QA/' AND mime_type='image/png'")
         before = self.shell(*query, include_stderr=True)
@@ -179,10 +179,7 @@ class Device:
         if hashlib.sha256(source).digest() != hashlib.sha256(written).digest():
             raise AssertionError("Synthetic public MediaStore bytes differ from the authored PNG")
         self.check("synthetic_media_bytes_verified")
-        self.shell("am", "start", "-W", "-n", COMPONENT, "-a", "android.intent.action.SEND", "-t", "image/png",
-                   "--eu", "android.intent.extra.STREAM", uri, "--grant-read-uri-permission", timeout=60)
-        self.control("translateButton", enabled=True)
-        self.check("ordinary_media_share_import")
+        return uri
 
     def products(self):
         listing = self.shell("ls", "-1", "/sdcard/Download/Koorix")
@@ -241,6 +238,11 @@ class Device:
             raise AssertionError("Actual process relaunch lost the selected theme")
         self.check("native_theme_switch_and_process_relaunch_persistence")
         self.theme(False)
+        # Publish before opening Recent so DocumentsUI offers the authored file.
+        # An adb am SEND extra is not a normal app share: its URI lacks the
+        # framework's Extra.STREAM -> ClipData migration and actual read grant.
+        # Select through the owner's one real GET_CONTENT input instead.
+        self.publish_source()
         self.click("pickButton")
         def chooser():
             root = self.ui()
@@ -251,10 +253,12 @@ class Device:
             return root if foreground and system_ui else None
         self.wait(chooser, "Actual foreground system source chooser")
         self.capture("source-chooser.png")
-        self.shell("input", "keyevent", "4")
-        self.control("workspaceLanguageButton")
         self.check("one_original_system_source_chooser")
-        self.import_source()
+        selected = self.wait(lambda: node(self.ui(), text="koorix-qa-source.png"),
+                             "Authored source visible in the actual system chooser")
+        self.tap(selected)
+        self.control("translateButton", enabled=True)
+        self.check("ordinary_system_chooser_image_import")
         self.capture("source-selected.png")
         self.click("translateButton")
         # The busy frame may be too brief on a fast machine. Never fabricate it.

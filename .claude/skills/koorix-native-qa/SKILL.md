@@ -47,9 +47,10 @@ reason to add another paid/network/model route.
    verified, non-debuggable, ARM64 regular APK** that will be delivered.
    No alternate application, debug variant, fake translation backend, secret key,
    native-library substitution, run-as or app-private file bypass is allowed.
-5. The driver uses public UI/resource IDs and ordinary MediaStore/share/export
-   paths: real theme/language/chooser actions, authored synthetic PNG, normal
-   Translate, bundled real OCR, the app's existing chosen online translator,
+5. The driver uses public UI/resource IDs and ordinary MediaStore/chooser/export
+   paths: real theme/language actions, authored synthetic PNG selected through
+   the original GET_CONTENT chooser and its actual read grant, normal Translate,
+   bundled real OCR, the app's existing chosen online translator,
    actual render/export/studio. No reader image/dialogue is uploaded to CI.
    External translator availability is an observed dependency, not a paid API or
    hidden fallback. Never turn an unavailable/failed live test into a pass.

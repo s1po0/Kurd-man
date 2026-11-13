@@ -51,7 +51,6 @@ class Contracts(unittest.TestCase):
                 super().__init__(output)
                 self.queries = 0
                 self.written = None
-                self.shared = None
 
             def shell(self, *args, data=None, **kwargs):
                 if args[:2] == ("content", "query"):
@@ -61,17 +60,13 @@ class Contracts(unittest.TestCase):
                     return ""  # Actual Android14 Content.InsertCommand does not print the URI.
                 if args[:2] == ("content", "write"):
                     self.written = (args[-1], data)
-                if args[:2] == ("am", "start"):
-                    self.shared = args
-                return ""
+                    return ""
+                raise AssertionError("Fixture publication must not launch/share into the app")
 
             def adb(self, *args, **kwargs):
                 if args[:3] == ("exec-out", "content", "read"):
                     return (self.output / "synthetic-source.png").read_bytes()
                 raise AssertionError("Unexpected ADB command")
-
-            def control(self, identifier, **kwargs):
-                self.asserted_control = identifier
 
             def check(self, code):
                 self.report["checks"].append(code)  # Never emit REAL_APK notices from this mock.
@@ -81,27 +76,23 @@ class Contracts(unittest.TestCase):
             source = b"\x89PNG\r\n\x1a\n" + b"synthetic" * 30
             (output / "synthetic-source.png").write_bytes(source)
             device = SyntheticDevice(output)
-            device.import_source()
+            self.assertEqual("content://media/external/images/media/123", device.publish_source())
             self.assertEqual(2, device.queries)
             self.assertEqual(("content://media/external/images/media/123", source), device.written)
-            self.assertIn("content://media/external/images/media/123", device.shared)
-            self.assertEqual("translateButton", device.asserted_control)
             self.assertIn("synthetic_media_bytes_verified", device.report["checks"])
 
             stale = SyntheticDevice(output)
             stale.queries = 1
             with self.assertRaisesRegex(RuntimeError, "not empty"):
-                stale.import_source()
+                stale.publish_source()
             self.assertIsNone(stale.written)
-            self.assertIsNone(stale.shared)
 
             class CorruptedDevice(SyntheticDevice):
                 def adb(self, *args, **kwargs):
                     return b"different public image bytes"
             corrupted = CorruptedDevice(output)
             with self.assertRaisesRegex(AssertionError, "bytes differ"):
-                corrupted.import_source()
-            self.assertIsNone(corrupted.shared)
+                corrupted.publish_source()
             self.assertNotIn("synthetic_media_bytes_verified", corrupted.report["checks"])
 
     def test_focus_accepts_real_system_pick_activity_not_activity_history(self):

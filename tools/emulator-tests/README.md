@@ -19,9 +19,11 @@ After all existing native/unit/free/signature gates, the production workflow:
 5. Uses ADB public UI actions (resource-ID XML, actual screen coordinates), a new
    empty emulator, no accounts and a fixed authored panel generated with Java AWT.
 6. Switches UI language and Light/Dark; restarts the process to verify persistence;
-   opens the original system source chooser. Installed OEM apps are not inferred.
-7. Shares the synthetic MediaStore image into the app, taps normal **Translate**,
-   waits for real bundled ML Kit OCR / existing online translation / render/export,
+   publishes the authored PNG into public MediaStore, opens the original unified
+   source chooser and selects that exact file through real DocumentsUI. Installed
+   OEM apps are not inferred; no shell-only intent is treated as a granted share.
+7. Taps normal **Translate**, waits for real bundled ML Kit OCR / existing online
+   translation / render/export,
    checks every source word/order and guarded field labels in the public output,
    and opens the actual saved result in the native studio.
 8. Checks for an observed app crash, captures genuine emulator screenshots and
@@ -53,8 +55,11 @@ silent. Do not require a printed URI or infer failure from an empty stdout.
 The driver first requires no matching fixture row, inserts the authored image,
 then queries its exact name/path/MIME and requires exactly one positive `_id`.
 Only the public external image collection is used. It writes the PNG and verifies
-its public readback SHA256 before sharing. Multiple/stale rows, errors or altered
-bytes fail; offline mocks of these contracts emit no actual-APK pass notices.
+its public readback SHA256 before opening the real chooser. Multiple/stale rows,
+errors or altered bytes fail; offline mocks of these contracts emit no actual-APK
+pass notices. The earlier ADB SEND-extra setup produced an actual no-read-access
+error, not a valid app-to-app URI grant; the current run selects through the
+ordinary GET_CONTENT result and its real provider grant instead.
 The driver has a 15-minute total budget, and emulator shutdown is bounded so a
 failed test can reach the always-run evidence collector. These are QA changes,
 not an alternate application or proof that the hosted runtime passed.

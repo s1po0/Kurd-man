@@ -91,7 +91,7 @@ hidden network fallback is added for offline. Final script cleanup is unchanged.
   contradictory OCR is not repaired by guessing. These regressions block release.
 - `tools/emulator-tests/` adds a fail-closed **actual installed APK** check on an
   empty official API34 CI emulator (ARM64 native bridge required). It uses the
-  exact normal signed release APK, public UI/MediaStore/share/export/studio and
+  exact normal signed release APK, public UI/MediaStore/chooser/export/studio and
   an unrelated authored PNG, real bundled OCR and selected translator. No test
   variant, reader page, private app-storage bypass or source substitution. Only
   named synthetic captures/exports may leave CI. Signing plaintext is removed
@@ -135,16 +135,34 @@ hidden network fallback is added for offline. Final script cleanup is unchanged.
   XML rather than polluting the user's synthetic file list. Partial report:
   `db98acf5ed541187941cde3b713feabce18b253e`. No OCR/MT success was claimed for
   this aborted input-setup run.
+- Run **43337378843 / job 131596884913** passed the corrected actual
+  DocumentsUI foreground check and captured the real unified chooser without a
+  public XML file. It then confirmed the original empty-output MediaStore setup
+  error, **before OCR/MT**, and an unbounded emulator shutdown delayed collection
+  until the 40-minute job limit. The eventual hash-verified partial report is
+  `9dc16662ec95e6b24f2649d6283372ffeb5f93f4`; the actual chooser and failure
+  screenshots were viewed. All 226 native/JVM regressions still passed. The run
+  did not publish/deliver anything and is not an end-to-end pass.
 - A subsequent source review of official Android14 `Content.InsertCommand`
   showed that `content insert` **does not print its returned URI** even when
   successful. Accepting another volume spelling was insufficient for that real
   shell behavior. The synthetic setup now queries the exact authored fixture's
   public name/path/MIME, requires one positive image ID with no pre-existing
-  fixture, and verifies PNG readback bytes before sharing. Local regression
+  fixture, and verifies PNG readback bytes before selection. Local regression
   reproduces the earlier empty-output failure and rejects stale/multiple rows
   or corrupted bytes. This is a QA input-setup correction, **not** a replacement
   OCR source or proof of a completed hosted translation. A total driver budget
   and bounded emulator shutdown preserve failure evidence rather than hanging.
+- Run **43341332890 / job 131614563311** validated the real public MediaStore
+  write/readback and reached the app, but the shell SEND-extra path lacked a real
+  app-readable URI grant. The viewed actual failure screenshot explicitly reports
+  no access to that synthetic URI; it is not OCR/translation evidence. Its verified
+  partial report is `03accc19760af30b88937e89b6ccb3cd8ce9695c`. Shutdown now
+  finished within the bounded test, and all 226 native/JVM tests passed again.
+  The driver now publishes the fixture **before opening the original chooser**
+  and taps its real DocumentsUI row, obtaining the same selected-URI read grant
+  as a normal reader. It does not grant broad media access or change the app.
+  This input correction must still pass the hosted end-to-end test.
 - The actual delivered old 1.8.1 APK was downloaded and independently hash/signature
   verified locally; it passes the old UI gates but **correctly fails** the new
   narration/system-field implementation gate. A stale APK cannot be relabelled
