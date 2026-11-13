@@ -340,8 +340,9 @@ class Device:
         self.click("webReaderGo")
         self.wait(lambda: any("Let's look at some creatures" in x.get("text", "")
                               for x in self.ui().iter("node")), "MDN example page loaded", timeout=90)
+        web_translate = self.control("webReaderTranslate", enabled=True)
         self.capture("web-browser.png")
-        self.click("webReaderTranslate")
+        self.tap(web_translate)
         self.control("workspaceLanguageButton", timeout=150)
         self.wait(lambda: "No clear text found" in self.control("statusText").get("text", ""),
                   "Web image reached OCR and completed with no synthetic dialogue", timeout=180)
@@ -496,6 +497,15 @@ def main():
             focus = device.shell("dumpsys", "window")
             device.report["focusedWindow"] = next((line.strip()[:300] for line in focus.splitlines()
                                                       if "mCurrentFocus=" in line), "unavailable")
+        except Exception:
+            pass
+        try:
+            # Empty CI emulator only. AndroidRuntime crash lines are retained
+            # for app failure diagnosis, not arbitrary page/network logs.
+            crash = device.shell("logcat", "-d", "-t", "2000", "-s", "AndroidRuntime:E", timeout=30)
+            lines = [line[:500] for line in crash.splitlines() if "AndroidRuntime" in line]
+            if lines:
+                device.report["androidRuntimeTail"] = lines[-20:]
         except Exception:
             pass
         try:

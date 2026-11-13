@@ -36,11 +36,11 @@ public final class WebResultActivity extends AppCompatActivity {
         LinearLayout navigation=new LinearLayout(this);previous=button(R.string.web_previous);next=button(R.string.web_next);next.setId(R.id.webResultNext);label=new TextView(this);label.setId(R.id.webResultPageLabel);label.setTextColor(getColor(R.color.text_primary));label.setGravity(android.view.Gravity.CENTER);label.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         navigation.addView(previous);navigation.addView(label,new LinearLayout.LayoutParams(0,-2,1));navigation.addView(next);root.addView(navigation);
         scroll=new ScrollView(this);image=new ImageView(this);image.setId(R.id.webResultImage);image.setAdjustViewBounds(true);image.setScaleType(ImageView.ScaleType.FIT_CENTER);image.setContentDescription(getString(R.string.ux_result_preview));scroll.addView(image,new ScrollView.LayoutParams(-1,-2));root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        LinearLayout actions=new LinearLayout(this);toggle=button(R.string.web_original);toggle.setId(R.id.webResultToggle);Button export=button(R.string.web_save);export.setId(R.id.webResultExport);actions.addView(toggle,new LinearLayout.LayoutParams(0,-2,1));actions.addView(export,new LinearLayout.LayoutParams(0,-2,1));root.addView(actions);setContentView(root);
+        LinearLayout actions=new LinearLayout(this);toggle=button(R.string.web_original);toggle.setId(R.id.webResultToggle);Button export=button(R.string.web_save);KoorixDesign.primary(export,true);export.setId(R.id.webResultExport);actions.addView(toggle,new LinearLayout.LayoutParams(0,-2,1));actions.addView(export,new LinearLayout.LayoutParams(0,-2,1));root.addView(actions);setContentView(root);
         previous.setOnClickListener(v->{if(page>0){page--;show();}});next.setOnClickListener(v->{if(page+1<project.pages.size()){page++;show();}});
         toggle.setOnClickListener(v->{original=!original;show();});export.setOnClickListener(v->{setResult(RESULT_OK,new Intent().putExtra(EditorActivity.EXTRA_EXPORT,true));finish();});show();
     }
-    private Button button(int text){Button b=new Button(this);b.setText(text);b.setMinHeight(KoorixDesign.dp(this,48));return b;}
+    private Button button(int text){Button b=new Button(this);b.setText(text);b.setTypeface(KoorixDesign.font(this,true));KoorixDesign.primary(b,false);return b;}
     private void show(){
         final File file=original?project.pages.get(page).sourceFile(project.projectDir):SavedJobPipeline.renderedPage(project,page);
         final int request=++generation;

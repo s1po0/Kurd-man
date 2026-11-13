@@ -55,11 +55,11 @@ public final class WebReaderActivity extends AppCompatActivity {
         catch(Exception failure){finish();return;}
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(getColor(R.color.page));
         LinearLayout bar=new LinearLayout(this);bar.setOrientation(LinearLayout.HORIZONTAL);
-        Button back=button(R.string.web_back);back.setOnClickListener(v->{if(web.canGoBack())web.goBack();else finish();});bar.addView(back);
-        Button forward=button(R.string.web_forward);forward.setOnClickListener(v->{if(web.canGoForward())web.goForward();});bar.addView(forward);
+        Button back=button(R.string.web_back);KoorixDesign.icon(back,R.drawable.ic_ui_back,R.string.web_back);back.setOnClickListener(v->{if(web.canGoBack())web.goBack();else finish();});bar.addView(back,new LinearLayout.LayoutParams(KoorixDesign.dp(this,48),-2));
+        Button forward=button(R.string.web_forward);KoorixDesign.icon(forward,R.drawable.ic_ui_chevron_next,R.string.web_forward);forward.setOnClickListener(v->{if(web.canGoForward())web.goForward();});bar.addView(forward,new LinearLayout.LayoutParams(KoorixDesign.dp(this,48),-2));
         address=new EditText(this);address.setId(R.id.webReaderAddress);address.setSingleLine(true);address.setHint(R.string.web_address);address.setTextDirection(View.TEXT_DIRECTION_LTR);address.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_URI);address.setImeOptions(EditorInfo.IME_ACTION_GO);
         bar.addView(address,new LinearLayout.LayoutParams(0,-2,1));
-        Button go=button(R.string.web_go);go.setId(R.id.webReaderGo);go.setOnClickListener(v->open());bar.addView(go);
+        Button go=button(R.string.web_go);KoorixDesign.primary(go,true);go.setId(R.id.webReaderGo);go.setOnClickListener(v->open());bar.addView(go);
         address.setOnEditorActionListener((v,id,event)->{if(id==EditorInfo.IME_ACTION_GO){open();return true;}return false;});root.addView(bar);
         status=new TextView(this);status.setId(R.id.webReaderStatus);status.setText(R.string.web_hint);status.setTextColor(getColor(R.color.text_secondary));status.setPadding(12,8,12,8);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);root.addView(status);
         web=new WebView(this);WebSettings settings=web.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(true);settings.setAllowFileAccess(false);settings.setAllowContentAccess(false);settings.setJavaScriptCanOpenWindowsAutomatically(false);settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);settings.setSupportMultipleWindows(false);settings.setSafeBrowsingEnabled(true);
@@ -70,11 +70,11 @@ public final class WebReaderActivity extends AppCompatActivity {
         });
         root.addView(web,new LinearLayout.LayoutParams(-1,0,1));
         LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.HORIZONTAL);
-        translate=button(R.string.web_translate);translate.setId(R.id.webReaderTranslate);translate.setOnClickListener(v->beginCapture());actions.addView(translate,new LinearLayout.LayoutParams(0,-2,1));
+        translate=button(R.string.web_translate);KoorixDesign.primary(translate,true);translate.setId(R.id.webReaderTranslate);translate.setOnClickListener(v->beginCapture());actions.addView(translate,new LinearLayout.LayoutParams(0,-2,1));
         stop=button(R.string.web_stop);stop.setId(R.id.webReaderStop);stop.setEnabled(false);stop.setOnClickListener(v->cancelCapture());actions.addView(stop);
         root.addView(actions);setContentView(root);
     }
-    private Button button(int label){Button b=new Button(this);b.setText(label);b.setMinHeight(KoorixDesign.dp(this,48));return b;}
+    private Button button(int label){Button b=new Button(this);b.setText(label);b.setTypeface(KoorixDesign.font(this,true));KoorixDesign.primary(b,false);return b;}
     private String asset(String name) throws Exception {try(InputStream in=getAssets().open(name);java.io.ByteArrayOutputStream bytes=new java.io.ByteArrayOutputStream()){byte[] b=new byte[4096];int n;while((n=in.read(b))!=-1)bytes.write(b,0,n);return bytes.toString(StandardCharsets.UTF_8.name());}}
     static boolean secureUrl(String value){try{Uri u=Uri.parse(value);return "https".equalsIgnoreCase(u.getScheme())&&u.getHost()!=null&&!u.getHost().isEmpty()&&u.getUserInfo()==null;}catch(Exception bad){return false;}}
     static boolean sameOrigin(String page,String candidate){try{Uri a=Uri.parse(page),b=Uri.parse(candidate);return secureUrl(page)&&secureUrl(candidate)&&a.getHost().equalsIgnoreCase(b.getHost())&&(a.getPort()<0?443:a.getPort())==(b.getPort()<0?443:b.getPort());}catch(Exception bad){return false;}}
