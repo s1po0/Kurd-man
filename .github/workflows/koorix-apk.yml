@@ -32,7 +32,9 @@ concurrency:
 jobs:
   build:
     name: Verify and publish regular Koorix release APK
-    runs-on: ubuntu-latest
+    # Pin the Android host while ubuntu-latest migrates; do not infer emulator
+    # compatibility from Robolectric compilation on a newer distro.
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     permissions:
       contents: write

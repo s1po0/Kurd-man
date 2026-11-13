@@ -63,8 +63,9 @@ def center(item):
 
 
 class Device:
-    def __init__(self, output):
+    def __init__(self, output, emulator_pid=None):
         self.output = output
+        self.emulator_pid = emulator_pid
         self.report = {"scope": "Installed regular signed APK on API34 Android emulator; synthetic source only; NOT physical-device/reader-page/general semantic acceptance",
                        "status": "running", "checks": [], "meaningReviewedByNativeHuman": False,
                        "readerDataUsed": False, "alternateAppOrDebugVariant": False}
@@ -85,6 +86,11 @@ class Device:
         deadline = time.monotonic() + timeout
         last = None
         while time.monotonic() < deadline:
+            if self.emulator_pid is not None:
+                try:
+                    os.kill(self.emulator_pid, 0)
+                except ProcessLookupError as problem:
+                    raise RuntimeError("Android emulator exited before " + label) from problem
             try:
                 result = predicate()
                 # ElementTree leaf controls are falsey despite being real nodes.
@@ -255,11 +261,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apk", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
+    parser.add_argument("--emulator-pid", type=int)
     args = parser.parse_args()
     if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
         raise RuntimeError("Only an empty GitHub-hosted emulator is authorized, never a connected owner's phone")
     args.out.mkdir(parents=True, exist_ok=True)
-    device = Device(args.out)
+    device = Device(args.out, args.emulator_pid)
     try:
         device.run(args.apk)
     except Exception as problem:

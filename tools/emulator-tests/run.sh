@@ -30,8 +30,24 @@ printf 'no\n' | "$AVDMANAGER" create avd --force --name koorix-native-qa \
   -cores 2 -memory 2048 -camera-back none -camera-front none > "$RUNTIME/emulator.log" 2>&1 &
 pid=$!
 trap 'adb -s emulator-5554 emu kill >/dev/null 2>&1 || true; kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true' EXIT
-if ! python3 tools/emulator-tests/driver.py --apk "$APK_FILE" --out "$OUT"; then
-  tail -n 40 "$RUNTIME/emulator.log"
+if ! python3 tools/emulator-tests/driver.py --apk "$APK_FILE" --out "$OUT" --emulator-pid "$pid"; then
+  # Fixed empty-emulator process output only, after signing plaintext removal.
+  # Actions log hosts may be inaccessible from Arena; retain a bounded public
+  # diagnostic and notices instead of treating a boot failure as APK acceptance.
+  {
+    echo 'Empty official Android CI emulator diagnostics; no reader/signing data.'
+    "$ANDROID_HOME/emulator/emulator" -version 2>&1 | head -n 5 || true
+    "$ANDROID_HOME/emulator/emulator" -accel-check 2>&1 || true
+    tail -n 75 "$RUNTIME/emulator.log"
+  } > "$OUT/emulator-diagnostics.txt"
+  python3 - "$OUT/emulator-diagnostics.txt" <<'PYDIAG'
+import re,sys
+from pathlib import Path
+lines=Path(sys.argv[1]).read_text(errors='replace').splitlines()
+selected=[s for s in lines if re.search('PANIC|ERROR|FATAL|denied|No space|cannot|accel|invalid',s,re.I)]
+for line in selected[-8:]:
+    print('::notice::EMULATOR_DIAGNOSTIC='+line[:600].replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
+PYDIAG
   echo '::error::Actual regular APK emulator check failed; not substituted with a mock or alternate build.'
   exit 1
 fi

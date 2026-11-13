@@ -101,6 +101,19 @@ hidden network fallback is added for offline. Final script cleanup is unchanged.
   and was fixed; it was not bypassed. Final production must pass at least **226
   native/JVM executions**, including 34 existing contour cases, 38 UI cases and
   18 narration cases, plus existing cryptographic/comic/quality/Skill checks.
+- Candidate `0bb0618`, run **43332616841 / job 131580780730**:
+  **226 native/JVM executions, 0 failures/skips**, 20 contour/panel fixtures and
+  54 UI captures; regular signed APK compilation/independent content gates passed.
+  **Actual APK emulator acceptance did not pass**: Android did not boot; no app
+  install/action was claimed. Its partial report is
+  `9d88defd07160ff812e8f24181c4ac2bc94b7581`. A stable Ubuntu24.04 Android host,
+  early-exit detection and bounded empty-emulator diagnostics were added rather
+  than weakening the gate or substituting another build. Final outcome remains
+  separate until observed in the release receipt.
+- The actual delivered old 1.8.1 APK was downloaded and independently hash/signature
+  verified locally; it passes the old UI gates but **correctly fails** the new
+  narration/system-field implementation gate. A stale APK cannot be relabelled
+  as this fix.
 - All 20 glyph/panel fixtures and 54 UI captures remain strictly allowlisted
   synthetic native output. Final counts, hashes, source tag and actual deliveries
   are recorded in `koorix/releases/v1.8.2.json` after verification.

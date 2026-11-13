@@ -11,7 +11,7 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[2]
 CAPTURES = {"home-ckb.png", "home-en-light.png", "home-en-dark.png", "source-chooser.png",
             "source-selected.png", "translating.png", "results.png", "studio.png", "failure.png"}
-ALLOWED = CAPTURES | {"synthetic-source.png", "synthetic-result.jpg", "synthetic-pairs.txt", "report.json"}
+ALLOWED = CAPTURES | {"synthetic-source.png", "synthetic-result.jpg", "synthetic-pairs.txt", "report.json", "emulator-diagnostics.txt"}
 REQUIRED = {"home-ckb.png", "home-en-light.png", "home-en-dark.png", "source-chooser.png",
             "source-selected.png", "results.png", "studio.png", "synthetic-source.png",
             "synthetic-result.jpg", "synthetic-pairs.txt", "report.json"}

@@ -1,0 +1,38 @@
+{
+  "repository": "https://github.com/alirezarezvani/claude-skills",
+  "commit": "08cd8a9fc86cc370e2c0d448e8171fbcfdbc5a30",
+  "license": "MIT",
+  "copyright": "2025 Alireza Rezvani",
+  "topicDiscovery": "https://github.com/topics/claude-skill",
+  "topicExhaustiveSourceAudit": false,
+  "selectedSourceReadBeforeUse": true,
+  "upstreamInstallersOrScriptsExecuted": false,
+  "nativeWebRewrite": false,
+  "files": [
+    {
+      "path": "LICENSE.alirezarezvani",
+      "upstreamPath": "LICENSE",
+      "sha256": "a20126646f93d32a8989c3cf4772d59194f405034f7babe7daebeac22b8ab151"
+    },
+    {
+      "path": "code-reviewer-SKILL.md",
+      "upstreamPath": "engineering-team/skills/code-reviewer/SKILL.md",
+      "sha256": "405fe797b4ff1be76148de2cf9cb9584705279da59803c9a9c1ea78e0e93bc9c"
+    },
+    {
+      "path": "universal.md",
+      "upstreamPath": "engineering-team/skills/code-reviewer/rules/universal.md",
+      "sha256": "f6d292c24a6bb81dac9c6a628e50bbe508a6417068823e53d052d90073a1d748"
+    },
+    {
+      "path": "java.md",
+      "upstreamPath": "engineering-team/skills/code-reviewer/languages/java.md",
+      "sha256": "660fdd99556c3bad10c41b8491724db21002cc3bf84b1b956fbfbaf9f2c638b6"
+    },
+    {
+      "path": "design-qa-SKILL.md",
+      "upstreamPath": "product-team/skills/design-qa/SKILL.md",
+      "sha256": "5c024fdb42a94b4682e11f5d5b3b0a9178cbe16e1a090f9a1f181248d9ac0a20"
+    }
+  ]
+}
