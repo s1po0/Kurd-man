@@ -24,7 +24,7 @@ final class ProjectResults {
         org.json.JSONArray pages=json.getJSONArray("pages");
         for(int i=0;i<pages.length();i++){
             org.json.JSONObject page=pages.getJSONObject(i);
-            for(String key:new String[]{"ocrComplete","translationComplete","renderComplete"})page.remove(key);
+            for(String key:new String[]{"ocrComplete","translationComplete","renderComplete","webPriority"})page.remove(key);
             org.json.JSONArray segments=page.getJSONArray("segments");
             for(int j=0;j<segments.length();j++)for(String key:new String[]{"readerReview","readerReviewBinding","translationWarnings","translationMethod","ocrConfidence","originalCkb"})segments.getJSONObject(j).remove(key);
         }

@@ -14,9 +14,16 @@ final class SavedJobPipeline {
     }
     interface Progress { void update(int phase,int page,int total); }
     private SavedJobPipeline() { }
+    /** Prioritize visible browser pages without changing stored chapter order. */
+    static List<Integer> workOrder(TranslationProject p) {
+        List<Integer> order=new ArrayList<>();
+        if(p.privateResults)for(int i=0;i<p.pages.size();i++)if(p.pages.get(i).webPriority)order.add(i);
+        for(int i=0;i<p.pages.size();i++)if(!p.privateResults||!p.pages.get(i).webPriority)order.add(i);
+        return order;
+    }
     static void ocr(TranslationProject p,Backend backend,Progress progress) throws Exception {
         try {
-            for(int i=0;i<p.pages.size();i++){JobRuntime.throwIfStopped();TranslationProject.Page page=p.pages.get(i);if(page.ocrComplete)continue;
+            for(int i:workOrder(p)){JobRuntime.throwIfStopped();TranslationProject.Page page=p.pages.get(i);if(page.ocrComplete)continue;
                 progress.update(0,i+1,p.pages.size());Bitmap bitmap=BitmapIo.decodeFile(page.sourceFile(p.projectDir));
                 if(bitmap==null){page.unreadable=true;page.ocrComplete=true;page.translationComplete=true;p.save();continue;}
                 try {List<Segment> segments=backend.recognize(bitmap,p);JobRuntime.throwIfStopped();page.width=bitmap.getWidth();page.height=bitmap.getHeight();page.segments.clear();page.segments.addAll(segments);page.ocrComplete=true;page.translationComplete=segments.isEmpty();p.save();}finally{bitmap.recycle();}
@@ -25,12 +32,12 @@ final class SavedJobPipeline {
     }
     static boolean needsTranslation(TranslationProject p){for(TranslationProject.Page page:p.pages)if(!page.translationComplete&&!page.unreadable)return true;return false;}
     static void translate(TranslationProject p,Backend backend,Progress progress) throws Exception {
-        try{for(int i=0;i<p.pages.size();i++){JobRuntime.throwIfStopped();TranslationProject.Page page=p.pages.get(i);if(page.translationComplete||page.unreadable)continue;progress.update(1,i+1,p.pages.size());backend.translate(page.segments,p);JobRuntime.throwIfStopped();page.translationComplete=true;p.save();}}finally{backend.closeTranslator();}
+        try{for(int i:workOrder(p)){JobRuntime.throwIfStopped();TranslationProject.Page page=p.pages.get(i);if(page.translationComplete||page.unreadable)continue;progress.update(1,i+1,p.pages.size());backend.translate(page.segments,p);JobRuntime.throwIfStopped();page.translationComplete=true;p.save();}}finally{backend.closeTranslator();}
     }
     static File renderedPage(TranslationProject p,int index){TranslationProject.Page page=p.pages.get(index);return new File(new File(p.projectDir,"rendered"),String.format(Locale.ROOT,"%04d%s",index+1,page.unreadable?SavedJobInput.extension(page.sourcePath):".jpg"));}
     static void render(TranslationProject p,Backend backend,Progress progress) throws Exception {
         File dir=new File(p.projectDir,"rendered");if(!dir.exists()&&!dir.mkdirs())throw new IOException("Could not create render directory");
-        for(int i=0;i<p.pages.size();i++){JobRuntime.throwIfStopped();TranslationProject.Page page=p.pages.get(i);File output=renderedPage(p,i);if(page.renderComplete&&output.isFile())continue;progress.update(2,i+1,p.pages.size());
+        for(int i:workOrder(p)){JobRuntime.throwIfStopped();TranslationProject.Page page=p.pages.get(i);File output=renderedPage(p,i);if(page.renderComplete&&output.isFile())continue;progress.update(2,i+1,p.pages.size());
             Bitmap bitmap=page.unreadable?null:BitmapIo.decodeFile(page.sourceFile(p.projectDir));
             if(bitmap==null){try(InputStream in=new FileInputStream(page.sourceFile(p.projectDir));OutputStream out=new FileOutputStream(output)){ProjectArchive.copy(in,out,1024L*1024*1024);}page.renderComplete=true;p.save();continue;}
             Bitmap rendered=null;

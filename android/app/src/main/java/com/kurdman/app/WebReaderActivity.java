@@ -27,17 +27,17 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.UUID;
 
 /** Explicit, bounded page capture. Website code has no Android bridge. */
 public final class WebReaderActivity extends AppCompatActivity {
-    static final String EXTRA_FILES="koorix.web.files";
+    static final String EXTRA_FILES="koorix.web.files", EXTRA_VISIBLE="koorix.web.visible";
     private static final long MAX_TOTAL=300L*1024*1024, MAX_IMAGE=32L*1024*1024;
     private static final int MAX_PAGES=300;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final ArrayList<String> candidates=new ArrayList<>(),files=new ArrayList<>();
+    private final ArrayList<Boolean> candidateVisible=new ArrayList<>(),fileVisible=new ArrayList<>();
     private WebView web;
     private EditText address;
     private TextView status;
@@ -90,14 +90,15 @@ public final class WebReaderActivity extends AppCompatActivity {
     }
     private void beginCapture(){if(capturing||!secureUrl(web.getUrl())){status.setText(R.string.web_invalid);return;}
         topUrl=web.getUrl();int token=++epoch;capturing=true;translate.setEnabled(false);stop.setEnabled(true);status.setText(R.string.web_discover);
-        candidates.clear();files.clear();index=0;failed=0;total=0;transferred=false;truncated=false;
+        candidates.clear();files.clear();candidateVisible.clear();fileVisible.clear();index=0;failed=0;total=0;transferred=false;truncated=false;
         try{importLimit=WebImportBudget.allowance(getCacheDir());if(importLimit<1)throw new java.io.IOException("Cache full");}
         catch(Exception full){cancelCapture();status.setText(R.string.web_cache_full);return;}
         session=new File(getCacheDir(),"web-reader/"+UUID.randomUUID());if(!session.mkdirs()){cancelCapture();status.setText(R.string.web_error);return;}
         web.evaluateJavascript(discovery,raw->{if(!valid(token))return;try{
-            JSONObject obj=new JSONObject(raw);truncated=obj.optBoolean("truncated",false);JSONArray imgs=obj.getJSONArray("images");LinkedHashSet<String> unique=new LinkedHashSet<>();
-            for(int i=0;i<imgs.length()&&unique.size()<MAX_PAGES;i++){String u=imgs.getJSONObject(i).optString("url","");if(u.length()<=8192&&sameOrigin(topUrl,u))unique.add(u);}
-            candidates.addAll(unique);if(candidates.isEmpty()){cancelCapture();status.setText(R.string.web_empty);return;}
+            JSONObject obj=new JSONObject(raw);truncated=obj.optBoolean("truncated",false);JSONArray imgs=obj.getJSONArray("images");java.util.LinkedHashMap<String,Boolean> unique=new java.util.LinkedHashMap<>();
+            for(int i=0;i<imgs.length()&&unique.size()<MAX_PAGES;i++){JSONObject image=imgs.getJSONObject(i);String u=image.optString("url","");if(u.length()<=8192&&sameOrigin(topUrl,u)){boolean visible=image.optBoolean("visible",false);unique.put(u,visible||Boolean.TRUE.equals(unique.get(u)));}}
+            for(java.util.Map.Entry<String,Boolean> entry:unique.entrySet()){candidates.add(entry.getKey());candidateVisible.add(entry.getValue());}
+            if(candidates.isEmpty()){cancelCapture();status.setText(R.string.web_empty);return;}
             String install="window.__koorixWebCapture=("+transport+")((u,m,s)=>("+capture+")(u,m,fetch,15000,s),btoa.bind(window));true";
             web.evaluateJavascript(install,result->{if(valid(token))next(token);});
         }catch(Exception e){cancelCapture();status.setText(R.string.web_error);}});
@@ -124,14 +125,15 @@ public final class WebReaderActivity extends AppCompatActivity {
             if("done".equals(state)){out.close();out=null;BitmapFactory.Options bounds=new BitmapFactory.Options();bounds.inJustDecodeBounds=true;BitmapFactory.decodeFile(current.getAbsolutePath(),bounds);
                 if(bounds.outWidth<=0||bounds.outHeight<=0||(long)bounds.outWidth*bounds.outHeight>100_000_000L)throw new IllegalArgumentException();
                 String ext="image/png".equals(bounds.outMimeType)?".png":"image/webp".equals(bounds.outMimeType)?".webp":"image/bmp".equals(bounds.outMimeType)?".bmp":"image/jpeg".equals(bounds.outMimeType)?".jpg":null;
-                if(ext==null)throw new IllegalArgumentException();File finalFile=new File(session,String.format(Locale.ROOT,"%04d%s",index+1,ext));if(!current.renameTo(finalFile))throw new IllegalStateException();files.add(finalFile.getAbsolutePath());total+=currentBytes;current=null;index++;next(token);return;}
+                if(ext==null)throw new IllegalArgumentException();File finalFile=new File(session,String.format(Locale.ROOT,"%04d%s",index+1,ext));if(!current.renameTo(finalFile))throw new IllegalStateException();files.add(finalFile.getAbsolutePath());fileVisible.add(candidateVisible.get(index));total+=currentBytes;current=null;index++;next(token);return;}
             skip(token);
         }catch(Exception failure){skip(token);}});
     }
     private void skip(int token){try{if(out!=null)out.close();}catch(Exception ignored){}out=null;if(current!=null)current.delete();current=null;failed++;index++;web.evaluateJavascript("window.__koorixWebCapture.cancel()",null);next(token);}
     private void finishCapture(){capturing=false;stop.setEnabled(false);translate.setEnabled(true);if(files.isEmpty()){deleteSession();status.setText(R.string.web_empty);return;}
         if(truncated)Toast.makeText(this,getString(R.string.web_capped),Toast.LENGTH_LONG).show();
-        else if(failed>0)Toast.makeText(this,getString(R.string.web_partial,failed),Toast.LENGTH_LONG).show();transferred=true;setResult(RESULT_OK,new Intent().putStringArrayListExtra(EXTRA_FILES,files));finish();}
+        else if(failed>0)Toast.makeText(this,getString(R.string.web_partial,failed),Toast.LENGTH_LONG).show();transferred=true;boolean[] priorities=new boolean[fileVisible.size()];for(int i=0;i<priorities.length;i++)priorities[i]=fileVisible.get(i);
+        setResult(RESULT_OK,new Intent().putStringArrayListExtra(EXTRA_FILES,files).putExtra(EXTRA_VISIBLE,priorities));finish();}
     private void deleteSession(){if(session!=null)TranslationProjectStore.deleteRecursive(session);session=null;}
     private void cancelCapture(){if(!capturing)return;capturing=false;epoch++;stop.setEnabled(false);translate.setEnabled(true);try{if(out!=null)out.close();}catch(Exception ignored){}out=null;web.evaluateJavascript("if(window.__koorixWebCapture)window.__koorixWebCapture.cancel()",null);deleteSession();status.setText(R.string.web_hint);}
     @Override protected void onDestroy(){cancelCapture();if(!transferred)deleteSession();if(web!=null){web.stopLoading();web.destroy();}super.onDestroy();}

@@ -14,6 +14,7 @@ final class SavedJobInput {
     final boolean offline,accurate,pdf,privateResults;
     final ComicTranslationSkill.Config config;
     final TextStyleSettings style;
+    final boolean[] webPriorities;
     Bitmap fallback;
     SavedJobInput(File image,File cbz,List<File> images,String name,String base,String source,String target,
             boolean offline,boolean accurate,boolean pdf,ComicTranslationSkill.Config config,TextStyleSettings style,Bitmap fallback){
@@ -21,7 +22,12 @@ final class SavedJobInput {
     }
     SavedJobInput(File image,File cbz,List<File> images,String name,String base,String source,String target,
             boolean offline,boolean accurate,boolean pdf,ComicTranslationSkill.Config config,TextStyleSettings style,Bitmap fallback,boolean privateResults){
+        this(image,cbz,images,name,base,source,target,offline,accurate,pdf,config,style,fallback,privateResults,null);
+    }
+    SavedJobInput(File image,File cbz,List<File> images,String name,String base,String source,String target,
+            boolean offline,boolean accurate,boolean pdf,ComicTranslationSkill.Config config,TextStyleSettings style,Bitmap fallback,boolean privateResults,boolean[] webPriorities){
         this.image=image;this.cbz=cbz;this.images=new ArrayList<>(images);this.name=name;this.base=base;
+        this.webPriorities=webPriorities==null?new boolean[0]:webPriorities.clone();
         this.source=source;this.target=target;this.offline=offline;this.accurate=accurate;this.pdf=pdf;this.privateResults=privateResults;
         this.config=config;this.style=new TextStyleSettings(style);this.fallback=fallback;
     }
@@ -52,6 +58,7 @@ final class SavedJobInput {
                 if(input.size()>300)throw new IOException("Page limit exceeded");long total=0;
                 for(int i=0;i<input.size();i++) {JobRuntime.throwIfStopped();File file=input.get(i);String ext=file==null?".jpg":extension(file.getName());
                     TranslationProject.Page page=new TranslationProject.Page(TranslationProjectStore.pageRelativePath(i+1,ext),ext);
+                    page.webPriority=privateResults&&i<webPriorities.length&&webPriorities[i];
                     try(OutputStream out=new FileOutputStream(page.sourceFile(p.projectDir))){
                         if(file!=null&&file.isFile()){try(InputStream in=new FileInputStream(file)){total+=ProjectArchive.copy(in,out,300L*1024*1024-total);}}
                         else if(!batch&&fallback!=null&&!fallback.isRecycled()){if(!fallback.compress(Bitmap.CompressFormat.JPEG,96,out))throw new IOException("Could not save source image");}

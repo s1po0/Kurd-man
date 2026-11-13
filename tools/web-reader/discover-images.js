@@ -14,7 +14,7 @@
   let urlChars = 0, hitBudget = false;
   const images = document.querySelectorAll('img');
   const results = [];
-  const seen = new Set();
+  const seen = new Map();
   const viewportHeight = Math.max(0, Number(window.innerHeight) || 0);
   const viewportWidth = Math.max(0, Number(window.innerWidth) || 0);
   const scanCount = Math.min(images.length, MAX_SCANNED);
@@ -41,11 +41,12 @@
     // many sites use them to distinguish pages or authorize an image.
     url.hash = '';
     const absolute = url.href;
-    if (absolute.length > MAX_URL || seen.has(absolute)) continue;
+    if (absolute.length > MAX_URL) continue;
+    const visible = box.bottom > 0 && box.top < viewportHeight && box.right > 0 && box.left < viewportWidth;
+    if (seen.has(absolute)) { if (visible) results[seen.get(absolute)].visible = true; continue; }
     if (urlChars + absolute.length > MAX_RESULT_URL_CHARS) { hitBudget = true; break; }
     urlChars += absolute.length;
-    seen.add(absolute);
-    const visible = box.bottom > 0 && box.top < viewportHeight && box.right > 0 && box.left < viewportWidth;
+    seen.set(absolute, results.length);
     results.push({url: absolute, order: i, visible,
       width: Math.round(box.width), height: Math.round(box.height)});
   }

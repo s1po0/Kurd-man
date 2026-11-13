@@ -3095,7 +3095,7 @@ public class MainActivity extends AppCompatActivity {
         ComicTranslationSkill.Config config=comicControls.forTranslation();if(config==null)return;
         SavedJobInput request=new SavedJobInput(images.get(0),null,images,getString(R.string.web_title),"web-chapter",
                 selectedSourceLanguage(),selectedTargetLanguage(),selectedOfflineMode(),accurateOcrCheck==null||accurateOcrCheck.isChecked(),
-                selectedCreatePdf(),config,globalTextStyle,null,true);
+                selectedCreatePdf(),config,globalTextStyle,null,true,result.getBooleanArrayExtra(WebReaderActivity.EXTRA_VISIBLE));
         if(SavedJobCoordinator.start(getApplicationContext(),request)){
             resultFile=null;resultTextFile=null;showMainPage(PAGE_RESULTS);currentBusy=true;
             progress.setVisibility(View.VISIBLE);statusText.setText(R.string.rel_prepare);updateButtons(true);

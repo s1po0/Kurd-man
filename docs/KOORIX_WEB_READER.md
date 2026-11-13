@@ -21,9 +21,11 @@ been safely copied into the new project.
   canvas, protected resources and some lazy loaders are not supported. Scroll
   first if the site only adds images while scrolling. Some ads or unrelated
   same-origin images can be included. The user is told when images are skipped.
-- Translation occurs after capture via the existing job. It does **not** yet
-  replace images inside the website, automatically translate while scrolling,
-  or display the first translated page before the whole job completes.
+- Translation occurs after capture via the existing job. Images visible at the
+  time of capture are processed first within each OCR, translation and render
+  phase, while final chapter order stays unchanged. It does **not** yet replace
+  images inside the website, automatically translate while scrolling, or show
+  the first translated page before the whole job completes.
 - Per-browser-image limit 32 MB, 300 pages, 300 MB aggregate import, and 1 GB
   app-cache budget. Decoding very long images is bounded; no promise of perfect
   layout or legibility for every webtoon. Search and browsing require network;

@@ -66,6 +66,8 @@ public class TranslationProject {
         public boolean translationComplete;
         public boolean renderComplete;
         public boolean layoutPrepared;
+        /** Browser capture visibility at import; affects work order, not page order. */
+        public boolean webPriority;
         public final List<Segment> segments = new ArrayList<>();
 
         public Page() {
@@ -266,7 +268,7 @@ public class TranslationProject {
         json.put("unreadable", page.unreadable);
         json.put("ocrComplete", page.ocrComplete);
         json.put("translationComplete", page.translationComplete);
-        json.put("renderComplete", page.renderComplete); json.put("layoutPrepared", page.layoutPrepared);
+        json.put("renderComplete", page.renderComplete); json.put("layoutPrepared", page.layoutPrepared); json.put("webPriority", page.webPriority);
         JSONArray segments = new JSONArray();
         for (Segment segment : page.segments) {
             segments.put(segmentToJson(segment));
@@ -284,7 +286,7 @@ public class TranslationProject {
         page.unreadable = json.optBoolean("unreadable", false);
         page.ocrComplete = json.optBoolean("ocrComplete", false);
         page.translationComplete = json.optBoolean("translationComplete", false);
-        page.renderComplete = json.optBoolean("renderComplete", false); page.layoutPrepared = json.optBoolean("layoutPrepared", false);
+        page.renderComplete = json.optBoolean("renderComplete", false); page.layoutPrepared = json.optBoolean("layoutPrepared", false); page.webPriority = json.optBoolean("webPriority", false);
         JSONArray segments = json.optJSONArray("segments");
         if (segments != null) {
             for (int i = 0; i < segments.length(); i++) {

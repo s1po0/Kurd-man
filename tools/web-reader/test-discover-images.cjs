@@ -47,4 +47,10 @@ function run(images) {
   assert.equal(result.truncated, true);
   assert.ok(result.images.reduce((n, x) => n + x.url.length, 0) <= 256 * 1024);
 }
-console.log('Web reader discovery prototype: 6 grouped tests passed.');
+{
+  const result = run([image('/same.jpg', {rect: {top:1000,bottom:1800}}), image('/same.jpg')]);
+  assert.equal(result.images.length, 1);
+  assert.equal(result.images[0].visible, true);
+  assert.equal(result.images[0].order, 0);
+}
+console.log('Web reader discovery prototype: 7 grouped tests passed.');
