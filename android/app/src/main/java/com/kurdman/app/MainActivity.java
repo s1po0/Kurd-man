@@ -321,6 +321,11 @@ public class MainActivity extends AppCompatActivity {
         translationModeSpinner = findViewById(R.id.translationModeSpinner);
         comicControls = new ComicTranslateControls(this, findViewById(android.R.id.content), savedInstanceState);
         findViewById(R.id.resultQualityButton).setOnClickListener(v -> openComicQuality());
+        findViewById(R.id.readWebResultButton).setOnClickListener(v -> {
+            TranslationProject project=TranslationProjectStore.load(this);
+            if(project!=null&&project.completed&&project.privateResults&&!JobRuntime.isRunning())
+                editorLauncher.launch(new Intent(this,WebResultActivity.class).putExtra(WebResultActivity.EXTRA_PROJECT,project.projectDir.getName()));
+        });
         offlineModelStatus = findViewById(R.id.offlineModelStatus);
         downloadOfflineButton = findViewById(R.id.downloadOfflineButton);
         deleteOfflineButton = findViewById(R.id.deleteOfflineButton);
@@ -5314,6 +5319,10 @@ public class MainActivity extends AppCompatActivity {
         ComicTranslationFlow.bindSummary(this, findViewById(android.R.id.content),
                 resultFile != null ? TranslationProjectStore.load(this) : null, busy);
         findViewById(R.id.resultQualityButton).setEnabled(enabled);
+        TranslationProject webProject=BuildConfig.PUBLIC_EDITION?TranslationProjectStore.load(this):null;
+        View webRead=findViewById(R.id.readWebResultButton);
+        boolean readable=webProject!=null&&webProject.privateResults&&webProject.completed&&webProject.exportsComplete;
+        webRead.setVisibility(readable?View.VISIBLE:View.GONE);webRead.setEnabled(enabled&&readable);
         if (accurateOcrCheck != null) {
             accurateOcrCheck.setEnabled(enabled);
         }

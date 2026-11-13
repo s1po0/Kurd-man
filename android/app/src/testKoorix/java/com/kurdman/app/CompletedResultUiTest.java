@@ -73,6 +73,13 @@ public class CompletedResultUiTest {
         assertEquals("The placeholder must not cover a completed translated image",View.GONE,a.findViewById(R.id.resultEmptyIcon).getVisibility());
         assertEquals(View.GONE,a.findViewById(R.id.resultEmptyHint).getVisibility());
     }
+    @Test public void privateWebResultExposesReaderWithoutPublishing() throws Exception {
+        TranslationProject p=project();p.privateResults=true;p.save();MainActivity a=main.get();
+        SavedJobCoordinator.Listener listener=ReflectionHelpers.getField(a,"savedJobListener");listener.changed(p,"Complete",false);
+        View read=a.findViewById(R.id.readWebResultButton);assertEquals(View.VISIBLE,read.getVisibility());assertTrue(read.isEnabled());
+        p.privateResults=false;p.save();ReflectionHelpers.callInstanceMethod(a,"updateButtons",ReflectionHelpers.ClassParameter.from(boolean.class,false));
+        assertEquals(View.GONE,read.getVisibility());
+    }
     @Test public void aRealSelectedSourcePreviewIsNotCoveredByTheEmptyBookEither() {
         MainActivity a=main.get();
         assertEquals(View.VISIBLE,a.findViewById(R.id.resultEmptyIcon).getVisibility());

@@ -15,4 +15,11 @@
     <string name="web_error">Could not read this page. Try again.</string>
     <string name="web_invalid">Only secure HTTPS websites are supported.</string>
     <string name="web_title">Web reader</string>
+    <string name="web_read">Read translated pages</string>
+    <string name="web_original">Show original</string>
+    <string name="web_translated">Show translation</string>
+    <string name="web_next">Next page</string>
+    <string name="web_previous">Previous page</string>
+    <string name="web_page">Page %1$d / %2$d</string>
+    <string name="web_save">Export result</string>
 </resources>

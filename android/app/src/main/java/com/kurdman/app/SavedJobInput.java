@@ -61,8 +61,19 @@ final class SavedJobInput {
                 }
             }
             JobRuntime.throwIfStopped();p.resumable=true;p.autoResume=true;p.save();
-            TranslationProjectStore.allowRecovery(context,p,true);return p;
+            TranslationProjectStore.allowRecovery(context,p,true);if(privateResults)discardCopiedWebSession(context);return p;
         } finally {fallback=null;if(!p.resumable)p.save();}
+    }
+    /** Only discard our own temporary browser input after all source pages are durable. */
+    private void discardCopiedWebSession(Context context) {
+        try {
+            if(images.isEmpty())return;
+            File root=new File(context.getCacheDir(),"web-reader").getCanonicalFile();
+            File session=images.get(0).getCanonicalFile().getParentFile();
+            if(session==null||!root.equals(session.getParentFile())||!session.getName().matches("[0-9a-f-]{36}"))return;
+            for(File file:images)if(!session.equals(file.getCanonicalFile().getParentFile()))return;
+            TranslationProjectStore.deleteRecursive(session);
+        }catch(IOException ignored){/* Android may later reclaim the app-owned cache. */}
     }
     static boolean imageName(String name){String n=name.toLowerCase(Locale.ROOT);return n.endsWith(".jpg")||n.endsWith(".jpeg")||n.endsWith(".png")||n.endsWith(".webp")||n.endsWith(".bmp");}
     static String extension(String name){int index=name.lastIndexOf('.');String ext=index<0?".jpg":name.substring(index).toLowerCase(Locale.ROOT);return ext.matches("\\.(jpg|jpeg|png|webp|bmp|gif|heic|heif|avif)")?ext:".jpg";}

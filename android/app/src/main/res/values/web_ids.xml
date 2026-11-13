@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item type="id" name="webReaderAddress" />
+    <item type="id" name="webReaderStatus" />
+    <item type="id" name="webReaderTranslate" />
+    <item type="id" name="webReaderStop" />
+    <item type="id" name="webReaderGo" />
+</resources>

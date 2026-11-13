@@ -15,4 +15,11 @@
     <string name="web_error">خوێندنەوەی پەڕەکە سەرکەوتوو نەبوو. دووبارە هەوڵ بدەرەوە.</string>
     <string name="web_invalid">تەنها ماڵپەڕی پارێزراوی HTTPS پشتگیری دەکرێت.</string>
     <string name="web_title">گەڕۆکی وێب</string>
+    <string name="web_read">خوێندنەوەی پەڕە وەرگێڕدراوەکان</string>
+    <string name="web_original">پیشاندانی ڕەسەن</string>
+    <string name="web_translated">پیشاندانی وەرگێڕان</string>
+    <string name="web_next">پەڕەی دواتر</string>
+    <string name="web_previous">پەڕەی پێشوو</string>
+    <string name="web_page">پەڕەی %1$d / %2$d</string>
+    <string name="web_save">هەناردەکردنی ئەنجام</string>
 </resources>

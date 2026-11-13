@@ -69,6 +69,7 @@
 
         <activity android:name=".ProjectLibraryActivity" android:exported="false" />
 
+        <activity android:name=".WebResultActivity" android:exported="false" />
         <activity android:name=".WebReaderActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
 
         <activity

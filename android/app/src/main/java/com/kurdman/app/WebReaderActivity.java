@@ -57,11 +57,11 @@ public final class WebReaderActivity extends AppCompatActivity {
         LinearLayout bar=new LinearLayout(this);bar.setOrientation(LinearLayout.HORIZONTAL);
         Button back=button(R.string.web_back);back.setOnClickListener(v->{if(web.canGoBack())web.goBack();else finish();});bar.addView(back);
         Button forward=button(R.string.web_forward);forward.setOnClickListener(v->{if(web.canGoForward())web.goForward();});bar.addView(forward);
-        address=new EditText(this);address.setSingleLine(true);address.setHint(R.string.web_address);address.setTextDirection(View.TEXT_DIRECTION_LTR);address.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_URI);address.setImeOptions(EditorInfo.IME_ACTION_GO);
+        address=new EditText(this);address.setId(R.id.webReaderAddress);address.setSingleLine(true);address.setHint(R.string.web_address);address.setTextDirection(View.TEXT_DIRECTION_LTR);address.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_URI);address.setImeOptions(EditorInfo.IME_ACTION_GO);
         bar.addView(address,new LinearLayout.LayoutParams(0,-2,1));
-        Button go=button(R.string.web_go);go.setOnClickListener(v->open());bar.addView(go);
+        Button go=button(R.string.web_go);go.setId(R.id.webReaderGo);go.setOnClickListener(v->open());bar.addView(go);
         address.setOnEditorActionListener((v,id,event)->{if(id==EditorInfo.IME_ACTION_GO){open();return true;}return false;});root.addView(bar);
-        status=new TextView(this);status.setText(R.string.web_hint);status.setTextColor(getColor(R.color.text_secondary));status.setPadding(12,8,12,8);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);root.addView(status);
+        status=new TextView(this);status.setId(R.id.webReaderStatus);status.setText(R.string.web_hint);status.setTextColor(getColor(R.color.text_secondary));status.setPadding(12,8,12,8);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);root.addView(status);
         web=new WebView(this);WebSettings settings=web.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(true);settings.setAllowFileAccess(false);settings.setAllowContentAccess(false);settings.setJavaScriptCanOpenWindowsAutomatically(false);settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);settings.setSupportMultipleWindows(false);settings.setSafeBrowsingEnabled(true);
         web.setWebViewClient(new WebViewClient(){
             @Override public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest request){return !secureUrl(request.getUrl().toString());}
@@ -70,8 +70,8 @@ public final class WebReaderActivity extends AppCompatActivity {
         });
         root.addView(web,new LinearLayout.LayoutParams(-1,0,1));
         LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.HORIZONTAL);
-        translate=button(R.string.web_translate);translate.setOnClickListener(v->beginCapture());actions.addView(translate,new LinearLayout.LayoutParams(0,-2,1));
-        stop=button(R.string.web_stop);stop.setEnabled(false);stop.setOnClickListener(v->cancelCapture());actions.addView(stop);
+        translate=button(R.string.web_translate);translate.setId(R.id.webReaderTranslate);translate.setOnClickListener(v->beginCapture());actions.addView(translate,new LinearLayout.LayoutParams(0,-2,1));
+        stop=button(R.string.web_stop);stop.setId(R.id.webReaderStop);stop.setEnabled(false);stop.setOnClickListener(v->cancelCapture());actions.addView(stop);
         root.addView(actions);setContentView(root);
     }
     private Button button(int label){Button b=new Button(this);b.setText(label);b.setMinHeight(KoorixDesign.dp(this,48));return b;}

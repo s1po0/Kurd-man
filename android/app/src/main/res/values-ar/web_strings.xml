@@ -15,4 +15,11 @@
     <string name="web_error">تعذرت قراءة الصفحة. حاول مجدداً.</string>
     <string name="web_invalid">تدعم المواقع الآمنة HTTPS فقط.</string>
     <string name="web_title">متصفح الويب</string>
+    <string name="web_read">قراءة الصفحات المترجمة</string>
+    <string name="web_original">عرض الأصل</string>
+    <string name="web_translated">عرض الترجمة</string>
+    <string name="web_next">الصفحة التالية</string>
+    <string name="web_previous">الصفحة السابقة</string>
+    <string name="web_page">الصفحة %1$d / %2$d</string>
+    <string name="web_save">تصدير النتيجة</string>
 </resources>

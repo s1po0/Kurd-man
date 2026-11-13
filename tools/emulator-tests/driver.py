@@ -329,6 +329,26 @@ class Device:
             raise AssertionError("Actual process relaunch lost the selected theme")
         self.check("native_theme_switch_and_process_relaunch_persistence")
         self.theme(False)
+        # Exercise the real WebView against MDN's public static example. Its
+        # photograph is not a translation-quality fixture; the goal here is to
+        # verify actual same-origin page discovery, bounded image capture and
+        # handoff to the real OCR job, not a claim about manga compatibility.
+        self.tap(self.reveal("webReaderButton"))
+        self.control("webReaderAddress", enabled=True)
+        self.click("webReaderAddress")
+        self.shell("input", "text", "https://mdn.github.io/dom-examples/history-api/index.html")
+        self.shell("input", "keyevent", "4")  # dismiss keyboard
+        self.click("webReaderGo")
+        self.wait(lambda: any("Let's look at some creatures" in x.get("text", "")
+                              for x in self.ui().iter("node")), "MDN example page loaded", timeout=90)
+        self.click("webReaderTranslate")
+        self.control("workspaceLanguageButton", timeout=150)
+        self.control("pickButton", enabled=True, timeout=180)
+        public = self.shell("content", "query", "--uri", "content://media/external/file",
+                            "--projection", "_id:_display_name", "--where", "_display_name LIKE 'Koorix-web-chapter%'")
+        if public != "No result found.":
+            raise AssertionError("Web reader job published a public file without explicit export")
+        self.check("webview_same_origin_public_example_capture_to_real_ocr_no_automatic_public_export")
         # Publish before opening Recent so DocumentsUI offers the authored file.
         # An adb am SEND extra is not a normal app share: its URI lacks the
         # framework's Extra.STREAM -> ClipData migration and actual read grant.
