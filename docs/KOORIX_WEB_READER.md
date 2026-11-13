@@ -82,6 +82,14 @@ Android. These synthetic results do not prove real comic translation quality,
 other sites, physical phones or the unresolved browser security properties. No
 1.8.4 release is authorized by this evidence.
 
+Run `43521849925` on `9f34938` passed 294 JVM tests (including the new
+partial-reader refresh regression on SDK26/34), regular APK build/signature
+verification, and the existing API34 installed-APK synthetic single-image
+web flows. The synthetic installed-APK report blob is
+`a19753725d0e5820d23962e77c5a3e30c92a3be5`. This run did not exercise the
+new refresh with multiple live web pages on Android and does not resolve any
+of the security blockers below; it was a verification run, not a release.
+
 Research: GitHub raw's sandbox response policy is documented in
 https://github.com/nvm-sh/nvm/issues/2392, and the test image's text/URL format
 is documented in https://github.com/kingkool68/dummyimage/blob/master/index.html.
