@@ -15,6 +15,7 @@
     <string name="web_capture">جارٍ تجهيز الصورة %1$d / %2$d…</string>
     <string name="web_empty">لم يتم العثور على صور متاحة. مرّر لتحميلها أو جرّب صفحة أخرى.</string>
     <string name="web_partial">تعذر تحميل %1$d صورة. ستترجم الصور المتبقية.</string>
+    <string name="web_unsupported">لا يمكن الوصول إلى صور هذه الصفحة. قد تكون محمية أو غير مدعومة؛ جرّب صفحة أخرى.</string>
     <string name="web_error">تعذرت قراءة الصفحة. حاول مجدداً.</string>
     <string name="web_invalid">تدعم المواقع الآمنة HTTPS فقط.</string>
     <string name="web_title">متصفح الويب</string>

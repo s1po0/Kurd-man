@@ -130,7 +130,7 @@ class Device:
     def __init__(self, output, emulator_pid=None):
         self.output = output
         self.emulator_pid = emulator_pid
-        self.report = {"scope": "Installed regular signed APK on API34 Android emulator; authored synthetic translation fixture and public MDN example image; NOT physical-device/reader-page/general semantic acceptance",
+        self.report = {"scope": "Installed regular signed APK on API34 Android emulator; authored synthetic translation fixture, generated HTTPS text and public MDN example image; NOT physical-device/reader-page/general semantic acceptance",
                        "status": "running", "checks": [], "meaningReviewedByNativeHuman": False,
                        "readerDataUsed": False, "alternateAppOrDebugVariant": False}
 
@@ -354,19 +354,31 @@ class Device:
         if public != "No result found.":
             raise AssertionError("Web reader job published a public file without explicit export")
         self.check("webview_same_origin_public_example_capture_to_real_ocr_no_automatic_public_export")
-        # Separately open an authored, fixed synthetic comic image as an HTTPS
-        # image document. This exercises website image bytes through the real
-        # OCR/translator/renderer into the private reader; no private user data.
+        # Raw GitHub image documents use a restrictive sandbox. Do not bypass
+        # it: verify the unsupported-page explanation before trying another site.
         self.tap(self.reveal("webReaderButton"))
         self.control("webReaderAddress", enabled=True)
         self.click("webReaderAddress")
         url = "https://raw.githubusercontent.com/s1po0/Kurd-man/35bd8848f28d229704a3001b8bcf863d6b736c79/manhwa/sample/demo_en.png"
         self.shell("input", "text", url)
         self.click("webReaderGo")
-        # The native screen reports main-frame completion; OCR assertions below
-        # independently verify that the expected authored image was captured.
         self.wait(lambda: self.control("webReaderStatus").get("text", "").startswith("Page loaded."),
-                  "Synthetic HTTPS image document", timeout=90)
+                  "Protected HTTPS image document loaded", timeout=90)
+        self.click("webReaderTranslate")
+        self.wait(lambda: self.control("webReaderStatus").get("text", "").startswith("This page cannot provide accessible images."),
+                  "Protected page explained without bypass", timeout=90)
+        self.check("protected_web_page_explained_without_bypass")
+        self.shell("input", "keyevent", "4")
+        self.control("workspaceLanguageButton")
+        # Generated text only; no reader image or private data. An independent
+        # public HTTPS image document must reach real OCR and translation.
+        self.tap(self.reveal("webReaderButton"))
+        self.control("webReaderAddress", enabled=True)
+        self.click("webReaderAddress")
+        self.shell("input", "text", "https://dummyimage.com/800x260/ffffff/000000.png&text=THE+MONSTERS+ARE+COMING")
+        self.click("webReaderGo")
+        self.wait(lambda: self.control("webReaderStatus").get("text", "").startswith("Page loaded."),
+                  "Synthetic HTTPS text image loaded", timeout=90)
         self.click("webReaderTranslate")
         self.control("workspaceLanguageButton", timeout=150)
         self.wait(lambda: self.control("statusText").get("text", "").startswith(("Complete;", "Processing finished,")),
@@ -374,8 +386,8 @@ class Device:
         text_item = self.reveal("resultText")
         synthetic_pairs = pairs(text_item.get("text", ""))
         combined = words(" ".join(a for a, _ in synthetic_pairs))
-        if "finally returned" not in combined or "monsters" not in combined:
-            raise AssertionError("Web capture did not reach actual OCR with authored dialogue")
+        if "monsters" not in combined or "coming" not in combined:
+            raise AssertionError("Web capture did not reach actual OCR with generated dialogue")
         public = self.shell("content", "query", "--uri", "content://media/external/file",
                             "--projection", "_id:_display_name", "--where", "_display_name LIKE 'Koorix-web-chapter%'")
         if public != "No result found.":
@@ -388,7 +400,7 @@ class Device:
         self.wait(lambda: self.control("webResultImage").get("content-desc") == "Show original",
                   "Original image decoded after toggle", timeout=30)
         self.capture("web-original.png")
-        self.check("web_https_authored_comic_real_ocr_translation_private_reader_and_original_toggle")
+        self.check("web_https_generated_text_real_ocr_translation_private_reader_and_original_toggle")
         self.shell("input", "keyevent", "4")
         self.control("workspaceLanguageButton")
         self.click("navTranslateButton")

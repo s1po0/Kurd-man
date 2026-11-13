@@ -56,6 +56,18 @@ HTTPS image document loaded, but capture returned the generic page-read error
 before any OCR result. The cause has not yet been established. Evidence index:
 `e81930a26fe71170d0226eb4166b23c896d5720d`; report blob:
 `3763daf62d1e107f97eb8dbf6d6ce1b60004b172`. Subsequent changes add only
-non-sensitive failure categories for diagnosis. Passing the MDN photograph
-check is not proof that translated comics, other sites, or the latest candidate
-work end-to-end. No 1.8.4 release is authorized by this evidence.
+non-sensitive failure categories for diagnosis. Run `43459701980` recorded a
+malformed/unavailable discovery response on the image document. GitHub raw
+resources commonly send a restrictive CSP sandbox, a possible explanation;
+this is not proven by the diagnostic alone. The candidate now explains that the
+page may be protected or unsupported rather than attempting a bypass. The
+updated installed-APK driver tests this explanation and separately attempts a
+generated HTTPS text image; neither new path has yet passed on Android. Passing
+the MDN photograph check is not proof that translated comics, other sites, or
+the latest candidate work end-to-end. No 1.8.4 release is authorized by this
+evidence.
+
+Research: GitHub raw's sandbox response policy is documented in
+https://github.com/nvm-sh/nvm/issues/2392, and the test image's text/URL format
+is documented in https://github.com/kingkool68/dummyimage/blob/master/index.html.
+These sources explain the test setup, not verified universal website behavior.

@@ -118,7 +118,7 @@ public final class WebReaderActivity extends AppCompatActivity {
             if(candidates.isEmpty()){cancelCapture();status.setText(R.string.web_empty);return;}
             String install="window.__koorixWebCapture=("+transport+")((u,m,s)=>("+capture+")(u,m,fetch,15000,s),btoa.bind(window));true";
             web.evaluateJavascript(install,result->{if(valid(token))next(token);});
-        }catch(Exception e){android.util.Log.w("KoorixWebReader", "Discovery response unavailable or malformed");cancelCapture();status.setText(R.string.web_error);}});
+        }catch(Exception e){android.util.Log.w("KoorixWebReader", "Discovery response unavailable or malformed");cancelCapture();status.setText(R.string.web_unsupported);}});
     }
     private boolean valid(int token){
         if(!capturing||epoch!=token||topUrl==null)return false;
