@@ -3,7 +3,7 @@ on:
   push:
     branches: ["arena/**"]
     paths:
-      - "koorix/releases/v1.8.2.json"
+      - "koorix/releases/v1.8.3.json"
       - ".github/workflows/koorix-done.yml"
 permissions:
   contents: read
@@ -18,44 +18,27 @@ jobs:
         run: |
           python3 - <<'PY'
           import json
-          record=json.load(open('koorix/releases/v1.8.2.json'))
-          assert record['version']=='1.8.2' and record['versionCode']==18
+          record=json.load(open('koorix/releases/v1.8.3.json'))
+          assert record['version']=='1.8.3' and record['versionCode']==19
           assert record['applicationId']=='com.koorix.app' and record['signingIdentity']=='permanent-v2'
-          for feature in ('userLoginRemoved','premiumRemoved','dailyAppQuotasRemoved',
-                          'unifiedAppCapableInputChooser','actualContourInkValidation','completeDialogueNoClip',
-                          'nativeReadingStudioUi','greenBrandRemoved','softBlueVioletPeachTriad',
-                          'persistentHeaderDarkLightShortcut','coveredOcrLinesNormalized',
-                          'coveredFragmentsRetainCompleteSourceRows','contextualSoraniSystemFields',
-                          'descriptionSupportedCustodianRole'):
-              assert record['features'][feature] is True, feature
-          assert record['features']['separateGalleryAndUnfilteredFiles'] is False
-          assert record['features']['newTranslationModel'] is False
+          assert record['apkSha256']=='ccb851fd8827c6b248088c28c6daad55c24cd1e3c9ecf9730a32897e0bdc8be0'
           verified=record['independentLocalVerification']
-          for check in ('native_triad_dark_mode_checked','native_reading_studio_ui_checked',
-                        'native_contour_classes_checked','native_ocr_system_fields_checked',
-                        'no_login_gate_checked','free_edition_checked'):
-              assert verified[check] is True, check
-          assert verified['sha256']==record['apkSha256']
+          assert verified['sha256']==record['apkSha256'] and verified['signature']['content_digest_verified']
+          assert verified['signature']['certificate_sha256']=='fb304de3cd357f35cf679e2a46befac08f3e97feef28b1b9a8af7b0891d40340'
           ci=record['ci']
           assert ci['status']=='success' and ci['failures']==ci['skipped']==0
-          assert ci['androidJvmExecutions']>=226 and ci['nativeNarrationExecutions']>=18
-          assert ci['nativeGlyphExecutions']>=34 and ci['nativeUiExecutions']>=38
-          assert ci['uiCaptures']>=54 and ci['bubbleFixtures']>=20
-          qa=record['nativeQaSkill']
-          assert qa['repository']=='alirezarezvani/claude-skills' and qa['license']=='MIT'
-          assert qa['upstreamInstallersExecuted'] is False
-          emulator=record['installedApkEmulator']
-          assert emulator['status']=='passed' and emulator['api']==34
-          assert emulator['apkSha256']==record['apkSha256']
-          assert emulator['readerDataUsed'] is False and emulator['alternateAppOrDebugVariant'] is False
-          assert emulator['sourceBlocks']==emulator['targetBlocks'] and emulator['sourceBlocks']>0
-          assert emulator['sameAgentVisualReview']=='passed-for-authored-fixture-only'
-          assert emulator['sameAgentMeaningReview']=='passed-for-authored-fixture-only'
-          assert emulator['meaningReviewedByNativeHuman'] is False
-          assert record['delivery']['chatFilePresented'] is True
-          assert record['delivery']['telegramApkAcknowledged'] is True
-          assert record['limitations']['actualSuppliedPageOcrRerun'] is False
-          assert record['limitations']['physicalDeviceAcceptance'] is False
+          assert ci['androidJvmExecutions']>=268 and ci['publicationExecutions']>=20 and ci['completionExecutions']>=22
+          device=record['installedApkEmulator']
+          assert device['status']=='passed' and device['apkSha256']==record['apkSha256']
+          assert device['publicImageRows']==1 and device['publicTxtRows']==0 and device['publicPdfRows']==1
+          assert device['readerDataUsed'] is False and device['physicalPhoneOrSamsungGallery'] is False
+          assert device['allArtifactsFetchedAndHashVerified'] is True
+          for item in ('one_public_gallery_image_no_automatic_txt','studio_export_same_owned_media_row_canonical_folder_no_txt',
+                       'requested_real_pdf_preserved_with_one_gallery_image_no_txt','explicit_manual_protection_retains_stop_and_stops_actual_service'):
+              assert item in device['checks'], item
+          assert record['delivery']['chatFilePresented'] and record['delivery']['telegramApkAcknowledged']
+          assert record['delivery']['releaseAssetDigestMatchesChatFile'] and record['delivery']['publicDownloadHead']==302
+          assert record['features']['automaticTxtSidecars'] is False and record['features']['previousReaderFilesAutomaticallyDeleted'] is False
           PY
       - name: Tell the owner the verified regular Koorix work is complete
         env:
@@ -64,11 +47,10 @@ jobs:
         run: |
           test -n "$TOKEN" && test -n "$ADMIN"
           MESSAGE="تەواو بووم ✅
-          Koorix 1.8.2 — چاکسازی دووبارەبوونەوەی هێڵ و پاراستنی هەموو وشەکانی OCR؛ زاراوەی Aspect لە پانێڵی سیستەمی گونجاودا دەبێتە تایبەتمەندی.
-          ڕێنمایی Java Review / Design QAی Skillە داواکراوەکان بەکار هات. خودی APKی ئاسایی لە ئەمولەیتەری ئەندرۆیددا بە وێنەی نموونە و OCR/وەرگێڕان/ڕەندەری ڕاستەقینە تاقی کراوەتەوە؛ نەک پەڕە تایبەتییەکەت یان هەموو مۆبایلێک. مۆدێلی نوێ نییە.
-          APK لە چات و Telegram نێردرا. Dark mode و سێ ڕەنگەکە، پڕۆژەکان، یەک هەڵبژێرەر، خۆڕایی و STOP پارێزراون.
-          هەمان package و کلیلی v2؛ لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە. پەڕە ڕەسەنەکە دووبارە Translate بکە.
-          https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.8.2/Koorix-v1.8.2.apk"
+          Koorix 1.8.3 — هەر وێنەی وەرگێڕدراو یەک کۆپیی گشتی هەیە و TXT خۆکار دروست ناکرێت. دەقی پڕۆژە و فایلە کۆنەکانت پارێزراون.
+          پیشاندانی ئەنجام، STOP، Undo و هەناردەی Studio چاک کراون. خودی APKی ئاسایی بە وێنەی نموونە لە ئەمولەیتەردا تاقی کراوەتەوە، نەک لە Galleryی مۆبایلەکەت.
+          APK لە چات و Telegram نێردرا. هەمان کلیلی v2؛ لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە.
+          https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.8.3/Koorix-v1.8.3.apk"
           RESPONSE=$(curl -fsS --connect-timeout 20 --max-time 60 \
             --data-urlencode "chat_id=$ADMIN" --data-urlencode "text=$MESSAGE" \
             "https://api.telegram.org/bot${TOKEN}/sendMessage")

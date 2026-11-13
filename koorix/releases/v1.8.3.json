@@ -1,0 +1,284 @@
+{
+  "version": "1.8.3",
+  "versionCode": 19,
+  "applicationId": "com.koorix.app",
+  "label": "Koorix",
+  "debuggable": false,
+  "sourceCommit": "003ecc922678d67c3bd0c7e19994724c8a7b0c07",
+  "nativeTreeSha": "8f280f048bcfc54306165b0b00f26d9c0478540e",
+  "releaseId": 444297397,
+  "assetId": 743861264,
+  "publishedAt": "2026-11-13T14:00:45Z",
+  "downloadUrl": "https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.8.3/Koorix-v1.8.3.apk",
+  "apkBlobSha": "155c5aff146ace6fc4fcbfcca65bd1e4b3d74942",
+  "apkBytes": 33591433,
+  "apkSha256": "ccb851fd8827c6b248088c28c6daad55c24cd1e3c9ecf9730a32897e0bdc8be0",
+  "signingIdentity": "permanent-v2",
+  "independentLocalVerification": {
+    "file": "Koorix-v1.8.3.apk",
+    "bytes": 33591433,
+    "sha256": "ccb851fd8827c6b248088c28c6daad55c24cd1e3c9ecf9730a32897e0bdc8be0",
+    "zip_entries": 631,
+    "signature": {
+      "scheme": "v2",
+      "rsa_bits": 3072,
+      "certificate_sha256": "fb304de3cd357f35cf679e2a46befac08f3e97feef28b1b9a8af7b0891d40340",
+      "algorithm": "0x103",
+      "content_digest_verified": true
+    },
+    "package": "com.koorix.app",
+    "version": "1.8.3",
+    "version_code": 19,
+    "label": "Koorix",
+    "debuggable": false,
+    "no_login_gate_checked": true,
+    "free_edition_checked": true,
+    "test_harness_and_private_recovery_absent": true,
+    "native_contour_classes_checked": true,
+    "native_reading_studio_ui_checked": true,
+    "native_triad_dark_mode_checked": true,
+    "native_ocr_system_fields_checked": true
+  },
+  "ci": {
+    "runId": 43437436521,
+    "jobId": 131926069148,
+    "status": "success",
+    "androidJvmExecutions": 268,
+    "publicationExecutions": 20,
+    "completionExecutions": 22,
+    "nativeNarrationExecutions": 18,
+    "nativeGlyphExecutions": 34,
+    "nativeUiExecutions": 38,
+    "failures": 0,
+    "skipped": 0,
+    "uiCaptures": 54,
+    "uiCaptureReportBlob": "5c7b356370ecaf90b7974107ed4183945e0af8e6",
+    "bubbleFixtures": 20,
+    "bubbleFixtureReportBlob": "4cbb41d63f20aa9b71c38dedb4f0967228b80c3e",
+    "cryptoTests": 18,
+    "comicAssertions": 605,
+    "systemFieldAndRoleAssertions": 108,
+    "qualityAssertions": 51
+  },
+  "installedApkEmulator": {
+    "scope": "Installed regular signed APK on API34 Android emulator; synthetic source only; NOT physical-device/reader-page/general semantic acceptance",
+    "status": "passed",
+    "checks": [
+      "same_verified_arm64_regular_apk_installed",
+      "native_theme_switch_and_process_relaunch_persistence",
+      "synthetic_media_bytes_verified",
+      "one_original_system_source_chooser",
+      "ordinary_system_chooser_image_import",
+      "busy_stop_visible_and_theme_recreation_disabled",
+      "completed_preview_not_labelled_empty_and_idle_stop_absent",
+      "one_public_gallery_image_no_automatic_txt",
+      "real_ocr_complete_source_no_duplicate_words",
+      "selected_live_translator_and_contextual_labels_retained_in_ui",
+      "real_saved_result_opens_native_studio",
+      "studio_undo_restores_controls_and_status_together",
+      "completed_preview_not_labelled_empty_and_idle_stop_absent",
+      "studio_export_same_owned_media_row_canonical_folder_no_txt",
+      "completed_preview_not_labelled_empty_and_idle_stop_absent",
+      "process_reopen_keeps_result_without_republication",
+      "completed_preview_not_labelled_empty_and_idle_stop_absent",
+      "requested_real_pdf_preserved_with_one_gallery_image_no_txt",
+      "explicit_manual_protection_retains_stop_and_stops_actual_service",
+      "no_regular_app_crash_observed"
+    ],
+    "meaningReviewedByNativeHuman": false,
+    "readerDataUsed": false,
+    "alternateAppOrDebugVariant": false,
+    "api": 34,
+    "abis": [
+      "x86_64",
+      "arm64-v8a"
+    ],
+    "nativeBridge": "libndk_translation.so",
+    "apkSha256": "ccb851fd8827c6b248088c28c6daad55c24cd1e3c9ecf9730a32897e0bdc8be0",
+    "publicImageRows": 1,
+    "publicTxtRows": 0,
+    "publicFolder": "Download/Koorix/",
+    "sourceBlocks": 1,
+    "targetBlocks": 1,
+    "publicPdfRows": 1,
+    "runId": 43437436521,
+    "jobId": 131926069148,
+    "reportBlob": "7a161c046335041ff9ef52012f7747768318c8f8",
+    "artifacts": [
+      {
+        "name": "home-ckb.png",
+        "bytes": 194118,
+        "sha256": "4ef5b154c7b6d0b9cf867d8d46ff90227239bd5c938b6cdd09fca4c64ffd4cc5",
+        "blob": "87b5118f47bb06be4969349fb831917f57552b23"
+      },
+      {
+        "name": "home-en-dark.png",
+        "bytes": 174257,
+        "sha256": "665feedf129e570a400eb9c46382d326b93c637ffadf2298e0aaf961515807de",
+        "blob": "aa0c2a197f34001cdca51e9ca4b0057146cb98f6"
+      },
+      {
+        "name": "home-en-light.png",
+        "bytes": 169288,
+        "sha256": "25253a0a0a061efd3b196e4edec5c417343c268646561c63b0f43c7017d43a3d",
+        "blob": "379776e18c0df7c32c622aaf1ad0cba74d71a3d3"
+      },
+      {
+        "name": "manual-keep-alive.png",
+        "bytes": 169259,
+        "sha256": "a33b69a1c5ea1bf3544cfff9c438080d44d81e0720fe36a4a1b87ca989cbc161",
+        "blob": "efb79b270afa6df0d89ea5ec412053e859ac781c"
+      },
+      {
+        "name": "manual-stopped.png",
+        "bytes": 205885,
+        "sha256": "f6930bafac912636c4392b1673bef94840a9dbf4334503b69799560ec1e7c509",
+        "blob": "f45cccd93136c1f69f819fb469c8a36d1c4bbe3f"
+      },
+      {
+        "name": "pdf-export.png",
+        "bytes": 233938,
+        "sha256": "22b06dcf0c936ea0fd6b4c097df6ba0255c6f08181adf80728d44c91382dc262",
+        "blob": "049bb753e8b8812101cca16d3c2fd05eb577a48b"
+      },
+      {
+        "name": "reopened-result.png",
+        "bytes": 260472,
+        "sha256": "58629b779e1c09cbc57ca0c5420c2d1078bf07c9e087491c6b3eb259d5d249e7",
+        "blob": "ce7430612eb49fb00b3685811d15737f713da032"
+      },
+      {
+        "name": "report.json",
+        "bytes": 1754,
+        "sha256": "6f8d6e88d1658b5d8fad48e8f4dbd89dd782ede07ea4a61adf6492dfca258b12",
+        "blob": "cc18936e2d06cdad93b10c4764218ad624ffc3bf"
+      },
+      {
+        "name": "results-text.png",
+        "bytes": 203271,
+        "sha256": "a5c328a89086d5c645bb21fa394adc2a31756426dca78460d869bcb103079f29",
+        "blob": "1d05a54ac2ec52a67085c1e92951591dc3d93d7a"
+      },
+      {
+        "name": "results.png",
+        "bytes": 234031,
+        "sha256": "923639576259bce8837ee88fb2f01c5443f8bd179e90a02efce641eeb35f1f7c",
+        "blob": "eacb5f05dd55fc021e053b3ff633350d269e0390"
+      },
+      {
+        "name": "source-chooser.png",
+        "bytes": 79624,
+        "sha256": "1191046ba3410cc2204883510c312b7763a9927ba97f8f00c07dfaa15f160c63",
+        "blob": "b02d26e6f898fc780d84e75d5b5e2e7ddda52165"
+      },
+      {
+        "name": "source-selected.png",
+        "bytes": 168073,
+        "sha256": "204c8612a6ae65b60ece25cbf228e5ba4deb2c630703144b079a448ae4391d05",
+        "blob": "ee9e09a5184f768c8658ec910c31d68fa8562204"
+      },
+      {
+        "name": "studio-export.png",
+        "bytes": 203587,
+        "sha256": "787756304a635f594ccca580ceae3f82dc842ba0bbe9367df477670337307f97",
+        "blob": "933dbf3707f99232dfec7a9d67dc86be18e383ce"
+      },
+      {
+        "name": "studio-size-90.png",
+        "bytes": 208244,
+        "sha256": "62df273fb1e540a53be8238c8d07aa9a02d144f9518dd432e214fc7392664cf0",
+        "blob": "4d1025109f85257e8d04d6bf5fbb40b2d36c584f"
+      },
+      {
+        "name": "studio-undo-100.png",
+        "bytes": 207278,
+        "sha256": "8e726eee54ca5c6ea1c1e04c2ef9bbb389b105fcbc03b70740952da6feddfd2b",
+        "blob": "9d1ebe6442987f4c841d593229f025ba22d71306"
+      },
+      {
+        "name": "studio.png",
+        "bytes": 219493,
+        "sha256": "0dd61dfa5a50cf8a050dc8af8737728f3b71567312bbb70ac23e016185fa1195",
+        "blob": "2df93e81ebb699e3b7917e34ff577b7fb599f023"
+      },
+      {
+        "name": "synthetic-result.jpg",
+        "bytes": 113180,
+        "sha256": "57bf44b9d3eacd6d48719a50d0b63190c66e4970078a30c389f8ffb210c3fe86",
+        "blob": "c531324d76a2704df5967bb5d184256f3543b796"
+      },
+      {
+        "name": "synthetic-result.pdf",
+        "bytes": 118310,
+        "sha256": "2e16a514d98b9b4ab3220f1f4ea3bc26493469f475342cd76f8d6a0e5491e053",
+        "blob": "6198a075a3512cadbcd683674d4a4e0d1ece155a"
+      },
+      {
+        "name": "synthetic-source.png",
+        "bytes": 33492,
+        "sha256": "2aa97f80fc275e194c08229c93058f4fdefff6e3f751da4ff36db00b51550820",
+        "blob": "a2947bd88da7663e641bbdb6eaecdfb6b0ed6ec9"
+      },
+      {
+        "name": "synthetic-studio-result.jpg",
+        "bytes": 113180,
+        "sha256": "57bf44b9d3eacd6d48719a50d0b63190c66e4970078a30c389f8ffb210c3fe86",
+        "blob": "c531324d76a2704df5967bb5d184256f3543b796"
+      },
+      {
+        "name": "synthetic-ui-pairs.json",
+        "bytes": 648,
+        "sha256": "0481de1048b8c531f41ae7d5e858aaf028f654844b4359245570100741183e84",
+        "blob": "0678213e6f86eee88d5d80e362dfc8fd08b15471"
+      },
+      {
+        "name": "translating.png",
+        "bytes": 180354,
+        "sha256": "4cd10cb48152c4510b42ace00b16232f049f196ce19536da0765124b5dac03be",
+        "blob": "0edc988355eebc541b779c4cc4f7d80f46fbc0ca"
+      }
+    ],
+    "allArtifactsFetchedAndHashVerified": true,
+    "viewedCaptures": [
+      "results.png",
+      "studio-undo-100.png",
+      "synthetic-result.jpg",
+      "manual-keep-alive.png"
+    ],
+    "sameAgentVisualReview": "passed-for-authored-fixture-only",
+    "sameAgentMeaningReview": "passed-for-authored-fixture-only",
+    "physicalPhoneOrSamsungGallery": false
+  },
+  "features": {
+    "singlePublicImagePerPage": true,
+    "automaticTxtSidecars": false,
+    "editableTextAndBackupPreserved": true,
+    "previousReaderFilesAutomaticallyDeleted": false,
+    "studioUsesSamePublicResult": true,
+    "pdfOptionalPreserved": true,
+    "stopForActivePendingManualWorkPreserved": true,
+    "notificationStopPausesPendingRecovery": true,
+    "emptyOverlayRemovedOnResult": true,
+    "undoStatusRestored": true,
+    "newTranslationModel": false,
+    "paidApiAdded": false,
+    "nllbAdded": false,
+    "hiddenOnlineFallbackAdded": false
+  },
+  "delivery": {
+    "chatFilePresented": true,
+    "telegramApkAcknowledged": true,
+    "telegramApkRunId": 43437436521,
+    "releaseAssetDigestMatchesChatFile": true,
+    "publicDownloadHead": 302,
+    "completionNotice": "pending"
+  },
+  "limitations": {
+    "physicalDeviceAcceptance": false,
+    "samsungGalleryTested": false,
+    "actualSuppliedPageOcrRerun": false,
+    "nativeHumanMeaningReview": false,
+    "generalTranslationQualityProven": false,
+    "oldDuplicateFilesAutomaticallyCleaned": false
+  }
+}

@@ -136,3 +136,22 @@ PR or merge. Existing v2 installations can update without uninstalling.
 TalkBack, exact historic reader-page OCR/rerender, offline-pack quality, native-
 human/general Sorani semantic acceptance or universal layout/erasure perfection.
 Do not relabel unchanged1.8.2 as this fix or treat a green count as those results.
+
+## Verified release and APK delivery
+
+The actual production run **43437436521 / job131926069148** passed all268
+native/JVM tests (0 failures/skips) and installed its **own delivered APK bytes**
+on API34 with the ARM64 bridge. All22 synthetic artifacts were recovered and
+SHA256/length/Git-blob verified, index `7a161c046335041ff9ef52012f7747768318c8f8`.
+Result preview, Undo, Gallery-related UI/service state and synthetic JPEG were
+viewed by the same agent. Actual public MediaStore reported one image row and
+no TXT; a selected PDF and manual foreground service STOP were exercised.
+
+Regular APK SHA256 `ccb851fd8827c6b248088c28c6daad55c24cd1e3c9ecf9730a32897e0bdc8be0`,
+33,591,433 bytes, permanent v2 signer. The public-only verifier independently
+confirmed signature/content, manifest, version and test/private-material
+exclusions. Release asset **743861264** has the same digest; the Git blob and
+chat-presented file were byte-verified, and the stable URL returned HTTP302.
+Telegram acknowledged the APK upload in the production job. Completion notice
+is a separate gated operation; its acknowledgement must be recorded only after
+it actually succeeds. No phone data was removed and old duplicates remain.
