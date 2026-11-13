@@ -47,6 +47,13 @@ def media_insert_uri(output):
     return found.group() if found else None
 
 
+def source_chooser_focused(window_dump):
+    # GET_CONTENT may correctly go straight to DocumentsUI's PickActivity,
+    # not a class literally called DocumentsActivity or ChooserActivity.
+    return bool(re.search(r"(?m)^\s*mCurrentFocus=.*(?:android/.*(?:Chooser|Resolver)Activity|"
+                          r"com\.(?:google\.android|android)\.documentsui/|com\.android\.intentresolver/)", window_dump))
+
+
 def node(root, identifier=None, text=None):
     for item in root.iter("node"):
         if identifier is not None and not item.get("resource-id", "").endswith(":id/" + identifier):
@@ -87,12 +94,12 @@ class Device:
                         include_stderr=include_stderr).decode("utf-8", "replace").strip()
 
     def ui(self):
-        output = self.shell("uiautomator", "dump", "/sdcard/koorix-qa-window.xml", timeout=35)
+        output = self.shell("uiautomator", "dump", "/data/local/tmp/koorix-qa-window.xml", timeout=35)
         if "UI hierchary dumped to" not in output and "UI hierarchy dumped to" not in output:
             # A failed dump can leave an old XML file behind. Never pass a
             # state transition by reading a stale previous-screen hierarchy.
             raise subprocess.CalledProcessError(1, ["uiautomator", "dump"])
-        return ET.fromstring(self.shell("cat", "/sdcard/koorix-qa-window.xml"))
+        return ET.fromstring(self.shell("cat", "/data/local/tmp/koorix-qa-window.xml"))
 
     def wait(self, predicate, label, timeout=90):
         deadline = time.monotonic() + timeout
@@ -226,7 +233,7 @@ class Device:
         def chooser():
             root = self.ui()
             focus = self.shell("dumpsys", "window")
-            foreground = re.search(r"mCurrentFocus=.*(?:ChooserActivity|ResolverActivity|DocumentsActivity)", focus)
+            foreground = source_chooser_focused(focus)
             system_ui = any(item.get("package") in ("android", "com.android.intentresolver",
                               "com.android.documentsui", "com.google.android.documentsui") for item in root.iter("node"))
             return root if foreground and system_ui else None
@@ -291,6 +298,12 @@ def main():
     except Exception as problem:
         device.report["status"] = "failed"
         device.report["failure"] = type(problem).__name__ + ": " + str(problem)[:300]
+        try:
+            focus = device.shell("dumpsys", "window")
+            device.report["focusedWindow"] = next((line.strip()[:300] for line in focus.splitlines()
+                                                      if "mCurrentFocus=" in line), "unavailable")
+        except Exception:
+            pass
         try:
             device.capture("failure.png")
         except Exception:

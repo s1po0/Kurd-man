@@ -126,6 +126,15 @@ hidden network fallback is added for offline. Final script cleanup is unchanged.
   genuinely focused chooser/fresh XML rather than a historical Activity entry,
   and disables only emulator system animations. Partial report:
   `3dfa4604b422e09ddb0532a805d12e5d30012912`.
+- The fresh foreground check in **43336006343 / job 131592225693** correctly
+  prevented a false pass: Android's real **DocumentsUI file chooser was visible**,
+  but its activity class was not the driver's old literal-name list. The actual
+  screenshot was viewed; the normal app chooser was not replaced. Matching now
+  recognizes the focused system DocumentsUI/IntentResolver packages (including
+  PickActivity), still rejects activity-history/home entries, and uses shell-temp
+  XML rather than polluting the user's synthetic file list. Partial report:
+  `db98acf5ed541187941cde3b713feabce18b253e`. No OCR/MT success was claimed for
+  this aborted input-setup run.
 - The actual delivered old 1.8.1 APK was downloaded and independently hash/signature
   verified locally; it passes the old UI gates but **correctly fails** the new
   narration/system-field implementation gate. A stale APK cannot be relabelled

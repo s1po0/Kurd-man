@@ -44,6 +44,16 @@ class Contracts(unittest.TestCase):
                         "content://media/internal/images/media/123", "file:///sdcard/private"):
             self.assertIsNone(driver.media_insert_uri(invalid))
 
+    def test_focus_accepts_real_system_pick_activity_not_activity_history(self):
+        for component in ("com.google.android.documentsui/com.android.documentsui.picker.PickActivity",
+                          "com.android.documentsui/.files.FilesActivity", "android/com.android.internal.app.ChooserActivity",
+                          "com.android.intentresolver/.ChooserActivity"):
+            self.assertTrue(driver.source_chooser_focused("  mCurrentFocus=Window{123 u0 " + component + "}"))
+        for wrong in ("Activity history: android/com.android.internal.app.ChooserActivity",
+                      "mCurrentFocus=Window{123 u0 com.koorix.app/com.kurdman.app.MainActivity}",
+                      "mCurrentFocus=null"):
+            self.assertFalse(driver.source_chooser_focused(wrong))
+
     def test_xml_leaf_controls_are_not_treated_as_missing(self):
         root = ET.fromstring('<hierarchy><node resource-id="com.koorix.app:id/quickThemeButton" enabled="true" bounds="[10,20][60,80]" text="Dark" /></hierarchy>')
         item = driver.node(root, identifier="quickThemeButton")
