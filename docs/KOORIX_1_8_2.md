@@ -116,6 +116,16 @@ hidden network fallback is added for offline. Final script cleanup is unchanged.
   headless-emulator host libraries address those observed setup errors. This was
   infrastructure, not a claim that the APK had run; all 226 native regressions
   passed again. No alternate app/ABI or mock route was used.
+- Run **43334918303 / job 131588556158** booted Android34, advertised
+  `x86_64,arm64-v8a` with `libndk_translation.so`, and installed/ran the **real
+  regular signed APK** (`95dc1a124d31ff7f0334cabafa489f968db186484afaa71a87e74579a4eb4863`).
+  Actual Kurdish/English light/dark screenshots and real theme/process-persistence
+  actions were observed. Its synthetic input setup stopped at MediaStore insertion,
+  so **OCR/MT/render was not claimed**. The driver now accepts the public
+  `external_primary` volume too, retains bounded insertion errors, requires a
+  genuinely focused chooser/fresh XML rather than a historical Activity entry,
+  and disables only emulator system animations. Partial report:
+  `3dfa4604b422e09ddb0532a805d12e5d30012912`.
 - The actual delivered old 1.8.1 APK was downloaded and independently hash/signature
   verified locally; it passes the old UI gates but **correctly fails** the new
   narration/system-field implementation gate. A stale APK cannot be relabelled

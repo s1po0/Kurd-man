@@ -36,6 +36,14 @@ class Contracts(unittest.TestCase):
             self.assertNotEqual(expected, driver.words(changed))
         self.assertEqual(expected, driver.words(driver.EXPECTED_SOURCE.upper().replace(":", " : ")))
 
+    def test_media_insert_accepts_only_public_external_image_collections(self):
+        for volume in ("external", "external_primary"):
+            uri = "content://media/" + volume + "/images/media/123"
+            self.assertEqual(uri, driver.media_insert_uri("Inserted " + uri + "\n"))
+        for invalid in ("Error while accessing provider", "content://private/images/media/123",
+                        "content://media/internal/images/media/123", "file:///sdcard/private"):
+            self.assertIsNone(driver.media_insert_uri(invalid))
+
     def test_xml_leaf_controls_are_not_treated_as_missing(self):
         root = ET.fromstring('<hierarchy><node resource-id="com.koorix.app:id/quickThemeButton" enabled="true" bounds="[10,20][60,80]" text="Dark" /></hierarchy>')
         item = driver.node(root, identifier="quickThemeButton")

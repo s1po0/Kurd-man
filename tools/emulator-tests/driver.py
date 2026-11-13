@@ -40,6 +40,13 @@ def pairs(text):
     return result
 
 
+def media_insert_uri(output):
+    # Android's external aggregate may return its external_primary volume.
+    # Permit exactly those public image collections, never arbitrary URI text.
+    found = re.search(r"content://media/(?:external|external_primary)/images/media/[1-9][0-9]*", output)
+    return found.group() if found else None
+
+
 def node(root, identifier=None, text=None):
     for item in root.iter("node"):
         if identifier is not None and not item.get("resource-id", "").endswith(":id/" + identifier):
@@ -70,16 +77,21 @@ class Device:
                        "status": "running", "checks": [], "meaningReviewedByNativeHuman": False,
                        "readerDataUsed": False, "alternateAppOrDebugVariant": False}
 
-    def adb(self, *args, data=None, timeout=30):
+    def adb(self, *args, data=None, timeout=30, include_stderr=False):
         completed = subprocess.run(["adb", "-s", "emulator-5554", *map(str, args)],
                                    input=data, capture_output=True, check=True, timeout=timeout)
-        return completed.stdout
+        return completed.stdout + (completed.stderr if include_stderr else b"")
 
-    def shell(self, *args, data=None, timeout=30):
-        return self.adb("shell", shlex.join(map(str, args)), data=data, timeout=timeout).decode("utf-8", "replace").strip()
+    def shell(self, *args, data=None, timeout=30, include_stderr=False):
+        return self.adb("shell", shlex.join(map(str, args)), data=data, timeout=timeout,
+                        include_stderr=include_stderr).decode("utf-8", "replace").strip()
 
     def ui(self):
-        self.shell("uiautomator", "dump", "/sdcard/koorix-qa-window.xml", timeout=35)
+        output = self.shell("uiautomator", "dump", "/sdcard/koorix-qa-window.xml", timeout=35)
+        if "UI hierchary dumped to" not in output and "UI hierarchy dumped to" not in output:
+            # A failed dump can leave an old XML file behind. Never pass a
+            # state transition by reading a stale previous-screen hierarchy.
+            raise subprocess.CalledProcessError(1, ["uiautomator", "dump"])
         return ET.fromstring(self.shell("cat", "/sdcard/koorix-qa-window.xml"))
 
     def wait(self, predicate, label, timeout=90):
@@ -118,7 +130,7 @@ class Device:
 
     def check(self, code):
         self.report["checks"].append(code)
-        print("Real APK check: " + code, flush=True)
+        print("::notice::REAL_APK_CHECK=" + code, flush=True)
 
     def capture(self, name):
         if name not in CAPTURES:
@@ -143,11 +155,10 @@ class Device:
     def import_source(self):
         inserted = self.shell("content", "insert", "--uri", "content://media/external/images/media",
                               "--bind", "_display_name:s:koorix-qa-source.png", "--bind", "mime_type:s:image/png",
-                              "--bind", "relative_path:s:Pictures/Koorix-QA/")
-        found = re.search(r"content://media/external/images/media/\d+", inserted)
-        if not found:
-            raise RuntimeError("Synthetic MediaStore insertion failed")
-        uri = found.group()
+                              "--bind", "relative_path:s:Pictures/Koorix-QA/", include_stderr=True)
+        uri = media_insert_uri(inserted)
+        if uri is None:
+            raise RuntimeError("Synthetic MediaStore insertion failed: " + inserted[:300])
         self.shell("content", "write", "--uri", uri, data=(self.output / "synthetic-source.png").read_bytes())
         self.shell("am", "start", "-W", "-n", COMPONENT, "-a", "android.intent.action.SEND", "-t", "image/png",
                    "--eu", "android.intent.extra.STREAM", uri, "--grant-read-uri-permission", timeout=60)
@@ -187,6 +198,8 @@ class Device:
             raise RuntimeError("Official emulator does not advertise required ARM64 compatibility; no alternate APK is substituted")
         self.shell("wm", "size", "1080x1920")
         self.shell("wm", "density", "420")
+        for setting in ("window_animation_scale", "transition_animation_scale", "animator_duration_scale"):
+            self.shell("settings", "put", "global", setting, "0")
         self.shell("input", "keyevent", "82")
         self.adb("install", "--no-streaming", "-r", str(apk.resolve()), timeout=120)
         package = self.shell("dumpsys", "package", PACKAGE)
@@ -210,8 +223,14 @@ class Device:
         self.check("native_theme_switch_and_process_relaunch_persistence")
         self.theme(False)
         self.click("pickButton")
-        self.wait(lambda: "ChooserActivity" in self.shell("dumpsys", "activity", "activities")
-                  or "documentsui" in self.shell("dumpsys", "activity", "activities"), "System source chooser")
+        def chooser():
+            root = self.ui()
+            focus = self.shell("dumpsys", "window")
+            foreground = re.search(r"mCurrentFocus=.*(?:ChooserActivity|ResolverActivity|DocumentsActivity)", focus)
+            system_ui = any(item.get("package") in ("android", "com.android.intentresolver",
+                              "com.android.documentsui", "com.google.android.documentsui") for item in root.iter("node"))
+            return root if foreground and system_ui else None
+        self.wait(chooser, "Actual foreground system source chooser")
         self.capture("source-chooser.png")
         self.shell("input", "keyevent", "4")
         self.control("workspaceLanguageButton")
@@ -220,7 +239,7 @@ class Device:
         self.capture("source-selected.png")
         self.click("translateButton")
         # The busy frame may be too brief on a fast machine. Never fabricate it.
-        initial = self.ui()
+        initial = self.wait(lambda: self.ui(), "Fresh busy or completed result hierarchy", timeout=50)
         stop = node(initial, identifier="stopJobButton")
         if stop is not None and stop.get("enabled") == "true":
             theme = node(initial, identifier="quickThemeButton")
