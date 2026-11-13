@@ -24,8 +24,10 @@ After all existing native/unit/free/signature gates, the production workflow:
    OEM apps are not inferred; no shell-only intent is treated as a granted share.
 7. Taps normal **Translate**, waits for real bundled ML Kit OCR / existing online
    translation / render/export,
-   checks every source word/order and guarded field labels in the public output,
-   and opens the actual saved result in the native studio.
+   checks every source word/order, both distinct field labels, the fixture's
+   description-supported custodian role and explicit inability in the public
+   output, and opens the actual saved result in the native studio. These fixture
+   assertions are not a general semantic score; actual output still needs review.
 8. Checks for an observed app crash, captures genuine emulator screenshots and
    exports only explicitly named synthetic products. Screenshots are reviewed by
    the agent; a green count alone is not a visual/semantic acceptance decision.

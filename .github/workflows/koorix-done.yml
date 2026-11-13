@@ -25,7 +25,8 @@ jobs:
                           'unifiedAppCapableInputChooser','actualContourInkValidation','completeDialogueNoClip',
                           'nativeReadingStudioUi','greenBrandRemoved','softBlueVioletPeachTriad',
                           'persistentHeaderDarkLightShortcut','coveredOcrLinesNormalized',
-                          'coveredFragmentsRetainCompleteSourceRows','contextualSoraniSystemFields'):
+                          'coveredFragmentsRetainCompleteSourceRows','contextualSoraniSystemFields',
+                          'descriptionSupportedCustodianRole'):
               assert record['features'][feature] is True, feature
           assert record['features']['separateGalleryAndUnfilteredFiles'] is False
           assert record['features']['newTranslationModel'] is False
@@ -48,6 +49,9 @@ jobs:
           assert emulator['apkSha256']==record['apkSha256']
           assert emulator['readerDataUsed'] is False and emulator['alternateAppOrDebugVariant'] is False
           assert emulator['sourceBlocks']==emulator['targetBlocks'] and emulator['sourceBlocks']>0
+          assert emulator['sameAgentVisualReview']=='passed-for-authored-fixture-only'
+          assert emulator['sameAgentMeaningReview']=='passed-for-authored-fixture-only'
+          assert emulator['meaningReviewedByNativeHuman'] is False
           assert record['delivery']['chatFilePresented'] is True
           assert record['delivery']['telegramApkAcknowledged'] is True
           assert record['limitations']['actualSuppliedPageOcrRerun'] is False

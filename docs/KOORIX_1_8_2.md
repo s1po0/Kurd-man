@@ -187,6 +187,21 @@ hidden network fallback is added for offline. Final script cleanup is unchanged.
   The conservative description-supported role guard, adversarial cases and the
   stricter real-export fixture check address that observed defect; a new hosted
   run and visual/meaning review are required, not reuse of the earlier green icon.
+- Corrected candidate **c505a24**, run **43346262307 / job 131626255823**,
+  passed **226 native/JVM, 108 system-field/role, 605 comic and 51 quality
+  assertions**, 18 crypto checks and the strengthened actual-APK fixture gate.
+  All 12 installed-APK artifacts were fetched and size/SHA256/Git-blob verified:
+  `b1b5ba0c3549504747b6a591ee0cb5a08d59ef80`. Actual JPEG/studio/dark-home/result
+  screenshots were viewed; every original English word remained, the custodian
+  title and explicit inability were present, and the full joined text fit the
+  black panel without a second smaller overlapping run. **Same-agent** visual
+  and meaning review passed for this authored fixture only, not a native-human
+  review, universal meaning score or rerun of the reader's private page.
+  Candidate APK SHA256:
+  `af298d15c16dcf7747556833946c1fb6e859c10f062a9083607d2fa14763210a`;
+  native tree `05817e482d9dbcf101e636ec1bc63797c4c355ea`. The release must
+  rebuild, re-exercise and independently verify its own delivered bytes; final
+  publication/delivery evidence belongs in the receipt, not an inferred claim.
 - The actual delivered old 1.8.1 APK was downloaded and independently hash/signature
   verified locally; it passes the old UI gates but **correctly fails** the new
   narration/system-field implementation gate. A stale APK cannot be relabelled
