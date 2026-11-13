@@ -1,5 +1,7 @@
 {
   "session": "koorix-regular-182-observe-1",
-  "sequence": 0,
-  "action": "snapshot"
+  "sequence": 1,
+  "action": "tap_id",
+  "expectedFrame": "ccd4b65c092651ff59d8a88e1f3ebc290860c6b300061c4bc992c8f9b3ae3fe4",
+  "id": "navSettingsButton"
 }
