@@ -22,4 +22,5 @@
     <string name="web_previous">پەڕەی پێشوو</string>
     <string name="web_page">پەڕەی %1$d / %2$d</string>
     <string name="web_save">هەناردەکردنی ئەنجام</string>
+    <string name="web_cache_full">شوێنی کاشی بەس نییە بۆ ئەم چەپتەرە.</string>
 </resources>

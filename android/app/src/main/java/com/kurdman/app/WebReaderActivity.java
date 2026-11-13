@@ -45,7 +45,7 @@ public final class WebReaderActivity extends AppCompatActivity {
     private String discovery,capture,transport,topUrl;
     private File session,current;
     private FileOutputStream out;
-    private long total,currentBytes,deadline;
+    private long total,currentBytes,deadline,importLimit;
     private int epoch,index,failed,jsId;
     private boolean capturing,transferred;
 
@@ -88,6 +88,8 @@ public final class WebReaderActivity extends AppCompatActivity {
     private void beginCapture(){if(capturing||!secureUrl(web.getUrl())){status.setText(R.string.web_invalid);return;}
         topUrl=web.getUrl();int token=++epoch;capturing=true;translate.setEnabled(false);stop.setEnabled(true);status.setText(R.string.web_discover);
         candidates.clear();files.clear();index=0;failed=0;total=0;transferred=false;
+        try{importLimit=WebImportBudget.allowance(getCacheDir());if(importLimit<1)throw new java.io.IOException("Cache full");}
+        catch(Exception full){cancelCapture();status.setText(R.string.web_cache_full);return;}
         session=new File(getCacheDir(),"web-reader/"+UUID.randomUUID());if(!session.mkdirs()){cancelCapture();status.setText(R.string.web_error);return;}
         web.evaluateJavascript(discovery,raw->{if(!valid(token))return;try{
             JSONObject obj=new JSONObject(raw);JSONArray imgs=obj.getJSONArray("images");LinkedHashSet<String> unique=new LinkedHashSet<>();
@@ -98,10 +100,10 @@ public final class WebReaderActivity extends AppCompatActivity {
         }catch(Exception e){cancelCapture();status.setText(R.string.web_error);}});
     }
     private boolean valid(int token){return capturing&&epoch==token&&topUrl!=null&&topUrl.equals(web.getUrl());}
-    private void next(int token){if(!valid(token))return;if(index>=candidates.size()||total>=MAX_TOTAL){finishCapture();return;}
+    private void next(int token){if(!valid(token))return;if(index>=candidates.size()||total>=importLimit){finishCapture();return;}
         status.setText(getString(R.string.web_capture,index+1,candidates.size()));current=new File(session,String.format(Locale.ROOT,"%04d.part",index+1));currentBytes=0;
         try{out=new FileOutputStream(current);}catch(Exception failure){cancelCapture();status.setText(R.string.web_error);return;}
-        long limit=Math.min(MAX_IMAGE,MAX_TOTAL-total);deadline=android.os.SystemClock.elapsedRealtime()+30000;
+        long limit=Math.min(MAX_IMAGE,importLimit-total);deadline=android.os.SystemClock.elapsedRealtime()+30000;
         String code="window.__koorixWebCapture.start("+JSONObject.quote(candidates.get(index))+","+limit+")";
         web.evaluateJavascript(code,raw->{if(!valid(token))return;try{jsId=Integer.parseInt(raw);poll(token);}catch(Exception bad){skip(token);}});
     }
@@ -109,7 +111,7 @@ public final class WebReaderActivity extends AppCompatActivity {
         web.evaluateJavascript("window.__koorixWebCapture.poll("+jsId+")",raw->{if(!valid(token))return;try{
             JSONObject result=new JSONObject(raw);String state=result.optString("status");
             if("working".equals(state)){handler.postDelayed(()->poll(token),50);return;}
-            if("chunk".equals(state)){String data=result.optString("data","");if(data.isEmpty()||data.length()>65536)throw new IllegalArgumentException();byte[] chunk=Base64.decode(data,Base64.DEFAULT);if(chunk.length==0||chunk.length>49152||currentBytes+chunk.length>MAX_IMAGE||total+currentBytes+chunk.length>MAX_TOTAL)throw new IllegalArgumentException();out.write(chunk);currentBytes+=chunk.length;handler.post(()->poll(token));return;}
+            if("chunk".equals(state)){String data=result.optString("data","");if(data.isEmpty()||data.length()>65536)throw new IllegalArgumentException();byte[] chunk=Base64.decode(data,Base64.DEFAULT);if(chunk.length==0||chunk.length>49152||currentBytes+chunk.length>MAX_IMAGE||total+currentBytes+chunk.length>importLimit)throw new IllegalArgumentException();out.write(chunk);currentBytes+=chunk.length;handler.post(()->poll(token));return;}
             if("done".equals(state)){out.close();out=null;BitmapFactory.Options bounds=new BitmapFactory.Options();bounds.inJustDecodeBounds=true;BitmapFactory.decodeFile(current.getAbsolutePath(),bounds);
                 if(bounds.outWidth<=0||bounds.outHeight<=0||(long)bounds.outWidth*bounds.outHeight>100_000_000L)throw new IllegalArgumentException();
                 String ext="image/png".equals(bounds.outMimeType)?".png":"image/webp".equals(bounds.outMimeType)?".webp":"image/bmp".equals(bounds.outMimeType)?".bmp":"image/jpeg".equals(bounds.outMimeType)?".jpg":null;

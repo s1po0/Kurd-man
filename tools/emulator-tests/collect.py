@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CAPTURES = {"home-ckb.png", "home-en-light.png", "home-en-dark.png", "source-chooser.png",
             "source-selected.png", "translating.png", "results.png", "results-text.png", "studio.png",
             "studio-size-90.png", "studio-undo-100.png", "studio-export.png", "reopened-result.png",
-            "manual-keep-alive.png", "manual-stopped.png", "pdf-export.png", "failure.png"}
+            "manual-keep-alive.png", "manual-stopped.png", "pdf-export.png", "web-no-text.png", "failure.png"}
 ALLOWED = CAPTURES | {"synthetic-source.png", "synthetic-result.jpg", "synthetic-studio-result.jpg", "synthetic-result.pdf", "synthetic-ui-pairs.json", "report.json", "emulator-diagnostics.txt"}
 REQUIRED = (CAPTURES - {"translating.png", "failure.png"}) | {"synthetic-source.png",
             "synthetic-result.jpg", "synthetic-studio-result.jpg", "synthetic-result.pdf", "synthetic-ui-pairs.json", "report.json"}

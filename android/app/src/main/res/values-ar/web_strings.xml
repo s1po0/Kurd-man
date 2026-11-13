@@ -22,4 +22,5 @@
     <string name="web_previous">الصفحة السابقة</string>
     <string name="web_page">الصفحة %1$d / %2$d</string>
     <string name="web_save">تصدير النتيجة</string>
+    <string name="web_cache_full">لا توجد مساحة كافية في ذاكرة التخزين المؤقت لهذا الفصل.</string>
 </resources>
