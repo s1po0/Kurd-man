@@ -548,6 +548,15 @@ def main():
         except Exception:
             pass
         try:
+            # Static app-authored categories only; never retain site URLs or dialogue.
+            diagnostics = device.shell("logcat", "-d", "-s", "KoorixWebReader:W", timeout=30)
+            safe = [line for line in diagnostics.splitlines() if any(message in line for message in
+                    ("Discovery response unavailable or malformed", "Navigation changed during capture"))]
+            if safe:
+                device.report["webReaderDiagnostics"] = safe[-5:]
+        except Exception:
+            pass
+        try:
             device.capture("failure.png")
         except Exception:
             pass  # No screenshot is evidence when Android itself was unavailable.
