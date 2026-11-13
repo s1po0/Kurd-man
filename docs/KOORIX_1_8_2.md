@@ -215,6 +215,26 @@ segmentation, an end-to-end rerender of the supplied raw with real OCR/MT, or
 universal Sorani meaning quality. The underlying engines are unchanged and their
 semantic limitations remain. Do not substitute passing counts for those claims.
 
+## Verified regular release and delivery
+
+Release **22b1407**, run **43347383485 / job 131629906155**, passed all 226
+native/JVM checks, 108 field/role assertions and the strengthened real-APK job
+again. Its **own delivered bytes** were installed on API34 with the official
+ARM64 bridge, not inferred from the candidate. All 12 actual-APK artifacts were
+fetched and hash-verified (`645f18281a7d3cdf37345cea98b2546b7e214d65`); the
+actual JPEG, studio and dark-home captures were directly reviewed. Same-agent
+fixture meaning/visual review passed within the limitations above.
+
+The regular APK is **33,590,089 bytes**, SHA256
+`d03ee91ff681e21e2e4cf4938106415f9e5e43d7837a03af976c62e3be97a300`,
+631 ZIP entries, non-debuggable `com.koorix.app` / `Koorix` / 1.8.2 / code18.
+Local public-only verification rechecked its complete v2 content digest, RSA3072
+signature/permanent certificate, manifest and implementation/harness exclusions.
+Release asset **741871196** reports the same SHA256; its unauthenticated stable
+URL returned HTTP302. The APK file was presented in chat and Telegram acknowledged
+the actual APK upload. Receipt: `koorix/releases/v1.8.2.json` (completion-message
+acknowledgement is recorded separately after that step, never inferred).
+
 ## Preserved
 
 Muted blue/violet/peach day/night UI, header moon/sun and saved theme; one original
@@ -232,5 +252,5 @@ the **original source page again**: an already flattened bad JPEG is not repaire
 by installing an APK, and existing reader-edited projects are not silently rewritten.
 No separate Skill setup or manual glossary is required for the guarded field case.
 
-Stable APK after verified publication:
+Verified stable regular APK:
 https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.8.2/Koorix-v1.8.2.apk

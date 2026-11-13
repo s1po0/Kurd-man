@@ -1,0 +1,330 @@
+{
+  "version": "1.8.2",
+  "versionCode": 18,
+  "applicationId": "com.koorix.app",
+  "label": "Koorix",
+  "debuggable": false,
+  "sourceCommit": "22b140750b83780e4b3c85f15dab1386b03a3aa4",
+  "buildCommit": "22b140750b83780e4b3c85f15dab1386b03a3aa4",
+  "nativeSourceLastChanged": "c505a24c44acbea3c00607be85bd18229ade7943",
+  "nativeTreeSha": "05817e482d9dbcf101e636ec1bc63797c4c355ea",
+  "repositoryPublic": true,
+  "releaseId": 443722474,
+  "assetId": 741871196,
+  "publishedAt": "2026-11-13T01:54:27Z",
+  "downloadUrl": "https://github.com/s1po0/Kurd-man/releases/download/koorix-v1.8.2/Koorix-v1.8.2.apk",
+  "blobSha": "875fac25e9f9f3b534127d7051075cd792c8c7ec",
+  "apkBytes": 33590089,
+  "apkSha256": "d03ee91ff681e21e2e4cf4938106415f9e5e43d7837a03af976c62e3be97a300",
+  "zipEntries": 631,
+  "signerSha256": "fb304de3cd357f35cf679e2a46befac08f3e97feef28b1b9a8af7b0891d40340",
+  "signerSha1": "21209f6f75195cfeb1dcaa7b7d74ad09e4954b6b",
+  "signingIdentity": "permanent-v2",
+  "independentLocalVerification": {
+    "file": "Koorix-v1.8.2.apk",
+    "bytes": 33590089,
+    "sha256": "d03ee91ff681e21e2e4cf4938106415f9e5e43d7837a03af976c62e3be97a300",
+    "zip_entries": 631,
+    "signature": {
+      "scheme": "v2",
+      "rsa_bits": 3072,
+      "certificate_sha256": "fb304de3cd357f35cf679e2a46befac08f3e97feef28b1b9a8af7b0891d40340",
+      "algorithm": "0x103",
+      "content_digest_verified": true
+    },
+    "package": "com.koorix.app",
+    "version": "1.8.2",
+    "version_code": 18,
+    "label": "Koorix",
+    "debuggable": false,
+    "no_login_gate_checked": true,
+    "free_edition_checked": true,
+    "test_harness_and_private_recovery_absent": true,
+    "native_contour_classes_checked": true,
+    "native_reading_studio_ui_checked": true,
+    "native_triad_dark_mode_checked": true,
+    "native_ocr_system_fields_checked": true
+  },
+  "abis": [
+    "arm64-v8a"
+  ],
+  "minSdk": 26,
+  "targetSdk": 35,
+  "ci": {
+    "runId": 43347383485,
+    "jobId": 131629906155,
+    "status": "success",
+    "androidJvmExecutions": 226,
+    "nativeNarrationExecutions": 18,
+    "nativeGlyphExecutions": 34,
+    "nativeUiExecutions": 38,
+    "failures": 0,
+    "skipped": 0,
+    "sdks": [
+      26,
+      34
+    ],
+    "uiCaptures": 54,
+    "uiCaptureReportBlob": "2e485878d022dc5fede2b3d518fb9620982882fa",
+    "bubbleFixtures": 20,
+    "bubbleFixtureReportBlob": "9c271123a844fe5694859a825426fe8822222ca4",
+    "cryptoTests": 18,
+    "comicAssertions": 605,
+    "systemFieldAndRoleAssertions": 108,
+    "qualityAssertions": 51,
+    "lexiconEntries": 204,
+    "signerColdRestores": 2,
+    "actualApkDriverHelperTests": 11,
+    "candidateRunId": 43346262307,
+    "candidateJobId": 131626255823,
+    "candidateStatus": "success",
+    "candidateSourceCommit": "c505a24c44acbea3c00607be85bd18229ade7943",
+    "candidateNativeTreeMatchesProduction": true
+  },
+  "nativeQaSkill": {
+    "repository": "alirezarezvani/claude-skills",
+    "commit": "08cd8a9fc86cc370e2c0d448e8171fbcfdbc5a30",
+    "license": "MIT",
+    "retainedReferences": ".claude/skills/koorix-native-qa/references/upstream",
+    "reviewedGuidance": [
+      "code-reviewer",
+      "universal rules",
+      "Java rules",
+      "Design QA"
+    ],
+    "upstreamInstallersExecuted": false,
+    "reactOrPlaywrightPresentedAsNativeRuntime": false
+  },
+  "installedApkEmulator": {
+    "scope": "Installed regular signed APK on API34 Android emulator; synthetic source only; NOT physical-device/reader-page/general semantic acceptance",
+    "status": "passed",
+    "checks": [
+      "same_verified_arm64_regular_apk_installed",
+      "native_theme_switch_and_process_relaunch_persistence",
+      "synthetic_media_bytes_verified",
+      "one_original_system_source_chooser",
+      "ordinary_system_chooser_image_import",
+      "busy_stop_visible_and_theme_recreation_disabled",
+      "real_ocr_complete_source_no_duplicate_words",
+      "selected_live_translator_and_contextual_labels_exported",
+      "real_saved_result_opens_native_studio",
+      "no_regular_app_crash_observed"
+    ],
+    "meaningReviewedByNativeHuman": false,
+    "readerDataUsed": false,
+    "alternateAppOrDebugVariant": false,
+    "api": 34,
+    "abis": [
+      "x86_64",
+      "arm64-v8a"
+    ],
+    "nativeBridge": "libndk_translation.so",
+    "apkSha256": "d03ee91ff681e21e2e4cf4938106415f9e5e43d7837a03af976c62e3be97a300",
+    "sourceBlocks": 1,
+    "targetBlocks": 1,
+    "runId": 43347383485,
+    "jobId": 131629906155,
+    "reportBlob": "645f18281a7d3cdf37345cea98b2546b7e214d65",
+    "artifacts": [
+      {
+        "name": "home-ckb.png",
+        "bytes": 194269,
+        "sha256": "1dbc970b3848af0df59e9dc6fc56a1fe6deea1003613ef464d4f4a48e8abeb37",
+        "blob": "6b527c0c1d827a5a43fa8a24f0dc7659280f02a5"
+      },
+      {
+        "name": "home-en-dark.png",
+        "bytes": 174599,
+        "sha256": "a1890b79a8a339d900d2b00e5ecc43bb65e022e42f2893b42f9673c950f326a4",
+        "blob": "df2fd4c6f3e7a4a10f0337ae3d69d985d20b0879"
+      },
+      {
+        "name": "home-en-light.png",
+        "bytes": 169769,
+        "sha256": "63358d04e7943af4f8e77bdec5b1728bd02143f1e35d0d4d7c602f2f72326a55",
+        "blob": "593dc0c321e4bf065c28bb94e13f8c0e67ecbbdd"
+      },
+      {
+        "name": "report.json",
+        "bytes": 1015,
+        "sha256": "cb6e549d0180192f065875aa2aa5a512a1c171be928a35a27772947af0bdf3e9",
+        "blob": "8770f2745092bdd3ed74177b263f24ccb984a607"
+      },
+      {
+        "name": "results.png",
+        "bytes": 260024,
+        "sha256": "c65fb3e4e71f8219d219d77adeeb3a78b86b6a426e5a2ae2aa59cd3312ce3d81",
+        "blob": "02716d90ac0fbd548b8cdd43e406d57562bb2c2a"
+      },
+      {
+        "name": "source-chooser.png",
+        "bytes": 99104,
+        "sha256": "e453424b36d3df39fb836ebe2b23769e0efc9446c8133410ca9c61ca7832798c",
+        "blob": "fb32c88f07ac0277806506157aa243284a52432c"
+      },
+      {
+        "name": "source-selected.png",
+        "bytes": 163923,
+        "sha256": "10a8b2f45c0c78400b85e07087f7c5da44b732b55b13f1f5a8c74afb5fbefc40",
+        "blob": "500effee00fa0825a952762200fd4c7942f99391"
+      },
+      {
+        "name": "studio.png",
+        "bytes": 219160,
+        "sha256": "74be049a883133b9c3d6b37184f812751e06eca7f80fe6b3b907a495592ba487",
+        "blob": "602c52ff71daf7c798662a938ff8fda9fe58b802"
+      },
+      {
+        "name": "synthetic-pairs.txt",
+        "bytes": 475,
+        "sha256": "e25661f164d0a85d3c6a05e62f752eefd135ee6ceb50ec347e4ab1fdbd4fadc5",
+        "blob": "463dc130f1330910f284a85c4a5daa59951d4e51"
+      },
+      {
+        "name": "synthetic-result.jpg",
+        "bytes": 113180,
+        "sha256": "57bf44b9d3eacd6d48719a50d0b63190c66e4970078a30c389f8ffb210c3fe86",
+        "blob": "c531324d76a2704df5967bb5d184256f3543b796"
+      },
+      {
+        "name": "synthetic-source.png",
+        "bytes": 33492,
+        "sha256": "2aa97f80fc275e194c08229c93058f4fdefff6e3f751da4ff36db00b51550820",
+        "blob": "a2947bd88da7663e641bbdb6eaecdfb6b0ed6ec9"
+      },
+      {
+        "name": "translating.png",
+        "bytes": 187251,
+        "sha256": "8d2e7f5a35946d07e706b14fe54f68754310b091a7acc1113fe3204364f768a7",
+        "blob": "47cdcc551d43cdf8c7e1e986cdc225016628d296"
+      }
+    ],
+    "allArtifactsFetchedAndHashVerified": true,
+    "sameAgentVisualReview": "passed-for-authored-fixture-only",
+    "sameAgentMeaningReview": "passed-for-authored-fixture-only",
+    "viewedCaptures": [
+      "synthetic-result.jpg",
+      "studio.png",
+      "home-en-dark.png"
+    ],
+    "visualFinding": "Complete joined replacement text fits the black panel without a second overlapping small run; surrounding authored art retained.",
+    "meaningFinding": "Guarded trait/description labels, custodian title, two abilities/one skill, nearby-stone sensing and inability to move them preserved in this authored fixture.",
+    "independentOrHumanSemanticReview": false,
+    "offlinePackRun": false
+  },
+  "features": {
+    "userLoginRemoved": true,
+    "premiumRemoved": true,
+    "dailyAppQuotasRemoved": true,
+    "deviceRegistrationRemoved": true,
+    "unifiedAppCapableInputChooser": true,
+    "singleInputButton": true,
+    "selectedUriReadAccessOnly": true,
+    "actualContourInkValidation": true,
+    "completeDialogueNoClip": true,
+    "fitBeforeErase": true,
+    "nativeReadingStudioUi": true,
+    "greenBrandRemoved": true,
+    "softBlueVioletPeachTriad": true,
+    "persistentHeaderDarkLightShortcut": true,
+    "settingsAndShortcutShareSavedTheme": true,
+    "coveredOcrLinesNormalized": true,
+    "coveredFragmentsRetainCompleteSourceRows": true,
+    "contextualSoraniSystemFields": true,
+    "descriptionSupportedCustodianRole": true,
+    "readerGlossaryAndWholeBlockOverridesWin": true,
+    "completeBodyRetainsSelectedEngine": true,
+    "automaticSkillWithTranslate": true,
+    "editableProjectsPreserved": true,
+    "backupRestorePreserved": true,
+    "stopAndRecoveryPreserved": true,
+    "persistentReportsPreserved": true,
+    "studioAndOptionalPdfPreserved": true,
+    "separateGalleryAndUnfilteredFiles": false,
+    "newTranslationModel": false,
+    "nllbAdded": false,
+    "paidApiAdded": false,
+    "hiddenOnlineFallbackAdded": false,
+    "sourceAction": "android.intent.action.GET_CONTENT",
+    "mimeType": "*/*",
+    "mimeWhitelist": false,
+    "multiSelectRequested": true,
+    "targetLanguageChoices": 74,
+    "uiLanguages": [
+      "ckb",
+      "en",
+      "ar"
+    ],
+    "appearanceModes": [
+      "system",
+      "light",
+      "dark"
+    ]
+  },
+  "regressionEvidence": {
+    "partialRowBaselineRunId": 43331847036,
+    "partialRowBaselineJobId": 131578214250,
+    "partialRowBaselineExecutions": 226,
+    "partialRowBaselineFailures": 4,
+    "partialRowBaselineSkipped": 0,
+    "bothCandidateScoreOrdersRetainAllWords": true,
+    "firstRealEndToEndRunId": 43344151462,
+    "firstRealEndToEndJobId": 131619307783,
+    "firstRealEndToEndReportBlob": "e927e9e0b9a98338927a6a0f5cb16976570e2092",
+    "firstRealEndToEndSemanticReview": "revise: unrelated sports sense in an authored fantasy role title",
+    "wrongRoleJavaBaselineRunId": 43345791834,
+    "wrongRoleJavaBaselineJobId": 131624724682,
+    "wrongRoleBaselineFailedAsExpected": true,
+    "earlierWrongRoleExportRejectedByStrengthenedCheck": true,
+    "correctedCandidateReportBlob": "b1b5ba0c3549504747b6a591ee0cb5a08d59ef80",
+    "fullSyntheticOrReaderTitleHardcodedInRuntime": false,
+    "allKnownTargetedRegressionsPassedInRelease": true
+  },
+  "localDeveloperChecks": {
+    "pythonSkillTests": 55,
+    "actualApkHelperTests": 11,
+    "pythonSyntax": true,
+    "shellSyntax": true,
+    "workflowYamlParsed": true,
+    "freeEditionContracts": true,
+    "nativeUiStaticContracts": true,
+    "siteLanguages": 3,
+    "sitePreferenceStorageStates": 6,
+    "localJavacUnavailableHostedJava17Used": true
+  },
+  "preservedSafetyLimits": {
+    "pages": 300,
+    "importMb": 300,
+    "cacheGb": 1,
+    "componentAndGlyphRasterPixelBudget": 3500000
+  },
+  "security": {
+    "signerRotated": false,
+    "privateSigningRecoveryOpened": false,
+    "upstreamInstallersExecuted": false,
+    "signingPlaintextRemovedBeforeEmulator": true,
+    "ownerPhoneUninstalledOrCleared": false,
+    "readerImagesOrDialogueUploadedToCi": false,
+    "alternateAppOrDebugVariantDelivered": false,
+    "apkAndSyntheticCapturesCommittedToGit": false
+  },
+  "delivery": {
+    "chatFilePresented": true,
+    "telegramApkAcknowledged": true,
+    "telegramApkRunId": 43347383485,
+    "publicUnauthenticatedDownloadHead": 302,
+    "releaseAssetDigestMatchesChatFile": true,
+    "completionNotice": "pending"
+  },
+  "limitations": {
+    "actualSuppliedPageOcrRerun": false,
+    "physicalDeviceAcceptance": false,
+    "generalSoraniMeaningGuarantee": false,
+    "nativeHumanMeaningReview": false,
+    "allOemChoosersOrTalkBackTested": false,
+    "offlinePackMeaningBenchmark": false,
+    "existingFlattenedJpegsAutomaticallyRepaired": false,
+    "translationModelsChanged": false,
+    "sameAgentFixtureReviewIsNotIndependentHumanReview": true
+  }
+}
