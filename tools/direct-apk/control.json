@@ -1,8 +1,7 @@
 {
   "session": "koorix-regular-182-observe-1",
-  "sequence": 17,
-  "action": "tap",
-  "expectedFrame": "6bc32a00d7bf255310143218b425dc55a781109d749f5e1eda15ff5cb1019e48",
-  "x": 194,
-  "y": 1423
+  "sequence": 18,
+  "action": "tap_id",
+  "expectedFrame": "de4ee8a127d06eb41c86a6fb2bec48f8e1f5ffee3810762f2e5fb93cd0983357",
+  "id": "editorUndoButton"
 }
