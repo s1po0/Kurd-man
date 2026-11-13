@@ -239,6 +239,15 @@ jobs:
           python3 tools/emulator-tests/collect.py --repository "${{ github.repository }}" \
             --commit "${{ github.sha }}" --run "${{ github.run_id }}"
 
+      # Verification is allowed, but this unreleased browser candidate still
+      # lacks the full live-comic and security acceptance documented below.
+      # A green synthetic test is not permission to publish it.
+      - name: Block release of unfinished web reader candidate
+        if: (github.event_name == 'workflow_dispatch' && inputs.publish) || contains(github.event.head_commit.message, '[release-koorix]')
+        run: |
+          echo "::error::Web reader acceptance and security review are incomplete; see docs/KOORIX_WEB_READER.md"
+          exit 1
+
       # Release/chat delivery starts only on an explicit release marker or publish dispatch.
       # Releases/chat delivery do not depend on the repository artifact quota.
       - name: Publish verified APK blob for chat delivery

@@ -92,3 +92,6 @@ and https://developer.android.com/privacy-and-security/risks/insecure-webview-na
 A future mitigation needs a threat model and device tests, including DNS changes,
 redirects, private IPv4/IPv6, iframes, WebSockets and service workers, without
 weakening TLS or bypassing site protections.
+The APK workflow has a fail-closed release block for this unfinished candidate;
+verification builds may run, but markers or dispatch cannot publish or deliver it
+until the blocker is deliberately removed after acceptance.
