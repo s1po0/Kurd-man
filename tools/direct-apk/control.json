@@ -1,7 +1,6 @@
 {
   "session": "koorix-regular-182-observe-1",
-  "sequence": 11,
-  "action": "tap_id",
-  "expectedFrame": "671bd0a45151b01f74c2ba9b7147179bab37f1a90d62926fea83a8c0e48bdc56",
-  "id": "translateButton"
+  "sequence": 12,
+  "action": "snapshot",
+  "expectedFrame": "cfabea3f371aad3040cede92ef54439aa7afcb1542224cfdb18738da6dbdcd2b"
 }
