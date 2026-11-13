@@ -89,16 +89,24 @@ public class ProjectResultsPublicationTest {
         assertEquals(1,Objects.requireNonNull(ProjectResults.library(app).listFiles()).length);
         assertEquals(ProjectResults.binding(p),TranslationProject.load(p.projectDir).outputBinding);assertEquals(0,media.deletes);
     }
-    @Test public void batchesKeepExactlyOneImagePerPagePlusRequestedArchiveAndPdf() throws Exception {
-        TranslationProject p=sample(2,true,true,true);ProjectResults.publish(app,p);
+    @Test public void batchesKeepExactlyOneImagePerPagePlusRequestedArchive() throws Exception {
+        TranslationProject p=sample(2,true,true,false);ProjectResults.publish(app,p);
         noNewTextFiles(ProjectResults.directory(p));noNewTextFiles(ProjectResults.library(app));
         try(ZipFile zip=new ZipFile(ProjectResults.result(p))){assertEquals(2,zip.size());assertNotNull(zip.getEntry("0001.jpg"));assertNotNull(zip.getEntry("0002.jpg"));}
-        assertTrue(new File(ProjectResults.directory(p),ProjectResults.stem(p)+".pdf").length()>0);
         if(Build.VERSION.SDK_INT>=29) {
-            assertEquals(4,media.rows.size());assertEquals(2,media.rows.stream().filter(r->r.values.getAsString("mime_type").startsWith("image/")).count());
+            assertEquals(3,media.rows.size());assertEquals(2,media.rows.stream().filter(r->r.values.getAsString("mime_type").startsWith("image/")).count());
             assertTrue(media.rows.stream().allMatch(r->"Download/Koorix/".equals(r.values.getAsString("relative_path"))));
-            ProjectResults.publish(app,p);assertEquals(4,media.rows.size());
+            ProjectResults.publish(app,p);assertEquals(3,media.rows.size());
         }
+    }
+    // Robolectric's native PdfDocument backend is available here on34, not26.
+    // Archive/batch/storage contracts above still execute on both SDKs; no skip.
+    @Test @Config(sdk=34) public void selectedPdfStillPublishesWithTheArchiveAndExactlyOneImagePerPage() throws Exception {
+        TranslationProject p=sample(2,true,true,true);ProjectResults.publish(app,p);
+        File pdf=new File(ProjectResults.directory(p),ProjectResults.stem(p)+".pdf");
+        assertTrue(pdf.length()>100);assertEquals("%PDF",new String(Files.readAllBytes(pdf.toPath()),0,4,java.nio.charset.StandardCharsets.US_ASCII));
+        assertEquals(4,media.rows.size());noNewTextFiles(ProjectResults.directory(p));noNewTextFiles(ProjectResults.library(app));
+        ProjectResults.publish(app,p);assertEquals(4,media.rows.size());
     }
     @Test public void cbzWithoutIndividualImageChoiceDoesNotExtractAPublicImageOrTxt() throws Exception {
         TranslationProject p=sample(2,true,false,false);ProjectResults.publish(app,p);
@@ -119,6 +127,30 @@ public class ProjectResultsPublicationTest {
         Row other=media.seed(MediaStore.Downloads.EXTERNAL_CONTENT_URI,ProjectResults.result(p).getName(),"Download/Koorix/","another.app");
         Files.write(other.file.toPath(),new byte[]{7,8,9});ProjectResults.publish(app,p);
         assertArrayEquals(new byte[]{7,8,9},Files.readAllBytes(other.file.toPath()));assertEquals(2,media.rows.size());assertEquals(0,media.deletes);
+    }
+    @Test public void studioRendersCurrentSourcesForEveryPageEvenWithCompletedOldCaches() throws Exception {
+        TranslationProject p=sample(2,true,true,false);
+        Bitmap fresh=Bitmap.createBitmap(48,64,Bitmap.Config.ARGB_8888);fresh.eraseColor(Color.RED);
+        for(TranslationProject.Page page:p.pages) {
+            page.segments.get(0).ensureStyle().visible=false;
+            try(OutputStream out=new FileOutputStream(page.sourceFile(p.projectDir))){assertTrue(fresh.compress(Bitmap.CompressFormat.PNG,100,out));}
+        }
+        fresh.recycle();List<Integer> progress=new ArrayList<>();
+        SavedJobPipeline.renderEdited(p,style->android.graphics.Typeface.DEFAULT,(phase,page,total)->progress.add(page));
+        assertEquals(Arrays.asList(1,2),progress);
+        for(int i=0;i<2;i++) {
+            Bitmap output=BitmapIo.decodeFile(SavedJobPipeline.renderedPage(p,i));
+            try{assertTrue(Color.red(output.getPixel(24,32))>240);assertTrue(Color.green(output.getPixel(24,32))<12);}
+            finally{output.recycle();}
+        }
+        ProjectResults.publish(app,p);assertEquals(ProjectResults.binding(p),TranslationProject.load(p.projectDir).outputBinding);
+    }
+    @Test public void stoppedStudioExportNeverReplacesAnEarlierProductOrDeletesItsSource() throws Exception {
+        TranslationProject p=sample(2,true,true,false);ProjectResults.publish(app,p);
+        byte[] before=Files.readAllBytes(ProjectResults.result(p).toPath());JobRuntime.requestStop();
+        try {SavedJobPipeline.renderEdited(p,style->android.graphics.Typeface.DEFAULT,(phase,page,total)->{});fail("STOP ignored");}
+        catch(InterruptedException expected) { }
+        assertArrayEquals(before,Files.readAllBytes(ProjectResults.result(p).toPath()));assertTrue(p.pages.get(0).sourceFile(p.projectDir).isFile());assertEquals(0,media.deletes);
     }
     @Test public void unavailableDuplicateLookupDoesNotBlindlyInsertAnotherPublicCopy() throws Exception {
         TranslationProject p=sample(1,false,false,false);ProjectResults.publish(app,p);

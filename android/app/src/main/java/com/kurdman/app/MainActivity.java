@@ -1094,7 +1094,8 @@ public class MainActivity extends AppCompatActivity {
         title.setText(name.isEmpty()?getString(R.string.ux_import_empty):name);
         meta.setText(pages>0?getResources().getQuantityString(R.plurals.ux_pages_ready,pages,pages):getString(R.string.ux_import_hint));
         View empty=findViewById(R.id.resultEmptyHint);
-        boolean noResult=resultBitmap==null&&resultFile==null;
+        boolean noResult=resultBitmap==null&&resultFile==null
+                &&(previewImage==null||previewImage.getDrawable()==null);
         if(empty!=null)empty.setVisibility(noResult?View.VISIBLE:View.GONE);
         View illustration=findViewById(R.id.resultEmptyIcon);
         if(illustration!=null)illustration.setVisibility(noResult?View.VISIBLE:View.GONE);
@@ -1582,8 +1583,8 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         boolean manual = KeepAliveService.isManualDesired(this);
-        boolean running = JobRuntime.isRunning();
-        boolean service = KeepAliveService.isServiceRunning();
+        boolean running = currentBusy || JobRuntime.isRunning()
+                || SavedJobCoordinator.hasPending(this);
         keepAliveToggleButton.setText(manual
                 ? getString(R.string.ks_0487)
                 : getString(R.string.ks_0493));
@@ -1595,7 +1596,7 @@ public class MainActivity extends AppCompatActivity {
         if (running) {
             text = getString(R.string.ks_0682)
                     + getString(R.string.ks_0452);
-        } else if (manual || service) {
+        } else if (manual) {
             text = getString(R.string.ks_0683)
                     + getString(R.string.ks_0132);
         } else {
@@ -1613,7 +1614,7 @@ public class MainActivity extends AppCompatActivity {
         }
         keepAliveStatus.setText(text);
         if (stopJobButton != null) {
-            stopJobButton.setVisibility(currentBusy || running || manual || service
+            stopJobButton.setVisibility(running || manual
                     ? View.VISIBLE : View.GONE);
         }
         updateKeepScreenFlag();
@@ -3111,7 +3112,7 @@ public class MainActivity extends AppCompatActivity {
         if(resultFile!=null&&resultFile.equals(product)&&shownProjectUpdatedAt==project.updatedAt)return;
         try{if(!project.outputBinding.equals(ProjectResults.binding(project)))return;}catch(Exception invalid){return;}
         shownProjectUpdatedAt=project.updatedAt;
-        resultFile=product;resultTextFile=ProjectResults.text(project);pairsText=ProjectResults.pairs(project);resultText.setText(pairsText);
+        resultFile=product;resultTextFile=null;pairsText=ProjectResults.pairs(project);resultText.setText(pairsText);
         Bitmap thumbnail=null;
         for(int i=0;i<project.pages.size()&&thumbnail==null;i++)thumbnail=BitmapIo.decodePreview(SavedJobPipeline.renderedPage(project,i));
         if(thumbnail!=null){Bitmap oldResult=resultBitmap,oldSource=originalBitmap;resultBitmap=thumbnail;previewImage.setImageBitmap(thumbnail);
@@ -3751,7 +3752,55 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /** Regular Koorix uses the same products/publication route after Studio edits. */
+    private void exportEditedSavedProject() {
+        if (currentBusy || JobRuntime.isRunning()) {
+            setStatus(getString(R.string.rel_busy));
+            return;
+        }
+        final TranslationProject project = TranslationProjectStore.load(this);
+        if (project == null || !project.completed || project.pages.isEmpty()) {
+            setStatus(getString(R.string.ks_0540));
+            updateButtons(false);
+            return;
+        }
+        final boolean createPdf = selectedCreatePdf();
+        ManhwaRenderer.activeTargetLanguage = project.targetLanguage;
+        ManhwaRenderer.i18nContext = getApplicationContext();
+        JobRuntime.init(getApplicationContext());
+        showMainPage(PAGE_RESULTS);
+        setBusy(true);
+        setStatus(getString(R.string.ks_0218));
+        executor.execute(() -> {
+            JobRuntime.markThreadStarted();
+            try {
+                SavedJobPipeline.renderEdited(project, styledTypefaceResolver(),
+                        (phase, page, total) -> setStatus(getString(R.string.rel_render_progress, page, total)));
+                throwIfJobStopped();
+                project.createPdf = createPdf;
+                ProjectResults.publish(getApplicationContext(), project);
+                runOnUiThread(() -> {
+                    showSavedProjectResult(project);
+                    refreshDownloadsList();
+                });
+                setStatus(getString(project.renderedSegments() < project.totalSegments()
+                        ? R.string.rel_partial : R.string.rel_complete));
+            } catch (Throwable failure) {
+                if (JobRuntime.wasStopped(failure)) setStatus(getString(R.string.ks_0675));
+                else {
+                    DiagnosticLog.error(getApplicationContext(), "studio_export",
+                            SavedJobCoordinator.safeFailure(failure), "Edited export interrupted; saved project retained.");
+                    setStatus(getString(R.string.rel_failed));
+                }
+            } finally {
+                JobRuntime.markThreadFinished();
+                setBusy(false);
+            }
+        });
+    }
+
     private void exportEditedProject() {
+        if (BuildConfig.PUBLIC_EDITION) { exportEditedSavedProject(); return; }
         final TranslationProject project = TranslationProjectStore.load(this);
         if (project == null || !project.completed || project.pages.isEmpty()) {
             setStatus(getString(R.string.ks_0540));
@@ -4630,7 +4679,8 @@ public class MainActivity extends AppCompatActivity {
                 String lower = file.getName().toLowerCase(Locale.ROOT);
                 if (lower.endsWith(".cbz") || lower.endsWith(".zip")
                         || lower.endsWith(".jpg") || lower.endsWith(".jpeg")
-                        || lower.endsWith(".png") || lower.endsWith(".txt")) {
+                        || lower.endsWith(".png") || lower.endsWith(".txt")
+                        || lower.endsWith(".pdf")) {
                     files.add(file);
                 }
             }
@@ -5341,5 +5391,6 @@ public class MainActivity extends AppCompatActivity {
                     ? getString(R.string.ks_0591)
                     : getString(R.string.ks_0590));
         }
+        refreshReadingSelection();
     }
 }

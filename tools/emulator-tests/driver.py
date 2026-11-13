@@ -19,8 +19,9 @@ COMPONENT = PACKAGE + "/com.kurdman.app.MainActivity"
 EXPECTED_SOURCE = ("ASPECT: STONE KEEPER ASPECT DESCRIPTION: This rare trait grants two abilities "
                    "and one skill. The bearer can sense nearby stones, but cannot move them.")
 CAPTURES = {"home-ckb.png", "home-en-light.png", "home-en-dark.png", "source-chooser.png",
-            "source-selected.png", "translating.png", "results.png", "studio.png", "failure.png"}
-PRODUCT = re.compile(r"Koorix-koorix-qa-source-p-[a-f0-9-]{36}\.ckb\.(?:jpg|txt)\Z")
+            "source-selected.png", "translating.png", "results.png", "results-text.png", "studio.png",
+            "studio-size-90.png", "studio-undo-100.png", "studio-export.png", "reopened-result.png", "failure.png"}
+PRODUCT = re.compile(r"Koorix-koorix-qa-source-p-[a-f0-9-]{36}\.ckb\.jpg\Z")
 
 
 def words(text):
@@ -51,6 +52,32 @@ def verify_fixture_targets(targets):
         raise AssertionError("Description-supported fixture role did not reach real translation/export")
     if "ناتوان" not in targets:
         raise AssertionError("The fixture's explicit inability is not present in the Sorani result")
+
+
+def product_rows(output):
+    """Parse only a disposable fixture's owner-scoped public MediaStore query."""
+    if output == "No result found.":
+        return []
+    rows = []
+    for line in output.splitlines():
+        match = re.fullmatch(r"Row: ([0-9]+) _id=([1-9][0-9]*), _display_name=([^,\r\n]+), "
+                             r"relative_path=([^,\r\n]+), mime_type=([^,\r\n]+), is_pending=([01])", line)
+        if match is None or int(match[1]) != len(rows):
+            raise ValueError("Invalid public MediaStore product query")
+        rows.append({"id": int(match[2]), "name": match[3], "path": match[4], "mime": match[5], "pending": int(match[6])})
+    if not rows:
+        raise ValueError("Missing public MediaStore query response")
+    return rows
+
+
+def single_public_product(rows):
+    if len(rows) != 1:
+        raise AssertionError("Expected exactly one owned public image and zero TXT files")
+    row = rows[0]
+    if (not PRODUCT.fullmatch(row["name"]) or row["path"] != "Download/Koorix/"
+            or row["mime"] != "image/jpeg" or row["pending"] != 0):
+        raise AssertionError("Unexpected, duplicate, TXT, legacy-folder or unfinished public product")
+    return row
 
 
 def media_query_uri(output):
@@ -193,27 +220,70 @@ class Device:
         self.check("synthetic_media_bytes_verified")
         return uri
 
+    def reveal(self, identifier, direction="down"):
+        for _ in range(9):
+            item = node(self.ui(), identifier=identifier)
+            if item is not None:
+                try:
+                    x, y = center(item)
+                    if 0 <= x < 1080 and 200 < y < 1750:
+                        return item
+                except ValueError:
+                    pass
+            start, end = (1400, 650) if direction == "down" else (650, 1400)
+            self.shell("input", "swipe", "540", start, "540", end, "350")
+        raise AssertionError("Control not reachable by ordinary scrolling: " + identifier)
+
+    def public_product(self):
+        def query(collection):
+            output = self.shell("content", "query", "--uri", "content://media/external/" + collection,
+                                "--projection", "_id:_display_name:relative_path:mime_type:is_pending",
+                                "--where", "owner_package_name='com.koorix.app'", include_stderr=True)
+            return product_rows(output)
+        row = single_public_product(query("file"))
+        gallery = single_public_product(query("images/media"))
+        if gallery != row:
+            raise AssertionError("Gallery and Files must expose the same one public image, not separate copies")
+        return row
+
     def products(self):
-        listing = self.shell("ls", "-1", "/sdcard/Download/Koorix")
-        names = [name for name in listing.splitlines() if PRODUCT.fullmatch(name)]
-        images = [name for name in names if name.endswith(".jpg")]
-        texts = [name for name in names if name.endswith(".txt")]
-        if len(images) != 1 or len(texts) != 1:
-            raise ValueError("Expected one synthetic public image/text result")
-        for original, target in [(images[0], "synthetic-result.jpg"), (texts[0], "synthetic-pairs.txt")]:
-            data = self.adb("exec-out", "cat", "/sdcard/Download/Koorix/" + original)
-            if not 10 < len(data) < (2_000_000 if target.endswith("jpg") else 50_000):
-                raise ValueError("Over-budget or empty synthetic export")
-            (self.output / target).write_bytes(data)
-        exported = pairs((self.output / "synthetic-pairs.txt").read_text())
+        row = self.public_product()
+        data = self.adb("exec-out", "cat", "/sdcard/Download/Koorix/" + row["name"])
+        if not data.startswith(b"\xff\xd8\xff") or not 100 < len(data) < 2_000_000:
+            raise ValueError("Over-budget, empty or invalid synthetic image export")
+        (self.output / "synthetic-result.jpg").write_bytes(data)
+        self.report["publicImageRows"] = 1
+        self.report["publicTxtRows"] = 0
+        self.report["publicFolder"] = row["path"]
+        self.check("one_public_gallery_image_no_automatic_txt")
+        return row["id"]
+
+    def read_result_text(self):
+        # Read the app's normal visible TextView. Never use private storage or
+        # retain an automatic app TXT merely to keep the older test working.
+        item = self.reveal("resultText")
+        exported = pairs(item.get("text", ""))
+        (self.output / "synthetic-ui-pairs.json").write_text(json.dumps({
+            "source": "public_resultText_UI", "readerDataUsed": False, "alternateAppOrDebugVariant": False,
+            "pairs": [{"source": a, "target": b} for a, b in exported]
+        }, ensure_ascii=False, indent=2) + "\n")
         if words(" ".join(source for source, _ in exported)) != words(EXPECTED_SOURCE):
             raise AssertionError("Real OCR omitted, duplicated, reordered or changed synthetic source words")
-        targets = " ".join(target for _, target in exported)
-        verify_fixture_targets(targets)
+        verify_fixture_targets(" ".join(target for _, target in exported))
         self.report["sourceBlocks"] = len(exported)
         self.report["targetBlocks"] = len(exported)
+        self.capture("results-text.png")
         self.check("real_ocr_complete_source_no_duplicate_words")
-        self.check("selected_live_translator_and_contextual_labels_exported")
+        self.check("selected_live_translator_and_contextual_labels_retained_in_ui")
+
+    def completed_ui(self):
+        self.control("quickThemeButton", enabled=True)
+        root = self.ui()
+        if node(root, identifier="stopJobButton") is not None:
+            raise AssertionError("Idle completion must not show a stale STOP-current-job action")
+        if node(root, identifier="resultEmptyHint") is not None:
+            raise AssertionError("Completed preview is still labelled empty")
+        self.check("completed_preview_not_labelled_empty_and_idle_stop_absent")
 
     def run(self, apk):
         self.wait(lambda: self.shell("getprop", "sys.boot_completed") == "1", "Android boot timeout", timeout=240)
@@ -230,7 +300,7 @@ class Device:
         self.shell("input", "keyevent", "82")
         self.adb("install", "--no-streaming", "-r", str(apk.resolve()), timeout=120)
         package = self.shell("dumpsys", "package", PACKAGE)
-        if "versionName=1.8.2" not in package or "versionCode=18" not in package:
+        if "versionName=1.8.3" not in package or "versionCode=19" not in package:
             raise AssertionError("Installed APK is not the expected regular update")
         self.check("same_verified_arm64_regular_apk_installed")
         self.shell("pm", "grant", PACKAGE, "android.permission.POST_NOTIFICATIONS")
@@ -285,24 +355,43 @@ class Device:
         # result page places its studio button above the screen fold.
         def ready():
             names = self.shell("ls", "-1", "/sdcard/Download/Koorix").splitlines()
-            return sum(bool(PRODUCT.fullmatch(name)) for name in names) == 2
-        self.wait(ready, "Synthetic translation did not export its real products", timeout=300)
+            return sum(bool(PRODUCT.fullmatch(name)) for name in names) == 1
+        self.wait(ready, "Synthetic translation did not export its real product", timeout=300)
+        self.completed_ui()
         self.capture("results.png")
-        self.products()
-        # Scroll only this disposable synthetic result surface, no private access.
-        for _ in range(7):
-            item = node(self.ui(), identifier="editResultButton")
-            if item is not None:
-                try:
-                    center(item)
-                    self.tap(item)
-                    break
-                except ValueError:
-                    pass
-            self.shell("input", "swipe", "540", "1400", "540", "650", "350")
+        product_id = self.products()
+        self.read_result_text()
+        self.tap(self.reveal("editResultButton", direction="up"))
         self.control("editorCanvas")
         self.capture("studio.png")
         self.check("real_saved_result_opens_native_studio")
+        self.click("editorSectionStyleButton")
+        self.tap(self.wait(lambda: node(self.ui(), text="A−"), "Studio size action"))
+        self.wait(lambda: self.control("editorStatus").get("text") == "Text size: 90%", "Size90 status")
+        self.capture("studio-size-90.png")
+        self.click("editorUndoButton")
+        self.wait(lambda: self.control("editorStatus").get("text") == "Text size: 100%", "Undo must also refresh the size status")
+        root = self.ui()
+        if not any(item.get("text", "").endswith("100%") and item.get("resource-id", "") != PACKAGE + ":id/editorStatus"
+                   for item in root.iter("node")):
+            raise AssertionError("Undo status and visible100% control disagree")
+        self.capture("studio-undo-100.png")
+        self.check("studio_undo_restores_controls_and_status_together")
+        self.click("editorSaveButton")
+        self.control("workspaceLanguageButton")
+        self.completed_ui()
+        if self.public_product()["id"] != product_id:
+            raise AssertionError("Studio export created a second public image instead of updating the same result")
+        self.capture("studio-export.png")
+        self.check("studio_export_same_owned_media_row_canonical_folder_no_txt")
+        self.shell("am", "force-stop", PACKAGE)
+        self.launch()
+        self.click("navResultsButton")
+        self.completed_ui()
+        if self.public_product()["id"] != product_id:
+            raise AssertionError("Reopening a saved project republished a duplicate public image")
+        self.capture("reopened-result.png")
+        self.check("process_reopen_keeps_result_without_republication")
         crashes = self.adb("logcat", "-b", "crash", "-d").decode("utf-8", "replace")
         if PACKAGE in crashes:
             raise AssertionError("Regular APK crash observed on the emulator")

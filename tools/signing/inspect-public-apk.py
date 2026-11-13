@@ -114,7 +114,8 @@ def main():
         assert package['versionName']==args.version and package['versionCode']==args.code
         assert app.get('debuggable',False) is False and app.get('label')=='Koorix','Not a regular non-debuggable Koorix'
         dex=b''.join(archive.read(n) for n in names if n.startswith('classes') and n.endswith('.dex'))
-        for forbidden in (b'Lorg/robolectric/',b'Lorg/junit/',b'Lcom/kurdman/app/KoorixReliabilityTest;'):
+        for forbidden in (b'Lorg/robolectric/',b'Lorg/junit/',b'Lcom/kurdman/app/KoorixReliabilityTest;',
+                          b'Lcom/kurdman/app/ProjectResultsPublicationTest;',b'Lcom/kurdman/app/CompletedResultUiTest;'):
             assert forbidden not in dex,'Unit-test harness present in APK'
         if args.no_login:
             assert not any(n=='activity' and str(a.get('name','')).endswith('.AccountActivity') for n,a in elements)

@@ -39,6 +39,24 @@ final class SavedJobPipeline {
             }finally{if(rendered!=null&&rendered!=bitmap)rendered.recycle();bitmap.recycle();}
         }
     }
+    /** Explicit Studio export must re-render current edits, never reuse stale job pixels. */
+    static void renderEdited(TranslationProject p,StyledTextRenderer.TypefaceResolver resolver,Progress progress) throws Exception {
+        File dir=new File(p.projectDir,"rendered");
+        if(!dir.exists()&&!dir.mkdirs())throw new IOException("Could not create render directory");
+        for(int i=0;i<p.pages.size();i++) {
+            JobRuntime.throwIfStopped();TranslationProject.Page page=p.pages.get(i);
+            progress.update(2,i+1,p.pages.size());File source=page.sourceFile(p.projectDir);
+            if(source==null||!source.isFile())throw new IOException("Saved source is missing");
+            File output=renderedPage(p,i);Bitmap bitmap=page.unreadable?null:BitmapIo.decodeFile(source);
+            if(bitmap==null) {ProjectResults.copy(source,output);page.renderComplete=true;p.save();continue;}
+            Bitmap rendered=null;
+            try {
+                rendered=StyledTextRenderer.renderEdited(bitmap,page.segments,resolver).bitmap;
+                JobRuntime.throwIfStopped();writeJpeg(output,rendered);
+                page.layoutPrepared=true;page.renderComplete=true;p.save();
+            } finally {if(rendered!=null&&rendered!=bitmap)rendered.recycle();bitmap.recycle();}
+        }
+    }
     static void writeJpeg(File file,Bitmap bitmap) throws IOException {
         android.util.AtomicFile atomic=new android.util.AtomicFile(file);FileOutputStream out=null;
         try{out=atomic.startWrite();if(!bitmap.compress(Bitmap.CompressFormat.JPEG,96,out))throw new IOException("Could not save render");atomic.finishWrite(out);}catch(IOException error){if(out!=null)atomic.failWrite(out);throw error;}

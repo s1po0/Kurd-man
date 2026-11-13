@@ -25,10 +25,18 @@ After all existing native/unit/free/signature gates, the production workflow:
 7. Taps normal **Translate**, waits for real bundled ML Kit OCR / existing online
    translation / render/export,
    checks every source word/order, both distinct field labels, the fixture's
-   description-supported custodian role and explicit inability in the public
-   output, and opens the actual saved result in the native studio. These fixture
-   assertions are not a general semantic score; actual output still needs review.
-8. Checks for an observed app crash, captures genuine emulator screenshots and
+   description-supported custodian role and explicit inability in the normal
+   visible result TextView, and opens the saved result in the native studio.
+   It does **not** require the app to create an unwanted TXT file for QA.
+   A local `synthetic-ui-pairs.json` is evidence read from public UI, not a phone
+   sidecar or private-storage extraction. These fixture assertions are not a
+   general semantic score; actual output still needs review.
+8. Requires exactly one app-owned public JPEG and zero TXT rows in MediaStore
+   Files, and that Gallery's Images view points at the **same row**, in
+   `Download/Koorix/`. Checks the completed/idle UI, Studio size90→Undo100 status
+   and controls, normal Studio export updating that same public row, and a
+   process reopen without republishing. This is not Samsung Gallery testing.
+9. Checks for an observed app crash, captures genuine emulator screenshots and
    exports only explicitly named synthetic products. Screenshots are reviewed by
    the agent; a green count alone is not a visual/semantic acceptance decision.
 

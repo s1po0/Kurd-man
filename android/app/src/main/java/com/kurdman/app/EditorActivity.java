@@ -2154,6 +2154,13 @@ public class EditorActivity extends AppCompatActivity
             bindSelectedControls();
             updateNavigation();
             scheduleAutosave();
+            // History rebinds the controls and the status together. The last
+            // adjustment (e.g.90%) must not remain after restoring100%.
+            Segment restored = selectedSegment();
+            setStatus(restored == null ? getString(R.string.ks_0130)
+                    : getString(R.string.ks_0295)
+                            + Math.round(restored.ensureStyle().sizeScale * 100f)
+                            + getString(R.string.ks_0396));
         } catch (Exception e) {
             setStatus(getString(R.string.ks_0610) + friendly(e));
         } finally {

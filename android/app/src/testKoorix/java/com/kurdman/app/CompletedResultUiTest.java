@@ -96,6 +96,14 @@ public class CompletedResultUiTest {
         ReflectionHelpers.callInstanceMethod(main.get(),"refreshKeepAliveUi");
         assertEquals(View.VISIBLE,main.get().findViewById(R.id.stopJobButton).getVisibility());
     }
+    @Test public void aRealRunningJobKeepsItsResponsiveStopEvenWithoutManualProtection() {
+        assertTrue(JobRuntime.tryBeginJob());
+        ReflectionHelpers.callInstanceMethod(main.get(),"refreshKeepAliveUi");
+        assertEquals(View.VISIBLE,main.get().findViewById(R.id.stopJobButton).getVisibility());
+        main.get().findViewById(R.id.stopJobButton).performClick();
+        assertTrue(JobRuntime.isStopRequested());
+        assertTrue("Only the runner may end its job; STOP requests cancellation",JobRuntime.isRunning());
+    }
     @Test public void undoAndRedoRefreshTheStatusInsteadOfKeepingTheOldSizeClaim() throws Exception {
         project();ActivityController<EditorActivity> editor=Robolectric.buildActivity(EditorActivity.class).setup();
         try {
@@ -110,6 +118,25 @@ public class CompletedResultUiTest {
             editor.get().findViewById(R.id.editorRedoButton).performClick();
             assertEquals(.9f,p.pages.get(0).segments.get(0).ensureStyle().sizeScale,.001f);
         } finally {editor.pause().stop().destroy();}
+    }
+    @Test public void studioExportUsesTheSameStableProductAndRetainsTheEditedProjectBinding() throws Exception {
+        TranslationProject p=project();p.pages.get(0).segments.get(0).ensureStyle().sizeScale=.9f;p.save();
+        ReflectionHelpers.callInstanceMethod(main.get(),"exportEditedProject");
+        ExecutorService worker=ReflectionHelpers.getStaticField(MainActivity.class,"executor");
+        worker.submit(()->{}).get(20,TimeUnit.SECONDS);shadowOf(Looper.getMainLooper()).idle();
+        File shown=ReflectionHelpers.getField(main.get(),"resultFile");
+        assertEquals("Studio must update the same result, not start a second legacy public export",ProjectResults.result(p).getCanonicalFile(),shown.getCanonicalFile());
+        assertNull("No automatic Studio TXT",ReflectionHelpers.getField(main.get(),"resultTextFile"));
+        TranslationProject saved=TranslationProject.load(p.projectDir);
+        assertEquals(ProjectResults.binding(saved),saved.outputBinding);
+        assertEquals(.9f,saved.pages.get(0).segments.get(0).ensureStyle().sizeScale,.001f);
+        assertEquals(View.GONE,main.get().findViewById(R.id.resultEmptyIcon).getVisibility());
+    }
+    @Test public void stopAllAlsoPausesPendingRecoveryAfterTheRunnerHasEnded() throws Exception {
+        TranslationProject p=project();p.completed=false;p.resumable=true;p.autoResume=true;p.save();
+        TranslationProjectStore.allowRecovery(app,p,true);assertTrue(SavedJobCoordinator.hasPending(app));
+        KeepAliveService.stopAll(app);
+        assertFalse("STOP while waiting for recovery must not silently restart it",SavedJobCoordinator.hasPending(app));
     }
     @Test public void stopAllActuallySendsItsStopIntentToAnAlreadyRunningService() {
         ServiceController<KeepAliveService> service=Robolectric.buildService(KeepAliveService.class).create();

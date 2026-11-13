@@ -89,24 +89,32 @@ jobs:
           python3 <<'PYTEST'
           from pathlib import Path
           import xml.etree.ElementTree as ET
+          import json
+          failure_summary=[]
           files=list(Path('android/app/build/test-results/testKoorixReleaseUnitTest').glob('TEST-*.xml'))
-          total=failed=skipped=native=ui=panel=0
+          total=failed=skipped=native=ui=panel=publication=completion=0
           for file in files:
               root=ET.parse(file).getroot()
               total+=int(root.get('tests',0));failed+=int(root.get('failures',0))+int(root.get('errors',0));skipped+=int(root.get('skipped',0))
               if root.get('name','').endswith('.BubbleContainmentAndroidTest'): native+=int(root.get('tests',0))
               if root.get('name','').endswith('.NarrationPanelAndroidTest'): panel+=int(root.get('tests',0))
+              if root.get('name','').endswith('.ProjectResultsPublicationTest'): publication+=int(root.get('tests',0))
+              if root.get('name','').endswith('.CompletedResultUiTest'): completion+=int(root.get('tests',0))
               if root.get('name','').endswith(('.ReadingStudioUiTest','.ReadingStudioNativeUiTest','.ThemeTriadAndroidTest')): ui+=int(root.get('tests',0))
               for test in root.findall('testcase'):
                   issue=test.find('failure')
                   if issue is not None:
                       detail=(issue.get('message','') or (issue.text or '').split('\n')[0])[:400]
+                      failure_summary.append({'class':root.get('name',''),'test':test.get('name',''),'detail':detail})
                       print('::error::In-app skill UI contract failed: '+test.get('name','test')+' '+detail.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
+          if failure_summary:
+              print('::notice::NATIVE_FAILURES='+json.dumps(failure_summary[:50],ensure_ascii=True).replace('%','%25'))
           print(f'::notice::In-app skill Android/JVM tests: {total} run, {failed} failed, {skipped} skipped; not device/semantic proof')
           print(f'::notice::Native glyph-containment regressions: {native} run on SDK26/34; synthetic shapes, not device acceptance')
           print(f'::notice::Native narration duplicate regressions: {panel} run on SDK26/34; synthetic, not reader-page OCR proof')
           print(f'::notice::Native reading-studio UI regressions: {ui} run; actual Views/XML with synthetic data')
-          if total < 226 or native < 34 or ui < 38 or panel < 18 or failed or skipped:
+          print(f'::notice::Single-publication/no-TXT regressions: {publication} run; completed UI/STOP/Undo/Studio: {completion} run')
+          if total < 267 or publication < 21 or completion < 20 or native < 34 or ui < 38 or panel < 18 or failed or skipped:
               print('::error::In-app skill tests were missing, failed or skipped; production distribution is blocked')
               raise SystemExit(1)
           PYTEST
@@ -254,7 +262,7 @@ jobs:
         run: |
           TAG="koorix-v$KOORIX_VERSION"
           cp "$APK_FILE" "Koorix-v$KOORIX_VERSION.apk"
-          NOTES="Koorix v$KOORIX_VERSION — covered narration OCR becomes one coherent source block, not overlapping duplicate translations. Actual line geometry and complete word coverage are required; higher-confidence fragments cannot replace the rest of a full row, in either score order. Final normalization runs after OCR re-reads. Guarded paired Aspect/Aspect Description fields use contextual Sorani trait labels only for EN-to-ckb Auto/Fantasy with independent game cues. A single description-supported object-plus-Keeper role uses the custodian sense rather than a football goalkeeper, only without sports cues or reader terms; its noun and the complete body retain the selected engine. Ordinary meanings, unsupported forms, ambiguous multiple pairs, other targets and reader overrides keep their normal route. No supplied chapter or full synthetic title hardcoded. Uses reviewed Java/code-review and rendered-build QA guidance from the owner-supplied alirezarezvani/claude-skills, not a new model. Release also requires installing this exact non-debuggable ARM64 APK on an Android emulator and exercising real UI/OCR/selected MT/render/export/studio with an unrelated synthetic panel; screenshots and source-word checks do not prove physical-device or general meaning quality. Muted blue/violet/peach, persistent Dark/Light shortcut, 74 targets, ckb/en/ar UI, one original GET_CONTENT */* input chooser, free/no-login/no-commercial-quota operation, automatic Skill, projects/backup/recovery/Reports/studio/PDF and 300-page/300-MB/1-GB safeguards remain. No paid API, NLLB, large model or hidden fallback. Same com.koorix.app and permanent v2 signer; install over v2 without uninstalling/clearing data. Translate the original page again; installing does not repair a flattened old JPEG. The exact historic reader OCR/device job and general Sorani semantics remain unverified. See docs/KOORIX_1_8_2.md."
+          NOTES="Koorix v$KOORIX_VERSION — one public image per translated page, no automatic TXT sidecars. Translation, image batches and Studio share the stable owner-scoped Download/Koorix export route; repeat exports update the same result rather than creating a second Pictures copy. CBZ and selected PDF outputs remain. Original/translated text, geometry and edits stay in saved projects and explicit backups. Existing reader images/TXT are not deleted. Completed previews no longer retain the empty hint/book overlay. Idle automatic-service shutdown no longer presents STOP as active work; actual jobs, pending recovery and explicit manual protection still have STOP. STOP dispatch and pending-recovery cancellation are covered. Studio Undo/Redo refreshes its status with the restored size. Same APK is installed and exercised on official Android34 with an authored synthetic input, public MediaStore uniqueness/no-TXT queries, Studio size/Undo/export and process reopen. Native contracts and emulator observations are not Samsung Gallery/physical-phone/general meaning acceptance. Existing guarded Sorani terms, OCR whole-word preservation, blue/violet/peach and Dark mode, all74 targets, ckb/en/ar UI, one unified source chooser, automatic Skill, free/no-login/no-quota, offline, Reports, project backup and 300-page/300-MB/1-GB safeguards remain. No new model, NLLB, paid API or hidden fallback. Same com.koorix.app and permanent v2 signer; update over v2 without uninstalling or clearing data. See docs/KOORIX_1_8_3.md."
 
           # An owner-prepared draft/tag is valid too. Upload verified bytes first,
           # then publish; expose public CLI errors without printing credentials.
@@ -299,10 +307,10 @@ jobs:
             echo "::error::APK exceeds Telegram's upload budget"
             exit 1
           fi
-          CAPTION="Koorix v$KOORIX_VERSION — چاکسازی دەقی دووبارە و زاراوەی پانێڵ.
-          خوێندنەوەی دووبارەی هەمان هێڵ یەک دەکرێتەوە؛ پارچەی کورت نابێت وشەکانی دیکە بسڕێتەوە. Aspect لە پانێڵی سیستەمی گونجاودا دەبێتە «تایبەتمەندی»؛ نەک لە هەموو ڕستەیەکدا. دەقی ناوەڕۆک هەر بە هەمان وەرگێڕەڕە.
-          ئەم APKی ئاساییە لە ئەمولەیتەردا بە وێنەی نموونە تاقی کراوەتەوە؛ نەک پەڕە تایبەتییەکەت یان هەموو مۆبایلێک. مۆدێلی نوێ نییە؛ Dark mode و سێ ڕەنگەکە پارێزراون.
-          هەمان کلیلی v2؛ لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە. پەڕە ڕەسەنەکە دووبارە Translate بکە.
+          CAPTION="Koorix v$KOORIX_VERSION — چاکسازی پاشەکەوتکردن و ڕووکار.
+          هەر وێنەیەکی وەرگێڕدراو تەنها یەک کۆپیی گشتی هەیە؛ TXT خۆکار دروست ناکرێت. دەق و دەستکارییەکان لە پڕۆژەکاندا دەمێننەوە؛ فایلە کۆنەکانت ناسڕدرێنەوە.
+          پیشاندانی ئەنجام، STOPی بێکار، Undo و هەناردەی Studio چاک کراون. APKی ئاسایی لە ئەمولەیتەردا بە وێنەی نموونە تاقی کراوەتەوە؛ نەک Galleryی مۆبایلەکەت.
+          هەمان کلیلی v2؛ لەسەر ئەپی پێشوو دایبمەزرێنە و مەیسڕەوە. Dark mode و سێ ڕەنگەکە پارێزراون.
           https://github.com/${{ github.repository }}/releases/download/koorix-v$KOORIX_VERSION/Koorix-v$KOORIX_VERSION.apk"
 
           RESP=$(curl -fsS --connect-timeout 20 --max-time 180 \

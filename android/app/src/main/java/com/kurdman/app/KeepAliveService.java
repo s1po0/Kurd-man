@@ -109,9 +109,16 @@ public class KeepAliveService extends Service {
         prefs(context).edit().putBoolean(PREF_DESIRED, false).apply();
         // Prevent a status update from racing the stop intent and putting
         // the service back into the foreground after the user tapped STOP.
+        boolean wasRunning = serviceRunning;
         serviceRunning = false;
+        // A retry may be pending after its worker has ended. STOP must also
+        // disable that saved recovery, without deleting the project or pages.
+        TranslationProject pending = TranslationProjectStore.load(context);
+        if (TranslationProjectStore.canRecover(context, pending)) {
+            TranslationProjectStore.allowRecovery(context, pending, false);
+        }
         JobRuntime.requestStop();
-        if (serviceRunning) {
+        if (wasRunning) {
             Intent intent = new Intent(context, KeepAliveService.class)
                     .setAction(ACTION_STOP_ALL);
             try {

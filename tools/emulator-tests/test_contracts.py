@@ -134,6 +134,52 @@ class Contracts(unittest.TestCase):
         for bad in ("../../secret", "Koorix-reader-p-12345678-1234-1234-1234-123456789abc.ckb.jpg", name + ".txt"):
             self.assertIsNone(driver.PRODUCT.fullmatch(bad))
 
+    def test_public_media_product_query_is_strict_and_has_no_txt_dependency(self):
+        name="Koorix-koorix-qa-source-p-12345678-1234-1234-1234-123456789abc.ckb.jpg"
+        output=f"Row: 0 _id=123, _display_name={name}, relative_path=Download/Koorix/, mime_type=image/jpeg, is_pending=0"
+        rows=driver.product_rows(output)
+        self.assertEqual(123,driver.single_public_product(rows)["id"])
+        self.assertEqual([],driver.product_rows("No result found."))
+        self.assertIsNone(driver.PRODUCT.fullmatch(name[:-3]+"txt"))
+        for invalid in ("",output+", extra=private",output.replace("Row: 0","Row: 1"),output.replace("_id=123","_id=-1"),"Error while accessing provider"):
+            with self.subTest(invalid=invalid),self.assertRaises(ValueError):
+                driver.product_rows(invalid)
+
+    def test_duplicate_images_txt_legacy_paths_and_pending_products_fail(self):
+        good={"id":123,"name":"Koorix-koorix-qa-source-p-12345678-1234-1234-1234-123456789abc.ckb.jpg",
+              "path":"Download/Koorix/","mime":"image/jpeg","pending":0}
+        for invalid in ([],[good,dict(good,id=124)], [dict(good,path="Pictures/Koorix/")],
+                        [dict(good,path="Download/KurdMan/")], [dict(good,pending=1)],
+                        [dict(good,name=good["name"][:-3]+"txt",mime="text/plain")]):
+            with self.subTest(invalid=invalid),self.assertRaises(AssertionError):
+                driver.single_public_product(invalid)
+
+    def test_gallery_and_files_must_refer_to_the_same_owned_image_row(self):
+        class SyntheticDevice(driver.Device):
+            different=False
+            def shell(self,*args,**kwargs):
+                self.assert_query(args)
+                identifier=124 if self.different and "images/media" in args[3] else 123
+                return f"Row: 0 _id={identifier}, _display_name=Koorix-koorix-qa-source-p-12345678-1234-1234-1234-123456789abc.ckb.jpg, relative_path=Download/Koorix/, mime_type=image/jpeg, is_pending=0"
+            def assert_query(self,args):
+                if args[:3]!=("content","query","--uri") or args[-1]!="owner_package_name='com.koorix.app'":
+                    raise AssertionError("Only exact owner-scoped public queries")
+        device=SyntheticDevice(Path("unused"));self.assertEqual(123,device.public_product()["id"])
+        device.different=True
+        with self.assertRaisesRegex(AssertionError,"same one public image"):
+            device.public_product()
+
+    def test_completion_rejects_stale_stop_and_empty_hints(self):
+        class SyntheticDevice(driver.Device):
+            extra=""
+            def control(self,*args,**kwargs):return ET.Element("node")
+            def ui(self):return ET.fromstring('<hierarchy>'+self.extra+'</hierarchy>')
+            def check(self,code):self.report["checks"].append(code)
+        device=SyntheticDevice(Path("unused"));device.completed_ui()
+        for identifier in ("stopJobButton","resultEmptyHint"):
+            device.extra=f'<node resource-id="com.koorix.app:id/{identifier}" />'
+            with self.assertRaises(AssertionError):device.completed_ui()
+
     def test_capture_allowlist_matches_collector(self):
         self.assertEqual(driver.CAPTURES, collector.CAPTURES)
         self.assertTrue(collector.REQUIRED.issubset(collector.ALLOWED))
