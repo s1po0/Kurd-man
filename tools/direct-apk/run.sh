@@ -4,7 +4,11 @@ set -euo pipefail
 [ "${GITHUB_ACTIONS:-}" = true ] && [ "${RUNNER_ENVIRONMENT:-}" = github-hosted ] || {
   echo 'Refusing to target any non-hosted device.'; exit 1;
 }
-: "${ANDROID_HOME:?Official Android SDK required}" "${APK_FILE:?Existing verified release required}"
+: "${ANDROID_HOME:?Official Android SDK required}" "${APK_FILE:?Existing verified release required}" "${GH_TOKEN:?Scoped inspection API token required}"
+# Keep the API token out of SDK/emulator/cleanup child environments, not just
+# out of the Python worker's subsequent adb calls.
+INSPECTION_API_TOKEN="$GH_TOKEN"
+unset GH_TOKEN
 [ -z "${KOORIX_RELEASE_STORE_PASSWORD:-}" ] && [ -z "${KOORIX_RELEASE_KEY_PASSWORD:-}" ] && [ -z "${KOORIX_RELEASE_KEYSTORE:-}" ] || {
   echo 'Signing secrets do not belong in direct app inspection.'; exit 1;
 }
@@ -48,4 +52,4 @@ shutdown_emulator() {
 }
 trap shutdown_emulator EXIT
 export EMULATOR_PID="$pid"
-python3 tools/direct-apk/worker.py
+GH_TOKEN="$INSPECTION_API_TOKEN" python3 tools/direct-apk/worker.py

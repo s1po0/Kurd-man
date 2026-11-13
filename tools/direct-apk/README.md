@@ -8,10 +8,10 @@ owner's `claude-skill` topic. See
 
 ## Execution boundary
 
-- Empty GitHub-hosted Ubuntu24.04/KVM + official Android34 Google APIs x86_64
+- Empty GitHub-hosted Ubuntu 24.04/KVM + official Android 34 Google APIs x86_64
   emulator with advertised ARM64 native bridge. Never a connected owner's phone.
 - Install the **already delivered unchanged** regular `com.koorix.app` 1.8.2,
-  code18, SHA256
+  code 18, SHA256
   `d03ee91ff681e21e2e4cf4938106415f9e5e43d7837a03af976c62e3be97a300`.
   Independently verify its pinned v2 signature/content/manifest before use.
 - No APK build, debug variant, re-signing, paid API, new model, mock translator,
@@ -30,7 +30,7 @@ The dedicated workflow can be manually dispatched **on the current Arena
 branch**. Its initial push trigger also requires `[inspect-koorix-apk]` in the
 commit message; updating `control.json` does **not** start a second emulator.
 The current bounded session ID is recorded in `worker.py` and `control.json`;
-initial command must be sequence0 / snapshot. A future new session requires
+initial command must be sequence 0 / snapshot. A future new session requires
 resetting the control file and explicitly choosing a new ID, not reusing a
 stale gesture sequence.
 
@@ -59,7 +59,7 @@ Coordinates/resource IDs come from the **observed** frame/XML, not guesses
 about a mock screen. A busy hierarchy dump may be unavailable; that is recorded
 as null, never replaced with stale XML.
 
-Up to32 commands, a20-minute worker budget plus bounded emulator startup and
+Up to 32 commands, a 20-minute worker budget plus bounded emulator startup and
 workflow timeout; finish closes the session with a **neutral** check result.
 Unavailability/failure stays explicit. Raw frames are not committed. Record the
 run/check IDs, exact APK, frame blob/digests, actions actually performed and

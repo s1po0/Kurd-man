@@ -1,0 +1,847 @@
+{
+  "schema": "koorix-direct-apk-observation-v1",
+  "purpose": "Owner-requested manual direct inspection, not another scripted release gate",
+  "session": "koorix-regular-182-observe-1",
+  "status": "finished-manual-inspection-not-a-test-verdict",
+  "qualityVerdict": "not-issued; observed UI defects remain unfixed",
+  "apk": {
+    "package": "com.koorix.app",
+    "label": "Koorix",
+    "version": "1.8.2",
+    "versionCode": 18,
+    "bytes": 33590089,
+    "sha256": "d03ee91ff681e21e2e4cf4938106415f9e5e43d7837a03af976c62e3be97a300",
+    "signerSha256": "fb304de3cd357f35cf679e2a46befac08f3e97feef28b1b9a8af7b0891d40340",
+    "releaseSourceCommit": "22b140750b83780e4b3c85f15dab1386b03a3aa4",
+    "androidTree": "05817e482d9dbcf101e636ec1bc63797c4c355ea",
+    "existingReleaseDownloadedAndPublicOnlyVerified": true,
+    "rebuiltOrResigned": false
+  },
+  "runtime": {
+    "workflowRunId": 43350571277,
+    "jobId": 131640362164,
+    "checkId": 131640797293,
+    "checkConclusion": "neutral",
+    "launchCommit": "37e72776600f5586eb2633a71716a8a2111f4dac",
+    "branch": "arena/d0574002-kurd-man",
+    "api": 34,
+    "abis": [
+      "x86_64",
+      "arm64-v8a"
+    ],
+    "nativeBridge": "libndk_translation.so",
+    "emptyHostedEmulator": true,
+    "sessionEnded": true,
+    "continuousVideoOrCurrentLivePhoneConnection": false
+  },
+  "guidance": {
+    "ownerRepository": "https://github.com/alirezarezvani/claude-skills",
+    "ownerRepositoryPin": "08cd8a9fc86cc370e2c0d448e8171fbcfdbc5a30",
+    "ownerTopic": "https://github.com/topics/claude-skill",
+    "nativeControllerSkill": "https://github.com/hah23255/adb-android-control",
+    "nativeControllerSkillPin": "cc1cb29de0adc581e260842b36c198217bfab0b2",
+    "license": "MIT",
+    "upstreamInstallersOrPackageExecuted": false
+  },
+  "scope": {
+    "readerDataUsed": false,
+    "appPrivateDataRead": false,
+    "ownerPhoneConnected": false,
+    "alternateOrDebugApp": false,
+    "signingOrTelegramSecretsLoaded": false,
+    "newModelOrHiddenTranslationFallback": false,
+    "syntheticFixture": "tools/emulator-tests/MakePanel.java",
+    "uiLanguagesActuallyViewed": [
+      "ckb",
+      "en"
+    ],
+    "stopActuallyPressed": false,
+    "offlineJobActuallyExercised": false,
+    "pdfExportActuallyExercised": false,
+    "originalPeekWhileHeldCaptured": false,
+    "nativeHumanMeaningReview": false,
+    "originalPrivateReaderPageRerendered": false,
+    "physicalPhoneOrTalkBackAccepted": false,
+    "androidFilesChanged": false,
+    "fixesApplied": false,
+    "apkPublishedOrRedelivered": false
+  },
+  "initialInfrastructureFailure": {
+    "runId": 43350400691,
+    "checkId": 131640176507,
+    "status": "failed-before-first-frame",
+    "reason": "Standalone hosted job had no adb on PATH",
+    "targetedFixCommit": "37e72776600f5586eb2633a71716a8a2111f4dac",
+    "fix": "Explicitly install platform-tools and export the SDK platform-tools PATH; subsequent actual session established"
+  },
+  "sameAgentVisualAssessment": {
+    "scope": "Viewed all27 actual native frames; authored fixture only, not a general UI or semantic certificate",
+    "studioObservation": "Complete joined Sorani replacement visible without the My work empty-book overlay; wording not manually rewritten",
+    "independentHumanReview": false
+  },
+  "findings": [
+    {
+      "id": "completed-preview-empty-overlay",
+      "status": "observed-unfixed",
+      "priority": "high",
+      "frames": [
+        12,
+        20
+      ],
+      "observation": "Empty-state book icon and hint remain over/under the completed translated preview. Icon covers real lettering. They disappear after explicit studio Save and new export at frame24, not merely Back.",
+      "sourceCorrelation": [
+        "MainActivity.java:756 savedJobListener sets status directly and calls showSavedProjectResult",
+        "MainActivity.java:3108 showSavedProjectResult assigns resultBitmap/File without refreshReadingSelection",
+        "MainActivity.java:1088 refreshReadingSelection owns resultEmptyIcon/Hint visibility"
+      ]
+    },
+    {
+      "id": "completed-status-stale-stop",
+      "status": "observed-unfixed-state-inconsistency",
+      "priority": "medium",
+      "frames": [
+        9,
+        10,
+        12,
+        13,
+        19,
+        24,
+        25,
+        26
+      ],
+      "observation": "STOP remains visible after ready/completed work and after edited export, disappears after returning from studio, then reappears after export. No manual keep-alive toggle was used. This is not proof that translation is still running or that STOP fails.",
+      "sourceCorrelation": [
+        "MainActivity.java:1580 refreshKeepAliveUi includes the asynchronous service-running flag",
+        "SavedJobCoordinator.java:62 posts completion and separately asks KeepAliveService.jobFinished",
+        "KeepAliveService.java:142-197 service completion is asynchronous"
+      ]
+    },
+    {
+      "id": "undo-size-status-stale",
+      "status": "observed-unfixed",
+      "priority": "low",
+      "frames": [
+        17,
+        18
+      ],
+      "observation": "After one A-minus and Undo, the actual size control returns to100 percent while the status banner still says90 percent. No claim that Undo loses the text style or that its pixel-size effect was verified.",
+      "sourceCorrelation": [
+        "EditorActivity.java:2119 undo and restoreSnapshot refresh controls but do not replace the earlier adjustment status"
+      ]
+    },
+    {
+      "id": "studio-export-legacy-folder",
+      "status": "observed-unfixed-consistency-issue",
+      "priority": "medium",
+      "frames": [
+        24,
+        25,
+        26
+      ],
+      "observation": "Studio save/export reports Download/KurdMan; normal saved-job exports use Download/Koorix. This is the regular Koorix app using a legacy export path, NOT an alternate KurdMan APK. Current-session file bytes/path were not independently read back.",
+      "sourceCorrelation": [
+        "MainActivity.java:3754 exportEditedProject uses the legacy saveFileToDownloads route",
+        "MainActivity.java:4533 saveFileToDownloads selects Download/KurdMan",
+        "ProjectResults.java:58-64 normal savePublic selects Download/Koorix"
+      ]
+    }
+  ],
+  "frameCount": 27,
+  "commandsAfterInitialObservation": 26,
+  "frames": [
+    {
+      "sequence": 0,
+      "image": {
+        "blob": "e1273b62c76fa1ca50ce24a83c08491c403f7240",
+        "bytes": 194273,
+        "sha256": "ccd4b65c092651ff59d8a88e1f3ebc290860c6b300061c4bc992c8f9b3ae3fe4"
+      },
+      "focusedWindow": "mCurrentFocus=Window{29a6e78 u0 com.koorix.app/com.kurdman.app.MainActivity}",
+      "observedAtEpoch": 1794536106,
+      "uiXml": {
+        "blob": "3a73e273005124488ee6139efcf2c3887523739c",
+        "bytes": 15020,
+        "sha256": "258d0f804039c5eff92f49936889288a95824fb8d044f5db2c71a9dd7e876dda"
+      },
+      "observedBySameAgent": true,
+      "observation": "Actual initial Sorani home, light theme"
+    },
+    {
+      "sequence": 1,
+      "image": {
+        "blob": "a4210611adaf8a6771be09f682c4270aece83d17",
+        "bytes": 189968,
+        "sha256": "daef8b8f8288e7da1ef1b602b1f18adeedbd69378996b2ebcbcb95649621a37a"
+      },
+      "focusedWindow": "mCurrentFocus=Window{29a6e78 u0 com.koorix.app/com.kurdman.app.MainActivity}",
+      "observedAtEpoch": 1794536134,
+      "uiXml": {
+        "blob": "156e41249e7d4228ec7fe8d35dae3e38672bedc7",
+        "bytes": 15071,
+        "sha256": "f6bc754a5739a3707dbc44a6c06d469075fa91fee295ef0d66491fc034ac1b9e"
+      },
+      "observedBySameAgent": true,
+      "observation": "Sorani Settings"
+    },
+    {
+      "sequence": 2,
+      "image": {
+        "blob": "1379bccc9af67ee33d7d7296098f07faccfc3ccd",
+        "bytes": 189687,
+        "sha256": "aa8f586874c6b08afabcef261a2189773eee19a84b94cfb4865cd097bdcabebd"
+      },
+      "focusedWindow": "mCurrentFocus=Window{29a6e78 u0 com.koorix.app/com.kurdman.app.MainActivity}",
+      "observedAtEpoch": 1794536156,
+      "uiXml": {
+        "blob": "56daaa64a88909e302795eddac9f0ed330e8cbe7",
+        "bytes": 15056,
+        "sha256": "0ca426f0e8ba32be8a85879f59c5710fd1fa4b582b6bd81e9e4dbf00ca8b55fa"
+      },
+      "observedBySameAgent": true,
+      "observation": "Header theme action changed Settings to dark; spinner also shows dark"
+    },
+    {
+      "sequence": 3,
+      "image": {
+        "blob": "1a53cc46235e5644a2dac4429836293f8aec71ab",
+        "bytes": 180754,
+        "sha256": "dda9cddecbc74c869deba92c852e12ef3cb3aa348491be3ddb5cbf836180c301"
+      },
+      "focusedWindow": "mCurrentFocus=Window{170e940 u0 com.koorix.app/com.kurdman.app.MainActivity}",
+      "observedAtEpoch": 1794536178,
+      "uiXml": {
+        "blob": "790149b05ace2ead60735ca69493b7d50088e33f",
+        "bytes": 14789,
+        "sha256": "d3beba0aa00222fef37863cfb24b04dd6ee646442687d478e4ff82d508fb4a0a"
+      },
+      "observedBySameAgent": true,
+      "observation": "English Settings; title, labels and navigation changed to LTR English"
+    },
+    {
+      "sequence": 4,
+      "image": {
+        "blob": "d750643d6c1255cd469d95e12a3c8c4347780578",
+        "bytes": 161666,
+        "sha256": "0682cda7116118d1a4a869ea7ed2e7b3a7fde803e79ed7a159cc0c0c0a4e3ac6"
+      },
+      "focusedWindow": "mCurrentFocus=Window{170e940 u0 com.koorix.app/com.kurdman.app.MainActivity}",
+      "observedAtEpoch": 1794536200,
+      "uiXml": {
+        "blob": "dac5d0a3edba28907604bb0b6a28b31670b8bc77",
+        "bytes": 13886,
+        "sha256": "09e146b668ef656922599071a4492205ed593235e80925fec2cdc9625973c2d8"
+      },
+      "observedBySameAgent": true,
+      "observation": "Reports empty state; no runtime defect logged"
+    },
+    {
+      "sequence": 5,
+      "image": {
+        "blob": "e574256c3106094853c7b0e77e3a2c900e4b3c09",
+        "bytes": 123926,
+        "sha256": "37f483749e985a3420cf19c4ee1f1ec73d08aa15c4870ff4d3501b1ff3330b10"
+      },
+      "focusedWindow": "mCurrentFocus=Window{170e940 u0 com.koorix.app/com.kurdman.app.MainActivity}",
+      "observedAtEpoch": 1794536222,
+      "uiXml": {
+        "blob": "510584979a05a16a8581a341368688edb8fd1d64",
+        "bytes": 12623,
+        "sha256": "a41b862ba0f8063e3d9756db19d05cff115c8d75b8b93d589227bff9056433e4"
+      },
+      "observedBySameAgent": true,
+      "observation": "Style preview and bundled font controls"
+    },
+    {
+      "sequence": 6,
+      "image": {
+        "blob": "9bc66a921b321aaf58536d8bcb1066f526309774",
+        "bytes": 146870,
+        "sha256": "ab7f489e61326323676920a8ded23a23ec9fc9615ed3b92ef37e75885239a2da"
+      },
+      "focusedWindow": "mCurrentFocus=Window{170e940 u0 com.koorix.app/com.kurdman.app.MainActivity}",
+      "observedAtEpoch": 1794536248,
+      "uiXml": {
+        "blob": "f40723d90c72be08b29f4c9898d5346d4bd0ed4d",
+        "bytes": 14846,
+        "sha256": "0476d2eb4bef9d93ff9505b48e4b2ebba229aaf5644998e7c5aa9453e9bb0026"
+      },
+      "observedBySameAgent": true,
+      "observation": "Lower Style controls after an observed scroll"
+    },
+    {
+      "sequence": 7,
+      "image": {
+        "blob": "b6934df41b3e44da6572f83d58c5bac50025c452",
+        "bytes": 201977,
+        "sha256": "13d5af276daec89d20da847cef8d564b9dc2037dc88818460afc436b3f232ed8"
+      },
+      "focusedWindow": "mCurrentFocus=Window{170e940 u0 com.koorix.app/com.kurdman.app.MainActivity}",
+      "observedAtEpoch": 1794536270,
+      "uiXml": {
+        "blob": "457e1f72b776a1267c2c7ed65bb8e742e3b78423",
+        "bytes": 14692,
+        "sha256": "302fe8c5fefa234bb62d2db30fbb7bf6ae4df99b073f85639151ddea7a8023cd"
+      },
+      "observedBySameAgent": true,
+      "observation": "Dark English Translate home"
+    },
+    {
+      "sequence": 8,
+      "image": {
+        "blob": "c2a054f01e6599a0d9e460552259136f36d512c7",
+        "bytes": 99388,
+        "sha256": "36c083860cc2912faca6ad199038e056285c631f47c0b0533e246503e795c956"
+      },
+      "focusedWindow": "mCurrentFocus=Window{b718fb0 u0 com.google.android.documentsui/com.android.documentsui.picker.PickActivity}",
+      "observedAtEpoch": 1794536293,
+      "uiXml": {
+        "blob": "c9cefe5ddb7edb8db39d23a9bb6068049a686fb9",
+        "bytes": 23466,
+        "sha256": "a16adee9c0fe1a4b79f72bc40067a3eaed02dd2eafa43a2dd0d6e63490800ab2"
+      },
+      "observedBySameAgent": true,
+      "observation": "Original system DocumentsUI chooser, all-type filter chips and other-app entry points"
+    },
+    {
+      "sequence": 9,
+      "image": {
+        "blob": "c0a31809cbe796ef4872894682e754082b13dae9",
+        "bytes": 168507,
+        "sha256": "c990e0742d1d229963957a36197ce5c5c41d1cb9e6964c2403acc244792fc9f3"
+      },
+      "focusedWindow": "mCurrentFocus=Window{170e940 u0 com.koorix.app/com.kurdman.app.MainActivity}",
+      "observedAtEpoch": 1794536318,
+      "uiXml": {
+        "blob": "719a05308d317761a5272043948193f3948ca8fa",
+        "bytes": 15041,
+        "sha256": "264b0e7e92fbb528da0d9c318cdfe606442fc0958df4e281b3b612a3df97dd89"
+      },
+      "observedBySameAgent": true,
+      "observation": "Authored 960x820 PNG selected through real chooser; Translate enabled; STOP visible"
+    },
+    {
+      "sequence": 10,
+      "image": {
+        "blob": "4b91a976c449850950d5c6761e455e213047c615",
+        "bytes": 166118,
+        "sha256": "671bd0a45151b01f74c2ba9b7147179bab37f1a90d62926fea83a8c0e48bdc56"
+      },
+      "focusedWindow": "mCurrentFocus=Window{170e940 u0 com.koorix.app/com.kurdman.app.MainActivity}",
+      "observedAtEpoch": 1794536344,
+      "uiXml": {
+        "blob": "2478678c84cdbd731696e9a179804d0bb33403c1",
+        "bytes": 16161,
+        "sha256": "53fd841197854fc2fd73233bca6bdea924233336a2239b16878f4f35e39e6951"
+      },
+      "observedBySameAgent": true,
+      "observation": "Observed EN to ckb, Online and automatic Skill controls"
+    },
+    {
+      "sequence": 11,
+      "image": {
+        "blob": "55064649aa127811fb12f5949cb76494d447ea41",
+        "bytes": 191134,
+        "sha256": "cfabea3f371aad3040cede92ef54439aa7afcb1542224cfdb18738da6dbdcd2b"
+      },
+      "focusedWindow": "mCurrentFocus=Window{170e940 u0 com.koorix.app/com.kurdman.app.MainActivity}",
+      "observedAtEpoch": 1794536366,
+      "uiXml": {
+        "blob": "a17e79a77e6feb15d31d4388fdd2612256ca6027",
+        "bytes": 12756,
+        "sha256": "45303303a2699dd9f35174440d2aa23cb0c9e8c991ee5ad1399dbb940747ea50"
+      },
+      "observedBySameAgent": true,
+      "observation": "Actual busy OCR 1/1; theme/language actions disabled and STOP enabled"
+    },
+    {
+      "sequence": 12,
+      "image": {
+        "blob": "2c2dc9623b6ece6fb93c1f43dad9dcde82665695",
+        "bytes": 262288,
+        "sha256": "75040d9c6d6bfa80342f589ab02345e5a3f7b63afa3caa6dac423d61521b4ca3"
+      },
+      "focusedWindow": "mCurrentFocus=Window{170e940 u0 com.koorix.app/com.kurdman.app.MainActivity}",
+      "observedAtEpoch": 1794536387,
+      "uiXml": {
+        "blob": "fcf307b36bc76ebebd22dfd97d815dcf162886f3",
+        "bytes": 12079,
+        "sha256": "0c780d8638ce45983b3c9824e071a84e73ca5ec45f721d18446831e1e57dabb6"
+      },
+      "observedBySameAgent": true,
+      "observation": "Complete status and translated page; empty book illustration obscures the real preview; STOP still visible"
+    },
+    {
+      "sequence": 13,
+      "image": {
+        "blob": "aab18fe5c9f6b86894a28c3df4e0846059cda2d5",
+        "bytes": 244541,
+        "sha256": "da1749b13df1eaf0444ac68c108e03bb4aeea387cbe3de10c14edb42713e47c4"
+      },
+      "focusedWindow": "mCurrentFocus=Window{170e940 u0 com.koorix.app/com.kurdman.app.MainActivity}",
+      "observedAtEpoch": 1794536429,
+      "uiXml": {
+        "blob": "922d03898398994db3d4f96af55cfb8be6081f33",
+        "bytes": 12414,
+        "sha256": "e3e991e50f1fae3bfd67163c59de78b29cb926817aa764d806a1cf98567ef902"
+      },
+      "observedBySameAgent": true,
+      "observation": "Actual one-block source/target text and enabled studio action"
+    },
+    {
+      "sequence": 14,
+      "image": {
+        "blob": "cff8e74c54516521a13e8efb6ed1b2cfb668555e",
+        "bytes": 218906,
+        "sha256": "54478a2272992e3fe3c69901f201769567b89210427fd2833030d1f0ed12024b"
+      },
+      "focusedWindow": "mCurrentFocus=Window{a23a83 u0 com.koorix.app/com.kurdman.app.EditorActivity}",
+      "observedAtEpoch": 1794536451,
+      "uiXml": {
+        "blob": "00bd9c063232b813d9fb0c2571e832a73ee57960",
+        "bytes": 16934,
+        "sha256": "1a1b9b0eea1e827d51d5583389d3a7d9f0bc4f69970eef9d7fbb86c1e8912f7b"
+      },
+      "observedBySameAgent": true,
+      "observation": "Actual native studio shows translated page without the empty book overlay"
+    },
+    {
+      "sequence": 15,
+      "image": {
+        "blob": "0cf1a7fc0b1a62b7502490aaaabd5836946c2036",
+        "bytes": 218474,
+        "sha256": "343f4d9266cb7ccb0511867854a0b92599590a3e619f2f194a4fc120b509c4f6"
+      },
+      "focusedWindow": "mCurrentFocus=Window{a23a83 u0 com.koorix.app/com.kurdman.app.EditorActivity}",
+      "observedAtEpoch": 1794536473,
+      "uiXml": {
+        "blob": "00bd9c063232b813d9fb0c2571e832a73ee57960",
+        "bytes": 16934,
+        "sha256": "1a1b9b0eea1e827d51d5583389d3a7d9f0bc4f69970eef9d7fbb86c1e8912f7b"
+      },
+      "observedBySameAgent": true,
+      "observation": "Short tap on eye returned to translated view; original-while-held capture NOT obtained"
+    },
+    {
+      "sequence": 16,
+      "image": {
+        "blob": "37bff20ae984ca98cceb8d71a15ba96bedfef701",
+        "bytes": 248885,
+        "sha256": "6bc32a00d7bf255310143218b425dc55a781109d749f5e1eda15ff5cb1019e48"
+      },
+      "focusedWindow": "mCurrentFocus=Window{a23a83 u0 com.koorix.app/com.kurdman.app.EditorActivity}",
+      "observedAtEpoch": 1794536500,
+      "uiXml": {
+        "blob": "7acfe44539a66009e438bc676c8737d811662ac1",
+        "bytes": 17440,
+        "sha256": "1c8f24abb469365c0e09a9ec2cfe2d59a10eabfee5cebf3b836c44f0b8df906c"
+      },
+      "observedBySameAgent": true,
+      "observation": "Actual studio Style section"
+    },
+    {
+      "sequence": 17,
+      "image": {
+        "blob": "0ed5da5d0a546120c874b11c4241df09f4b0c464",
+        "bytes": 206262,
+        "sha256": "de4ee8a127d06eb41c86a6fb2bec48f8e1f5ffee3810762f2e5fb93cd0983357"
+      },
+      "focusedWindow": "mCurrentFocus=Window{a23a83 u0 com.koorix.app/com.kurdman.app.EditorActivity}",
+      "observedAtEpoch": 1794536520,
+      "uiXml": {
+        "blob": "efdad5ae06fe3524b8aeb8532a5cc52ba89ead4b",
+        "bytes": 17421,
+        "sha256": "7075ffc608697dd2422453ccf0ff1735d047a5871b16bdce1c177e06ee785862"
+      },
+      "observedBySameAgent": true,
+      "observation": "A-minus changed the size control to 90 percent; Undo enabled; rendered pixel-size effect not asserted"
+    },
+    {
+      "sequence": 18,
+      "image": {
+        "blob": "0432e753a957122320de8aac97eb23ab79b39f0d",
+        "bytes": 205776,
+        "sha256": "0069b80499603a9fc51ba9e4085d06b9d69fe78486dc98c18a1aa41c3ea2b377"
+      },
+      "focusedWindow": "mCurrentFocus=Window{a23a83 u0 com.koorix.app/com.kurdman.app.EditorActivity}",
+      "observedAtEpoch": 1794536547,
+      "uiXml": {
+        "blob": "294124c74151b848bfb87fd6765f18333fc939cb",
+        "bytes": 17422,
+        "sha256": "65355f9482cd5ffeef8131d3e148fc8f44747b366b8df0809e712e67d0431d7b"
+      },
+      "observedBySameAgent": true,
+      "observation": "Undo restored Size 100 percent, but top status still said Text size 90 percent"
+    },
+    {
+      "sequence": 19,
+      "image": {
+        "blob": "046302b082ece70b97562675e8553866b4184b8c",
+        "bytes": 205198,
+        "sha256": "8c148f0d1d29b2b6e144372ce9f7c8459ed6573d90f34410857813d603622cb8"
+      },
+      "focusedWindow": "mCurrentFocus=Window{170e940 u0 com.koorix.app/com.kurdman.app.MainActivity}",
+      "observedAtEpoch": 1794536574,
+      "uiXml": {
+        "blob": "e1cc6de0ba82ea30f319ede307fe0a7620f09e9e",
+        "bytes": 12040,
+        "sha256": "012c51bebb72bda87e7e91874c3a729a0d50064d5a4d603b92fe826a0fd94853"
+      },
+      "observedBySameAgent": true,
+      "observation": "Returned to My work; STOP absent on this refreshed lifecycle surface"
+    },
+    {
+      "sequence": 20,
+      "image": {
+        "blob": "4f2dc41c4ca9e65ac981c805cf128fa8a9315447",
+        "bytes": 242138,
+        "sha256": "c39bd12f471b9af170306100e6806944290158661682d56e3099b92e019acedb"
+      },
+      "focusedWindow": "mCurrentFocus=Window{170e940 u0 com.koorix.app/com.kurdman.app.MainActivity}",
+      "observedAtEpoch": 1794536600,
+      "uiXml": {
+        "blob": "4236a23c3e1c98986a2b09e8db50337de4c0f386",
+        "bytes": 12491,
+        "sha256": "fb0a66d95bd2fb94ab478a481c1a63280a65dfbb7571200ee58be24402fd1170"
+      },
+      "observedBySameAgent": true,
+      "observation": "Completed preview still has the empty book icon and empty-state hint after studio Back"
+    },
+    {
+      "sequence": 21,
+      "image": {
+        "blob": "ec03668ad01cbd2a59cda3680b055dd777f40233",
+        "bytes": 108062,
+        "sha256": "580a5d80af6c10710c702ce472b1bc269a6d3bc7c58c6b1d19f9d9c3f51b11a0"
+      },
+      "focusedWindow": "mCurrentFocus=Window{44798e8 u0 com.koorix.app/com.kurdman.app.ProjectLibraryActivity}",
+      "observedAtEpoch": 1794536627,
+      "uiXml": {
+        "blob": "046161f51d6681023d5cfa562f2df153d9bce80d",
+        "bytes": 8202,
+        "sha256": "71e2e63febc65c651f40c996c2e096001270881903a3d1e77541c525f42ac87a"
+      },
+      "observedBySameAgent": true,
+      "observation": "Saved-project library has the authored one-page EN to ckb Complete project"
+    },
+    {
+      "sequence": 22,
+      "image": {
+        "blob": "9d5654a425de3763af7fca71af96fb3b97e15823",
+        "bytes": 218695,
+        "sha256": "1b62b136a60c9a2211631c446db0f633315f56989b4127d59fd572a500a80580"
+      },
+      "focusedWindow": "mCurrentFocus=Window{53290d8 u0 com.koorix.app/com.kurdman.app.EditorActivity}",
+      "observedAtEpoch": 1794536646,
+      "uiXml": {
+        "blob": "00bd9c063232b813d9fb0c2571e832a73ee57960",
+        "bytes": 16934,
+        "sha256": "1a1b9b0eea1e827d51d5583389d3a7d9f0bc4f69970eef9d7fbb86c1e8912f7b"
+      },
+      "observedBySameAgent": true,
+      "observation": "Reopened saved project in actual studio"
+    },
+    {
+      "sequence": 23,
+      "image": {
+        "blob": "726efafd7b975ce1fd0373eba84020b3c5c6e3b5",
+        "bytes": 204747,
+        "sha256": "d20120775475680025bbd44a39e0a16e95ac4e82d478dae789390a9b02cfd7b7"
+      },
+      "focusedWindow": "mCurrentFocus=Window{53290d8 u0 com.koorix.app/com.kurdman.app.EditorActivity}",
+      "observedAtEpoch": 1794536674,
+      "uiXml": {
+        "blob": "51f340d3fa0f1b3e2b875be8b673aa413555f030",
+        "bytes": 16462,
+        "sha256": "9dbf0bae9cab4e664399408421a08b11293a49971e4aedaa751e04c0434916d6"
+      },
+      "observedBySameAgent": true,
+      "observation": "Actual Export section and Save and new export action"
+    },
+    {
+      "sequence": 24,
+      "image": {
+        "blob": "5456ab4311cbc6c76097cb958f7572ec44aed538",
+        "bytes": 207184,
+        "sha256": "dc7c706f97a387dbacb0b23dc30430ad349dc78afd2632407662aa1570239b70"
+      },
+      "focusedWindow": "mCurrentFocus=Window{170e940 u0 com.koorix.app/com.kurdman.app.MainActivity}",
+      "observedAtEpoch": 1794536699,
+      "uiXml": {
+        "blob": "53c730ab344c63c63793346c51c92093f786d24e",
+        "bytes": 12102,
+        "sha256": "53248bb63d780adddf78ae9f6f08dea8ed04cb56ba1be62403efe4ff477de08c"
+      },
+      "observedBySameAgent": true,
+      "observation": "Save and export returned to a clean preview without placeholder; status reports Download/KurdMan, not the normal Koorix folder; STOP visible again"
+    },
+    {
+      "sequence": 25,
+      "image": {
+        "blob": "e0a1fc9b21b33e8363824e363ee59473387c40fb",
+        "bytes": 166655,
+        "sha256": "a3fa27c739503512d8fa75dc1e6946060b18a1aff314cdd06c3560f7462b9207"
+      },
+      "focusedWindow": "mCurrentFocus=Window{170e940 u0 com.koorix.app/com.kurdman.app.MainActivity}",
+      "observedAtEpoch": 1794536726,
+      "uiXml": {
+        "blob": "7349aed459c9f492fbc0237beb310c56d7117db9",
+        "bytes": 13938,
+        "sha256": "4688bf5ff23cbe85a62c2ec45ee5043e63972e8bffdafb175d40f3ff7d640275"
+      },
+      "observedBySameAgent": true,
+      "observation": "Reports after live job and export still show no recorded error or warning"
+    },
+    {
+      "sequence": 26,
+      "image": {
+        "blob": "70fff5a527339cc8fe245025df100f4ef743d8ae",
+        "bytes": 166794,
+        "sha256": "0f835a27231a4060ae341e660dfe714749aff1fc2879de2c59320f4527387b0a"
+      },
+      "focusedWindow": "mCurrentFocus=Window{170e940 u0 com.koorix.app/com.kurdman.app.MainActivity}",
+      "observedAtEpoch": 1794536761,
+      "uiXml": {
+        "blob": "7349aed459c9f492fbc0237beb310c56d7117db9",
+        "bytes": 13938,
+        "sha256": "4688bf5ff23cbe85a62c2ec45ee5043e63972e8bffdafb175d40f3ff7d640275"
+      },
+      "observedBySameAgent": true,
+      "observation": "Explicit finish; final actual frame captured and session closed with neutral check"
+    }
+  ],
+  "commands": [
+    {
+      "commit": "0822a863ee0bf0921c175a63c38be9e54afd4335",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 0,
+      "action": "snapshot"
+    },
+    {
+      "commit": "a21c8d63d3d5921393fb421ba2036e8bb1011a3e",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 1,
+      "action": "tap_id",
+      "expectedFrame": "ccd4b65c092651ff59d8a88e1f3ebc290860c6b300061c4bc992c8f9b3ae3fe4",
+      "id": "navSettingsButton"
+    },
+    {
+      "commit": "7fbaa4229adfcef1f42b3bc9b7c58d72c3d09c4e",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 2,
+      "action": "tap_id",
+      "expectedFrame": "daef8b8f8288e7da1ef1b602b1f18adeedbd69378996b2ebcbcb95649621a37a",
+      "id": "quickThemeButton"
+    },
+    {
+      "commit": "e8cc96847521abb6904a77e80404cfde6ba84d83",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 3,
+      "action": "tap_id",
+      "expectedFrame": "aa8f586874c6b08afabcef261a2189773eee19a84b94cfb4865cd097bdcabebd",
+      "id": "langEnButton"
+    },
+    {
+      "commit": "2dd4b8b9fd332af710361cc13701e9fc7d3ace11",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 4,
+      "action": "tap_id",
+      "expectedFrame": "dda9cddecbc74c869deba92c852e12ef3cb3aa348491be3ddb5cbf836180c301",
+      "id": "navReportsButton"
+    },
+    {
+      "commit": "1fe5ac965f668f7bba208b7a420cf59daf235e24",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 5,
+      "action": "tap_id",
+      "expectedFrame": "0682cda7116118d1a4a869ea7ed2e7b3a7fde803e79ed7a159cc0c0c0a4e3ac6",
+      "id": "navStyleButton"
+    },
+    {
+      "commit": "a505ebb4df764f84a3b406329beab6d439cd24e8",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 6,
+      "action": "swipe",
+      "expectedFrame": "37f483749e985a3420cf19c4ee1f1ec73d08aa15c4870ff4d3501b1ff3330b10",
+      "x": 540,
+      "y": 1460,
+      "toX": 540,
+      "toY": 600,
+      "durationMs": 350
+    },
+    {
+      "commit": "ca3b2619f3dfa26c3786dfa03880e11980fabe4b",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 7,
+      "action": "tap_id",
+      "expectedFrame": "ab7f489e61326323676920a8ded23a23ec9fc9615ed3b92ef37e75885239a2da",
+      "id": "navTranslateButton"
+    },
+    {
+      "commit": "bb88ba2b295f675aebc20103d344978bc03aca97",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 8,
+      "action": "tap_id",
+      "expectedFrame": "13d5af276daec89d20da847cef8d564b9dc2037dc88818460afc436b3f232ed8",
+      "id": "pickButton"
+    },
+    {
+      "commit": "5da7d26d55d3393a1f04faf396e7895b70c31cb2",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 9,
+      "action": "tap",
+      "expectedFrame": "36c083860cc2912faca6ad199038e056285c631f47c0b0533e246503e795c956",
+      "x": 450,
+      "y": 850
+    },
+    {
+      "commit": "367f489a923d9e7f4e08501e7c55f28e68d12af8",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 10,
+      "action": "swipe",
+      "expectedFrame": "c990e0742d1d229963957a36197ce5c5c41d1cb9e6964c2403acc244792fc9f3",
+      "x": 540,
+      "y": 1400,
+      "toX": 540,
+      "toY": 600,
+      "durationMs": 350
+    },
+    {
+      "commit": "349418b0b465de89616bd47170bf1786109c25c8",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 11,
+      "action": "tap_id",
+      "expectedFrame": "671bd0a45151b01f74c2ba9b7147179bab37f1a90d62926fea83a8c0e48bdc56",
+      "id": "translateButton"
+    },
+    {
+      "commit": "8b4db54ba0d327632753237e7e499e4b8b8cafb5",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 12,
+      "action": "snapshot",
+      "expectedFrame": "cfabea3f371aad3040cede92ef54439aa7afcb1542224cfdb18738da6dbdcd2b"
+    },
+    {
+      "commit": "01f2cc024070ca637e04f8473d564d22e29580d1",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 13,
+      "action": "swipe",
+      "expectedFrame": "75040d9c6d6bfa80342f589ab02345e5a3f7b63afa3caa6dac423d61521b4ca3",
+      "x": 540,
+      "y": 1460,
+      "toX": 540,
+      "toY": 650,
+      "durationMs": 350
+    },
+    {
+      "commit": "39d4a78a9cbb857c547b7068bb53230fde5ee5f3",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 14,
+      "action": "tap_id",
+      "expectedFrame": "da1749b13df1eaf0444ac68c108e03bb4aeea387cbe3de10c14edb42713e47c4",
+      "id": "editResultButton"
+    },
+    {
+      "commit": "328f80d05630940ff6760115d7878188629d6404",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 15,
+      "action": "tap_id",
+      "expectedFrame": "54478a2272992e3fe3c69901f201769567b89210427fd2833030d1f0ed12024b",
+      "id": "editorPeekButton"
+    },
+    {
+      "commit": "13ca539ca2e3cd535e4d3ddff59e31a98cebb930",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 16,
+      "action": "tap_id",
+      "expectedFrame": "343f4d9266cb7ccb0511867854a0b92599590a3e619f2f194a4fc120b509c4f6",
+      "id": "editorSectionStyleButton"
+    },
+    {
+      "commit": "09dc23d2afdb623721ac544d54c704844d7e289c",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 17,
+      "action": "tap",
+      "expectedFrame": "6bc32a00d7bf255310143218b425dc55a781109d749f5e1eda15ff5cb1019e48",
+      "x": 194,
+      "y": 1423
+    },
+    {
+      "commit": "99e8858663649c0897220d430826dc7fa7467d52",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 18,
+      "action": "tap_id",
+      "expectedFrame": "de4ee8a127d06eb41c86a6fb2bec48f8e1f5ffee3810762f2e5fb93cd0983357",
+      "id": "editorUndoButton"
+    },
+    {
+      "commit": "96b21c1e4a0164d7c7c0ab640d6927c147f159ae",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 19,
+      "action": "tap_id",
+      "expectedFrame": "0069b80499603a9fc51ba9e4085d06b9d69fe78486dc98c18a1aa41c3ea2b377",
+      "id": "editorBackButton"
+    },
+    {
+      "commit": "29efd48e415720194c6ba9372f5d753f372284ae",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 20,
+      "action": "swipe",
+      "expectedFrame": "8c148f0d1d29b2b6e144372ce9f7c8459ed6573d90f34410857813d603622cb8",
+      "x": 540,
+      "y": 650,
+      "toX": 540,
+      "toY": 1450,
+      "durationMs": 350
+    },
+    {
+      "commit": "815bc1f8aa1dec0e9d653a623afdb03b3e374f80",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 21,
+      "action": "tap_id",
+      "expectedFrame": "c39bd12f471b9af170306100e6806944290158661682d56e3099b92e019acedb",
+      "id": "projectLibraryButton"
+    },
+    {
+      "commit": "eb1811144aeeeee844560d827c2e2adbc4dcd455",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 22,
+      "action": "tap",
+      "expectedFrame": "580a5d80af6c10710c702ce472b1bc269a6d3bc7c58c6b1d19f9d9c3f51b11a0",
+      "x": 540,
+      "y": 1153
+    },
+    {
+      "commit": "bcc7baf94577e8460c9b1c35789ce0c5222e4a73",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 23,
+      "action": "tap_id",
+      "expectedFrame": "1b62b136a60c9a2211631c446db0f633315f56989b4127d59fd572a500a80580",
+      "id": "editorSectionFinishButton"
+    },
+    {
+      "commit": "96ff0df2e764b1bd9b9e1a921dd187f1b0f0ab39",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 24,
+      "action": "tap",
+      "expectedFrame": "d20120775475680025bbd44a39e0a16e95ac4e82d478dae789390a9b02cfd7b7",
+      "x": 540,
+      "y": 1273
+    },
+    {
+      "commit": "eaabd4d7d755d5036fb58053a1c9666d9d2af151",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 25,
+      "action": "tap_id",
+      "expectedFrame": "dc7c706f97a387dbacb0b23dc30430ad349dc78afd2632407662aa1570239b70",
+      "id": "navReportsButton"
+    },
+    {
+      "commit": "79e31e46d52ba29f87078109beb0226098cab77c",
+      "session": "koorix-regular-182-observe-1",
+      "sequence": 26,
+      "action": "finish",
+      "expectedFrame": "a3fa27c739503512d8fa75dc1e6946060b18a1aff314cdd06c3560f7462b9207"
+    }
+  ],
+  "retrieval": "Use GitHub git/blobs IDs above; verify Git blob SHA1, byte length and SHA256 before viewing. Raw synthetic frames remain outside Git."
+}

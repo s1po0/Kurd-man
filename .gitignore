@@ -35,3 +35,6 @@ skill-download/
 
 # Static site build output is generated, never committed.
 /koorix/site/public/
+
+# Presented actual-APK screenshots are recovered from the small evidence receipt.
+/Koorix-direct-inspection-*.png

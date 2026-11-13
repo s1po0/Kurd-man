@@ -113,6 +113,12 @@ class ControlContracts(unittest.TestCase):
         start = script.index('env -u GH_TOKEN "$ANDROID_HOME/emulator/emulator"')
         self.assertLess(export, start)
 
+    def test_api_token_is_not_in_sdk_emulator_or_cleanup_environment(self):
+        script = (worker.ROOT / "tools/direct-apk/run.sh").read_text()
+        self.assertLess(script.index("unset GH_TOKEN"), script.index('"$SDKMANAGER" --install'))
+        self.assertIn('GH_TOKEN="$INSPECTION_API_TOKEN" python3 tools/direct-apk/worker.py', script)
+        self.assertIn('os.environ.pop("GH_TOKEN")', Path(worker.__file__).read_text())
+
     def test_no_rebuild_signing_or_delivery_in_inspection_workflow(self):
         workflow = (worker.ROOT / ".github/workflows/koorix-direct-apk.yml").read_text()
         for prohibited in ("secrets.", "assembleKoorix", "store.py restore", "gh release create", "sendDocument"):

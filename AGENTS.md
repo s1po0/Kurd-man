@@ -30,10 +30,14 @@ For a request to open/inspect the actual app, also read
 alirezarezvani/claude-skills Java review and rendered-build QA guidance; those
 Skills are not Android runtimes. The sandbox has no SDK/KVM by default. Use the
 existing regular APK CI's empty hosted emulator, identical verified release APK,
-public UI and fixed synthetic source. Never substitute a web mockup/debug app,
-read app-private storage, expose signing material, or upload a reader page.
-Installed-APK emulator evidence is separate from Robolectric and physical-device
-or semantic acceptance. Keep failures/unavailable checks explicit.
+public UI and fixed synthetic source. For direct exploration rather than only a
+prewritten test, use the bounded `tools/direct-apk/` observe-act-observe session:
+view each actual frame before choosing the next gesture. Its manual findings
+are in `docs/KOORIX_DIRECT_APK_INSPECTION.md`; a completed session is not a green
+quality verdict. Never substitute a web mockup/debug app, read app-private
+storage, expose signing material, or upload a reader page. Installed-APK emulator
+evidence is separate from Robolectric and physical-device or semantic acceptance.
+Keep failures/unavailable checks explicit.
 
 ## Owner constraints
 
