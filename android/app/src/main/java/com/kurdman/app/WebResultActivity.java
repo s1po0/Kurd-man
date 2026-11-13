@@ -47,7 +47,7 @@ public final class WebResultActivity extends AppCompatActivity {
         Bitmap previousBitmap=displayed;displayed=null;image.setImageDrawable(null);
         if(previousBitmap!=null&&!previousBitmap.isRecycled())previousBitmap.recycle();
         label.setText(getString(R.string.web_page,page+1,project.pages.size()));toggle.setText(original?R.string.web_translated:R.string.web_original);
-        image.setContentDescription(getString(original?R.string.web_original:R.string.web_translated));
+        image.setContentDescription(getString(R.string.web_image_loading));
         previous.setEnabled(page>0);next.setEnabled(page+1<project.pages.size());scroll.post(()->scroll.scrollTo(0,0));
         decoder.execute(()->{
             Bitmap loaded=null;try{loaded=BitmapIo.decodeFile(file);}catch(RuntimeException|OutOfMemoryError ignored){/* visible error below */}
@@ -55,7 +55,8 @@ public final class WebResultActivity extends AppCompatActivity {
             runOnUiThread(()->{
                 if(isFinishing()||isDestroyed()||request!=generation){if(bitmap!=null)bitmap.recycle();return;}
                 Bitmap old=displayed;displayed=bitmap;image.setImageBitmap(bitmap);if(old!=null&&!old.isRecycled())old.recycle();
-                if(bitmap==null)label.setText(R.string.web_error);
+                if(bitmap==null){label.setText(R.string.web_error);image.setContentDescription(getString(R.string.web_error));}
+                else image.setContentDescription(getString(original?R.string.web_original:R.string.web_translated));
             });
         });
     }

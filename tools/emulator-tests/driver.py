@@ -381,13 +381,12 @@ class Device:
         if public != "No result found.":
             raise AssertionError("Translated web page published without explicit export")
         self.tap(self.reveal("readWebResultButton", direction="up"))
-        self.control("webResultImage")
-        time.sleep(1)  # The reader decodes its bitmap off the UI thread.
+        self.wait(lambda: self.control("webResultImage").get("content-desc") == "Show translation",
+                  "Translated image decoded", timeout=30)
         self.capture("web-rendered.png")
         self.click("webResultToggle")
         self.wait(lambda: self.control("webResultImage").get("content-desc") == "Show original",
-                  "Original image toggle", timeout=30)
-        time.sleep(1)
+                  "Original image decoded after toggle", timeout=30)
         self.capture("web-original.png")
         self.check("web_https_authored_comic_real_ocr_translation_private_reader_and_original_toggle")
         self.shell("input", "keyevent", "4")

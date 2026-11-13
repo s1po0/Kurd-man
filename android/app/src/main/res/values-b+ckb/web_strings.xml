@@ -10,6 +10,7 @@
     <string name="web_hint">چەپتەرەکە بکەرەوە، پاشان وێنە بەردەستەکانی وەربگێڕە. هەندێک وێنەی پارێزراو یان ماڵپەڕی تر دەستناکەون.</string>
     <string name="web_loading">بارکردنی پەڕە…</string>
     <string name="web_ready">پەڕە بارکرا. ئەگەر پێویست بوو خوارەوە بچۆ، پاشان وێنە بەردەستەکان وەربگێڕە.</string>
+    <string name="web_image_loading">بارکردنی وێنە…</string>
     <string name="web_discover">گەڕان بۆ وێنەکان…</string>
     <string name="web_capture">ئامادەکردنی وێنەی %1$d / %2$d…</string>
     <string name="web_empty">هیچ وێنەیەکی بەردەست نەدۆزرایەوە. خوارەوە بچۆ بۆ بارکردنیان یان پەڕەیەکی تر تاقی بکەرەوە.</string>
