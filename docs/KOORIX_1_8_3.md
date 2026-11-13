@@ -49,7 +49,7 @@ The actual installed1.8.2 observations are preserved separately in
   explicit manual keep-alive—not a transient service-running flag during idle
   shutdown. Active-job/manual STOP remains available. `stopAll` remembers the
   prior running flag before clearing it, so its service STOP intent is reachable.
-  STOP also disables pending recovery after a worker has ended, without deleting
+  Activity and notification STOP both disable pending recovery after a worker has ended, without deleting
   checkpoints. It still requests cancellation; only the runner ends its job.
 - Undo/Redo rebinds the restored size into the status as well as the controls.
   Restoring100% no longer leaves the earlier90% claim on screen.
@@ -86,8 +86,8 @@ executed267 native/JVM cases with2 failures/0 skips: the unsupported PDF backend
 and the unit provider's native file-descriptor transport. Its20 completion/UI/
 STOP/Undo/Studio regressions all passed; no APK was distributed. Those test
 boundaries were corrected explicitly, not hidden in production code.
-The production gate now requires **at least266 native/JVM executions**,
-including **20 publication** and **20 completion/STOP/Undo/Studio** executions,
+The production gate now requires **at least268 native/JVM executions**,
+including **20 publication** and **22 completion/STOP/Undo/Studio** executions,
 plus the existing contour/narration/UI/crypto/comic/quality gates. Counts test
 covered contracts, not physical devices or general translation quality.
 

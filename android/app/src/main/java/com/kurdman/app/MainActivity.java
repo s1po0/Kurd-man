@@ -1614,6 +1614,7 @@ public class MainActivity extends AppCompatActivity {
         }
         keepAliveStatus.setText(text);
         if (stopJobButton != null) {
+            stopJobButton.setText(getString(running ? R.string.ux_stop : R.string.ks_0487));
             stopJobButton.setVisibility(running || manual
                     ? View.VISIBLE : View.GONE);
         }

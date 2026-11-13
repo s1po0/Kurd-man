@@ -90,6 +90,7 @@ public class CompletedResultUiTest {
         app.getSharedPreferences("kurdman_settings",0).edit().putBoolean("keep_alive_desired",true).commit();
         ReflectionHelpers.callInstanceMethod(main.get(),"refreshKeepAliveUi");
         assertEquals(View.VISIBLE,main.get().findViewById(R.id.stopJobButton).getVisibility());
+        assertEquals(main.get().getString(R.string.ks_0487),((TextView)main.get().findViewById(R.id.stopJobButton)).getText().toString());
     }
     @Test public void protectedWorkStillHasStopBeforeTheServiceStarts() {
         ReflectionHelpers.setField(main.get(),"currentBusy",true);
@@ -137,6 +138,17 @@ public class CompletedResultUiTest {
         TranslationProjectStore.allowRecovery(app,p,true);assertTrue(SavedJobCoordinator.hasPending(app));
         KeepAliveService.stopAll(app);
         assertFalse("STOP while waiting for recovery must not silently restart it",SavedJobCoordinator.hasPending(app));
+    }
+    @Test public void notificationStopAlsoPausesPendingRecoveryWithoutDeletingCheckpoints() throws Exception {
+        TranslationProject p=project();p.completed=false;p.resumable=true;p.autoResume=true;p.save();
+        TranslationProjectStore.allowRecovery(app,p,true);assertTrue(SavedJobCoordinator.hasPending(app));
+        ServiceController<KeepAliveService> service=Robolectric.buildService(KeepAliveService.class).create();
+        try {
+            assertEquals(KeepAliveService.START_NOT_STICKY,service.get().onStartCommand(
+                    new Intent(app,KeepAliveService.class).setAction(KeepAliveService.ACTION_STOP_ALL),0,1));
+            assertFalse(SavedJobCoordinator.hasPending(app));assertFalse(KeepAliveService.isServiceRunning());
+            assertTrue(p.pages.get(0).sourceFile(p.projectDir).isFile());
+        } finally {service.destroy();}
     }
     @Test public void stopAllActuallySendsItsStopIntentToAnAlreadyRunningService() {
         ServiceController<KeepAliveService> service=Robolectric.buildService(KeepAliveService.class).create();

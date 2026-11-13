@@ -114,7 +114,7 @@ jobs:
           print(f'::notice::Native narration duplicate regressions: {panel} run on SDK26/34; synthetic, not reader-page OCR proof')
           print(f'::notice::Native reading-studio UI regressions: {ui} run; actual Views/XML with synthetic data')
           print(f'::notice::Single-publication/no-TXT regressions: {publication} run; completed UI/STOP/Undo/Studio: {completion} run')
-          if total < 266 or publication < 20 or completion < 20 or native < 34 or ui < 38 or panel < 18 or failed or skipped:
+          if total < 268 or publication < 20 or completion < 22 or native < 34 or ui < 38 or panel < 18 or failed or skipped:
               print('::error::In-app skill tests were missing, failed or skipped; production distribution is blocked')
               raise SystemExit(1)
           PYTEST

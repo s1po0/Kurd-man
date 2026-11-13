@@ -106,18 +106,11 @@ public class KeepAliveService extends Service {
     }
 
     public static void stopAll(Context context) {
-        prefs(context).edit().putBoolean(PREF_DESIRED, false).apply();
         // Prevent a status update from racing the stop intent and putting
         // the service back into the foreground after the user tapped STOP.
         boolean wasRunning = serviceRunning;
         serviceRunning = false;
-        // A retry may be pending after its worker has ended. STOP must also
-        // disable that saved recovery, without deleting the project or pages.
-        TranslationProject pending = TranslationProjectStore.load(context);
-        if (TranslationProjectStore.canRecover(context, pending)) {
-            TranslationProjectStore.allowRecovery(context, pending, false);
-        }
-        JobRuntime.requestStop();
+        cancelProtectedWork(context);
         if (wasRunning) {
             Intent intent = new Intent(context, KeepAliveService.class)
                     .setAction(ACTION_STOP_ALL);
@@ -127,6 +120,17 @@ public class KeepAliveService extends Service {
                 context.stopService(new Intent(context, KeepAliveService.class));
             }
         }
+    }
+
+    private static void cancelProtectedWork(Context context) {
+        prefs(context).edit().putBoolean(PREF_DESIRED, false).apply();
+        // Activity and notification STOP must both disable a retry after its
+        // worker has ended, without deleting the project or its checkpoints.
+        TranslationProject pending = TranslationProjectStore.load(context);
+        if (TranslationProjectStore.canRecover(context, pending)) {
+            TranslationProjectStore.allowRecovery(context, pending, false);
+        }
+        JobRuntime.requestStop();
     }
 
     @Override
@@ -141,8 +145,8 @@ public class KeepAliveService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent == null ? null : intent.getAction();
         if (ACTION_STOP_ALL.equals(action)) {
-            prefs(this).edit().putBoolean(PREF_DESIRED, false).apply();
-            JobRuntime.requestStop();
+            serviceRunning = false;
+            cancelProtectedWork(this);
             stopForeground(STOP_FOREGROUND_REMOVE);
             stopSelf();
             return START_NOT_STICKY;
