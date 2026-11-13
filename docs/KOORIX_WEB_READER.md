@@ -46,3 +46,16 @@ This does **not** constitute an end-to-end web-to-translated-comic test,
 physical phone/OEM gallery verification, universal site support, or native-human
 Sorani quality review. No reader page is uploaded. Actual outcomes and exact
 release signatures must be recorded separately if a release is made.
+
+### Installed-APK findings (unreleased)
+
+The signed candidate in run `43456220578` passed 286 JVM tests and captured
+MDN's same-origin photograph into the real OCR no-text path without a public
+export. It did **not** pass the authored-comic end-to-end test: the synthetic
+HTTPS image document loaded, but capture returned the generic page-read error
+before any OCR result. The cause has not yet been established. Evidence index:
+`e81930a26fe71170d0226eb4166b23c896d5720d`; report blob:
+`3763daf62d1e107f97eb8dbf6d6ce1b60004b172`. Subsequent changes add only
+non-sensitive failure categories for diagnosis. Passing the MDN photograph
+check is not proof that translated comics, other sites, or the latest candidate
+work end-to-end. No 1.8.4 release is authorized by this evidence.
