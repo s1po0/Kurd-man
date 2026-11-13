@@ -346,7 +346,7 @@ class Device:
                   "Web image reached OCR and completed with no synthetic dialogue", timeout=180)
         self.capture("web-no-text.png")
         self.click("navTranslateButton")
-        self.control("pickButton", enabled=True, timeout=60)
+        self.reveal("pickButton", direction="up")
         public = self.shell("content", "query", "--uri", "content://media/external/file",
                             "--projection", "_id:_display_name", "--where", "_display_name LIKE 'Koorix-web-chapter%'")
         if public != "No result found.":
