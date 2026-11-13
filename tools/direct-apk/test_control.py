@@ -106,6 +106,13 @@ class ControlContracts(unittest.TestCase):
         with patch.dict("os.environ", {}, clear=True), self.assertRaisesRegex(RuntimeError, "empty hosted"):
             worker.main()
 
+    def test_standalone_job_installs_and_exposes_adb_before_emulator(self):
+        script = (worker.ROOT / "tools/direct-apk/run.sh").read_text()
+        self.assertIn('"$SDKMANAGER" --install platform-tools emulator', script)
+        export = script.index('export PATH="$ANDROID_HOME/platform-tools:')
+        start = script.index('env -u GH_TOKEN "$ANDROID_HOME/emulator/emulator"')
+        self.assertLess(export, start)
+
     def test_no_rebuild_signing_or_delivery_in_inspection_workflow(self):
         workflow = (worker.ROOT / ".github/workflows/koorix-direct-apk.yml").read_text()
         for prohibited in ("secrets.", "assembleKoorix", "store.py restore", "gh release create", "sendDocument"):

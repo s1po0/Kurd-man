@@ -26,9 +26,12 @@ python3 -m unittest discover -s tools/direct-apk -p 'test_*.py' -v
 java -Djava.awt.headless=true tools/emulator-tests/MakePanel.java "$OUT/synthetic-source.png"
 SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
 AVDMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
-"$SDKMANAGER" --install emulator 'system-images;android-34;google_apis;x86_64' > "$RUNTIME/sdk.log" 2>&1 || {
+"$SDKMANAGER" --install platform-tools emulator 'system-images;android-34;google_apis;x86_64' > "$RUNTIME/sdk.log" 2>&1 || {
   tail -n 35 "$RUNTIME/sdk.log"; exit 1;
 }
+# A standalone inspection job does not inherit setup-android/Gradle's PATH.
+export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+command -v adb >/dev/null
 printf 'no\n' | "$AVDMANAGER" create avd --force --name koorix-direct \
   --package 'system-images;android-34;google_apis;x86_64' --device pixel \
   --path "$ANDROID_AVD_HOME/koorix-direct.avd" > "$RUNTIME/avd.log" 2>&1 || {
