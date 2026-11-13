@@ -21,7 +21,7 @@ EXPECTED_SOURCE = ("ASPECT: STONE KEEPER ASPECT DESCRIPTION: This rare trait gra
 CAPTURES = {"home-ckb.png", "home-en-light.png", "home-en-dark.png", "source-chooser.png",
             "source-selected.png", "translating.png", "results.png", "results-text.png", "studio.png",
             "studio-size-90.png", "studio-undo-100.png", "studio-export.png", "reopened-result.png",
-            "manual-keep-alive.png", "manual-stopped.png", "pdf-export.png", "web-browser.png", "web-no-text.png", "failure.png"}
+            "manual-keep-alive.png", "manual-stopped.png", "pdf-export.png", "web-browser.png", "web-no-text.png", "web-rendered.png", "web-original.png", "failure.png"}
 PRODUCT = re.compile(r"Koorix-koorix-qa-source-p-[a-f0-9-]{36}\.ckb\.jpg\Z")
 
 
@@ -354,6 +354,46 @@ class Device:
         if public != "No result found.":
             raise AssertionError("Web reader job published a public file without explicit export")
         self.check("webview_same_origin_public_example_capture_to_real_ocr_no_automatic_public_export")
+        # Separately open an authored, fixed synthetic comic image as an HTTPS
+        # image document. This exercises website image bytes through the real
+        # OCR/translator/renderer into the private reader; no private user data.
+        self.tap(self.reveal("webReaderButton"))
+        self.control("webReaderAddress", enabled=True)
+        self.click("webReaderAddress")
+        url = "https://raw.githubusercontent.com/s1po0/Kurd-man/35bd8848f28d229704a3001b8bcf863d6b736c79/manhwa/sample/demo_en.png"
+        self.shell("input", "text", url)
+        self.click("webReaderGo")
+        # Wait for Chromium's image document to load, not just the typed URL.
+        self.wait(lambda: any(x.get("class", "") == "android.webkit.WebView" and
+                              "demo_en.png" in x.get("content-desc", "")
+                              for x in self.ui().iter("node")), "Synthetic HTTPS image document", timeout=90)
+        self.click("webReaderTranslate")
+        self.control("workspaceLanguageButton", timeout=150)
+        self.wait(lambda: node(self.ui(), identifier="readWebResultButton"),
+                  "Web synthetic image translated into private reader", timeout=300)
+        text_item = self.reveal("resultText")
+        synthetic_pairs = pairs(text_item.get("text", ""))
+        combined = words(" ".join(a for a, _ in synthetic_pairs))
+        if "finally returned" not in combined or "monsters" not in combined:
+            raise AssertionError("Web capture did not reach actual OCR with authored dialogue")
+        public = self.shell("content", "query", "--uri", "content://media/external/file",
+                            "--projection", "_id:_display_name", "--where", "_display_name LIKE 'Koorix-web-chapter%'")
+        if public != "No result found.":
+            raise AssertionError("Translated web page published without explicit export")
+        self.tap(self.reveal("readWebResultButton", direction="up"))
+        self.control("webResultImage")
+        time.sleep(1)  # The reader decodes its bitmap off the UI thread.
+        self.capture("web-rendered.png")
+        self.click("webResultToggle")
+        self.wait(lambda: self.control("webResultImage").get("content-desc") == "Show original",
+                  "Original image toggle", timeout=30)
+        time.sleep(1)
+        self.capture("web-original.png")
+        self.check("web_https_authored_comic_real_ocr_translation_private_reader_and_original_toggle")
+        self.shell("input", "keyevent", "4")
+        self.control("workspaceLanguageButton")
+        self.click("navTranslateButton")
+        self.reveal("pickButton", direction="up")
         # Publish before opening Recent so DocumentsUI offers the authored file.
         # An adb am SEND extra is not a normal app share: its URI lacks the
         # framework's Extra.STREAM -> ClipData migration and actual read grant.
