@@ -71,3 +71,24 @@ Research: GitHub raw's sandbox response policy is documented in
 https://github.com/nvm-sh/nvm/issues/2392, and the test image's text/URL format
 is documented in https://github.com/kingkool68/dummyimage/blob/master/index.html.
 These sources explain the test setup, not verified universal website behavior.
+
+### Security review blockers
+
+The HTTPS/same-origin capture rule is not a network isolation boundary. An
+untrusted page can run its own scripts; the browsing WebView can make requests
+independent of our capture script. It has not been shown to block local/private
+network destinations, DNS rebinding, all redirects, or hostile manipulation of
+JavaScript globals used by discovery/capture. Native byte and image bounds are
+defence in depth, not proof that a captured image came from the intended DOM
+node. Cookies are not copied into project metadata, but WebView's normal cookie
+store is a separate consideration. Do not treat this candidate as independently
+security-reviewed or ready for release.
+
+Do not claim a `shouldInterceptRequest` denylist solves this: Android documents
+that redirect follow-ups are not all delivered to that callback, and it does not
+provide request bodies for transparent replay. References:
+https://developer.android.com/reference/android/webkit/WebViewClient#shouldInterceptRequest(android.webkit.WebView,%20android.webkit.WebResourceRequest)
+and https://developer.android.com/privacy-and-security/risks/insecure-webview-native-bridges.
+A future mitigation needs a threat model and device tests, including DNS changes,
+redirects, private IPv4/IPv6, iframes, WebSockets and service workers, without
+weakening TLS or bypassing site protections.
