@@ -363,10 +363,10 @@ class Device:
         url = "https://raw.githubusercontent.com/s1po0/Kurd-man/35bd8848f28d229704a3001b8bcf863d6b736c79/manhwa/sample/demo_en.png"
         self.shell("input", "text", url)
         self.click("webReaderGo")
-        # Wait for Chromium's image document to load, not just the typed URL.
-        self.wait(lambda: any(x.get("class", "") == "android.webkit.WebView" and
-                              "demo_en.png" in x.get("content-desc", "")
-                              for x in self.ui().iter("node")), "Synthetic HTTPS image document", timeout=90)
+        # The native screen reports main-frame completion; OCR assertions below
+        # independently verify that the expected authored image was captured.
+        self.wait(lambda: self.control("webReaderStatus").get("text", "").startswith("Page loaded."),
+                  "Synthetic HTTPS image document", timeout=90)
         self.click("webReaderTranslate")
         self.control("workspaceLanguageButton", timeout=150)
         self.wait(lambda: self.control("statusText").get("text", "").startswith(("Complete;", "Processing finished,")),

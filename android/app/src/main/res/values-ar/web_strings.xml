@@ -8,6 +8,8 @@
     <string name="web_translate">ترجمة هذه الصفحة</string>
     <string name="web_stop">إيقاف</string>
     <string name="web_hint">افتح الفصل ثم ترجم صوره المتاحة. قد لا تتاح بعض الصور المحمية أو الموجودة على مواقع أخرى.</string>
+    <string name="web_loading">جارٍ تحميل الصفحة…</string>
+    <string name="web_ready">تم تحميل الصفحة. مرّر إذا لزم الأمر، ثم ترجم الصور المتاحة.</string>
     <string name="web_discover">جارٍ البحث عن الصور…</string>
     <string name="web_capture">جارٍ تجهيز الصورة %1$d / %2$d…</string>
     <string name="web_empty">لم يتم العثور على صور متاحة. مرّر لتحميلها أو جرّب صفحة أخرى.</string>

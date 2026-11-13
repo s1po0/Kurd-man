@@ -8,6 +8,8 @@
     <string name="web_translate">Translate this page</string>
     <string name="web_stop">Stop</string>
     <string name="web_hint">Open a chapter, then translate its available images. Some protected or cross-site images cannot be accessed.</string>
+    <string name="web_loading">Loading page…</string>
+    <string name="web_ready">Page loaded. Scroll if needed, then translate its available images.</string>
     <string name="web_discover">Looking for images…</string>
     <string name="web_capture">Preparing image %1$d / %2$d…</string>
     <string name="web_empty">No accessible chapter images found. Scroll to load them or try another page.</string>

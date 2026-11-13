@@ -47,7 +47,7 @@ public final class WebReaderActivity extends AppCompatActivity {
     private FileOutputStream out;
     private long total,currentBytes,deadline,importLimit;
     private int epoch,index,failed,jsId;
-    private boolean capturing,transferred,truncated;
+    private boolean capturing,transferred,truncated,pageFailed;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -65,12 +65,24 @@ public final class WebReaderActivity extends AppCompatActivity {
         web=new WebView(this);WebSettings settings=web.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(true);settings.setAllowFileAccess(false);settings.setAllowContentAccess(false);settings.setJavaScriptCanOpenWindowsAutomatically(false);settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);settings.setSupportMultipleWindows(false);settings.setSafeBrowsingEnabled(true);
         web.setWebViewClient(new WebViewClient(){
             @Override public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest request){return !secureUrl(request.getUrl().toString());}
-            @Override public void onPageStarted(WebView view,String url,Bitmap favicon){epoch++;if(capturing)cancelCapture();if(!secureUrl(url)){view.stopLoading();status.setText(R.string.web_invalid);}}
-            @Override public void onPageFinished(WebView view,String url){if(secureUrl(url))address.setText(url);}
+            @Override public void onPageStarted(WebView view,String url,Bitmap favicon){
+                epoch++;if(capturing)cancelCapture();pageFailed=false;translate.setEnabled(false);
+                if(!secureUrl(url)){pageFailed=true;view.stopLoading();status.setText(R.string.web_invalid);}
+                else status.setText(R.string.web_loading);
+            }
+            @Override public void onReceivedError(WebView view,WebResourceRequest request,android.webkit.WebResourceError error){
+                if(request.isForMainFrame()){pageFailed=true;translate.setEnabled(false);status.setText(R.string.web_error);}
+            }
+            @Override public void onReceivedHttpError(WebView view,WebResourceRequest request,android.webkit.WebResourceResponse response){
+                if(request.isForMainFrame()){pageFailed=true;translate.setEnabled(false);status.setText(R.string.web_error);}
+            }
+            @Override public void onPageFinished(WebView view,String url){
+                if(!pageFailed&&secureUrl(url)&&url.equals(view.getUrl())){address.setText(url);translate.setEnabled(true);status.setText(R.string.web_ready);}
+            }
         });
         root.addView(web,new LinearLayout.LayoutParams(-1,0,1));
         LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.HORIZONTAL);
-        translate=button(R.string.web_translate);KoorixDesign.primary(translate,true);translate.setId(R.id.webReaderTranslate);translate.setOnClickListener(v->beginCapture());actions.addView(translate,new LinearLayout.LayoutParams(0,-2,1));
+        translate=button(R.string.web_translate);translate.setEnabled(false);KoorixDesign.primary(translate,true);translate.setId(R.id.webReaderTranslate);translate.setOnClickListener(v->beginCapture());actions.addView(translate,new LinearLayout.LayoutParams(0,-2,1));
         stop=button(R.string.web_stop);stop.setId(R.id.webReaderStop);stop.setEnabled(false);stop.setOnClickListener(v->cancelCapture());actions.addView(stop);
         root.addView(actions);setContentView(root);
     }
