@@ -11,7 +11,7 @@
     <string name="web_loading">Loading page…</string>
     <string name="web_ready">Page loaded. Scroll if needed, then translate its available images.</string>
     <string name="web_image_loading">Loading image…</string>
-    <string name="web_partial_reader_hint">Only finished pages are shown. Return and reopen for new pages; export is available after the job completes.</string>
+    <string name="web_partial_reader_hint">Finished pages appear here automatically. Save is available after the job completes.</string>
     <string name="web_first_ready">Visible pages are ready to read; the rest are still processing.</string>
     <string name="web_discover">Looking for images…</string>
     <string name="web_capture">Preparing image %1$d / %2$d…</string>

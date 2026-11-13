@@ -25,9 +25,10 @@ been safely copied into the new project.
   candidate processes the initially visible pages through OCR, translation and
   rendering first, then exposes their durable private checkpoints in the native
   reader while the remaining pages continue. Chapter order is unchanged. A
-  partially opened reader shows only finished pages; reopen it to see new pages,
-  and export is disabled until the whole job completes. This new path still
-  needs Android verification. It does **not** replace images inside the website,
+  partially opened reader shows only finished pages and refreshes its durable
+  page list as the job progresses without changing the page being read; export
+  is disabled until the whole job completes. This refresh still needs installed
+  Android verification. It does **not** replace images inside the website,
   translate images added while scrolling, or start before capture finishes.
 - Per-browser-image limit 32 MB, 300 pages, 300 MB aggregate import, and 1 GB
   app-cache budget. Decoding very long images is bounded; no promise of perfect

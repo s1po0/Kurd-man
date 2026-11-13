@@ -120,6 +120,41 @@ public class CompletedResultUiTest {
             assertFalse(reader.get().findViewById(R.id.webResultExport).isEnabled());
         } finally {reader.pause().stop().destroy();JobRuntime.endJob();}
     }
+    private void drainReaderRefresh(WebResultActivity reader) throws Exception {
+        ExecutorService worker=ReflectionHelpers.getField(reader,"refresher");
+        // A progress event can coalesce with the resume refresh and schedule a second read.
+        for(int i=0;i<3;i++){worker.submit(()->{}).get(15,TimeUnit.SECONDS);shadowOf(Looper.getMainLooper()).idle();}
+    }
+    @Test public void partialReaderUpdatesWithoutLosingTheCurrentChapterPage() throws Exception {
+        TranslationProject p=project();p.privateResults=true;p.completed=false;p.exportsComplete=false;
+        TranslationProject.Page second=new TranslationProject.Page("pages/0002.png",".png");
+        TranslationProject.Page third=new TranslationProject.Page("pages/0003.png",".png");
+        ProjectResults.copy(p.pages.get(0).sourceFile(p.projectDir),second.sourceFile(p.projectDir));
+        ProjectResults.copy(p.pages.get(0).sourceFile(p.projectDir),third.sourceFile(p.projectDir));
+        p.pages.add(second);p.pages.add(third);
+        ProjectResults.copy(SavedJobPipeline.renderedPage(p,0),SavedJobPipeline.renderedPage(p,2));third.renderComplete=true;
+        p.pages.get(0).renderComplete=false;p.save();assertTrue(JobRuntime.tryBeginJob());
+        ActivityController<WebResultActivity> reader=Robolectric.buildActivity(WebResultActivity.class,
+                new Intent(app,WebResultActivity.class).putExtra(WebResultActivity.EXTRA_PROJECT,p.projectDir.getName())).setup();
+        try {
+            WebResultActivity activity=reader.get();drainReaderRefresh(activity);
+            assertTrue(((TextView)activity.findViewById(R.id.webResultPageLabel)).getText().toString().contains("3 / 3"));
+            activity.findViewById(R.id.webResultToggle).performClick();
+            p.pages.get(0).renderComplete=true;p.save();
+            SavedJobCoordinator.Listener listener=ReflectionHelpers.getField(activity,"jobListener");listener.changed(p,"Working",true);drainReaderRefresh(activity);
+            assertTrue("A newly completed earlier page must not change the page being read",((TextView)activity.findViewById(R.id.webResultPageLabel)).getText().toString().contains("3 / 3"));
+            assertFalse(activity.findViewById(R.id.webResultExport).isEnabled());
+            activity.findViewById(R.id.webResultNext).performClick();
+            assertTrue(((TextView)activity.findViewById(R.id.webResultPageLabel)).getText().toString().contains("3 / 3"));
+            android.widget.Button previous=ReflectionHelpers.getField(activity,"previous");assertTrue(previous.isEnabled());previous.performClick();
+            assertTrue(((TextView)activity.findViewById(R.id.webResultPageLabel)).getText().toString().contains("1 / 3"));
+            ProjectResults.copy(SavedJobPipeline.renderedPage(p,0),SavedJobPipeline.renderedPage(p,1));second.renderComplete=true;p.completed=true;p.exportsComplete=true;p.save();
+            JobRuntime.endJob();listener.changed(p,"Complete",false);drainReaderRefresh(activity);
+            assertTrue(activity.findViewById(R.id.webResultNext).isEnabled());
+            assertTrue(activity.findViewById(R.id.webResultExport).isEnabled());
+            assertTrue(((TextView)activity.findViewById(R.id.webResultPageLabel)).getText().toString().contains("1 / 3"));
+        } finally {reader.pause().stop().destroy();JobRuntime.endJob();}
+    }
     @Test public void aRealSelectedSourcePreviewIsNotCoveredByTheEmptyBookEither() {
         MainActivity a=main.get();
         assertEquals(View.VISIBLE,a.findViewById(R.id.resultEmptyIcon).getVisibility());
