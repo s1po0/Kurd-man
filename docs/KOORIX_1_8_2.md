@@ -110,6 +110,12 @@ hidden network fallback is added for offline. Final script cleanup is unchanged.
   early-exit detection and bounded empty-emulator diagnostics were added rather
   than weakening the gate or substituting another build. Final outcome remains
   separate until observed in the release receipt.
+- The bounded diagnostic in run **43334072434 / job 131585686615** identified
+  an **unknown AVD directory** and a **missing host libpulse**; KVM itself was
+  reported usable. Explicit shared Android-user/AVD locations and ordinary
+  headless-emulator host libraries address those observed setup errors. This was
+  infrastructure, not a claim that the APK had run; all 226 native regressions
+  passed again. No alternate app/ABI or mock route was used.
 - The actual delivered old 1.8.1 APK was downloaded and independently hash/signature
   verified locally; it passes the old UI gates but **correctly fails** the new
   narration/system-field implementation gate. A stale APK cannot be relabelled

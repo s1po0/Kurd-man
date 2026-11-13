@@ -13,6 +13,19 @@ sudo chmod a+rw /dev/kvm
 OUT=android/app/build/outputs/emulator-tests
 RUNTIME=android/app/build/outputs/emulator-runtime
 mkdir -p "$OUT" "$RUNTIME"
+# Recent command-line tools may choose a different Android user-home default
+# than the emulator. Give BOTH tools an explicit, disposable AVD location.
+export ANDROID_USER_HOME="$RUNNER_TEMP/koorix-native-qa-android"
+export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
+mkdir -p "$ANDROID_AVD_HOME"
+# The standard headless Ubuntu image omits libpulse even with -noaudio.
+# These are host emulator libraries, never APK/runtime dependencies.
+sudo apt-get update -qq > "$RUNTIME/host-dependencies.log" 2>&1
+sudo apt-get install -y --no-install-recommends libpulse0 libnss3 libnspr4 libxcb1 \
+  libx11-6 libxcomposite1 libxcursor1 libxi6 libxrandr2 libxrender1 libxtst6 \
+  libxkbcommon0 >> "$RUNTIME/host-dependencies.log" 2>&1 || {
+  tail -n 20 "$RUNTIME/host-dependencies.log"; exit 1;
+}
 python3 -m unittest discover -s tools/emulator-tests -p 'test_*.py' -v
 java -Djava.awt.headless=true tools/emulator-tests/MakePanel.java "$OUT/synthetic-source.png"
 # Official SDK components only. No device-farm account, app login or new model.
@@ -22,7 +35,8 @@ AVDMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
   tail -n 35 "$RUNTIME/sdk.log"; exit 1;
 }
 printf 'no\n' | "$AVDMANAGER" create avd --force --name koorix-native-qa \
-  --package 'system-images;android-34;google_apis;x86_64' --device pixel > "$RUNTIME/avd.log" 2>&1 || {
+  --package 'system-images;android-34;google_apis;x86_64' --device pixel \
+  --path "$ANDROID_AVD_HOME/koorix-native-qa.avd" > "$RUNTIME/avd.log" 2>&1 || {
   cat "$RUNTIME/avd.log"; exit 1;
 }
 "$ANDROID_HOME/emulator/emulator" -avd koorix-native-qa -port 5554 -no-window \
