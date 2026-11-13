@@ -155,3 +155,6 @@ chat-presented file were byte-verified, and the stable URL returned HTTP302.
 Telegram acknowledged the APK upload in the production job. Completion notice
 is a separate gated operation; its acknowledgement must be recorded only after
 it actually succeeds. No phone data was removed and old duplicates remain.
+
+The separate completion gate **43439037030 / job131931517497** passed after
+chat presentation and APK delivery; Telegram acknowledged **تەواو بووم**.
