@@ -1,11 +1,7 @@
 {
   "session": "koorix-regular-182-observe-1",
-  "sequence": 20,
-  "action": "swipe",
-  "expectedFrame": "8c148f0d1d29b2b6e144372ce9f7c8459ed6573d90f34410857813d603622cb8",
-  "x": 540,
-  "y": 650,
-  "toX": 540,
-  "toY": 1450,
-  "durationMs": 350
+  "sequence": 21,
+  "action": "tap_id",
+  "expectedFrame": "c39bd12f471b9af170306100e6806944290158661682d56e3099b92e019acedb",
+  "id": "projectLibraryButton"
 }
