@@ -35,7 +35,7 @@ jobs:
     # Pin the Android host while ubuntu-latest migrates; do not infer emulator
     # compatibility from Robolectric compilation on a newer distro.
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 50
     permissions:
       contents: write
     steps:
@@ -228,7 +228,10 @@ jobs:
 
       - name: Open the actual verified regular APK on Android and translate a synthetic panel
         id: emulator_check
-        timeout-minutes: 25
+        timeout-minutes: 32
+        env:
+          # Deliberate one-run opt-in only; ordinary CI stays independent of a public site's availability.
+          KOORIX_OPEN_COMIC_QA: ${{ contains(github.event.head_commit.message, '[open-comic-qa]') && '1' || '0' }}
         run: bash tools/emulator-tests/run.sh
 
       - name: Save only allowlisted synthetic installed-APK captures and exports

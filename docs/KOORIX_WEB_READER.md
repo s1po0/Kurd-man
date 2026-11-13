@@ -90,6 +90,12 @@ web flows. The synthetic installed-APK report blob is
 new refresh with multiple live web pages on Android and does not resolve any
 of the security blockers below; it was a verification run, not a release.
 
+The verification workflow also supports an explicitly opted-in public-comic
+probe on the regular installed APK. It opens David Revoy's CC-BY Pepper&Carrot
+Episode 1 and retains only counts/check outcomes, never comic screenshots or
+dialogue. A public-site success is not a network isolation, physical-phone,
+or Sorani-quality review. Ordinary CI does not require the external site.
+
 Research: GitHub raw's sandbox response policy is documented in
 https://github.com/nvm-sh/nvm/issues/2392, and the test image's text/URL format
 is documented in https://github.com/kingkool68/dummyimage/blob/master/index.html.

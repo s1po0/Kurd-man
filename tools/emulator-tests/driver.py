@@ -130,7 +130,9 @@ class Device:
     def __init__(self, output, emulator_pid=None):
         self.output = output
         self.emulator_pid = emulator_pid
-        self.report = {"scope": "Installed regular signed APK on API34 Android emulator; authored synthetic translation fixture, generated HTTPS text and public MDN example image; NOT physical-device/reader-page/general semantic acceptance",
+        # Never collect screenshots or page text from the opt-in public-comic probe.
+        self.public_comic_open = False
+        self.report = {"scope": "Installed regular signed APK on API34 Android emulator; authored synthetic translation fixture, generated HTTPS text and public MDN example image; optional public-comic probe records outcomes only; NOT physical-device/general semantic acceptance",
                        "status": "running", "checks": [], "meaningReviewedByNativeHuman": False,
                        "readerDataUsed": False, "alternateAppOrDebugVariant": False}
 
@@ -190,6 +192,8 @@ class Device:
         print("::notice::REAL_APK_CHECK=" + code, flush=True)
 
     def capture(self, name):
+        if self.public_comic_open:
+            raise ValueError("Public-comic probe must never capture page images")
         if name not in CAPTURES:
             raise ValueError("Not an allowlisted synthetic emulator capture")
         data = self.adb("exec-out", "screencap", "-p")
@@ -294,6 +298,50 @@ class Device:
         if node(root, identifier="resultEmptyHint") is not None:
             raise AssertionError("Completed preview is still labelled empty")
         self.check("completed_preview_not_labelled_empty_and_idle_stop_absent")
+
+    def public_comic_probe(self):
+        """Opt-in: open a CC-BY webcomic in the real APK; retain no comic pixels or dialogue.
+
+        This verifies one site's ordinary public flow, not site compatibility,
+        translation quality, browser isolation, or physical-device behavior.
+        """
+        self.public_comic_open = True
+        self.click("navTranslateButton")
+        self.tap(self.reveal("webReaderButton", direction="up"))
+        self.control("webReaderAddress", enabled=True)
+        self.click("webReaderAddress")
+        self.shell("input", "text", "https://www.peppercarrot.com/en/webcomic/ep01_Potion-of-Flight.html")
+        self.click("webReaderGo")
+        self.wait(lambda: self.control("webReaderStatus", timeout=5).get("text", "").startswith("Page loaded."),
+                  "Public comic page loaded", timeout=90)
+        self.click("webReaderTranslate")
+        self.control("workspaceLanguageButton", timeout=180)
+        def readable():
+            item = node(self.ui(), identifier="readWebResultButton")
+            if item is not None and item.get("enabled") == "true":
+                return item
+            self.shell("input", "swipe", "540", "1400", "540", "650", "350")
+            return None
+        self.wait(readable, "Public comic has a readable durable page", timeout=420)
+        self.tap(self.reveal("readWebResultButton", direction="up"))
+        label = self.control("webResultPageLabel", timeout=30).get("text", "")
+        found = re.search(r"([0-9]+)\s*/\s*([0-9]+)", label)
+        if found is None or int(found.group(2)) < 3:
+            raise AssertionError("Public comic did not produce at least three captured pages")
+        self.report["publicComicCapturedPages"] = int(found.group(2))
+        self.report["publicComicReaderOpenedBeforeCompletion"] = self.control("webResultExport").get("enabled") == "false"
+        def export_enabled():
+            item = node(self.ui(), identifier="webResultExport")
+            return item is not None and item.get("enabled") == "true"
+        self.wait(export_enabled, "Public comic job completed with reader open", timeout=420)
+        self.click("webResultNext")
+        next_label = self.control("webResultPageLabel").get("text", "")
+        if next_label == label:
+            raise AssertionError("Public comic reader did not navigate to another page")
+        self.click("webResultToggle")
+        self.wait(lambda: self.control("webResultImage", timeout=5).get("content-desc") == "Show original",
+                  "Public comic original image decoded", timeout=30)
+        self.check("public_open_comic_multiple_pages_private_reader_navigation_and_original")
 
     def run(self, apk):
         self.wait(lambda: self.shell("getprop", "sys.boot_completed") == "1", "Android boot timeout", timeout=240)
@@ -522,6 +570,8 @@ class Device:
         if PACKAGE in crashes:
             raise AssertionError("Regular APK crash observed on the emulator")
         self.check("no_regular_app_crash_observed")
+        if os.environ.get("KOORIX_OPEN_COMIC_QA") == "1":
+            self.public_comic_probe()
         self.report["status"] = "passed"
 
 
@@ -536,9 +586,9 @@ def main():
     args.out.mkdir(parents=True, exist_ok=True)
     device = Device(args.out, args.emulator_pid)
     def runtime_budget_exhausted(_number, _frame):
-        raise TimeoutError("Actual-APK driver exceeded its 15-minute total runtime budget")
+        raise TimeoutError("Actual-APK driver exceeded its total runtime budget")
     signal.signal(signal.SIGALRM, runtime_budget_exhausted)
-    signal.alarm(15 * 60)
+    signal.alarm((22 if os.environ.get("KOORIX_OPEN_COMIC_QA") == "1" else 15) * 60)
     try:
         device.run(args.apk)
     except Exception as problem:
@@ -551,12 +601,12 @@ def main():
         except Exception:
             pass
         try:
-            # Empty CI emulator only. AndroidRuntime crash lines are retained
-            # for app failure diagnosis, not arbitrary page/network logs.
-            crash = device.shell("logcat", "-d", "-t", "2000", "-s", "AndroidRuntime:E", timeout=30)
-            lines = [line[:500] for line in crash.splitlines() if "AndroidRuntime" in line]
-            if lines:
-                device.report["androidRuntimeTail"] = lines[-20:]
+            # A public comic may be on screen or in logs; retain none of its contents.
+            if not device.public_comic_open:
+                crash = device.shell("logcat", "-d", "-t", "2000", "-s", "AndroidRuntime:E", timeout=30)
+                lines = [line[:500] for line in crash.splitlines() if "AndroidRuntime" in line]
+                if lines:
+                    device.report["androidRuntimeTail"] = lines[-20:]
         except Exception:
             pass
         try:
@@ -569,7 +619,8 @@ def main():
         except Exception:
             pass
         try:
-            device.capture("failure.png")
+            if not device.public_comic_open:
+                device.capture("failure.png")
         except Exception:
             pass  # No screenshot is evidence when Android itself was unavailable.
         raise

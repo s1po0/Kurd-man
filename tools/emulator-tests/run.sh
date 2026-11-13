@@ -59,7 +59,11 @@ if ! python3 tools/emulator-tests/driver.py --apk "$APK_FILE" --out "$OUT" --emu
     echo 'Empty official Android CI emulator diagnostics; no reader/signing data.'
     "$ANDROID_HOME/emulator/emulator" -version 2>&1 | head -n 5 || true
     "$ANDROID_HOME/emulator/emulator" -accel-check 2>&1 || true
-    tail -n 75 "$RUNTIME/emulator.log"
+    if [ "${KOORIX_OPEN_COMIC_QA:-0}" != 1 ]; then
+      tail -n 75 "$RUNTIME/emulator.log"
+    else
+      echo 'Emulator logs withheld for public-comic privacy.'
+    fi
   } > "$OUT/emulator-diagnostics.txt"
   python3 - "$OUT/emulator-diagnostics.txt" <<'PYDIAG'
 import re,sys

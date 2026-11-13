@@ -62,7 +62,7 @@ def main():
         data = validate(path)
         evidence.append({"name": path.name, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(),
                          "blob": blob(args.repository, data)})
-    report = {"scope": "Actual installed regular signed ARM64 Koorix under Android emulator, authored synthetic translation fixture, generated HTTPS text and public MDN example image; NOT physical-device/general semantic/reader-page proof",
+    report = {"scope": "Actual installed regular signed ARM64 Koorix under Android emulator, authored synthetic fixtures and public MDN image; optional open-comic check records counts only, no page pixels or dialogue; NOT physical-device/general semantic/security proof",
               "commit": args.commit, "run": args.run, "files": evidence}
     sha = blob(args.repository, (json.dumps(report, indent=2) + "\n").encode())
     print(f"::notice::INSTALLED_APK_EMULATOR_REPORT_BLOB={sha} files={len(evidence)}")

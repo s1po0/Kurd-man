@@ -19,6 +19,15 @@ collector = load("collect")
 
 
 class Contracts(unittest.TestCase):
+    def test_public_comic_mode_never_captures_page_pixels(self):
+        with tempfile.TemporaryDirectory() as folder:
+            device = driver.Device(Path(folder))
+            device.public_comic_open = True
+            for name in ("failure.png", "web-rendered.png", "other.png"):
+                with self.subTest(name=name), self.assertRaises(ValueError):
+                    device.capture(name)
+            self.assertEqual([], list(Path(folder).iterdir()))
+
     def test_pairs_keep_all_source_words_and_original_order(self):
         text = "ASPECT: STONE KEEPER\n→ تایبەتمەندی: بەردپارێز\n\nASPECT DESCRIPTION:\n→ وەسفی تایبەتمەندی:\n\nThis rare trait grants two abilities and one skill.\n→ دەقی نموونە"
         exported = driver.pairs(text)
