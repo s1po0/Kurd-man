@@ -1,0 +1,32 @@
+'use strict';
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const factory = vm.runInNewContext(fs.readFileSync(__dirname + '/transport.js', 'utf8'), {AbortController});
+const encode = s => Buffer.from(s, 'binary').toString('base64');
+const tick = () => new Promise(resolve => setImmediate(resolve));
+(async () => {
+  const bytes = Buffer.alloc(90000); for (let i = 0; i < bytes.length; i++) bytes[i] = i % 251;
+  const transport = factory(async () => ({mime:'image/jpeg', bytes:bytes.length, chunks:[new Uint8Array(bytes.subarray(0, 10)),new Uint8Array(bytes.subarray(10))]}), encode);
+  const id = transport.start('https://example.com/a', 100000);
+  assert.equal(transport.poll(id).status, 'working');
+  assert.throws(() => transport.start('https://example.com/b', 100000));
+  await tick();
+  const out = [];
+  for (;;) {const part = transport.poll(id); if (part.status === 'done') break; assert.equal(part.status, 'chunk'); assert.ok(part.data.length <= 65536); out.push(Buffer.from(part.data, 'base64'));}
+  assert.deepEqual(Buffer.concat(out), bytes);
+  assert.equal(transport.poll(id).status, 'expired');
+  const next = transport.start('https://example.com/b', 100000);
+  assert.equal(transport.poll(id).status, 'expired');
+  assert.equal(transport.poll(next).status, 'working');
+  transport.cancel();
+  let finish, signal;
+  const blocked = factory((url, limit, s) => { signal=s; return new Promise(resolve => {finish = resolve;}); }, encode);
+  const old = blocked.start('https://example.com/a', 1000); blocked.cancel(); assert.equal(signal.aborted, true);
+  finish({mime:'image/jpeg',bytes:1,chunks:[new Uint8Array([4])]}); await tick();
+  assert.equal(blocked.poll(old).status, 'expired');
+  const failed = factory(async () => {throw Error('secret url');}, encode);
+  const failure = failed.start('https://example.com', 100); await tick();
+  assert.equal(JSON.stringify(failed.poll(failure)), '{"status":"error"}');
+  console.log('Web reader transport prototype: 7 grouped cases passed.');
+})().catch(e => {console.error(e); process.exit(1);});

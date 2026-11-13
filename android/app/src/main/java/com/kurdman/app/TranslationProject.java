@@ -40,6 +40,8 @@ public class TranslationProject {
     public boolean accurateOcr = true;
     public boolean createPdf;
     public boolean imageBatch;
+    /** Web-reader jobs stay private until the reader explicitly exports. */
+    public boolean privateResults;
     public boolean resumable;
     public boolean autoResume;
     public int quotaPages;
@@ -145,7 +147,7 @@ public class TranslationProject {
         root.put("comicSkill", ComicSettings.toJson(comicConfig));
         JSONObject job = new JSONObject();
         job.put("offline", offlineMode); job.put("accurateOcr", accurateOcr);
-        job.put("pdf", createPdf); job.put("imageBatch", imageBatch);
+        job.put("pdf", createPdf); job.put("imageBatch", imageBatch); job.put("privateResults", privateResults);
         job.put("resumable", resumable); job.put("autoResume", autoResume);
         job.put("quotaPages", quotaPages); job.put("exportsComplete", exportsComplete); job.put("outputBinding", outputBinding);
         job.put("quotaJobId", quotaJobId); job.put("owner", jobOwner);
@@ -177,6 +179,7 @@ public class TranslationProject {
             project.accurateOcr = job.optBoolean("accurateOcr", true);
             project.createPdf = job.optBoolean("pdf", false);
             project.imageBatch = job.optBoolean("imageBatch", false);
+            project.privateResults = job.optBoolean("privateResults", false);
             project.resumable = job.optBoolean("resumable", false);
             project.autoResume = job.optBoolean("autoResume", false);
             project.quotaPages = job.optInt("quotaPages", 0); project.exportsComplete = job.optBoolean("exportsComplete", false); project.outputBinding = job.optString("outputBinding", "");

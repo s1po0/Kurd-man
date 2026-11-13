@@ -30,7 +30,9 @@ final class ProjectResults {
         }
         MessageDigest digest=MessageDigest.getInstance("SHA-256");byte[] bytes=digest.digest(json.toString().getBytes(StandardCharsets.UTF_8));StringBuilder out=new StringBuilder();for(byte b:bytes)out.append(String.format(Locale.ROOT,"%02x",b&255));return out.toString();
     }
-    static synchronized void publish(Context context,TranslationProject p) throws Exception {
+    static synchronized void publish(Context context,TranslationProject p) throws Exception { publish(context,p,false); }
+    static synchronized void publishExplicit(Context context,TranslationProject p) throws Exception { publish(context,p,true); }
+    private static void publish(Context context,TranslationProject p,boolean explicit) throws Exception {
         File dir=directory(p);if(!dir.exists()&&!dir.mkdirs())throw new IOException("Could not create product directory");
         List<File> pages=new ArrayList<>();for(int i=0;i<p.pages.size();i++)pages.add(SavedJobPipeline.renderedPage(p,i));
         File result=result(p);
@@ -49,7 +51,7 @@ final class ProjectResults {
         // Exactly one public destination: Download/Koorix. Images in this
         // MediaStore collection are already visible to Gallery; a second
         // Pictures copy would make each translated page appear twice.
-        for(File file:exports){JobRuntime.throwIfStopped();copyToLibrary(context,file);savePublic(context,file);}
+        if(!p.privateResults || explicit)for(File file:exports){JobRuntime.throwIfStopped();copyToLibrary(context,file);savePublic(context,file);}
         JobRuntime.throwIfStopped();p.exportsComplete=true;p.outputBinding=binding(p);p.save();
     }
     static File library(Context context){File root=context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);if(root==null)root=new File(context.getFilesDir(),Environment.DIRECTORY_DOWNLOADS);return new File(root,"KurdMan");}

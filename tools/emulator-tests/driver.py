@@ -310,7 +310,7 @@ class Device:
         self.shell("input", "keyevent", "82")
         self.adb("install", "--no-streaming", "-r", str(apk.resolve()), timeout=120)
         package = self.shell("dumpsys", "package", PACKAGE)
-        if "versionName=1.8.3" not in package or "versionCode=19" not in package:
+        if "versionName=1.8.4" not in package or "versionCode=20" not in package:
             raise AssertionError("Installed APK is not the expected regular update")
         self.check("same_verified_arm64_regular_apk_installed")
         self.shell("pm", "grant", PACKAGE, "android.permission.POST_NOTIFICATIONS")

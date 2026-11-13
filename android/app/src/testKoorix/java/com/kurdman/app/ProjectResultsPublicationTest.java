@@ -69,6 +69,26 @@ public class ProjectResultsPublicationTest {
             assertArrayEquals(Files.readAllBytes(ProjectResults.result(p).toPath()),Files.readAllBytes(only.file.toPath()));
         } else assertTrue(media.rows.isEmpty());
     }
+    @Test public void webReaderPublicationIsPrivateUntilExplicitExportAndSurvivesReopen() throws Exception {
+        TranslationProject p=sample(2,true,true,false);p.privateResults=true;p.save();
+        p=TranslationProject.load(p.projectDir);assertTrue(p.privateResults);
+        ProjectResults.publish(app,p);
+        assertTrue(ProjectResults.result(p).isFile());assertTrue(p.exportsComplete);
+        assertTrue(media.rows.isEmpty());assertFalse(ProjectResults.library(app).exists());
+        ProjectResults.publishExplicit(app,p);
+        assertTrue(ProjectResults.library(app).isDirectory());
+        if(Build.VERSION.SDK_INT>=29){assertEquals(3,media.rows.size());ProjectResults.publishExplicit(app,p);assertEquals(3,media.rows.size());}
+        assertTrue(TranslationProject.load(p.projectDir).privateResults);
+        noNewTextFiles(ProjectResults.directory(p));noNewTextFiles(ProjectResults.library(app));
+    }
+    @Test public void oldProjectWithoutPrivacyFlagRemainsPublic() throws Exception {
+        TranslationProject p=sample(1,false,false,false);
+        org.json.JSONObject root=p.toJson();root.getJSONObject("job").remove("privateResults");
+        TranslationProject old=TranslationProject.fromJson(root,p.projectDir);
+        assertFalse(old.privateResults);ProjectResults.publish(app,old);
+        assertTrue(ProjectResults.library(app).isDirectory());
+        if(Build.VERSION.SDK_INT>=29)assertEquals(1,media.rows.size());
+    }
     @Test public void textAndGeometryStillSurviveProjectReopenAndBackupWithoutAnyTxt() throws Exception {
         TranslationProject p=sample(1,false,false,false);ProjectResults.publish(app,p);p.completed=true;p.save();
         TranslationProject reopened=TranslationProject.load(p.projectDir);Segment s=reopened.pages.get(0).segments.get(0);

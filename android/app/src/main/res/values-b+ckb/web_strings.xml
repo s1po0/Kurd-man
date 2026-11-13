@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="web_open">گەڕۆکی وێب</string>
+    <string name="web_address">ناونیشانی ماڵپەڕ یان گەڕان</string>
+    <string name="web_go">بڕۆ</string>
+    <string name="web_back">گەڕانەوە</string>
+    <string name="web_forward">پێشەوە</string>
+    <string name="web_translate">وەرگێڕانی ئەم پەڕەیە</string>
+    <string name="web_stop">وەستاندن</string>
+    <string name="web_hint">چەپتەرەکە بکەرەوە، پاشان وێنە بەردەستەکانی وەربگێڕە. هەندێک وێنەی پارێزراو یان ماڵپەڕی تر دەستناکەون.</string>
+    <string name="web_discover">گەڕان بۆ وێنەکان…</string>
+    <string name="web_capture">ئامادەکردنی وێنەی %1$d / %2$d…</string>
+    <string name="web_empty">هیچ وێنەیەکی بەردەست نەدۆزرایەوە. خوارەوە بچۆ بۆ بارکردنیان یان پەڕەیەکی تر تاقی بکەرەوە.</string>
+    <string name="web_partial">%1$d وێنە بار نەکرا. وێنە ماوەکان وەردەگێڕدرێن.</string>
+    <string name="web_error">خوێندنەوەی پەڕەکە سەرکەوتوو نەبوو. دووبارە هەوڵ بدەرەوە.</string>
+    <string name="web_invalid">تەنها ماڵپەڕی پارێزراوی HTTPS پشتگیری دەکرێت.</string>
+    <string name="web_title">گەڕۆکی وێب</string>
+</resources>

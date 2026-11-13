@@ -69,6 +69,13 @@ jobs:
           fi
           exit $code
 
+      - name: Test bounded web capture prototypes and shipped scripts
+        run: |
+          for file in discover-images capture-image transport; do cmp "tools/web-reader/$file.js" "android/app/src/main/assets/web/$file.js"; done
+          node tools/web-reader/test-discover-images.cjs
+          node tools/web-reader/test-capture-image.cjs
+          node tools/web-reader/test-transport.cjs
+
       - name: Set up Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
         with:

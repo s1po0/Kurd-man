@@ -11,14 +11,18 @@ final class SavedJobInput {
     final File image,cbz;
     final List<File> images;
     final String name,base,source,target;
-    final boolean offline,accurate,pdf;
+    final boolean offline,accurate,pdf,privateResults;
     final ComicTranslationSkill.Config config;
     final TextStyleSettings style;
     Bitmap fallback;
     SavedJobInput(File image,File cbz,List<File> images,String name,String base,String source,String target,
             boolean offline,boolean accurate,boolean pdf,ComicTranslationSkill.Config config,TextStyleSettings style,Bitmap fallback){
+        this(image,cbz,images,name,base,source,target,offline,accurate,pdf,config,style,fallback,false);
+    }
+    SavedJobInput(File image,File cbz,List<File> images,String name,String base,String source,String target,
+            boolean offline,boolean accurate,boolean pdf,ComicTranslationSkill.Config config,TextStyleSettings style,Bitmap fallback,boolean privateResults){
         this.image=image;this.cbz=cbz;this.images=new ArrayList<>(images);this.name=name;this.base=base;
-        this.source=source;this.target=target;this.offline=offline;this.accurate=accurate;this.pdf=pdf;
+        this.source=source;this.target=target;this.offline=offline;this.accurate=accurate;this.pdf=pdf;this.privateResults=privateResults;
         this.config=config;this.style=new TextStyleSettings(style);this.fallback=fallback;
     }
     TranslationProject prepare(Context context) throws Exception {
@@ -27,7 +31,7 @@ final class SavedJobInput {
         boolean batch=cbz==null&&images.size()>1;
         TranslationProject p=TranslationProjectStore.createNew(context,cbz!=null||batch,name,base,source);
         JobRuntime.activateSavedProject(p);
-        p.targetLanguage=target;p.comicConfig=config;p.jobStyle=style;p.offlineMode=offline;p.accurateOcr=accurate;p.createPdf=pdf;p.imageBatch=batch;
+        p.targetLanguage=target;p.comicConfig=config;p.jobStyle=style;p.offlineMode=offline;p.accurateOcr=accurate;p.createPdf=pdf;p.imageBatch=batch;p.privateResults=privateResults;
         try {
             if(cbz!=null) {
                 if(!cbz.isFile()||cbz.length()>300L*1024*1024)throw new IOException("CBZ import limit exceeded");

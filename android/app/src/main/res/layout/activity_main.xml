@@ -67,6 +67,7 @@
                         <Button android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/comic_clear" android:id="@+id/comicInlineReset" style="@style/Widget.Koorix.Button" />
                     </LinearLayout>
                 </LinearLayout>
+                <Button android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/web_open" android:drawableStart="@drawable/ic_ui_globe" android:drawablePadding="10dp" android:id="@+id/webReaderButton" style="@style/Widget.Koorix.Button" />
                 <Button android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/ux_home_library" android:drawableStart="@drawable/ic_ui_projects" android:drawablePadding="10dp" android:id="@+id/homeLibraryButton" style="@style/Widget.Koorix.Button" />
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ux_import_limits" android:textSize="11sp" android:layout_marginTop="12dp" style="@style/Widget.Koorix.Body" />
             </LinearLayout>

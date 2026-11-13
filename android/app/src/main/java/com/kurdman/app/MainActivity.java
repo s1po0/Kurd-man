@@ -231,6 +231,7 @@ public class MainActivity extends AppCompatActivity {
     private ActivityResultLauncher<String[]> importFontLauncher;
     private ActivityResultLauncher<String> notificationPermissionLauncher;
     private ActivityResultLauncher<Intent> editorLauncher;
+    private ActivityResultLauncher<Intent> webReaderLauncher;
     private final int[] readingScrollPositions = new int[5];
     private Bitmap originalBitmap;
     private Bitmap resultBitmap;
@@ -505,6 +506,8 @@ public class MainActivity extends AppCompatActivity {
         editorLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> handleStudioOrLibraryResult(result.getResultCode(),result.getData()));
+        webReaderLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                result -> {if(result.getResultCode()==RESULT_OK && result.getData()!=null)startWebTranslation(result.getData());});
 
         // Keep existing font/editor callback keys; one public source chooser.
         inputSourcesLauncher = registerForActivityResult(new ComicInputPicker.Sources(),this::acceptPickedInput);
@@ -600,6 +603,9 @@ public class MainActivity extends AppCompatActivity {
             else pickLauncher.launch(new String[]{"image/*","application/zip","application/x-zip-compressed","application/x-cbz","application/vnd.comicbook+zip","application/x-comicbook","application/octet-stream"});
         });
         findViewById(R.id.inputBrowseHint).setVisibility(BuildConfig.PUBLIC_EDITION?View.VISIBLE:View.GONE);
+        View webReaderButton=findViewById(R.id.webReaderButton);
+        webReaderButton.setVisibility(BuildConfig.PUBLIC_EDITION?View.VISIBLE:View.GONE);
+        webReaderButton.setOnClickListener(v -> openWebReader());
         downloadOfflineButton.setOnClickListener(v -> downloadOfflineModel());
         deleteOfflineButton.setOnClickListener(v -> confirmDeleteOfflineModel());
         downloadPaddleOcrButton.setOnClickListener(v -> downloadPaddleOcrPack());
@@ -3053,6 +3059,45 @@ public class MainActivity extends AppCompatActivity {
                 || originalBitmap != null && !originalBitmap.isRecycled();
     }
 
+    private boolean webTranslationReady() {
+        if(comicControls==null||!comicControls.validate())return false;
+        String source=selectedSourceLanguage(),target=selectedTargetLanguage();boolean offline=selectedOfflineMode();
+        boolean supported=TranslationLanguages.source(source)&&TranslationLanguages.target(target)
+                && (!offline || "ckb".equals(target) || MlKitOfflineEngine.isPairSupported(source,target));
+        boolean ready=offlinePackReady && (source+">"+target).equals(offlinePackPair)
+                && (!"ckb".equals(target) || offlineModelManager!=null && offlineModelManager.isModelReady());
+        TranslationPreflight.Error problem=TranslationPreflight.check(currentBusy||JobRuntime.isRunning(),true,true,supported,offline,ready);
+        if(problem==TranslationPreflight.Error.NONE)return true;
+        setStatus(getString(problem==TranslationPreflight.Error.BUSY?R.string.rel_busy:
+                problem==TranslationPreflight.Error.PACK_MISSING?R.string.ks_0737:R.string.ks_0539));return false;
+    }
+    private void openWebReader() {
+        if(webTranslationReady())webReaderLauncher.launch(new Intent(this,WebReaderActivity.class));
+    }
+    private void startWebTranslation(Intent result) {
+        if(!webTranslationReady())return;
+        ArrayList<String> paths=result.getStringArrayListExtra(WebReaderActivity.EXTRA_FILES);
+        if(paths==null||paths.isEmpty()||paths.size()>300){setStatus(getString(R.string.web_error));return;}
+        List<File> images=new ArrayList<>();long bytes=0;
+        try {
+            String root=new File(getCacheDir(),"web-reader").getCanonicalPath()+File.separator;
+            java.util.HashSet<String> seen=new java.util.HashSet<>();
+            for(String path:paths){File file=new File(path).getCanonicalFile();String canonical=file.getPath();
+                if(!canonical.startsWith(root)||!seen.add(canonical)||!file.isFile()||file.length()<=0||file.length()>32L*1024*1024)throw new IOException("Invalid web image");
+                bytes+=file.length();if(bytes>300L*1024*1024)throw new IOException("Web page limit");images.add(file);
+            }
+        }catch(Exception invalid){setStatus(getString(R.string.web_error));return;}
+        ComicTranslationSkill.Config config=comicControls.forTranslation();if(config==null)return;
+        SavedJobInput request=new SavedJobInput(images.get(0),null,images,getString(R.string.web_title),"web-chapter",
+                selectedSourceLanguage(),selectedTargetLanguage(),selectedOfflineMode(),accurateOcrCheck==null||accurateOcrCheck.isChecked(),
+                selectedCreatePdf(),config,globalTextStyle,null,true);
+        if(SavedJobCoordinator.start(getApplicationContext(),request)){
+            resultFile=null;resultTextFile=null;showMainPage(PAGE_RESULTS);currentBusy=true;
+            progress.setVisibility(View.VISIBLE);statusText.setText(R.string.rel_prepare);updateButtons(true);
+            requestNotificationPermissionIfNeeded();updateKeepScreenFlag();
+        }else setStatus(getString(R.string.rel_busy));
+    }
+
     private void translatePublicSelection() {
         if (comicControls==null || !comicControls.validate()) return;
         String source=selectedSourceLanguage(),target=selectedTargetLanguage(); boolean offline=selectedOfflineMode();
@@ -3779,7 +3824,7 @@ public class MainActivity extends AppCompatActivity {
                         (phase, page, total) -> setStatus(getString(R.string.rel_render_progress, page, total)));
                 throwIfJobStopped();
                 project.createPdf = createPdf;
-                ProjectResults.publish(getApplicationContext(), project);
+                ProjectResults.publishExplicit(getApplicationContext(), project);
                 runOnUiThread(() -> {
                     showSavedProjectResult(project);
                     refreshDownloadsList();
