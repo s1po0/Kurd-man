@@ -35,7 +35,12 @@ After all existing native/unit/free/signature gates, the production workflow:
    Files, and that Gallery's Images view points at the **same row**, in
    `Download/Koorix/`. Checks the completed/idle UI, Studio size90→Undo100 status
    and controls, normal Studio export updating that same public row, and a
-   process reopen without republishing. This is not Samsung Gallery testing.
+   process reopen without republishing. Then enables the actual selected-PDF
+   option and requires a complete public PDF plus that same one Gallery image,
+   and starts/stops explicit manual foreground protection through its real UI.
+   Android PdfDocument writing/service shutdown are actual installed-app checks,
+   not replaced with Robolectric's absent PDF backend or a fake service. This is
+   still not Samsung Gallery/physical-phone testing.
 9. Checks for an observed app crash, captures genuine emulator screenshots and
    exports only explicitly named synthetic products. Screenshots are reviewed by
    the agent; a green count alone is not a visual/semantic acceptance decision.

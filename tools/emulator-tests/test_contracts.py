@@ -154,6 +154,17 @@ class Contracts(unittest.TestCase):
             with self.subTest(invalid=invalid),self.assertRaises(AssertionError):
                 driver.single_public_product(invalid)
 
+    def test_requested_pdf_allows_only_that_document_without_weakening_no_txt(self):
+        image={"id":123,"name":"Koorix-koorix-qa-source-p-12345678-1234-1234-1234-123456789abc.ckb.jpg",
+               "path":"Download/Koorix/","mime":"image/jpeg","pending":0}
+        pdf=dict(image,id=124,name=image["name"][:-4]+".pdf",mime="application/pdf")
+        self.assertIs(image,driver.single_public_product([image,pdf],with_pdf=True))
+        for invalid in ([image],[image,pdf,pdf],[image,dict(pdf,mime="text/plain")],
+                        [image,dict(pdf,path="Download/KurdMan/")],[image,dict(pdf,pending=1)],
+                        [image,dict(pdf,name=image["name"][:-4]+".txt")]):
+            with self.subTest(invalid=invalid),self.assertRaises(AssertionError):
+                driver.single_public_product(invalid,with_pdf=True)
+
     def test_gallery_and_files_must_refer_to_the_same_owned_image_row(self):
         class SyntheticDevice(driver.Device):
             different=False

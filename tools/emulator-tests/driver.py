@@ -20,7 +20,8 @@ EXPECTED_SOURCE = ("ASPECT: STONE KEEPER ASPECT DESCRIPTION: This rare trait gra
                    "and one skill. The bearer can sense nearby stones, but cannot move them.")
 CAPTURES = {"home-ckb.png", "home-en-light.png", "home-en-dark.png", "source-chooser.png",
             "source-selected.png", "translating.png", "results.png", "results-text.png", "studio.png",
-            "studio-size-90.png", "studio-undo-100.png", "studio-export.png", "reopened-result.png", "failure.png"}
+            "studio-size-90.png", "studio-undo-100.png", "studio-export.png", "reopened-result.png",
+            "manual-keep-alive.png", "manual-stopped.png", "pdf-export.png", "failure.png"}
 PRODUCT = re.compile(r"Koorix-koorix-qa-source-p-[a-f0-9-]{36}\.ckb\.jpg\Z")
 
 
@@ -70,7 +71,16 @@ def product_rows(output):
     return rows
 
 
-def single_public_product(rows):
+def single_public_product(rows, with_pdf=False):
+    if with_pdf:
+        images = [row for row in rows if row["mime"] == "image/jpeg"]
+        row = single_public_product(images)
+        documents = [item for item in rows if item is not row]
+        if (len(rows) != 2 or len(documents) != 1 or documents[0]["name"] != row["name"][:-4] + ".pdf"
+                or documents[0]["path"] != "Download/Koorix/" or documents[0]["mime"] != "application/pdf"
+                or documents[0]["pending"] != 0):
+            raise AssertionError("Expected only the one image plus its requested PDF, never a TXT/extra copy")
+        return row
     if len(rows) != 1:
         raise AssertionError("Expected exactly one owned public image and zero TXT files")
     row = rows[0]
@@ -234,13 +244,13 @@ class Device:
             self.shell("input", "swipe", "540", start, "540", end, "350")
         raise AssertionError("Control not reachable by ordinary scrolling: " + identifier)
 
-    def public_product(self):
+    def public_product(self, with_pdf=False):
         def query(collection):
             output = self.shell("content", "query", "--uri", "content://media/external/" + collection,
                                 "--projection", "_id:_display_name:relative_path:mime_type:is_pending",
                                 "--where", "owner_package_name='com.koorix.app'", include_stderr=True)
             return product_rows(output)
-        row = single_public_product(query("file"))
+        row = single_public_product(query("file"), with_pdf=with_pdf)
         gallery = single_public_product(query("images/media"))
         if gallery != row:
             raise AssertionError("Gallery and Files must expose the same one public image, not separate copies")
@@ -392,6 +402,46 @@ class Device:
             raise AssertionError("Reopening a saved project republished a duplicate public image")
         self.capture("reopened-result.png")
         self.check("process_reopen_keeps_result_without_republication")
+        # PdfDocument is a real Android service/native boundary, not supplied
+        # by Robolectric. Exercise the existing optional PDF on this exact APK.
+        self.click("navSettingsButton")
+        pdf_option = self.reveal("createPdfCheck")
+        if pdf_option.get("checked") != "false":
+            raise AssertionError("Fresh synthetic install unexpectedly enabled automatic PDF")
+        self.tap(pdf_option)
+        self.click("navResultsButton")
+        self.tap(self.reveal("editResultButton", direction="up"))
+        self.control("editorCanvas")
+        self.click("editorSaveButton")
+        self.control("workspaceLanguageButton")
+        self.completed_ui()
+        pdf_row = self.public_product(with_pdf=True)
+        if pdf_row["id"] != product_id:
+            raise AssertionError("Requested PDF must not create a second Gallery image")
+        pdf_data = self.adb("exec-out", "cat", "/sdcard/Download/Koorix/" + pdf_row["name"][:-4] + ".pdf")
+        if not pdf_data.startswith(b"%PDF-") or b"%%EOF" not in pdf_data[-100:] or not 1000 < len(pdf_data) < 3_000_000:
+            raise AssertionError("Requested real Android PDF is empty, unfinished or over budget")
+        (self.output / "synthetic-result.pdf").write_bytes(pdf_data)
+        studio_data = self.adb("exec-out", "cat", "/sdcard/Download/Koorix/" + pdf_row["name"])
+        if not studio_data.startswith(b"\xff\xd8\xff") or not 100 < len(studio_data) < 2_000_000:
+            raise AssertionError("Studio did not retain a valid actual JPEG product")
+        (self.output / "synthetic-studio-result.jpg").write_bytes(studio_data)
+        self.report["publicPdfRows"] = 1
+        self.capture("pdf-export.png")
+        self.check("requested_real_pdf_preserved_with_one_gallery_image_no_txt")
+        self.click("navSettingsButton")
+        self.tap(self.reveal("keepAliveToggleButton"))
+        self.control("stopJobButton", enabled=True)
+        service = r"ServiceRecord\{[^}]*com\.koorix\.app/com\.kurdman\.app\.KeepAliveService"
+        self.wait(lambda: bool(re.search(service, self.shell("dumpsys", "activity", "services", PACKAGE))),
+                  "Actual manual foreground protection did not start", timeout=30)
+        self.capture("manual-keep-alive.png")
+        self.click("stopJobButton")
+        self.wait(lambda: node(self.ui(), identifier="stopJobButton") is None, "Manual STOP must hide after stopping", timeout=30)
+        self.wait(lambda: re.search(service, self.shell("dumpsys", "activity", "services", PACKAGE)) is None,
+                  "Manual STOP did not actually stop the foreground service", timeout=30)
+        self.capture("manual-stopped.png")
+        self.check("explicit_manual_protection_retains_stop_and_stops_actual_service")
         crashes = self.adb("logcat", "-b", "crash", "-d").decode("utf-8", "replace")
         if PACKAGE in crashes:
             raise AssertionError("Regular APK crash observed on the emulator")

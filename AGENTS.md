@@ -55,6 +55,9 @@ Keep failures/unavailable checks explicit.
   `GET_CONTENT */*` chooser, not separate Gallery and Files routes or photo-only
   picker. Compatible installed Gallery, MT Manager, ZArchiver/My Files must be
   eligible. Keep multi-select and selected-URI grants, without broad storage access.
+- Public translation/Studio exports: one public image per translated page,
+  canonical Download/Koorix, no automatic TXT sidecars. Keep editable source/
+  target text in saved projects/backups; do not delete old reader images/TXT.
 - One source block/bubble -> one target block, original page/order/geometry;
   preserve clean erasure, black narration, joined ovals, outside SFX and studio.
 - Keep offline truly offline, STOP responsive, saved projects/Reports persistent,
