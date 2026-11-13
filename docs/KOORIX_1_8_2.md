@@ -135,6 +135,16 @@ hidden network fallback is added for offline. Final script cleanup is unchanged.
   XML rather than polluting the user's synthetic file list. Partial report:
   `db98acf5ed541187941cde3b713feabce18b253e`. No OCR/MT success was claimed for
   this aborted input-setup run.
+- A subsequent source review of official Android14 `Content.InsertCommand`
+  showed that `content insert` **does not print its returned URI** even when
+  successful. Accepting another volume spelling was insufficient for that real
+  shell behavior. The synthetic setup now queries the exact authored fixture's
+  public name/path/MIME, requires one positive image ID with no pre-existing
+  fixture, and verifies PNG readback bytes before sharing. Local regression
+  reproduces the earlier empty-output failure and rejects stale/multiple rows
+  or corrupted bytes. This is a QA input-setup correction, **not** a replacement
+  OCR source or proof of a completed hosted translation. A total driver budget
+  and bounded emulator shutdown preserve failure evidence rather than hanging.
 - The actual delivered old 1.8.1 APK was downloaded and independently hash/signature
   verified locally; it passes the old UI gates but **correctly fails** the new
   narration/system-field implementation gate. A stale APK cannot be relabelled

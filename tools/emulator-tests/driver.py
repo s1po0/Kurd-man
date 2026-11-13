@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import shlex
+import signal
 import subprocess
 import time
 import xml.etree.ElementTree as ET
@@ -40,11 +41,11 @@ def pairs(text):
     return result
 
 
-def media_insert_uri(output):
-    # Android's external aggregate may return its external_primary volume.
-    # Permit exactly those public image collections, never arbitrary URI text.
-    found = re.search(r"content://media/(?:external|external_primary)/images/media/[1-9][0-9]*", output)
-    return found.group() if found else None
+def media_query_uri(output):
+    # Android14's content insert is silent, even on success. Query only the
+    # exact authored image; reject zero/multiple rows or unexpected columns.
+    found = re.fullmatch(r"\s*Row: 0 _id=([1-9][0-9]*)\s*", output)
+    return "content://media/external/images/media/" + found.group(1) if found else None
 
 
 def source_chooser_focused(window_dump):
@@ -160,13 +161,24 @@ class Device:
                   "Native theme action did not change", timeout=30)
 
     def import_source(self):
+        query = ("content", "query", "--uri", "content://media/external/images/media", "--projection", "_id",
+                 "--where", "_display_name='koorix-qa-source.png' AND relative_path='Pictures/Koorix-QA/' AND mime_type='image/png'")
+        before = self.shell(*query, include_stderr=True)
+        if before != "No result found.":
+            raise RuntimeError("Synthetic image collection is not empty: " + before[:200])
         inserted = self.shell("content", "insert", "--uri", "content://media/external/images/media",
                               "--bind", "_display_name:s:koorix-qa-source.png", "--bind", "mime_type:s:image/png",
                               "--bind", "relative_path:s:Pictures/Koorix-QA/", include_stderr=True)
-        uri = media_insert_uri(inserted)
+        selected = self.shell(*query, include_stderr=True)
+        uri = media_query_uri(selected)
         if uri is None:
-            raise RuntimeError("Synthetic MediaStore insertion failed: " + inserted[:300])
-        self.shell("content", "write", "--uri", uri, data=(self.output / "synthetic-source.png").read_bytes())
+            raise RuntimeError("Synthetic MediaStore query after insertion failed: " + (inserted + selected)[:300])
+        source = (self.output / "synthetic-source.png").read_bytes()
+        self.shell("content", "write", "--uri", uri, data=source)
+        written = self.adb("exec-out", "content", "read", "--uri", uri)
+        if hashlib.sha256(source).digest() != hashlib.sha256(written).digest():
+            raise AssertionError("Synthetic public MediaStore bytes differ from the authored PNG")
+        self.check("synthetic_media_bytes_verified")
         self.shell("am", "start", "-W", "-n", COMPONENT, "-a", "android.intent.action.SEND", "-t", "image/png",
                    "--eu", "android.intent.extra.STREAM", uri, "--grant-read-uri-permission", timeout=60)
         self.control("translateButton", enabled=True)
@@ -293,6 +305,10 @@ def main():
         raise RuntimeError("Only an empty GitHub-hosted emulator is authorized, never a connected owner's phone")
     args.out.mkdir(parents=True, exist_ok=True)
     device = Device(args.out, args.emulator_pid)
+    def runtime_budget_exhausted(_number, _frame):
+        raise TimeoutError("Actual-APK driver exceeded its 15-minute total runtime budget")
+    signal.signal(signal.SIGALRM, runtime_budget_exhausted)
+    signal.alarm(15 * 60)
     try:
         device.run(args.apk)
     except Exception as problem:
@@ -310,6 +326,7 @@ def main():
             pass  # No screenshot is evidence when Android itself was unavailable.
         raise
     finally:
+        signal.alarm(0)
         (args.out / "report.json").write_text(json.dumps(device.report, indent=2) + "\n")
 
 

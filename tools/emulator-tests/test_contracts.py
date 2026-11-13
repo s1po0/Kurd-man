@@ -36,13 +36,73 @@ class Contracts(unittest.TestCase):
             self.assertNotEqual(expected, driver.words(changed))
         self.assertEqual(expected, driver.words(driver.EXPECTED_SOURCE.upper().replace(":", " : ")))
 
-    def test_media_insert_accepts_only_public_external_image_collections(self):
-        for volume in ("external", "external_primary"):
-            uri = "content://media/" + volume + "/images/media/123"
-            self.assertEqual(uri, driver.media_insert_uri("Inserted " + uri + "\n"))
-        for invalid in ("Error while accessing provider", "content://private/images/media/123",
-                        "content://media/internal/images/media/123", "file:///sdcard/private"):
-            self.assertIsNone(driver.media_insert_uri(invalid))
+    def test_media_query_requires_one_exact_public_image_id(self):
+        self.assertEqual("content://media/external/images/media/123",
+                         driver.media_query_uri("Row: 0 _id=123\n"))
+        for invalid in ("", "No result found.", "Row: 0 _id=0", "Row: 0 _id=-1",
+                        "Row: 0 _id=123\nRow: 1 _id=124", "Row: 0 _id=123, private=bad",
+                        "Error while accessing provider", "content://private/images/media/123"):
+            with self.subTest(invalid=invalid):
+                self.assertIsNone(driver.media_query_uri(invalid))
+
+    def test_silent_android_content_insert_is_followed_by_exact_query_and_readback(self):
+        class SyntheticDevice(driver.Device):
+            def __init__(self, output):
+                super().__init__(output)
+                self.queries = 0
+                self.written = None
+                self.shared = None
+
+            def shell(self, *args, data=None, **kwargs):
+                if args[:2] == ("content", "query"):
+                    self.queries += 1
+                    return "No result found." if self.queries == 1 else "Row: 0 _id=123"
+                if args[:2] == ("content", "insert"):
+                    return ""  # Actual Android14 Content.InsertCommand does not print the URI.
+                if args[:2] == ("content", "write"):
+                    self.written = (args[-1], data)
+                if args[:2] == ("am", "start"):
+                    self.shared = args
+                return ""
+
+            def adb(self, *args, **kwargs):
+                if args[:3] == ("exec-out", "content", "read"):
+                    return (self.output / "synthetic-source.png").read_bytes()
+                raise AssertionError("Unexpected ADB command")
+
+            def control(self, identifier, **kwargs):
+                self.asserted_control = identifier
+
+            def check(self, code):
+                self.report["checks"].append(code)  # Never emit REAL_APK notices from this mock.
+
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder)
+            source = b"\x89PNG\r\n\x1a\n" + b"synthetic" * 30
+            (output / "synthetic-source.png").write_bytes(source)
+            device = SyntheticDevice(output)
+            device.import_source()
+            self.assertEqual(2, device.queries)
+            self.assertEqual(("content://media/external/images/media/123", source), device.written)
+            self.assertIn("content://media/external/images/media/123", device.shared)
+            self.assertEqual("translateButton", device.asserted_control)
+            self.assertIn("synthetic_media_bytes_verified", device.report["checks"])
+
+            stale = SyntheticDevice(output)
+            stale.queries = 1
+            with self.assertRaisesRegex(RuntimeError, "not empty"):
+                stale.import_source()
+            self.assertIsNone(stale.written)
+            self.assertIsNone(stale.shared)
+
+            class CorruptedDevice(SyntheticDevice):
+                def adb(self, *args, **kwargs):
+                    return b"different public image bytes"
+            corrupted = CorruptedDevice(output)
+            with self.assertRaisesRegex(AssertionError, "bytes differ"):
+                corrupted.import_source()
+            self.assertIsNone(corrupted.shared)
+            self.assertNotIn("synthetic_media_bytes_verified", corrupted.report["checks"])
 
     def test_focus_accepts_real_system_pick_activity_not_activity_history(self):
         for component in ("com.google.android.documentsui/com.android.documentsui.picker.PickActivity",

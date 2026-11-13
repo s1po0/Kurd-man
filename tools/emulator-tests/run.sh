@@ -43,7 +43,14 @@ printf 'no\n' | "$AVDMANAGER" create avd --force --name koorix-native-qa \
   -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect -accel on \
   -cores 2 -memory 2048 -camera-back none -camera-front none > "$RUNTIME/emulator.log" 2>&1 &
 pid=$!
-trap 'adb -s emulator-5554 emu kill >/dev/null 2>&1 || true; kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true' EXIT
+shutdown_emulator() {
+  # A dead/unresponsive emulator must not leave the shell waiting indefinitely
+  # before the always-run collector can preserve the failed driver's report.
+  timeout --kill-after=2s 10s adb -s emulator-5554 emu kill >/dev/null 2>&1 || true
+  kill -KILL "$pid" 2>/dev/null || true
+  wait "$pid" 2>/dev/null || true
+}
+trap shutdown_emulator EXIT
 if ! python3 tools/emulator-tests/driver.py --apk "$APK_FILE" --out "$OUT" --emulator-pid "$pid"; then
   # Fixed empty-emulator process output only, after signing plaintext removal.
   # Actions log hosts may be inaccessible from Arena; retain a bounded public

@@ -211,6 +211,7 @@ jobs:
 
       - name: Open the actual verified regular APK on Android and translate a synthetic panel
         id: emulator_check
+        timeout-minutes: 25
         run: bash tools/emulator-tests/run.sh
 
       - name: Save only allowlisted synthetic installed-APK captures and exports

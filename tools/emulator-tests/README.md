@@ -45,6 +45,20 @@ python3 tools/emulator-tests/collect.py --repository "$GITHUB_REPOSITORY" \
   --commit "$GITHUB_SHA" --run "$GITHUB_RUN_ID"
 ```
 
+### Android14 MediaStore setup
+
+The official Android14 [`Content.InsertCommand`](https://github.com/aosp-mirror/platform_frameworks_base/blob/android-14.0.0_r1/cmds/content/src/com/android/commands/content/Content.java#L554-L568)
+ignores the return value of `provider.insert`: successful `content insert` is
+silent. Do not require a printed URI or infer failure from an empty stdout.
+The driver first requires no matching fixture row, inserts the authored image,
+then queries its exact name/path/MIME and requires exactly one positive `_id`.
+Only the public external image collection is used. It writes the PNG and verifies
+its public readback SHA256 before sharing. Multiple/stale rows, errors or altered
+bytes fail; offline mocks of these contracts emit no actual-APK pass notices.
+The driver has a 15-minute total budget, and emulator shutdown is bounded so a
+failed test can reach the always-run evidence collector. These are QA changes,
+not an alternate application or proof that the hosted runtime passed.
+
 Local helper checks do not require Android and do not establish device acceptance:
 
 ```sh
