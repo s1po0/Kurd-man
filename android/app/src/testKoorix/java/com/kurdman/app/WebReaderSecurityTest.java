@@ -19,6 +19,12 @@ public class WebReaderSecurityTest {
         assertFalse(WebReaderActivity.secureUrl("javascript:alert(1)"));
         assertFalse(WebReaderActivity.secureUrl(null));
     }
+    @Test public void untrustedDiscoveryResponseIsBoundedBeforeJsonParsing() {
+        assertFalse(WebReaderActivity.boundedDiscoveryResponse(null));
+        assertTrue(WebReaderActivity.boundedDiscoveryResponse("{}"));
+        assertTrue(WebReaderActivity.boundedDiscoveryResponse(new String(new char[512*1024])));
+        assertFalse(WebReaderActivity.boundedDiscoveryResponse(new String(new char[512*1024+1])));
+    }
     @Test public void onlyMatchesExactOriginAndPort() {
         String page="https://example.com/chapter";
         assertTrue(WebReaderActivity.sameOrigin(page,"https://EXAMPLE.COM:443/page.png"));

@@ -35,6 +35,9 @@ public final class WebReaderActivity extends AppCompatActivity {
     static final String EXTRA_FILES="koorix.web.files", EXTRA_VISIBLE="koorix.web.visible";
     private static final long MAX_TOTAL=300L*1024*1024, MAX_IMAGE=32L*1024*1024;
     private static final int MAX_PAGES=300;
+    // The JS result is untrusted even though our discovery script has its own
+    // lower URL budget. Limit native parsing/allocation independently.
+    private static final int MAX_DISCOVERY_JSON_CHARS=512*1024;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final ArrayList<String> candidates=new ArrayList<>(),files=new ArrayList<>();
     private final ArrayList<Boolean> candidateVisible=new ArrayList<>(),fileVisible=new ArrayList<>();
@@ -89,6 +92,7 @@ public final class WebReaderActivity extends AppCompatActivity {
     private Button button(int label){Button b=new Button(this);b.setText(label);b.setTypeface(KoorixDesign.font(this,true));KoorixDesign.primary(b,false);return b;}
     private String asset(String name) throws Exception {try(InputStream in=getAssets().open(name);java.io.ByteArrayOutputStream bytes=new java.io.ByteArrayOutputStream()){byte[] b=new byte[4096];int n;while((n=in.read(b))!=-1)bytes.write(b,0,n);return bytes.toString(StandardCharsets.UTF_8.name());}}
     static boolean secureUrl(String value){try{Uri u=Uri.parse(value);return "https".equalsIgnoreCase(u.getScheme())&&u.getHost()!=null&&!u.getHost().isEmpty()&&u.getUserInfo()==null;}catch(Exception bad){return false;}}
+    static boolean boundedDiscoveryResponse(String raw){return raw!=null&&raw.length()<=MAX_DISCOVERY_JSON_CHARS;}
     static boolean sameOrigin(String page,String candidate){try{Uri a=Uri.parse(page),b=Uri.parse(candidate);return secureUrl(page)&&secureUrl(candidate)&&a.getHost().equalsIgnoreCase(b.getHost())&&(a.getPort()<0?443:a.getPort())==(b.getPort()<0?443:b.getPort());}catch(Exception bad){return false;}}
     private void open(){if(capturing)return;String text=address.getText().toString().trim();if(text.isEmpty())return;String url;
         if(text.startsWith("https://"))url=text;
@@ -107,6 +111,7 @@ public final class WebReaderActivity extends AppCompatActivity {
         catch(Exception full){cancelCapture();status.setText(R.string.web_cache_full);return;}
         session=new File(getCacheDir(),"web-reader/"+UUID.randomUUID());if(!session.mkdirs()){cancelCapture();status.setText(R.string.web_error);return;}
         web.evaluateJavascript(discovery,raw->{if(!valid(token))return;try{
+            if(!boundedDiscoveryResponse(raw))throw new IllegalArgumentException("Discovery response too large");
             JSONObject obj=new JSONObject(raw);truncated=obj.optBoolean("truncated",false);JSONArray imgs=obj.getJSONArray("images");java.util.LinkedHashMap<String,Boolean> unique=new java.util.LinkedHashMap<>();
             for(int i=0;i<imgs.length()&&unique.size()<MAX_PAGES;i++){JSONObject image=imgs.getJSONObject(i);String u=image.optString("url","");if(u.length()<=8192&&sameOrigin(topUrl,u)){boolean visible=image.optBoolean("visible",false);unique.put(u,visible||Boolean.TRUE.equals(unique.get(u)));}}
             for(java.util.Map.Entry<String,Boolean> entry:unique.entrySet()){candidates.add(entry.getKey());candidateVisible.add(entry.getValue());}
