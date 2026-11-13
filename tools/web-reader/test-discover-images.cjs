@@ -42,4 +42,9 @@ function run(images) {
   assert.equal(run([image('/transparent', {style: {display: 'block', visibility: 'visible', opacity: '0'}})]).images.length, 0);
   assert.equal(run([image('/bad', {rect: {width: NaN}})]).images.length, 0);
 }
-console.log('Web reader discovery prototype: 5 grouped tests passed.');
+{
+  const result = run(Array.from({length:300}, (_, i) => image('/'+i+'-'+'x'.repeat(4000))));
+  assert.equal(result.truncated, true);
+  assert.ok(result.images.reduce((n, x) => n + x.url.length, 0) <= 256 * 1024);
+}
+console.log('Web reader discovery prototype: 6 grouped tests passed.');

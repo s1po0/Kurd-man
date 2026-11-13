@@ -9,6 +9,9 @@
   const MAX_IMAGES = 300;
   const MAX_SCANNED = 4000;
   const MAX_URL = 8192;
+  // Keep evaluateJavascript responses safely bounded even with hostile markup.
+  const MAX_RESULT_URL_CHARS = 256 * 1024;
+  let urlChars = 0, hitBudget = false;
   const images = document.querySelectorAll('img');
   const results = [];
   const seen = new Set();
@@ -39,10 +42,12 @@
     url.hash = '';
     const absolute = url.href;
     if (absolute.length > MAX_URL || seen.has(absolute)) continue;
+    if (urlChars + absolute.length > MAX_RESULT_URL_CHARS) { hitBudget = true; break; }
+    urlChars += absolute.length;
     seen.add(absolute);
     const visible = box.bottom > 0 && box.top < viewportHeight && box.right > 0 && box.left < viewportWidth;
     results.push({url: absolute, order: i, visible,
       width: Math.round(box.width), height: Math.round(box.height)});
   }
-  return {images: results, scanned: scanCount, truncated: images.length > scanCount || results.length === MAX_IMAGES};
+  return {images: results, scanned: scanCount, truncated: hitBudget || images.length > scanCount || results.length === MAX_IMAGES};
 })()

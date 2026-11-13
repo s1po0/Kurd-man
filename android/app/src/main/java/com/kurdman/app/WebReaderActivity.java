@@ -102,7 +102,11 @@ public final class WebReaderActivity extends AppCompatActivity {
             web.evaluateJavascript(install,result->{if(valid(token))next(token);});
         }catch(Exception e){cancelCapture();status.setText(R.string.web_error);}});
     }
-    private boolean valid(int token){return capturing&&epoch==token&&topUrl!=null&&topUrl.equals(web.getUrl());}
+    private boolean valid(int token){
+        if(!capturing||epoch!=token||topUrl==null)return false;
+        if(!topUrl.equals(web.getUrl())){cancelCapture();status.setText(R.string.web_error);return false;}
+        return true;
+    }
     private void next(int token){if(!valid(token))return;
         if(index>=candidates.size()){finishCapture();return;}
         if(total>=importLimit){failed+=candidates.size()-index;finishCapture();return;}
