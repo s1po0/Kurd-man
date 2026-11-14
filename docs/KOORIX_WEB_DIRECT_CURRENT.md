@@ -52,5 +52,27 @@ Public artwork screenshots below are not user data (attribution above):
 | 16 | translated story page 2 | `f6be99af44437773dba8e86ee1197a99c67bf6f8` |
 | 17 | translated story page 3 | `9cc8651310673bde49667857f00cef143c852c9e` |
 
+## Follow-up with a narrow artwork guard
+
+After adding a guard that leaves standalone numeric OCR blocks and explicit
+URLs/email addresses in their original pixels, build `c8106db584c2e7fa52616586df01420bde1f386d`
+was exercised in the same regular APK workflow: run `43561899985`, check
+`132347974222`, APK SHA256
+`cbe02004111180b93c6f35f01433465f5f1932803ecd8c0c920cb3d3eff24ce6`.
+Frame 12 blob `9df0a8fe24ce531ac4e1f8577523ad8fd3bb7ba8` shows page 1:
+the large stray `18` replacements observed previously are absent, and the
+small original broom numbers remain. The garbled mixed-script fragment near
+the second balloon, awkward text within that balloon, and SFX placement remain.
+This observation does not prove the source of those fragments, credit/date
+preservation on page 3, or the behavior of all numbers. Standalone numbers
+in bubbles also remain original rather than being translated; they remain
+editable, and mixed numbered dialogue is not suppressed by this guard.
+The session was finished explicitly and its conclusion was neutral.
+
+Run `43561844699` at `c8ad51f1720c36deb89d3003f31d7c7a7472a3c5`
+completed successfully: 298 JVM tests and installed-APK checks, including the
+public-comic count smoke test, not visual/meaning/security acceptance. The
+minimum-three count is only a smoke check and does not prove image identity.
+
 The visual defects, uncertain image filtering and unresolved network security
 are release blockers. No APK or Telegram completion message was sent.
