@@ -1,7 +1,7 @@
 {
   "session": "koorix-regular-184-observe-1",
-  "sequence": 13,
+  "sequence": 14,
   "action": "tap_id",
-  "expectedFrame": "0c2effeeb68e6a92ef9e0f84becec7f000f334a1220515eb43ba6e4468c085d9",
-  "id": "readWebResultButton"
+  "expectedFrame": "e0bd37ca8f11599a847d5aea85194cba5fced1d3425162413c81d025dfb836f9",
+  "id": "webResultToggle"
 }
