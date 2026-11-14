@@ -1,0 +1,65 @@
+name: Koorix current APK inspection
+
+on:
+  push:
+    branches: ["arena/d0574002-kurd-man"]
+    paths: [".github/workflows/koorix-direct-current.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  observe:
+    if: contains(github.event.head_commit.message, '[inspect-current-apk]')
+    name: Observe current regular Koorix candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android tooling
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+      - name: Restore permanent signer without generating a key
+        env:
+          KOORIX_SIGNING_WRAP_KEY: ${{ secrets.KOORIX_SIGNING_WRAP_KEY }}
+          TELEGRAM_SIGNING_WRAP: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          umask 077
+          python3 -m pip install -r tools/signing/requirements.txt --disable-pip-version-check
+          python3 tools/signing/store.py restore --store signing/koorix-release-v2.enc.json \
+            --manifest signing/koorix-release-v2.json --backup signing/recovery-verification.json \
+            --out "$RUNNER_TEMP/direct-signing" --github-env "$GITHUB_ENV"
+      - name: Build and independently verify the regular candidate
+        run: |
+          gradle --no-daemon --no-configuration-cache -p android assembleKoorixRelease
+          bash tools/signing/verify-apk.sh
+      - name: Verify candidate and remove signing material before Android starts
+        run: |
+          python3 tools/signing/inspect-public-apk.py "$APK_FILE" --version 1.8.4 --code 20 \
+            --no-login --free --contours --reading-studio --triad-theme --system-panels
+          echo "APK_SHA256=$(sha256sum "$APK_FILE" | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          rm -rf "$RUNNER_TEMP/direct-signing"
+          for key in KOORIX_RELEASE_KEYSTORE KOORIX_RELEASE_ALIAS KOORIX_RELEASE_STORE_PASSWORD KOORIX_RELEASE_KEY_PASSWORD; do
+            echo "$key=" >> "$GITHUB_ENV"
+          done
+      - name: Observe and control this regular APK on Android
+        timeout-minutes: 26
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash tools/direct-apk/run.sh
+      - name: Remove ephemeral signing material
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/direct-signing"

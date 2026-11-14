@@ -8,11 +8,12 @@ import base64
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import time
 
-from worker import APK_SHA256, CHECK_NAME, REPOSITORY, ROOT, SESSION, validate_command
+from worker import CHECK_NAME, REPOSITORY, ROOT, SESSION, validate_command
 
 CACHE = ROOT / ".cache/direct-apk-session"
 
@@ -42,6 +43,7 @@ def watch(commit):
     seen = set()
     deadline = time.monotonic() + 30 * 60
     failure_count = 0
+    apk_sha = None
     print("Waiting for the actual regular APK Android session", flush=True)
     while time.monotonic() < deadline:
         try:
@@ -50,7 +52,7 @@ def watch(commit):
             if not matching:
                 runs = api("actions/runs?head_sha=" + commit + "&per_page=20")["workflow_runs"]
                 for run in runs:
-                    if run["name"] == "Koorix direct APK inspection" and run["status"] == "completed":
+                    if run["name"] == "Koorix current APK inspection" and run["status"] == "completed":
                         raise RuntimeError("Direct Android session did not start: run " + str(run["id"]) + " " + str(run["conclusion"]))
                 time.sleep(5)
                 continue
@@ -60,8 +62,12 @@ def watch(commit):
                 time.sleep(5)
                 continue
             state = json.loads(summary)
-            if state["session"] != SESSION or state["launchCommit"] != commit or state["apkSha256"] != APK_SHA256:
+            digest = state.get("apkSha256", "")
+            if (state["session"] != SESSION or state["launchCommit"] != commit
+                    or state.get("version") != "1.8.4" or not re.fullmatch(r"[a-f0-9]{64}", digest)
+                    or (apk_sha is not None and digest != apk_sha)):
                 raise ValueError("Wrong APK/session/launch commit")
+            apk_sha = digest
             if state.get("readerDataUsed") is not False or state.get("alternateAppOrDebugVariant") is not False:
                 raise ValueError("Unexpected observation scope")
             for frame in state["frames"]:
@@ -116,7 +122,7 @@ def main():
     observe = commands.add_parser("watch")
     observe.add_argument("--commit", required=True)
     action = commands.add_parser("act")
-    action.add_argument("action", choices=("snapshot", "tap_id", "tap", "swipe", "back", "launch", "finish"))
+    action.add_argument("action", choices=("snapshot", "tap_id", "tap", "swipe", "back", "launch", "public_comic_url", "finish"))
     action.add_argument("--id")
     for field in ("x", "y", "toX", "toY", "durationMs"):
         action.add_argument("--" + field, type=int)

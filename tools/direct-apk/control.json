@@ -1,6 +1,5 @@
 {
-  "session": "koorix-regular-182-observe-1",
-  "sequence": 26,
-  "action": "finish",
-  "expectedFrame": "a3fa27c739503512d8fa75dc1e6946060b18a1aff314cdd06c3560f7462b9207"
+  "session": "koorix-regular-184-observe-1",
+  "sequence": 0,
+  "action": "snapshot"
 }

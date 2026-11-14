@@ -62,6 +62,18 @@ class ControlContracts(unittest.TestCase):
             with self.subTest(identifier=identifier), self.assertRaises(ValueError):
                 worker.validate_command(self.valid("tap_id", id=identifier))
 
+    def test_public_comic_action_has_only_one_fixed_public_url(self):
+        events = []
+        class Device:
+            def shell(self, *args):
+                events.append(args)
+        command = self.valid("public_comic_url")
+        worker.validate_command(command)
+        worker.act(Device(), command)
+        self.assertEqual(events, [("input", "text", "https://www.peppercarrot.com/en/webcomic/ep01_Potion-of-Flight.html")])
+        with self.assertRaises(ValueError):
+            worker.validate_command(self.valid("public_comic_url", url="https://private.example/"))
+
     def test_snapshot_and_finish_have_no_device_command(self):
         class NoDevice:
             def __getattr__(self, _name):

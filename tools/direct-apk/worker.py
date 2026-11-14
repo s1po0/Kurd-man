@@ -21,9 +21,11 @@ import urllib.request
 ROOT = Path(__file__).resolve().parents[2]
 REPOSITORY = "s1po0/Kurd-man"
 CHECK_NAME = "Direct regular APK · observe / act / observe"
+# Historical 1.8.2 delivered-APK pin retained for the older workflow contract;
+# the current candidate is bound to its verified build digest at runtime.
 APK_SHA256 = "d03ee91ff681e21e2e4cf4938106415f9e5e43d7837a03af976c62e3be97a300"
-SESSION = "koorix-regular-182-observe-1"
-ACTIONS = {"snapshot", "tap", "tap_id", "swipe", "back", "launch", "finish"}
+SESSION = "koorix-regular-184-observe-1"
+ACTIONS = {"snapshot", "tap", "tap_id", "swipe", "back", "launch", "public_comic_url", "finish"}
 MAX_COMMANDS = 32
 
 
@@ -120,6 +122,10 @@ def act(device, command):
         device.shell("input", "keyevent", "4")
     elif action == "launch":
         device.launch()
+    elif action == "public_comic_url":
+        # The only permitted text input is this public CC-BY test page, after
+        # the observer explicitly selects the address control. No private URL.
+        device.shell("input", "text", "https://www.peppercarrot.com/en/webcomic/ep01_Potion-of-Flight.html")
     # snapshot/finish are not Android mutations.
 
 
@@ -160,13 +166,14 @@ def main():
     out = ROOT / "android/app/build/outputs/direct-apk"
     out.mkdir(parents=True, exist_ok=True)
     apk = Path(os.environ["APK_FILE"])
-    if hashlib.sha256(apk.read_bytes()).hexdigest() != APK_SHA256:
-        raise ValueError("Not the verified regular delivered APK")
+    expected_sha = os.environ.get("APK_SHA256", "")
+    if not re.fullmatch(r"[a-f0-9]{64}", expected_sha) or hashlib.sha256(apk.read_bytes()).hexdigest() != expected_sha:
+        raise ValueError("Not the verified regular candidate APK")
     check = github.api("check-runs", {"name": CHECK_NAME, "head_sha": os.environ["GITHUB_SHA"], "status": "in_progress",
-                                     "output": {"title": "Starting the actual regular APK", "summary": "Empty Android emulator; no reader data, no app rebuild."}})
+                                     "output": {"title": "Starting the actual regular APK", "summary": "Empty Android emulator; same-key unreleased regular APK."}})
     check_id = check["id"]
-    state = {"scope": "Manual observe-act-observe, real installed regular APK; NOT physical-phone/general semantic acceptance",
-             "session": SESSION, "apkSha256": APK_SHA256, "version": "1.8.2", "runId": int(os.environ["GITHUB_RUN_ID"]),
+    state = {"scope": "Manual observe-act-observe, real installed regular candidate APK; public CC-BY Pepper&Carrot by David Revoy may appear; NOT physical-phone/general semantic acceptance",
+             "session": SESSION, "apkSha256": expected_sha, "version": "1.8.4", "runId": int(os.environ["GITHUB_RUN_ID"]),
              "launchCommit": os.environ["GITHUB_SHA"], "branch": branch, "status": "starting", "sequence": -1,
              "readerDataUsed": False, "alternateAppOrDebugVariant": False, "actions": [], "frames": []}
 
@@ -176,7 +183,7 @@ def main():
         state["frames"].append({"sequence": sequence, **frame})
 
     def publish():
-        github.api(f"check-runs/{check_id}", {"output": {"title": "Actual Koorix 1.8.2 · " + state["status"],
+        github.api(f"check-runs/{check_id}", {"output": {"title": "Actual Koorix 1.8.4 · " + state["status"],
                                                           "summary": json.dumps(state, ensure_ascii=False)}}, method="PATCH")
         (out / "session.json").write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
 
@@ -199,7 +206,7 @@ def main():
             device.shell("settings", "put", "global", name, "0")
         device.adb("install", "--no-streaming", "-r", str(apk.resolve()), timeout=120)
         package = device.shell("dumpsys", "package", "com.koorix.app")
-        if "versionName=1.8.2" not in package or "versionCode=18" not in package:
+        if "versionName=1.8.4" not in package or "versionCode=20" not in package:
             raise RuntimeError("Unexpected actual installed version")
         device.shell("pm", "grant", "com.koorix.app", "android.permission.POST_NOTIFICATIONS")
         device.shell("input", "keyevent", "82")
