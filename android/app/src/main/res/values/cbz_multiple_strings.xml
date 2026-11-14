@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cbz_multiple_loading">چەند فایلێکی CBZ دەخوێندرێنەوە…</string>
+    <string name="cbz_multiple_limit">زۆرترین ژمارەی فایلە هەڵبژێردراوەکان ٣٠٠ە.</string>
+    <string name="cbz_multiple_mixed">فایلەکانی CBZ پێکەوە هەڵبژێرە؛ لەگەڵ وێنەی جیا تێکەڵیان مەکە.</string>
+</resources>

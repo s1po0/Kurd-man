@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cbz_multiple_loading">Reading selected CBZ files…</string>
+    <string name="cbz_multiple_limit">Select at most 300 files.</string>
+    <string name="cbz_multiple_mixed">Select CBZ files together, without separate images.</string>
+</resources>

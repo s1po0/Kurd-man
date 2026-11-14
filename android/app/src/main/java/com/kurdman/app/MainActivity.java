@@ -2690,12 +2690,18 @@ public class MainActivity extends AppCompatActivity {
         if (picked.isEmpty()) {
             return;
         }
+        int archiveCount = 0;
+        for (PickedInput input : picked) if (input.cbz) archiveCount++;
+        if (archiveCount == picked.size()) {
+            Collections.sort(picked, (a, b) -> naturalFileNameCompare(a.displayName, b.displayName));
+            loadMultipleCbz(picked);
+            return;
+        }
         for (PickedInput input : picked) {
             if (input.cbz) {
-                String message = getString(R.string.ks_0167)
-                        + getString(R.string.ks_0093);
+                String message = getString(R.string.cbz_multiple_mixed);
                 DiagnosticLog.warning(getApplicationContext(), "file-picker",
-                        "Mixed multi-selection rejected: CBZ must be selected alone; count="
+                        "Mixed image and CBZ selection rejected; count="
                                 + picked.size());
                 setStatus("⚠ " + message);
                 return;
@@ -2926,6 +2932,83 @@ public class MainActivity extends AppCompatActivity {
             i++;
         }
         return value.substring(i);
+    }
+
+    /** Copy only the explicitly chosen archives; publish the new selection only
+     * after every archive has been validated and merged successfully. */
+    private void loadMultipleCbz(List<PickedInput> picked) {
+        if (picked.size() > 300) {
+            setStatus("⚠ " + getString(R.string.cbz_multiple_limit));
+            return;
+        }
+        setBusy(true);
+        setStatus(getString(R.string.cbz_multiple_loading));
+        executor.execute(() -> {
+            JobRuntime.markThreadStarted();
+            File workDir = new File(getCacheDir(), "selected-cbz-parts-" + java.util.UUID.randomUUID());
+            File merged = new File(getCacheDir(), "selected-cbz-batch-" + java.util.UUID.randomUUID() + ".cbz");
+            boolean ready = false;
+            boolean mergedCreated = false;
+            boolean workCreated = false;
+            try {
+                if (!workDir.mkdir()) throw new IOException("Could not create temporary import folder");
+                workCreated = true;
+                List<File> archives = new ArrayList<>();
+                List<String> names = new ArrayList<>();
+                long total = 0;
+                for (int i = 0; i < picked.size(); i++) {
+                    throwIfJobStopped();
+                    File file = new File(workDir, String.format(Locale.ROOT, "%04d.cbz", i + 1));
+                    long remaining = MultiCbzImport.IMPORT_LIMIT - total;
+                    if (remaining <= 0) throw new IOException("CBZ import limit exceeded (300 MB)");
+                    total += copyUriToFile(picked.get(i).uri, file, remaining);
+                    archives.add(file);
+                    names.add(picked.get(i).displayName);
+                }
+                int pages = MultiCbzImport.merge(archives, merged, () -> {
+                    if (JobRuntime.isRunning() && JobRuntime.isStopRequested())
+                        throw new IOException(JobRuntime.STOPPED_MESSAGE);
+                });
+                mergedCreated = true;
+                Bitmap preview;
+                try (ZipFile zip = new ZipFile(merged)) {
+                    List<ZipEntry> entries = listCbzImageEntries(zip);
+                    if (entries.isEmpty()) throw new IOException("No readable CBZ pages");
+                    File first = new File(workDir, "preview" + extensionWithDot(entries.get(0).getName(), ".jpg"));
+                    copyZipEntry(zip, entries.get(0), first);
+                    preview = decodeBitmap(first);
+                }
+                if (preview == null) throw new IOException("Could not decode first CBZ page");
+                String label = batchBaseName(names) + " — " + picked.size() + " CBZ";
+                ready = true;
+                runOnUiThread(() -> {
+                    clearBatchSelection();
+                    selectedImageFile = null;
+                    selectedCbzFile = merged;
+                    selectedName = label;
+                    selectedCbzPages = pages;
+                    originalBitmap = null;
+                    resultBitmap = null;
+                    resultFile = null;
+                    resultTextFile = null;
+                    pairsText = "";
+                    previewImage.setImageBitmap(preview);
+                    resultText.setText("📚 " + label + getString(R.string.ks_0007) + pages + getString(R.string.ks_0005));
+                    updateButtons(false);
+                });
+                setStatus(getString(R.string.ks_0548) + label + " — " + pages + getString(R.string.ks_0043));
+            } catch (Exception e) {
+                setStatus(getString(R.string.ks_0609) + friendlyError(e));
+            } finally {
+                if (mergedCreated && !ready) merged.delete();
+                if (workCreated) {
+                    File[] files = workDir.listFiles();
+                    if (files != null) for (File file : files) file.delete();
+                    workDir.delete();
+                }
+                setBusy(false);
+            }
+        });
     }
 
     private void loadPickedFile(Uri uri) {

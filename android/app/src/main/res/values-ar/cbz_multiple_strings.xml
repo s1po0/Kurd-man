@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cbz_multiple_loading">جارٍ قراءة ملفات CBZ المحددة…</string>
+    <string name="cbz_multiple_limit">يمكن اختيار ٣٠٠ ملف كحد أقصى.</string>
+    <string name="cbz_multiple_mixed">اختر ملفات CBZ معًا دون خلطها بصور منفصلة.</string>
+</resources>
