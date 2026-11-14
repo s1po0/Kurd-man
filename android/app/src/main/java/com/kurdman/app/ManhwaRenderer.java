@@ -758,6 +758,29 @@ public class ManhwaRenderer {
         return combined;
     }
 
+    /** Preserve a standalone number/date exactly in its original pixels.
+     * OCR can mistake tiny art details for numbers and translation can change
+     * them. The block remains editable; mixed dialogue is not affected. */
+    static boolean isStandaloneNumericText(String value) {
+        if(value==null)return false;
+        boolean digit=false;
+        for(int offset=0;offset<value.length();) {
+            int cp=value.codePointAt(offset);offset+=Character.charCount(cp);
+            if(Character.isDigit(cp)){digit=true;continue;}
+            if(Character.isWhitespace(cp)||"+-−.,:/%٪٫٬()[]".indexOf(cp)>=0)continue;
+            return false;
+        }
+        return digit;
+    }
+
+    private static final java.util.regex.Pattern ADDRESS_OR_CREDIT = java.util.regex.Pattern.compile(
+            "(?i)(?:https?://|\\bwww\\.|\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b)");
+    /** Credits/addresses identify the author or a destination; don't mangle
+     * them into translated artwork. The complete block stays editable. */
+    static boolean isAddressOrCredit(String value) {
+        return value!=null && ADDRESS_OR_CREDIT.matcher(value).find();
+    }
+
     public static RenderResult render(Bitmap original, List<Segment> segments) {
         return render(original, segments, new TextStyleSettings(),
                 style -> Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
@@ -803,6 +826,13 @@ public class ManhwaRenderer {
             if (segment.ckb == null || segment.ckb.trim().isEmpty()) {
                 segment.ensureStyle().visible = false;
                 skippedNoTranslation++;
+                continue;
+            }
+            if (isStandaloneNumericText(segment.text) || isAddressOrCredit(segment.text)) {
+                // Do not erase or repaint standalone numbers, URLs or credits
+                // with potentially changed OCR/translation. They remain editable.
+                segment.ensureStyle().visible = false;
+                skippedFit++;
                 continue;
             }
 

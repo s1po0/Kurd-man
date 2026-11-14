@@ -121,10 +121,13 @@ The probe does not establish translation accuracy, visible layout quality,
 actual automatic-save behavior for this comic, security isolation or physical
 phone behavior. A later experiment in run `43533759794` (`c3bb71c`) applied a
 small-thumbnail heuristic and the same page reported only three captured
-images, failing a five-image expectation. Report blob
-`57e2898fc44585170b3cf8de5adfd009c1a01af0`. It is not yet known whether the
-missing items were thumbnails, comic pages, or a site loading difference, so
-this filter has not been accepted. The release gate remains in place.
+images, failing the probe's five-image expectation. Report blob
+`57e2898fc44585170b3cf8de5adfd009c1a01af0`. A subsequent direct session
+(`docs/KOORIX_WEB_DIRECT_CURRENT.md`) observed three story pages in the reader;
+the earlier five-image expectation was not independently established. The
+three omitted images were not individually identified and the heuristic can
+omit legitimate small panels. Further verification is needed; the release
+gate remains in place.
 
 Research: GitHub raw's sandbox response policy is documented in
 https://github.com/nvm-sh/nvm/issues/2392, and the test image's text/URL format

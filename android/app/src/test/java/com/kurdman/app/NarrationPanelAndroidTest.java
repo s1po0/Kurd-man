@@ -85,6 +85,25 @@ public class NarrationPanelAndroidTest {
         for(Object line:(List<?>)f.get(b)){Field box=line.getClass().getDeclaredField("box");box.setAccessible(true);((Rect)box.get(line)).offset(500,0);}
         assertEquals(2,merge(a,b).size());
     }
+    @Test public void standaloneNumberMustNeverBeRepaintedAsAChangedNumber() {
+        for(String text:new String[]{"18","48","٠٥/٢٠١٤","-12.5%"})assertTrue(ManhwaRenderer.isStandaloneNumericText(text));
+        for(String text:new String[]{"", "...", "Level 48", "1st", "2014 story"})assertFalse(ManhwaRenderer.isStandaloneNumericText(text));
+        Bitmap original=Bitmap.createBitmap(100,100,Bitmap.Config.ARGB_8888);original.eraseColor(Color.rgb(35,75,52));
+        Canvas canvas=new Canvas(original);Paint paint=new Paint();paint.setColor(Color.WHITE);paint.setTextSize(22);canvas.drawText("18",30,50,paint);
+        Segment number=new Segment("18",new Rect(30,28,60,52),1);number.ckb="48";
+        ManhwaRenderer.RenderResult result=ManhwaRenderer.render(original,Arrays.asList(number));
+        assertFalse(number.rendered);assertFalse(number.ensureStyle().visible);
+        assertEquals("Keep the OCR number in the editable project", "18",result.segments.get(0).text);
+        for(int y=0;y<100;y++)for(int x=0;x<100;x++)assertEquals("Original artwork must stay untouched",original.getPixel(x,y),result.bitmap.getPixel(x,y));
+        original.recycle();result.bitmap.recycle();
+    }
+    @Test public void explicitCreditsAndAddressesRemainOriginalInsteadOfBeingTranslated() {
+        assertTrue(ManhwaRenderer.isAddressOrCredit("WWW.EXAMPLE.COM 05/2014"));
+        assertTrue(ManhwaRenderer.isAddressOrCredit("https://example.org"));
+        assertTrue(ManhwaRenderer.isAddressOrCredit("artist@example.org"));
+        assertFalse(ManhwaRenderer.isAddressOrCredit("The year is 2014."));
+        assertFalse(ManhwaRenderer.isAddressOrCredit("Come here!"));
+    }
     @Test public void automaticDarkPanelRendersOneCompleteJoinedRunAfterNormalization()throws Exception {
         List<Object> selected=merge(candidate(LINES,140,0,.94f),candidate(new String[]{LINES[0]},140,4,.92f));assertEquals(1,selected.size());
         Bitmap page=Bitmap.createBitmap(600,440,Bitmap.Config.ARGB_8888);page.eraseColor(Color.rgb(65,75,120));Canvas c=new Canvas(page);Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);p.setColor(Color.BLACK);c.drawRect(32,40,568,400,p);p.setColor(Color.WHITE);p.setTextSize(25);
