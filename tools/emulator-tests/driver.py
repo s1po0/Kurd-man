@@ -349,9 +349,13 @@ class Device:
         self.tap(self.reveal("readWebResultButton", direction="up"))
         label = self.control("webResultPageLabel", timeout=30).get("text", "")
         found = re.search(r"([0-9]+)\s*/\s*([0-9]+)", label)
-        if found is None or int(found.group(2)) < 3:
-            raise AssertionError("Public comic did not produce at least three captured pages")
+        if found is None:
+            raise AssertionError("Public comic reader did not report its page count")
         self.report["publicComicCapturedPages"] = int(found.group(2))
+        # Current public episode has one cover and four story pages. This is
+        # intentionally an opt-in site-specific regression, not a universal rule.
+        if self.report["publicComicCapturedPages"] != 5:
+            raise AssertionError("Public comic capture did not match its current five chapter images")
         self.report["publicComicReaderOpenedBeforeCompletion"] = self.control("webResultExport").get("enabled") == "false"
         def export_enabled():
             item = node(self.ui(), identifier="webResultExport")

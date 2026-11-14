@@ -112,7 +112,11 @@ public final class WebReaderActivity extends AppCompatActivity {
         session=new File(getCacheDir(),"web-reader/"+UUID.randomUUID());if(!session.mkdirs()){cancelCapture();status.setText(R.string.web_error);return;}
         web.evaluateJavascript(discovery,raw->{if(!valid(token))return;try{
             if(!boundedDiscoveryResponse(raw))throw new IllegalArgumentException("Discovery response too large");
-            JSONObject obj=new JSONObject(raw);truncated=obj.optBoolean("truncated",false);JSONArray imgs=obj.getJSONArray("images");java.util.LinkedHashMap<String,Boolean> unique=new java.util.LinkedHashMap<>();
+            JSONObject obj=new JSONObject(raw);truncated=obj.optBoolean("truncated",false);
+            // The page can tamper with JS results. Bound this informational
+            // count independently; native still validates every captured URL.
+            failed=Math.max(0,Math.min(4000,obj.optInt("filteredSmall",0)));
+            JSONArray imgs=obj.getJSONArray("images");java.util.LinkedHashMap<String,Boolean> unique=new java.util.LinkedHashMap<>();
             for(int i=0;i<imgs.length()&&unique.size()<MAX_PAGES;i++){JSONObject image=imgs.getJSONObject(i);String u=image.optString("url","");if(u.length()<=8192&&sameOrigin(topUrl,u)){boolean visible=image.optBoolean("visible",false);unique.put(u,visible||Boolean.TRUE.equals(unique.get(u)));}}
             for(java.util.Map.Entry<String,Boolean> entry:unique.entrySet()){candidates.add(entry.getKey());candidateVisible.add(entry.getValue());}
             if(candidates.isEmpty()){cancelCapture();status.setText(R.string.web_empty);return;}

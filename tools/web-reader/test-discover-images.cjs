@@ -10,7 +10,7 @@ function image(source, overrides = {}) {
     ...overrides, getAttribute: name => attrs[name] || null, getBoundingClientRect: () => rect};
 }
 function run(images) {
-  const context = {URL, document: {baseURI: 'https://example.com/chapter/', querySelectorAll: () => images},
+  const context = {URL, document: {URL: 'https://example.com/chapter/', baseURI: 'https://example.com/chapter/', querySelectorAll: () => images},
     window: {innerHeight: 900, innerWidth: 500,
       getComputedStyle: img => img.style || {display: 'block', visibility: 'visible', opacity: '1'}}};
   return JSON.parse(JSON.stringify(vm.runInNewContext(script, context, {timeout: 2000})));
@@ -53,4 +53,18 @@ function run(images) {
   assert.equal(result.images[0].visible, true);
   assert.equal(result.images[0].order, 0);
 }
-console.log('Web reader discovery prototype: 7 grouped tests passed.');
+{
+  const thumb = image('/related.jpg', {naturalWidth: 120, naturalHeight: 120, rect: {width: 120, height: 120}});
+  const page = image('/comic.jpg', {naturalWidth: 800, naturalHeight: 1200});
+  const result = run([thumb, page]);
+  assert.deepEqual(result.images.map(x => x.url), ['https://example.com/comic.jpg']);
+  assert.equal(result.filteredSmall, 1);
+  assert.equal(run([thumb]).images.length, 1, 'a lone small image may be a genuine panel');
+  const lazy = image('/placeholder', {complete: false, naturalWidth: 1, naturalHeight: 1, attrs: {'data-src': '/lazy.jpg'}});
+  assert.equal(run([page, lazy]).images.length, 2, 'unknown lazy image dimensions are not discarded');
+  assert.equal(run([thumb, image('https://cdn.example.org/large.jpg')]).images.length, 2,
+    'an unsupported cross-origin page must not suppress a same-origin small panel');
+  const reused = image('/related.jpg', {naturalWidth: 800, naturalHeight: 1200});
+  assert.equal(run([thumb, reused, page]).images.length, 2, 'a larger duplicate must not be filtered');
+}
+console.log('Web reader discovery prototype: 8 grouped tests passed.');

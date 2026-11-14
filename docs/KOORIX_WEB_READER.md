@@ -19,8 +19,11 @@ been safely copied into the new project.
   HTTPS URLs on the **exact current page origin** are captured; cross-origin
   image CDNs, opaque responses, redirects, blob/data URLs, CSS backgrounds,
   canvas, protected resources and some lazy loaders are not supported. Scroll
-  first if the site only adds images while scrolling. Some ads or unrelated
-  same-origin images can be included. The user is told when images are skipped.
+  first if the site only adds images while scrolling. When a same-origin large
+  image is known, loaded images no larger than 256×256 pixels are omitted as
+  likely thumbnails and the user is told. Single small images and unknown lazy
+  images are kept. This heuristic can exclude small legitimate panels or include
+  larger ads/unrelated same-origin images; it is not content understanding.
 - Translation occurs after capture via the existing job. The unreleased
   candidate processes the initially visible pages through OCR, translation and
   rendering first, then exposes their durable private checkpoints in the native
