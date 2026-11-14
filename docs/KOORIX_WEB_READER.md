@@ -104,7 +104,19 @@ Run `43530039857` recorded translation followed by completion with retained
 text, but its driver did not find the reader button; report blob
 `634ac6bfe046ca8b33a221a3018635a9568fa4eb`. This does not establish reader
 acceptance. The driver was scrolling down instead of back up towards the
-reader and has been adjusted; actual UI behavior still needs verification.
+reader and was adjusted.
+
+Run `43532209834` on `d644d75` passed the opt-in public-comic probe on the
+same-key regular APK under Android API34. It captured six qualifying images,
+opened the private reader before completion, waited until completion with the
+reader still open, navigated to another ready page and toggled the original.
+The public page contains non-comic images too, so six is the captured-image
+count, not a claim that all are story pages. No comic pixels or dialogue were
+collected in the report. Index `6645968c0cbfad0a87c0138d03018f959fd9717b`,
+report `624c39de99a69e32e4a9995c4ceec8267fde4cc8`; 294 JVM tests passed.
+The probe does not establish translation accuracy, visible layout quality,
+actual automatic-save behavior for this comic, security isolation or physical
+phone behavior. The release gate remains in place.
 
 Research: GitHub raw's sandbox response policy is documented in
 https://github.com/nvm-sh/nvm/issues/2392, and the test image's text/URL format
