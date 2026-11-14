@@ -1,6 +1,7 @@
 {
   "session": "koorix-regular-184-observe-2",
-  "sequence": 11,
-  "action": "snapshot",
-  "expectedFrame": "ce848cf786adbeb08ebf8ddf4bce7c2333c690bfa9703da65d716e8ee8f9359a"
+  "sequence": 12,
+  "action": "tap_id",
+  "expectedFrame": "f0923001142f98cd64095fc920dcecc26df99ed8e4e744f2ae288d72a4992a33",
+  "id": "readWebResultButton"
 }
