@@ -1,6 +1,11 @@
 {
   "session": "koorix-regular-184-multiple-cbz-2",
-  "sequence": 6,
-  "action": "snapshot",
-  "expectedFrame": "519c5953bcfd5e85ba65544f472d262b648747527a08d0faaee35eb0120588bf"
+  "sequence": 7,
+  "action": "swipe",
+  "expectedFrame": "76d18cf1e8608c3ff71482938554c6f278752fb62aedbd03d81f53a2b1bf9668",
+  "x": 550,
+  "y": 1400,
+  "toX": 550,
+  "toY": 650,
+  "durationMs": 350
 }
