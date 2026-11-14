@@ -22,6 +22,10 @@ files and existing projects are not deleted.
   order, ZIP path handling, malformed/empty archives, page limit, cancellation,
   existing-file preservation, actual chooser callback and durable project
   preparation. These are synthetic cases, not all archive providers or phones.
+- Final localized hint build `724fef4`: workflow `43618122825` passed
+  the native/JVM suite, signed regular APK verification, and its existing
+  installed-APK synthetic checks. This workflow does not itself exercise the
+  multiple-CBZ chooser.
 - Separate direct observe→act→observe session `43617326391`, check
   `132516049977`, launch commit `63eadbf98cd71481b7c8e0fc0109666871005672`,
   Android34 official emulator with ARM64 bridge; regular candidate 1.8.4 APK
