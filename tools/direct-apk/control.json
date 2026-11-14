@@ -1,7 +1,11 @@
 {
   "session": "koorix-regular-184-multiple-cbz-2",
-  "sequence": 1,
-  "action": "tap_id",
-  "expectedFrame": "4fcd496e6f55d48be1bd8d5788ab64eea0dc2b9bbb2ff823fc42d9d5db990d45",
-  "id": "pickButton"
+  "sequence": 2,
+  "action": "swipe",
+  "expectedFrame": "3f302e7f61f313fa4f770756aee68282e9eddbd3d777653209a3c9bc1279fb8c",
+  "x": 420,
+  "y": 860,
+  "toX": 420,
+  "toY": 860,
+  "durationMs": 1200
 }
