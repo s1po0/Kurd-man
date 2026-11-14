@@ -119,7 +119,12 @@ collected in the report. Index `6645968c0cbfad0a87c0138d03018f959fd9717b`,
 report `624c39de99a69e32e4a9995c4ceec8267fde4cc8`; 294 JVM tests passed.
 The probe does not establish translation accuracy, visible layout quality,
 actual automatic-save behavior for this comic, security isolation or physical
-phone behavior. The release gate remains in place.
+phone behavior. A later experiment in run `43533759794` (`c3bb71c`) applied a
+small-thumbnail heuristic and the same page reported only three captured
+images, failing a five-image expectation. Report blob
+`57e2898fc44585170b3cf8de5adfd009c1a01af0`. It is not yet known whether the
+missing items were thumbnails, comic pages, or a site loading difference, so
+this filter has not been accepted. The release gate remains in place.
 
 Research: GitHub raw's sandbox response policy is documented in
 https://github.com/nvm-sh/nvm/issues/2392, and the test image's text/URL format
