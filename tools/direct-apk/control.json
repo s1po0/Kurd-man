@@ -1,8 +1,8 @@
 {
   "session": "koorix-regular-184-observe-1",
-  "sequence": 1,
+  "sequence": 2,
   "action": "swipe",
-  "expectedFrame": "105cfbd3ffd9f52e944b474a4ce6f34ccda49d0fea8e278a553271aece78c959",
+  "expectedFrame": "50f74f39304700f76875af0e22058df8b282dab9121d6a6371fb56a713abc1bd",
   "x": 540,
   "y": 1400,
   "toX": 540,
