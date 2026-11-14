@@ -1,5 +1,7 @@
 {
   "session": "koorix-regular-184-multiple-cbz-2",
-  "sequence": 0,
-  "action": "snapshot"
+  "sequence": 1,
+  "action": "tap_id",
+  "expectedFrame": "4fcd496e6f55d48be1bd8d5788ab64eea0dc2b9bbb2ff823fc42d9d5db990d45",
+  "id": "pickButton"
 }
