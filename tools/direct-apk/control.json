@@ -1,6 +1,8 @@
 {
   "session": "koorix-regular-184-observe-2",
-  "sequence": 4,
-  "action": "public_comic_url",
-  "expectedFrame": "96feb4e756e7eef14e8347bd3dc727c6dd5eb42906a18b4de6690cce8d18101c"
+  "sequence": 5,
+  "action": "tap",
+  "expectedFrame": "fe32e4add7bf5518bfb5fb4829c43f6a456dd1af4718fe637968916d494d5ad2",
+  "x": 440,
+  "y": 100
 }
