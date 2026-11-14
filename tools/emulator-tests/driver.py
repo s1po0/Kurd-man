@@ -341,7 +341,9 @@ class Device:
                 return item
             if category in ("no-text", "job-failed", "stopped"):
                 raise AssertionError("Public comic job ended without a readable page: " + category)
-            self.shell("input", "swipe", "540", "1400", "540", "650", "350")
+            # The results screen restores its earlier scroll position; the
+            # private-reader button is above the synthetic result details.
+            self.shell("input", "swipe", "540", "650", "540", "1400", "350")
             return None
         self.wait(readable, "Public comic has a readable durable page", timeout=420)
         self.tap(self.reveal("readWebResultButton", direction="up"))

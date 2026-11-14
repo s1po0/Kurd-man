@@ -100,7 +100,11 @@ failed before opening the comic because the driver scrolled the wrong way to
 reach the browser button. Run `43527624762` opened the public site and returned
 to the app, but no readable checkpoint was observed within 420 seconds; the
 cause is not established. Report blob `a38d26eb338fc3b36346353a1016200bc28bea8d`.
-Fixed-label-only progress diagnostics have been added for the next probe.
+Run `43530039857` recorded translation followed by completion with retained
+text, but its driver did not find the reader button; report blob
+`634ac6bfe046ca8b33a221a3018635a9568fa4eb`. This does not establish reader
+acceptance. The driver was scrolling down instead of back up towards the
+reader and has been adjusted; actual UI behavior still needs verification.
 
 Research: GitHub raw's sandbox response policy is documented in
 https://github.com/nvm-sh/nvm/issues/2392, and the test image's text/URL format
