@@ -9,7 +9,7 @@
     <string name="ux_reports">Reports</string>
     <string name="ux_import_title">Start with your pages</string>
     <string name="ux_import_empty">No pages selected yet</string>
-    <string name="ux_import_hint">Images or one CBZ/ZIP, in filename order.</string>
+    <string name="ux_import_hint">Images or multiple CBZ/ZIP files; files and pages are ordered in one project.</string>
     <string name="ux_pick">Choose images or CBZ</string>
     <string name="ux_source_apps">One chooser for compatible Gallery, MT Manager, ZArchiver or My Files.</string>
     <string name="ux_languages">Translation languages</string>

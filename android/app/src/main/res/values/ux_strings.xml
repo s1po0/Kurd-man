@@ -9,7 +9,7 @@
     <string name="ux_reports">ڕاپۆرت</string>
     <string name="ux_import_title">پەڕەکانت زیاد بکە</string>
     <string name="ux_import_empty">هێشتا پەڕەیەک هەڵنەبژێردراوە</string>
-    <string name="ux_import_hint">وێنەکان یان یەک CBZ/ZIP؛ بە ڕیزبەندی ناوەکان.</string>
+    <string name="ux_import_hint">وێنەکان یان چەند CBZ/ZIP؛ فایلەکان و لاپەڕەکان بە ڕیز دەکرێنە یەک پڕۆژە.</string>
     <string name="ux_pick">هەڵبژاردنی وێنە یان CBZ</string>
     <string name="ux_source_apps">یەک هەڵبژێرەر بۆ ئەپە گونجاوەکان؛ Gallery، MT Manager، ZArchiver یان My Files.</string>
     <string name="ux_languages">زمانی وەرگێڕان</string>

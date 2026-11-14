@@ -9,7 +9,7 @@
     <string name="ux_reports">التقارير</string>
     <string name="ux_import_title">أضف صفحاتك</string>
     <string name="ux_import_empty">لم تُحدَّد صفحات بعد</string>
-    <string name="ux_import_hint">صور أو ملف CBZ/ZIP واحد، بترتيب الأسماء.</string>
+    <string name="ux_import_hint">صور أو عدة ملفات CBZ/ZIP؛ تُرتب الملفات والصفحات في مشروع واحد.</string>
     <string name="ux_pick">اختيار صور أو CBZ</string>
     <string name="ux_source_apps">منتقٍ واحد لتطبيقات Gallery أو MT Manager أو ZArchiver أو My Files المتوافقة.</string>
     <string name="ux_languages">لغات الترجمة</string>
