@@ -26,7 +26,7 @@ CHECK_NAME = "Direct regular APK · observe / act / observe"
 # Historical 1.8.2 delivered-APK pin retained for the older workflow contract;
 # the current candidate is bound to its verified build digest at runtime.
 APK_SHA256 = "d03ee91ff681e21e2e4cf4938106415f9e5e43d7837a03af976c62e3be97a300"
-SESSION = "koorix-regular-184-multiple-cbz-1"
+SESSION = "koorix-regular-184-multiple-cbz-2"
 ACTIONS = {"snapshot", "tap", "tap_id", "swipe", "back", "launch", "public_comic_url", "finish"}
 MAX_COMMANDS = 32
 
@@ -163,22 +163,14 @@ def publish_synthetic_cbz(device, out):
             archive.writestr("page-1.png", source)
         payload = buffer.getvalue()
         name = f"koorix-qa-chapter-{chapter}.cbz"
-        uri_base = "content://media/external/downloads"
-        where = f"_display_name='{name}' AND relative_path='Download/'"
-        before = device.shell("content", "query", "--uri", uri_base, "--projection", "_id", "--where", where)
-        if before != "No result found.":
-            raise RuntimeError("Synthetic CBZ destination is not empty")
-        device.shell("content", "insert", "--uri", uri_base, "--bind", f"_display_name:s:{name}",
-                     "--bind", "mime_type:s:application/zip", "--bind", "relative_path:s:Download/")
-        result = device.shell("content", "query", "--uri", uri_base, "--projection", "_id", "--where", where)
-        match = re.fullmatch(r"Row: 0 _id=([1-9][0-9]*)", result.strip())
-        if match is None:
-            raise RuntimeError("Could not create synthetic CBZ fixture")
-        uri = uri_base + "/" + match.group(1)
-        device.shell("content", "write", "--uri", uri, data=payload)
-        written = device.adb("exec-out", "content", "read", "--uri", uri)
+        local = out / name
+        local.write_bytes(payload)
+        target = "/sdcard/Download/" + name
+        device.adb("push", str(local), target)
+        written = device.adb("exec-out", "cat", target)
         if hashlib.sha256(payload).digest() != hashlib.sha256(written).digest():
             raise RuntimeError("Synthetic CBZ readback differs")
+        device.shell("am", "broadcast", "-a", "android.intent.action.MEDIA_SCANNER_SCAN_FILE", "-d", "file://" + target)
 
 
 def main():
