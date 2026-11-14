@@ -11,7 +11,7 @@ permissions:
 jobs:
   observe:
     if: contains(github.event.head_commit.message, '[inspect-current-apk]')
-    name: Observe current regular Koorix candidate
+    name: Observe current regular Koorix candidate after artwork guard
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:

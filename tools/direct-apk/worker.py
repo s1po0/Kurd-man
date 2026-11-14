@@ -24,7 +24,7 @@ CHECK_NAME = "Direct regular APK · observe / act / observe"
 # Historical 1.8.2 delivered-APK pin retained for the older workflow contract;
 # the current candidate is bound to its verified build digest at runtime.
 APK_SHA256 = "d03ee91ff681e21e2e4cf4938106415f9e5e43d7837a03af976c62e3be97a300"
-SESSION = "koorix-regular-184-observe-1"
+SESSION = "koorix-regular-184-observe-2"
 ACTIONS = {"snapshot", "tap", "tap_id", "swipe", "back", "launch", "public_comic_url", "finish"}
 MAX_COMMANDS = 32
 
