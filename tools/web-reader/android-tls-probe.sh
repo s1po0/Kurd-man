@@ -17,4 +17,4 @@ JAVA_TOOL_OPTIONS='-Xmx256m -XX:ActiveProcessorCount=2' "$d8" --min-api 26 --out
 adb push "$root/probe-dex.jar" /data/local/tmp/koorix-tls-probe.jar >/dev/null
 echo 'Running Android probe'
 trap 'adb shell rm -f /data/local/tmp/koorix-tls-probe.jar >/dev/null || true' EXIT
-adb shell CLASSPATH=/data/local/tmp/koorix-tls-probe.jar app_process /system/bin com.kurdman.app.AndroidPinnedTlsProbe
+adb shell CLASSPATH=/data/local/tmp/koorix-tls-probe.jar app_process /system/bin com.kurdman.app.AndroidPinnedTlsProbe </dev/null

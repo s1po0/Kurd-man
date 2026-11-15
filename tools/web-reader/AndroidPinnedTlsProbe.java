@@ -3,9 +3,11 @@ package com.kurdman.app;
 /** Executed only by the disposable hosted-emulator script; fixed public host. */
 public final class AndroidPinnedTlsProbe {
     public static void main(String[] args) throws Exception {
+        System.out.println("ANDROID_PINNED_TLS_STAGE=starting-public-get");
         PinnedHttpsClient.Response response=PinnedHttpsClient.get("https://github.com/robots.txt",128*1024);
         if(!response.contentType.toLowerCase(java.util.Locale.ROOT).startsWith("text/plain") || response.body.length==0)
             throw new IllegalStateException("Unexpected public TLS response");
+        System.out.println("ANDROID_PINNED_TLS_STAGE=starting-wrong-host");
         boolean mismatch=false;
         try(java.net.Socket plain=PublicNetworkGuard.connectDirect("github.com",443,15000)) {
             javax.net.ssl.SSLSocketFactory factory=(javax.net.ssl.SSLSocketFactory)javax.net.ssl.SSLSocketFactory.getDefault();
