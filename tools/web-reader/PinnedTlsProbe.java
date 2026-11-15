@@ -16,15 +16,16 @@ public final class PinnedTlsProbe {
         boolean refused = false;
         try (java.net.Socket plain = PublicNetworkGuard.connectDirect("github.com",443,15000)) {
             javax.net.ssl.SSLSocketFactory factory=(javax.net.ssl.SSLSocketFactory)javax.net.ssl.SSLSocketFactory.getDefault();
-            try (javax.net.ssl.SSLSocket tls=(javax.net.ssl.SSLSocket)factory.createSocket(plain,"wrong-koorix-test.invalid",443,true)) {
+            try (javax.net.ssl.SSLSocket tls=(javax.net.ssl.SSLSocket)factory.createSocket(plain,"www.google.com",443,true)) {
                 tls.setSoTimeout(15000);
                 javax.net.ssl.SSLParameters parameters=tls.getSSLParameters();
                 parameters.setEndpointIdentificationAlgorithm("HTTPS");
-                parameters.setServerNames(java.util.Collections.singletonList(new javax.net.ssl.SNIHostName("github.com")));
                 tls.setSSLParameters(parameters);
                 try { tls.startHandshake(); } catch (javax.net.ssl.SSLHandshakeException expected) {
                     String message=expected.getMessage();
-                    refused=message!=null && message.contains("wrong-koorix-test.invalid");
+                    if(message==null||!message.contains("www.google.com"))
+                        throw new IllegalStateException("Unexpected wrong-host TLS error: " + message,expected);
+                    refused=true;
                 }
             }
         }
