@@ -76,6 +76,15 @@ jobs:
           node tools/web-reader/test-capture-image.cjs
           node tools/web-reader/test-transport.cjs
 
+      - name: Probe pinned HTTPS using a fixed public fixture
+        run: |
+          mkdir -p "$RUNNER_TEMP/koorix-pinned-tls"
+          javac -d "$RUNNER_TEMP/koorix-pinned-tls" \
+            android/app/src/main/java/com/kurdman/app/PublicNetworkGuard.java \
+            android/app/src/main/java/com/kurdman/app/PinnedHttpsClient.java \
+            tools/web-reader/PinnedTlsProbe.java
+          java -cp "$RUNNER_TEMP/koorix-pinned-tls" com.kurdman.app.PinnedTlsProbe
+
       - name: Set up Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
         with:
