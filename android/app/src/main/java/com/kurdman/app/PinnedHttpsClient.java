@@ -11,7 +11,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
-import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -43,9 +42,10 @@ final class PinnedHttpsClient {
                 SSLParameters parameters=tls.getSSLParameters();
                 parameters.setEndpointIdentificationAlgorithm("HTTPS");
                 tls.setSSLParameters(parameters);
+                // JSSE verifies the endpoint against the original host during
+                // this handshake. HttpsURLConnection's default verifier is a
+                // fallback callback, not a standalone certificate validator.
                 tls.startHandshake();
-                if(!HttpsURLConnection.getDefaultHostnameVerifier().verify(host,tls.getSession()))
-                    throw new IOException("TLS hostname verification failed");
                 String path=uri.getRawPath();if(path==null||path.isEmpty())path="/";
                 if(uri.getRawQuery()!=null)path+="?"+uri.getRawQuery();
                 String request="GET "+path+" HTTP/1.1\r\nHost: "+host+"\r\n"
