@@ -51,6 +51,15 @@ shutdown_emulator() {
   wait "$pid" 2>/dev/null || true
 }
 trap shutdown_emulator EXIT
+# Exercise only the standalone experimental TLS primitive against one fixed
+# public fixture on the same disposable emulator; this is not WebView proof.
+adb -s emulator-5554 wait-for-device
+for ((i=0; i<120; i++)); do
+  [[ "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r')" == 1 ]] && break
+  sleep 2
+done
+[[ "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r')" == 1 ]] || { echo 'Emulator did not boot for TLS probe'; exit 1; }
+bash tools/web-reader/android-tls-probe.sh
 if ! python3 tools/emulator-tests/driver.py --apk "$APK_FILE" --out "$OUT" --emulator-pid "$pid"; then
   # Fixed empty-emulator process output only, after signing plaintext removal.
   # Actions log hosts may be inaccessible from Arena; retain a bounded public
