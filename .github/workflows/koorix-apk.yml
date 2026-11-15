@@ -16,6 +16,7 @@ on:
       - "tools/bubble-tests/**"
       - "tools/ui-tests/**"
       - "tools/emulator-tests/**"
+      - "tools/web-reader/**"
       - "tools/free-edition/**"
       - "tools/signing/*.py"
       - "tools/signing/*.sh"
