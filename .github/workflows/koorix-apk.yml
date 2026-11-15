@@ -79,11 +79,18 @@ jobs:
       - name: Probe pinned HTTPS using a fixed public fixture
         run: |
           mkdir -p "$RUNNER_TEMP/koorix-pinned-tls"
-          javac -d "$RUNNER_TEMP/koorix-pinned-tls" \
-            android/app/src/main/java/com/kurdman/app/PublicNetworkGuard.java \
-            android/app/src/main/java/com/kurdman/app/PinnedHttpsClient.java \
-            tools/web-reader/PinnedTlsProbe.java
-          java -cp "$RUNNER_TEMP/koorix-pinned-tls" com.kurdman.app.PinnedTlsProbe
+          set +e
+          { javac -d "$RUNNER_TEMP/koorix-pinned-tls" \
+              android/app/src/main/java/com/kurdman/app/PublicNetworkGuard.java \
+              android/app/src/main/java/com/kurdman/app/PinnedHttpsClient.java \
+              tools/web-reader/PinnedTlsProbe.java && \
+            java -cp "$RUNNER_TEMP/koorix-pinned-tls" com.kurdman.app.PinnedTlsProbe; } > /tmp/pinned-tls-probe.log 2>&1
+          code=$?
+          tail -n 15 /tmp/pinned-tls-probe.log
+          if [ $code -ne 0 ]; then
+            tail -n 8 /tmp/pinned-tls-probe.log | while IFS= read -r line; do echo "::error::$line"; done
+          fi
+          exit $code
 
       - name: Set up Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
