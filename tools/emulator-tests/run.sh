@@ -59,7 +59,13 @@ for ((i=0; i<120; i++)); do
   sleep 2
 done
 [[ "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r')" == 1 ]] || { echo 'Emulator did not boot for TLS probe'; exit 1; }
-bash tools/web-reader/android-tls-probe.sh
+tls_log="$RUNTIME/android-tls-probe.log"
+if ! timeout --kill-after=5s 90s bash tools/web-reader/android-tls-probe.sh > "$tls_log" 2>&1; then
+  tail -n 20 "$tls_log" | while IFS= read -r line; do echo "::error::ANDROID_TLS_PROBE=$line"; done
+  echo '::error::Android pinned TLS primitive probe failed; no security acceptance.'
+  exit 1
+fi
+echo '::notice::Android public pinned TLS and wrong-host rejection passed; not WebView security proof'
 if ! python3 tools/emulator-tests/driver.py --apk "$APK_FILE" --out "$OUT" --emulator-pid "$pid"; then
   # Fixed empty-emulator process output only, after signing plaintext removal.
   # Actions log hosts may be inaccessible from Arena; retain a bounded public
