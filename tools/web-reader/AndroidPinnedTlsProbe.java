@@ -2,7 +2,11 @@ package com.kurdman.app;
 
 /** Executed only by the disposable hosted-emulator script; fixed public host. */
 public final class AndroidPinnedTlsProbe {
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
+        try { runProbe(); }
+        catch (Throwable failure) { failure.printStackTrace(); System.exit(1); }
+    }
+    private static void runProbe() throws Exception {
         System.out.println("ANDROID_PINNED_TLS_STAGE=starting-public-get");
         PinnedHttpsClient.Response response=PinnedHttpsClient.get("https://github.com/robots.txt",128*1024);
         if(!response.contentType.toLowerCase(java.util.Locale.ROOT).startsWith("text/plain") || response.body.length==0)
@@ -25,5 +29,8 @@ public final class AndroidPinnedTlsProbe {
         }
         if(!mismatch)throw new IllegalStateException("Wrong TLS hostname accepted");
         System.out.println("ANDROID_PINNED_TLS_PROBE=public-get-and-wrong-host-rejection");
+        // app_process is not an Android application lifecycle: framework
+        // background threads can remain alive after main returns.
+        System.exit(0);
     }
 }
