@@ -30,6 +30,29 @@ or SNI, enforce bounded concurrency/time/bytes, and never fall back to direct
 unvalidated traffic. System proxies, DNS64/NAT64 and unusual routes require
 explicit threat-model decisions and tests.
 
+## Experimental HTTPS client (not integrated)
+
+`PinnedHttpsClient` is a preliminary, unused GET-only transport; it does not
+route WebView traffic or fix the current browser. It rejects non-HTTPS URLs,
+redirects, ambiguous HTTP framing and compression, pins validated DNS answers,
+and bounds response bytes. It still needs an overall deadline including DNS,
+robust concurrency limits, fuller framing/compatibility review, independent
+security review and an actual isolation architecture before any use.
+
+Hosted OpenJDK probe on `754b427` passed a real public GET and rejected a
+wrong TLS hostname, after an earlier attempt incorrectly used the default
+`HttpsURLConnection` verifier as a standalone validator (which failed closed).
+320 JVM tests passed there, but installed APK run `43775129068` failed later
+with `TimeoutError: Missing control webReaderTranslate`; not a clean build.
+Disposable Android API34 probe work followed: runs `43776126336`,
+`43776688999` and `43777810131` should not be treated as passed end-to-end;
+the first two probes timed out and the third run's final outcome could not be
+retrieved due to GitHub API rate limiting. In run `43776688999`, diagnostic
+stages show the positive GET completed and the wrong-host phase started, but
+not its result. An app_process lifecycle termination fix was added afterward;
+it needs a verified run. Host-provider behavior cannot establish Android or
+WebView isolation. The release gate remains in force.
+
 ## Isolated script execution candidate
 
 AndroidX WebKit [release notes](https://developer.android.com/jetpack/androidx/releases/webkit)
