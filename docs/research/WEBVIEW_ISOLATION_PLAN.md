@@ -46,11 +46,13 @@ wrong TLS hostname, after an earlier attempt incorrectly used the default
 with `TimeoutError: Missing control webReaderTranslate`; not a clean build.
 Disposable Android API34 probe work followed: runs `43776126336`,
 `43776688999` and `43777810131` should not be treated as passed end-to-end;
-the first two probes timed out and the third run's final outcome could not be
-retrieved due to GitHub API rate limiting. In run `43776688999`, diagnostic
+the first two probes timed out and the third failed its Android probe. In run `43776688999`, diagnostic
 stages show the positive GET completed and the wrong-host phase started, but
-not its result. An app_process lifecycle termination fix was added afterward;
-it needs a verified run. Host-provider behavior cannot establish Android or
+not its result. Run `43777810131` reached a hostname-mismatch certificate
+rejection on Android, but the probe erroneously required the hostname in the
+error message and therefore failed. The diagnostic matcher was updated to
+recognize Android's explicit subjectAltNames mismatch; it still needs a verified
+full run. Host-provider behavior cannot establish Android or
 WebView isolation. The release gate remains in force.
 
 ## Isolated script execution candidate

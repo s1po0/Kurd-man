@@ -52,8 +52,11 @@ Hosted run `45734684900` (`7598802`) parsed the pinned live store blob before
 failing later because Robolectric could not fetch its Android artifact; it is
 not a successful Android run. Run `45735126030` (`f8ce707`) also parsed the
 pinned blob with source metadata, but Android/JVM tests could not run because
-Maven Central returned HTTP 429. The release gate remains; no test or prototype
-proves the requested feature works.
+Maven Central returned HTTP 429. Run `45735586223` (`35b647a`) compiled and
+ran the fixed-public-blob parser and installed-first grouping probe successfully,
+but failed later when Robolectric could not download Android artifacts; this is
+not a passed Android build or installed-app test. The release gate remains; no
+test or prototype proves the requested feature works.
 
 ## Remaining acceptance gates
 
