@@ -77,6 +77,16 @@ jobs:
           node tools/web-reader/test-capture-image.cjs
           node tools/web-reader/test-transport.cjs
 
+      - name: Probe pinned public extension index metadata
+        if: contains(github.event.head_commit.message, '[extension-index-qa]')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/koorix-extension-index"
+          gh api repos/keiyoushi/extensions/git/blobs/8cf02b6b70f10dd9733659780f7ca858377538c3 --jq .content | base64 -d > "$RUNNER_TEMP/koorix-extension-index/index.pb"
+          javac -d "$RUNNER_TEMP/koorix-extension-index" android/app/src/main/java/com/kurdman/app/ExtensionStoreIndex.java tools/web-reader/ExtensionIndexProbe.java
+          java -cp "$RUNNER_TEMP/koorix-extension-index" com.kurdman.app.ExtensionIndexProbe "$RUNNER_TEMP/koorix-extension-index/index.pb"
+
       - name: Probe pinned HTTPS using a fixed public fixture
         run: |
           mkdir -p "$RUNNER_TEMP/koorix-pinned-tls"
