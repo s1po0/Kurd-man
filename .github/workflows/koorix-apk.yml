@@ -84,7 +84,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/koorix-extension-index"
           gh api repos/keiyoushi/extensions/git/blobs/8cf02b6b70f10dd9733659780f7ca858377538c3 --jq .content | base64 -d > "$RUNNER_TEMP/koorix-extension-index/index.pb"
-          javac -d "$RUNNER_TEMP/koorix-extension-index" android/app/src/main/java/com/kurdman/app/ExtensionStoreIndex.java tools/web-reader/ExtensionIndexProbe.java
+          javac -d "$RUNNER_TEMP/koorix-extension-index" android/app/src/main/java/com/kurdman/app/ExtensionStoreIndex.java android/app/src/main/java/com/kurdman/app/ExtensionLibrarySections.java tools/web-reader/ExtensionIndexProbe.java
           java -cp "$RUNNER_TEMP/koorix-extension-index" com.kurdman.app.ExtensionIndexProbe "$RUNNER_TEMP/koorix-extension-index/index.pb"
           echo '::notice::Pinned public store metadata parsed; this is not an extension runtime or trust verification'
 

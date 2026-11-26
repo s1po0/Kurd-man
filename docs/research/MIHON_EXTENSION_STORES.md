@@ -1,0 +1,83 @@
+# Extension stores: groundwork, not a delivered feature
+
+## Owner request
+
+Add a Mihon-style extension-store mode with Keiyoushi compatibility. Installed
+extensions/sites must appear in a separate first section; extensions not yet
+installed appear below. Existing locally present extensions remain visible even
+if removed from the current store. Search should find the names of sites inside
+an extension without moving an installed extension into the available section.
+Installed means **present**, not automatically enabled, compatible or trusted.
+The actual UI, installation, installed-package discovery and source runtime do
+not exist yet. No release or new APK may claim this mode works.
+
+## Upstream findings
+
+- [Keiyoushi repository](https://github.com/keiyoushi/extensions) advertises
+  `https://github.com/keiyoushi/extensions/raw/repo/index.pb`. Repository
+  snapshot `0859bd8b9bed149e40b1a2f9c92f1a4fced2c9de` has gzipped protobuf
+  metadata, blob `8cf02b6b70f10dd9733659780f7ca858377538c3`, and a current
+  `repo.json` fingerprint. Its legacy `index.min.json` is now an outdated-app
+  compatibility listing, not the full catalog. Remote metadata, including a
+  fingerprint supplied by the same server, is untrusted until the user approves
+  a store and its identity is verified independently. Fingerprints can change;
+  do not hard-code the fixture as a universal trust decision.
+- [Upstream index.proto](https://github.com/keiyoushi/extensions-source/blob/main/.github/scripts/index.proto)
+  describes store metadata, resources, content warnings and multiple sources
+  per extension. Source metadata URLs, labels and identifiers are untrusted.
+- [Mihon](https://github.com/mihonapp/mihon), examined at
+  `f8e30a86086020aaee1e89a9d015373b1a4ff026` (Apache-2.0), handles installed
+  shared and private extensions; its loader supports extension library versions
+  1.4 and 1.6, obtains signing certificate SHA-256 fingerprints, checks trust and
+  package metadata, and loads extension classes through a class loader. A
+  class loader is **not** a security sandbox: extension code shares the host
+  process and permissions. Do not copy this unsafe assumption into Koorix or
+  claim a certificate proves a source harmless. Android package visibility,
+  split/source API dependencies, supported versions and store updates all need
+  real-device testing. No upstream code was copied into this groundwork.
+
+## Current implementation and evidence
+
+`ExtensionStoreIndex` is a bounded offline parser for an embedded-list v2
+protobuf, including gzip expansion limits, duplicate-package rejection,
+content warnings and per-extension source metadata. External index-list URLs
+are deliberately rejected. URLs are merely data: they are not downloaded,
+validated or executed. `ExtensionLibrarySections` is an unconnected pure data
+model for installed-first grouping and source-name search; the caller must
+supply the actual local extension inventory, and a package-name match must
+never be interpreted as signature verification. Neither class offers UI,
+installer, runtime, network routing or usable sources.
+
+Hosted run `45734684900` (`7598802`) parsed the pinned live store blob before
+failing later because Robolectric could not fetch its Android artifact; it is
+not a successful Android run. Run `45735126030` (`f8ce707`) also parsed the
+pinned blob with source metadata, but Android/JVM tests could not run because
+Maven Central returned HTTP 429. The release gate remains; no test or prototype
+proves the requested feature works.
+
+## Remaining acceptance gates
+
+- Review a compatible Mihon source API and host dependency/license strategy;
+  support real search, title/chapter/page operations, and source-specific image
+  headers, not just a catalog or a generic website button.
+- Avoid executing untrusted extension code with access to Koorix data, signing
+  material or arbitrary local-network endpoints. Design and test an isolation
+  and narrowly scoped IPC/network architecture with explicit permissions and
+  failure behavior. A separate class loader/process sharing the app UID does
+  not satisfy this requirement. Existing WebView private-network and hostile
+  page-world issues remain open independently.
+- Handle user-approved store identity, per-APK signer verification, version
+  checks, safe upgrades, package-name conflicts, revocation, install consent,
+  removal, and content warnings without assuming store metadata is safe.
+  No installer or extension should be bundled/installed automatically.
+- Implement native Kurdish/English/Arabic UI with first installed then available
+  sections, search, language/content filtering and refresh; reconcile existing
+  system-installed extensions and local private extensions with Android package
+  visibility and explicit trust. Preserve user's existing installs and data.
+- Respect 300-page/300-MB import and 1-GB cache limits, STOP, project recovery,
+  and normal automatic Translate. No hidden paid service or per-image chat.
+- Test malformed and hostile stores/APKs, wrong/changed signers, unavailable
+  networks, redirects, private networks, parallel lifecycle/restarts, and actual
+  extension/source-to-translation flow on disposable Android. Public-site tests
+  must not claim complete coverage. Final same-v2-signed regular APK, release
+  link and Telegram acknowledgement remain gated on actual completion.
