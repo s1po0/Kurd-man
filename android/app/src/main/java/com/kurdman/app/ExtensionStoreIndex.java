@@ -30,10 +30,17 @@ final class ExtensionStoreIndex {
         final String name, packageName, apkUrl, extensionLib, versionName;
         final long versionCode;
         final int contentWarning;
-        Entry(String name,String packageName,String apkUrl,String extensionLib,long versionCode,String versionName,int warning){
+        final List<Source> sources;
+        Entry(String name,String packageName,String apkUrl,String extensionLib,long versionCode,String versionName,int warning,List<Source> sources){
             this.name=name;this.packageName=packageName;this.apkUrl=apkUrl;this.extensionLib=extensionLib;
             this.versionCode=versionCode;this.versionName=versionName;this.contentWarning=warning;
+            this.sources=Collections.unmodifiableList(new ArrayList<>(sources));
         }
+    }
+    static final class Source {
+        final long id;
+        final String name, language, homeUrl;
+        Source(long id,String name,String language,String homeUrl){this.id=id;this.name=name;this.language=language;this.homeUrl=homeUrl;}
     }
     private static final class Reader {
         final byte[] data;int pos,end;
@@ -110,6 +117,8 @@ final class ExtensionStoreIndex {
     }
     private static Entry parseEntry(Reader r)throws IOException {
         String name=null,pkg=null,apk=null,lib=null,version=null;long code=-1;int warning=0;
+        boolean sawWarning=false;
+        List<Source> sources=new ArrayList<>();Set<Long> sourceIds=new HashSet<>();
         while(r.more()){
             int tag=r.key(),field=tag>>>3,wire=tag&7;
             if(field==1&&wire==2){if(name!=null)throw new IOException("Duplicate field");name=r.string();}
@@ -118,14 +127,33 @@ final class ExtensionStoreIndex {
             else if(field==4&&wire==2){if(lib!=null)throw new IOException("Duplicate field");lib=r.string();}
             else if(field==5&&wire==0){if(code!=-1)throw new IOException("Duplicate field");code=r.varint();}
             else if(field==6&&wire==2){if(version!=null)throw new IOException("Duplicate field");version=r.string();}
-            else if(field==7&&wire==0){long value=r.varint();if(value<0||value>3)throw new IOException("Unknown content warning");warning=(int)value;}
+            else if(field==7&&wire==0){if(sawWarning)throw new IOException("Duplicate content warning");sawWarning=true;long value=r.varint();if(value<0||value>3)throw new IOException("Unknown content warning");warning=(int)value;}
+            else if(field==8&&wire==2){
+                if(sources.size()>=1000)throw new IOException("Too many sources");
+                Source source=parseSource(r.message());if(!sourceIds.add(source.id))throw new IOException("Duplicate source id");sources.add(source);
+            }
             else r.skip(wire);
         }
         if(name==null||name.trim().isEmpty()||pkg==null||!pkg.matches("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)+")
                 ||apk==null||apk.isEmpty()||lib==null||lib.isEmpty()||version==null||version.isEmpty()||code<=0)
             throw new IOException("Invalid extension metadata");
         // The URL is UNTRUSTED metadata, not authorization to download or install.
-        return new Entry(name,pkg,apk,lib,code,version,warning);
+        return new Entry(name,pkg,apk,lib,code,version,warning,sources);
+    }
+    private static Source parseSource(Reader r)throws IOException {
+        long id=0;boolean hasId=false;String name=null,language=null,url=null;
+        while(r.more()){
+            int tag=r.key(),field=tag>>>3,wire=tag&7;
+            if(field==1&&wire==0){if(hasId)throw new IOException("Duplicate source id");hasId=true;id=r.varint();}
+            else if(field==2&&wire==2){if(name!=null)throw new IOException("Duplicate source name");name=r.string();}
+            else if(field==3&&wire==2){if(language!=null)throw new IOException("Duplicate source language");language=r.string();}
+            else if(field==4&&wire==2){if(url!=null)throw new IOException("Duplicate source URL");url=r.string();}
+            else r.skip(wire);
+        }
+        if(!hasId||id==0||name==null||name.trim().isEmpty()||language==null||language.isEmpty()||url==null||url.isEmpty())
+            throw new IOException("Invalid source metadata");
+        // Metadata URLs may not be loaded without separate destination validation.
+        return new Source(id,name,language,url);
     }
     private static String parseResources(Reader r)throws IOException {
         String apk=null;

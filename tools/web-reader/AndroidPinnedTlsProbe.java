@@ -22,7 +22,8 @@ public final class AndroidPinnedTlsProbe {
                 catch(javax.net.ssl.SSLHandshakeException expected) {
                     String s=expected.toString();Throwable cause=expected.getCause();
                     while(cause!=null){s+=" "+cause.toString();cause=cause.getCause();}
-                    if(!s.contains("www.google.com"))throw new IllegalStateException("Wrong-host probe did not reach certificate hostname rejection",expected);
+                    if(!s.contains("www.google.com") && !s.contains("No subjectAltNames on the certificate match"))
+                        throw new IllegalStateException("Wrong-host probe did not reach certificate hostname rejection",expected);
                     mismatch=true;
                 }
             }
