@@ -46,6 +46,7 @@ public class FreeMainActivityTest {
         File apk=new File(app.getCacheDir(),"extension.apk");try(FileOutputStream out=new FileOutputStream(apk)){out.write(new byte[]{1,2,3});}
         ReflectionHelpers.setField(main,"selectedName","existing-book.cbz");
         main.findViewById(R.id.pickButton).performClick();ShadowActivity.IntentForResult request=Shadows.shadowOf(main).getNextStartedActivityForResult();
+        assertEquals(Intent.ACTION_CHOOSER,Shadows.shadowOf(main).getNextStartedActivity().getAction());
         assertTrue(main.getActivityResultRegistry().dispatchResult(request.requestCode,Activity.RESULT_OK,new Intent().setData(Uri.fromFile(apk))));
         Shadows.shadowOf(Looper.getMainLooper()).idle();
         androidx.appcompat.app.AlertDialog dialog=(androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog();
