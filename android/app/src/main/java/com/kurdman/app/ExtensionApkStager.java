@@ -21,6 +21,7 @@ import java.util.concurrent.TimeoutException;
  */
 final class ExtensionApkStager {
     static final int MAX_APK_BYTES=32*1024*1024;
+    static final long STALE_MILLIS=7L*24*60*60*1000;
     private static final ThreadPoolExecutor WORKER=new ThreadPoolExecutor(1,1,0,TimeUnit.MILLISECONDS,
             new SynchronousQueue<>(),r->{Thread t=new Thread(r,"koorix-extension-apk");t.setDaemon(true);return t;},new ThreadPoolExecutor.AbortPolicy());
     private ExtensionApkStager() { }
@@ -38,12 +39,29 @@ final class ExtensionApkStager {
     }
     private static File download(ExtensionStoreIndex.Entry entry,String approvedSigner,File cacheDir,PackageManager pm,
                                  PinnedHttpsClient.Cancellation cancellation)throws IOException {
+        cleanupStale(cacheDir,System.currentTimeMillis());
         long capacity=WebImportBudget.allowance(cacheDir);
         if(capacity<1)throw new IOException("Cache is full");
         int max=(int)Math.min(MAX_APK_BYTES,capacity);
         PinnedHttpsClient.Response response=PinnedHttpsClient.getFollowingRedirects(entry.apkUrl,max,cancellation);
         cancellation.check();
         return stage(response.body,entry,approvedSigner,cacheDir,pm,cancellation);
+    }
+    /** Reclaim only old, app-created installer staging files; never reader/project data. */
+    static void cleanupStale(File cacheDir,long now)throws IOException {
+        if(cacheDir==null||now<=0)throw new IOException("Invalid cache");
+        File dir=new File(cacheDir,"extension-install");
+        if(Files.isSymbolicLink(dir.toPath()))throw new IOException("Unsafe installer cache");
+        if(!dir.exists())return;
+        if(!dir.isDirectory())throw new IOException("Invalid installer cache");
+        File[] files=dir.listFiles();if(files==null)throw new IOException("Cannot inspect installer cache");
+        int removed=0;
+        for(File file:files){
+            if(removed>=128)break;
+            long modified=file.lastModified();
+            if(file.getName().matches("extension-[0-9]+\\.apk")&&!Files.isSymbolicLink(file.toPath())&&file.isFile()
+                    &&modified>0&&modified<=now&&now-modified>=STALE_MILLIS&&file.delete())removed++;
+        }
     }
     static File stage(byte[] bytes,ExtensionStoreIndex.Entry entry,String approvedSigner,File cacheDir,PackageManager pm,
                       PinnedHttpsClient.Cancellation cancellation)throws IOException {

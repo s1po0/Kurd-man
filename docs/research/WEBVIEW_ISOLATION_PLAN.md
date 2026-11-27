@@ -15,7 +15,12 @@ Pepper&Carrot static-page probe (links, image references and one image fetch),
 and regular signed-build checks without using an emulator. Run `45989623547`
 (`a745d40`) passed 366 JVM tests including optional image selection. Neither
 proves the correct comic panels were chosen, actual Android TLS/installer
-behavior, or reader translation quality. JavaScript sites remain unsupported.
+behavior, or reader translation quality. Run `45991988187` (`b4de259`) passed
+380 JVM tests and a stronger fixed public fixture: three known Pepper&Carrot
+story image URLs were discovered in order and one was fetched without an
+emulator. Other page images may still be unrelated, and this was hosted Java,
+not Android TLS, decoded-image capture, translation, or device proof. JavaScript
+sites remain unsupported.
 
 ## Address and DNS primitive
 

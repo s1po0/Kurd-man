@@ -38,6 +38,14 @@ public class ExtensionApkStagerTest {
         catch(java.io.IOException expected){}
         File dir=new File(cache,"extension-install");if(dir.exists())assertEquals(0,dir.listFiles().length);
     }
+    @Test public void onlyAncientOwnedInstallerTempsAreReclaimed()throws Exception {
+        File cache=new File(RuntimeEnvironment.getApplication().getCacheDir(),"extension-stage-reclaim"),dir=new File(cache,"extension-install");assertTrue(dir.mkdirs());
+        File old=new File(dir,"extension-123.apk"),fresh=new File(dir,"extension-456.apk"),other=new File(dir,"reader-123.apk"),keep=new File(cache,"reader.txt");
+        for(File f:new File[]{old,fresh,other,keep})try(FileOutputStream out=new FileOutputStream(f)){out.write(1);}
+        long now=System.currentTimeMillis();assertTrue(old.setLastModified(now-ExtensionApkStager.STALE_MILLIS-1000));assertTrue(other.setLastModified(now-ExtensionApkStager.STALE_MILLIS-1000));
+        ExtensionApkStager.cleanupStale(cache,now);
+        assertFalse(old.exists());assertTrue(fresh.exists());assertTrue(other.exists());assertTrue(keep.exists());
+    }
     @Test public void requiresExplicitValidFingerprintBeforeNetwork()throws Exception {
         try{ExtensionApkStager.prepare(entry(),"",RuntimeEnvironment.getApplication().getCacheDir(),RuntimeEnvironment.getApplication().getPackageManager(),1000);fail();}
         catch(java.io.IOException expected){}

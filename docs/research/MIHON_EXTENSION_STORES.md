@@ -73,7 +73,8 @@ installer handoff; granting it does not install anything automatically.
 `ExtensionApkStager` bounds download/cache use, validates HTTPS destinations
 and each redirect, stages in private cache and compares package/version/signer
 via Android metadata before the system installer independently verifies it.
-The displayed store fingerprint still needs the reader's independent approval;
+Only app-created installer-cache APKs older than seven days are eligible for
+bounded cleanup; reader files and projects are not touched. The displayed store fingerprint still needs the reader's independent approval;
 a valid signer does not imply safe code. API26 synthetic metadata tests are not
 proof of API28+ PackageManager behavior, APK installer behavior, or malware
 containment. No APK is executed by these components.
@@ -147,7 +148,12 @@ plugin bundles the Keiyoushi core in each extension but uses `compileOnly` for
 shared libraries and `extensions-lib` 1.6. The AchyManga fixture subclasses
 `KeiSource`, which in turn subclasses Mihon `HttpSource`, depends on OkHttp,
 coroutines, serialization and injection, and insists that particular host
-network interceptors exist. Each source may customize its client. A safe runtime
+network interceptors exist. The pinned `keiyoushi/extensions-lib` revision
+`42255ee5fa96d9425697b7c143587483207308d1` is explicitly a compile-only stub
+library: for example, its `HttpSource` constructor throws `Stub!`; packaging it
+as the host implementation would not run sources. Its README lists newer host
+Kotlin, coroutines, serialization, OkHttp and jsoup compatibility requirements.
+Each source may customize its client. A safe runtime
 must supply compatible ABI/dependencies and mediate all privileged requests
 without trusting extension-created clients; an isolated process with no network
 permission is a candidate boundary, not a working compatibility layer. No source
