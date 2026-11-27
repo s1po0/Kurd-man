@@ -6,8 +6,12 @@ on:
       - 'android/app/src/main/java/com/kurdman/app/ExtensionStoreIndex.java'
       - 'android/app/src/main/java/com/kurdman/app/ExtensionLibrarySections.java'
       - 'android/app/src/main/java/com/kurdman/app/ExtensionIdentityPolicy.java'
+      - 'android/app/src/main/java/com/kurdman/app/ExtensionCatalogClient.java'
+      - 'android/app/src/main/java/com/kurdman/app/PinnedHttpsClient.java'
+      - 'android/app/src/main/java/com/kurdman/app/PublicNetworkGuard.java'
       - 'tools/web-reader/ExtensionOfflineProbe.java'
       - 'tools/web-reader/ExtensionIndexProbe.java'
+      - 'tools/web-reader/ExtensionCatalogLiveProbe.java'
       - '.github/workflows/koorix-extension-foundations.yml'
 permissions:
   contents: read
@@ -28,7 +32,10 @@ jobs:
             android/app/src/main/java/com/kurdman/app/ExtensionStoreIndex.java \
             android/app/src/main/java/com/kurdman/app/ExtensionLibrarySections.java \
             android/app/src/main/java/com/kurdman/app/ExtensionIdentityPolicy.java \
-            tools/web-reader/ExtensionOfflineProbe.java tools/web-reader/ExtensionIndexProbe.java
+            android/app/src/main/java/com/kurdman/app/ExtensionCatalogClient.java \
+            android/app/src/main/java/com/kurdman/app/PinnedHttpsClient.java \
+            android/app/src/main/java/com/kurdman/app/PublicNetworkGuard.java \
+            tools/web-reader/ExtensionOfflineProbe.java tools/web-reader/ExtensionIndexProbe.java tools/web-reader/ExtensionCatalogLiveProbe.java
           java -cp "$RUNNER_TEMP/ext-foundations" com.kurdman.app.ExtensionOfflineProbe
           echo '::notice::Synthetic offline identity and grouping checks passed; no APK verification, extension execution, or Android acceptance'
       - name: Parse pinned public Keiyoushi index without installing extensions
@@ -38,3 +45,7 @@ jobs:
           gh api repos/keiyoushi/extensions/git/blobs/8cf02b6b70f10dd9733659780f7ca858377538c3 --jq .content | base64 -d > "$RUNNER_TEMP/ext-foundations/index.pb"
           java -cp "$RUNNER_TEMP/ext-foundations" com.kurdman.app.ExtensionIndexProbe "$RUNNER_TEMP/ext-foundations/index.pb"
           echo '::notice::Pinned public store index parsed and grouped; no Android emulator or extension installation used'
+      - name: Probe live fixed public store transport
+        run: |
+          java -cp "$RUNNER_TEMP/ext-foundations" com.kurdman.app.ExtensionCatalogLiveProbe
+          echo '::notice::Live public metadata fetch passed; no APK verification or Android security acceptance'
