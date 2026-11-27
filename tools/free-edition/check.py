@@ -24,7 +24,9 @@ assert not manifest.findall('.//activity'),'Public billing/auth activity remains
 # Broad package visibility is requested only for owner-requested local
 # extension APK inventory, never to send installed-app data to a server.
 android_ns='{http://schemas.android.com/apk/res/android}'
-assert any(p.get(android_ns+'name')=='android.permission.QUERY_ALL_PACKAGES' for p in manifest.findall('uses-permission'))
+public_permissions={p.get(android_ns+'name') for p in manifest.findall('uses-permission')}
+assert 'android.permission.QUERY_ALL_PACKAGES' in public_permissions
+assert 'android.permission.REQUEST_INSTALL_PACKAGES' in public_permissions
 inventory=(ANDROID/'src/main/java/com/kurdman/app/ExtensionInstalledInventory.java').read_text()
 assert 'tachiyomi.extension' in inventory and 'getInstalledPackages' in inventory
 assert not any(word in inventory for word in ('HttpURLConnection','OkHttp','java.net.','android.util.Log'))

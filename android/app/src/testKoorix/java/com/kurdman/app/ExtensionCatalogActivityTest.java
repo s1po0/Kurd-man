@@ -68,6 +68,7 @@ public class ExtensionCatalogActivityTest {
             androidx.appcompat.app.AlertDialog details=(androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog();
             assertEquals(activity.getString(R.string.ext_prepare),details.getButton(android.content.DialogInterface.BUTTON_POSITIVE).getText().toString());
             details.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick();
+            Shadows.shadowOf(Looper.getMainLooper()).idle();
             androidx.appcompat.app.AlertDialog trust=(androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog();
             assertTrue(trust.isShowing());
             assertEquals(activity.getString(R.string.ext_approve_signer),trust.getButton(android.content.DialogInterface.BUTTON_POSITIVE).getText().toString());

@@ -8,9 +8,10 @@ installed appear below. Existing locally present extensions remain visible even
 if removed from the current store. Search should find the names of sites inside
 an extension without moving an installed extension into the available section.
 Installed means **present**, not automatically enabled, compatible or trusted.
-A read-only native catalog and local shared-APK inventory are now implemented;
-installing, executing sources, browsing chapters and translating them do not
-exist yet. No release or new APK may claim the requested mode works.
+A native catalog, local shared-APK inventory, explicit signer confirmation and
+Android installer handoff are implemented as an unfinished candidate; executing
+sources, browsing chapters and translating them do not exist yet. No release or
+new APK may claim the requested mode works.
 
 ## Upstream findings
 
@@ -47,16 +48,27 @@ validated or executed. `ExtensionLibrarySections` is an unconnected pure data
 model for installed-first grouping and source-name search; the caller must
 supply the actual local extension inventory, and a package-name match must
 never be interpreted as signature verification. `ExtensionCatalogActivity`
-now connects those pieces to a native, explicitly read-only screen with localized
-search, installed-first sections, content-warning labels and error states. It
-does not install or run extensions or open sites. `ExtensionInstalledInventory`
+now connects those pieces to a native screen with localized search,
+installed-first sections, content-warning labels and error states. The reader
+can explicitly approve a displayed store signer, prepare a matching APK and
+handoff to Android's installer; Koorix never installs silently, and cannot yet
+run the extension or open its sources. `ExtensionInstalledInventory`
 uses the `tachiyomi.extension` feature flag to filter system-installed packages
 locally, without storing, logging or transmitting the installed-app list. Koorix
 requests broad `QUERY_ALL_PACKAGES` visibility solely for this user-requested
 inventory; users should understand this permission permits the app to query all
 installed apps. It cannot read another app's private extensions or cross-profile
 apps, and an unreadable inventory is shown as unknown, not "not installed".
-No detected package is automatically trusted.
+No detected package is automatically trusted. Android's per-app
+`REQUEST_INSTALL_PACKAGES` permission is requested for the explicit system
+installer handoff; granting it does not install anything automatically.
+`ExtensionApkStager` bounds download/cache use, validates HTTPS destinations
+and each redirect, stages in private cache and compares package/version/signer
+via Android metadata before the system installer independently verifies it.
+The displayed store fingerprint still needs the reader's independent approval;
+a valid signer does not imply safe code. API26 synthetic metadata tests are not
+proof of API28+ PackageManager behavior, APK installer behavior, or malware
+containment. No APK is executed by these components.
 
 Hosted run `45734684900` (`7598802`) parsed the pinned live store blob before
 failing later because Robolectric could not fetch its Android artifact; it is
@@ -99,6 +111,13 @@ Run `45979804908` (`354178b`) passed 340 JVM tests, including synthetic native
 catalog/inventory grouping, built and verified the same-v2 APK, and skipped the
 emulator. It did not publish an APK or exercise the app on a device; installing
 and using extensions remains unimplemented and this is not a release candidate.
+Run `45981517955` (`289ddea`) passed 348 JVM tests, including synthetic archive
+and staging failure checks, without an emulator. Run `45982363408` (`ee4f1ee`)
+used Android SDK `apksigner` and `aapt` to independently check one fixed public
+extension APK's signature and metadata without installing or executing it;
+this checks that fixture, not the in-app PackageManager implementation on a
+phone. The follow-up consent UI test at `264b43c` failed on test looper timing
+and is being corrected, so it is not a passing build.
 
 An Android `isolatedProcess=true` service is a potential execution boundary
 ([Android service documentation](https://developer.android.com/guide/topics/manifest/service-element)),
