@@ -2,4 +2,6 @@
 <resources>
     <item name="staticWebLinks" type="id" />
     <item name="staticWebSummary" type="id" />
+    <item name="staticWebImageSelect" type="id" />
+    <item name="staticWebImagePreview" type="id" />
 </resources>

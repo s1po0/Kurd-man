@@ -5,5 +5,7 @@
     <string name="static_web_no_images">لم تُوجد صور في هذه الصفحة. اختر رابطاً لفتح فصل.</string>
     <string name="static_web_ready">اختر رابطاً أو ترجم الصور الموجودة. كل الصور محددة؛ يمكنك استبعاد الصور غير المرغوبة.</string>
     <string name="static_web_image">صورة %1$d • %2$s</string>
+    <string name="static_web_preview">معاينة</string>
+    <string name="static_web_preview_title">صورة %1$d (معاينة مصغّرة)</string>
     <string name="static_web_empty">تعذر تجهيز أي صور متاحة. جرّب صفحة أخرى.</string>
 </resources>

@@ -5,5 +5,7 @@
     <string name="static_web_no_images">هیچ وێنەیەک لەم پەڕەیە نەدۆزرایەوە. بەستەرێک هەڵبژێرە بۆ کردنەوەی چەپتەر.</string>
     <string name="static_web_ready">بەستەرێک هەڵبژێرە یان وێنە دۆزراوەکان وەربگێڕە. هەموویان هەڵبژێردراون؛ دەتوانیت وێنە نەخوازراوەکان لاببەیت.</string>
     <string name="static_web_image">وێنەی %1$d • %2$s</string>
+    <string name="static_web_preview">پێشبینین</string>
+    <string name="static_web_preview_title">وێنەی %1$d (پێشبینینی بچووککراو)</string>
     <string name="static_web_empty">هیچ وێنەیەکی بەردەست ئامادە نەکرا. پەڕەیەکی تر تاقی بکەرەوە.</string>
 </resources>

@@ -33,6 +33,14 @@ public class StaticWebImportTest {
         assertTrue(StaticWebImport.validImage(png,".png"));assertFalse(StaticWebImport.validImage(png,".jpg"));
         assertFalse(StaticWebImport.validImage(PNG,".png"));
     }
+    @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    public void previewIsSampledAndNotStored()throws Exception {
+        android.graphics.Bitmap original=android.graphics.Bitmap.createBitmap(4096,8,android.graphics.Bitmap.Config.ARGB_8888);
+        java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();assertTrue(original.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out));original.recycle();byte[] bytes=out.toByteArray();
+        StaticWebTransport transport=new StaticWebTransport((url,max,c)->new PinnedHttpsClient.Response(200,"image/png",bytes,null,url));
+        android.graphics.Bitmap preview=new StaticWebPreview(transport).fetch("https://example.org/a.png",new PinnedHttpsClient.Cancellation());
+        assertTrue(preview.getWidth()<=2048);assertTrue(preview.getHeight()<=2048);preview.recycle();
+    }
     @Test public void cancellationAndInvalidImageLeaveNoNewSession()throws Exception {
         File cache=cache("static-test-two");PinnedHttpsClient.Cancellation cancel=new PinnedHttpsClient.Cancellation();
         StaticWebTransport transport=new StaticWebTransport((url,max,c)->{c.cancel();return ok(url);});

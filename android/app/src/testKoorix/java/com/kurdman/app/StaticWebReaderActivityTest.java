@@ -30,7 +30,10 @@ import org.robolectric.annotation.LooperMode;
 @LooperMode(LooperMode.Mode.PAUSED)
 public class StaticWebReaderActivityTest {
     public static class FakeReader extends StaticWebReaderActivity {
-        volatile int pageLoads;
+        volatile int pageLoads,previewLoads;
+        @Override android.graphics.Bitmap fetchPreview(String url,PinnedHttpsClient.Cancellation cancel)throws IOException {
+            previewLoads++;return android.graphics.Bitmap.createBitmap(4,4,android.graphics.Bitmap.Config.ARGB_8888);
+        }
         @Override StaticWebPage fetchPage(String url,PinnedHttpsClient.Cancellation cancel)throws IOException {
             pageLoads++;String html="<title>Example</title><a href='/next'>Next chapter</a><img src='/one.png'>";
             return StaticWebPage.parse(url,"text/html",html.getBytes(StandardCharsets.UTF_8));
@@ -61,7 +64,7 @@ public class StaticWebReaderActivityTest {
             EditText address=activity.findViewById(R.id.webReaderAddress);address.setText("https://example.org/start");
             activity.findViewById(R.id.webReaderGo).performClick();ListView list=activity.findViewById(R.id.staticWebLinks);
             waitFor(()->list.getAdapter().getCount()==2);assertEquals("Next chapter",((android.widget.TextView)list.getAdapter().getView(0,null,list)).getText().toString());
-            android.widget.CheckBox image=(android.widget.CheckBox)list.getAdapter().getView(1,null,list);assertTrue(image.isChecked());image.setChecked(false);
+            android.widget.CheckBox image=list.getAdapter().getView(1,null,list).findViewById(R.id.staticWebImageSelect);assertTrue(image.isChecked());image.setChecked(false);
             assertFalse(activity.findViewById(R.id.webReaderTranslate).isEnabled());image.setChecked(true);assertTrue(activity.findViewById(R.id.webReaderTranslate).isEnabled());
             list.performItemClick(list.getAdapter().getView(0,null,list),0,0);waitFor(()->address.getText().toString().equals("https://example.org/next"));
             activity.onBackPressed();assertEquals("https://example.org/start",address.getText().toString());
@@ -78,6 +81,15 @@ public class StaticWebReaderActivityTest {
             assertTrue(activity.started.await(5,java.util.concurrent.TimeUnit.SECONDS));activity.findViewById(R.id.webReaderStop).performClick();activity.release.countDown();
             waitFor(()->activity.lateSession!=null&&!activity.lateSession.exists());assertFalse(activity.isFinishing());assertNull(Shadows.shadowOf(activity).getResultIntent());
         }finally{activity.release.countDown();controller.pause().stop().destroy();}
+    }
+    @Test public void previewRequiresExplicitTap()throws Exception {
+        org.robolectric.android.controller.ActivityController<FakeReader> controller=Robolectric.buildActivity(FakeReader.class).setup();
+        try{FakeReader activity=controller.get();((EditText)activity.findViewById(R.id.webReaderAddress)).setText("https://example.org/start");activity.findViewById(R.id.webReaderGo).performClick();
+            ListView list=activity.findViewById(R.id.staticWebLinks);waitFor(()->list.getAdapter().getCount()==2);assertEquals(0,activity.previewLoads);
+            android.app.Dialog previous=org.robolectric.shadows.ShadowDialog.getLatestDialog();View row=list.getAdapter().getView(1,null,list);row.findViewById(R.id.staticWebImagePreview).performClick();
+            waitFor(()->activity.previewLoads==1&&org.robolectric.shadows.ShadowDialog.getLatestDialog()!=previous);
+            assertTrue(org.robolectric.shadows.ShadowDialog.getLatestDialog().isShowing());org.robolectric.shadows.ShadowDialog.getLatestDialog().dismiss();
+        }finally{controller.pause().stop().destroy();}
     }
     @Test public void approvedStartupUrlLoadsWithoutJavaScript()throws Exception {
         android.content.Intent intent=new android.content.Intent().putExtra(StaticWebReaderActivity.EXTRA_START_URL,"https://example.org/source");

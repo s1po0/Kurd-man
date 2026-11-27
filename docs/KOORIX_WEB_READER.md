@@ -27,8 +27,10 @@ only after the user taps Translate. Image responses are independently checked,
 bounded and stored in a new private cache session before transfer to the
 existing saved-project flow. The page can still label or order misleading
 content, and native image decoders still handle untrusted bytes. Images are
-selected by default and can be excluded by name/host; thumbnails are not yet
-shown. Socket DNS cancellation,
+selected by default and can be excluded by name/host. An optional Preview button
+fetches a reduced in-memory image only after the reader taps it; translating
+fetches the selected images again, so the preview does not guarantee unchanged
+content. Socket DNS cancellation,
 Android TLS, unusual network routes, real sites and physical devices remain
 unverified. Earlier WebView tests below are historical, not static-reader proof.
 
