@@ -12,6 +12,7 @@ on:
       - 'tools/web-reader/ExtensionOfflineProbe.java'
       - 'tools/web-reader/ExtensionIndexProbe.java'
       - 'tools/web-reader/ExtensionCatalogLiveProbe.java'
+      - 'tools/web-reader/ExtensionApkDownloadProbe.java'
       - '.github/workflows/koorix-extension-foundations.yml'
 permissions:
   contents: read
@@ -35,7 +36,7 @@ jobs:
             android/app/src/main/java/com/kurdman/app/ExtensionCatalogClient.java \
             android/app/src/main/java/com/kurdman/app/PinnedHttpsClient.java \
             android/app/src/main/java/com/kurdman/app/PublicNetworkGuard.java \
-            tools/web-reader/ExtensionOfflineProbe.java tools/web-reader/ExtensionIndexProbe.java tools/web-reader/ExtensionCatalogLiveProbe.java
+            tools/web-reader/ExtensionOfflineProbe.java tools/web-reader/ExtensionIndexProbe.java tools/web-reader/ExtensionCatalogLiveProbe.java tools/web-reader/ExtensionApkDownloadProbe.java
           java -cp "$RUNNER_TEMP/ext-foundations" com.kurdman.app.ExtensionOfflineProbe
           echo '::notice::Synthetic offline identity and grouping checks passed; no APK verification, extension execution, or Android acceptance'
       - name: Parse pinned public Keiyoushi index without installing extensions
@@ -49,3 +50,7 @@ jobs:
         run: |
           java -cp "$RUNNER_TEMP/ext-foundations" com.kurdman.app.ExtensionCatalogLiveProbe
           echo '::notice::Live public metadata fetch passed; no APK verification or Android security acceptance'
+      - name: Fetch one fixed public extension container without executing it
+        run: |
+          java -cp "$RUNNER_TEMP/ext-foundations" com.kurdman.app.ExtensionApkDownloadProbe
+          echo '::notice::Public extension container fetched; it was not installed, executed, or signature verified'
