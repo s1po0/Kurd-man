@@ -67,9 +67,12 @@ final class StaticWebPage {
                 }else if("img".equals(tag)){
                     String u=null;
                     // Common lazy-load attributes take precedence over placeholders.
-                    for(String attr:new String[]{"data-src","data-original","data-lazy-src","src"}){
+                    for(String attr:new String[]{"data-src","data-original","data-lazy-src"}){
                         u=resolve(base,e.attr(attr));if(u!=null)break;
                     }
+                    if(u==null)u=srcset(base,e.attr("data-srcset"));
+                    if(u==null)u=srcset(base,e.attr("srcset"));
+                    if(u==null)u=resolve(base,e.attr("src"));
                     if(u!=null&&!images.containsKey(u)){
                         if(images.size()>=MAX_IMAGES)capped=true;else images.put(u,Boolean.TRUE);
                     }
@@ -94,6 +97,22 @@ final class StaticWebPage {
             }
         }
         return true;
+    }
+    /** Conservative srcset subset: discard malformed/mixed descriptors. */
+    private static String srcset(URI base,String raw){
+        if(raw==null||raw.isEmpty()||raw.length()>8192)return null;
+        String[] candidates=raw.split(",",-1);if(candidates.length>64)return null;
+        String best=null,kind=null;double score=-1;
+        for(String candidate:candidates){
+            String[] fields=candidate.trim().split("\\s+");if(fields.length<1||fields.length>2||fields[0].isEmpty())return null;
+            String desc=fields.length==1?"1x":fields[1];
+            if(!desc.matches("[0-9]{1,5}w|[0-9]{1,3}(\\.[0-9]{1,2})?x"))return null;
+            String unit=desc.substring(desc.length()-1);if(kind!=null&&!kind.equals(unit))return null;kind=unit;
+            double value;try{value=Double.parseDouble(desc.substring(0,desc.length()-1));}catch(NumberFormatException bad){return null;}
+            if(value<=0||("w".equals(unit)&&value>10000)||("x".equals(unit)&&value>100))return null;
+            String url=resolve(base,fields[0]);if(url!=null&&value>score){score=value;best=url;}
+        }
+        return best;
     }
     private static String resolve(URI base,String raw){
         if(raw==null||raw.isEmpty()||raw.length()>8192)return null;

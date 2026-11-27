@@ -18,6 +18,15 @@ public class StaticWebPageTest {
         assertEquals(2,page.images.size());assertEquals("https://example.org/images/01.jpg",page.images.get(0));
         assertEquals("https://cdn.example.org/02.png",page.images.get(1));assertFalse(page.truncated);
     }
+    @Test public void handlesBoundedResponsiveAndLazyImageSets()throws Exception {
+        StaticWebPage page=parse("<img src='/fallback.png' srcset='/small.jpg 320w, /large.jpg 1280w'>"+
+                "<img data-srcset='/one.jpg 1x, /two.jpg 2x' src='/other.jpg'>"+
+                "<img srcset='/invalid.jpg 2w, /mixed.jpg 3x' src='/safe.jpg'>"+
+                "<img srcset='http://example.org/a 1x, https://cdn.example.org/a 2x'>");
+        assertEquals(4,page.images.size());assertEquals("https://example.org/large.jpg",page.images.get(0));
+        assertEquals("https://example.org/two.jpg",page.images.get(1));assertEquals("https://example.org/safe.jpg",page.images.get(2));
+        assertEquals("https://cdn.example.org/a",page.images.get(3));
+    }
     @Test public void rejectsUnsafeUrlsAndDoesNotFetchAnything()throws Exception {
         StaticWebPage page=parse("<a href='javascript:alert(1)'>x</a><a href='https://user:pass@example.org/x'>x</a>"+
                 "<a href='file:///etc/passwd'>x</a><a href='https://127.0.0.1/x'>x</a><a href='#local'>x</a>"+
