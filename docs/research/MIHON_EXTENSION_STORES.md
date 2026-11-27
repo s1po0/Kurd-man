@@ -58,6 +58,18 @@ but failed later when Robolectric could not download Android artifacts; this is
 not a passed Android build or installed-app test. The release gate remains; no
 test or prototype proves the requested feature works.
 
+The owner requested **no Android emulator** for this work. Commit `7f7dd61`
+adds an explicitly offline `ExtensionIdentityPolicy`: it compares approved
+SHA-256 signer identity, package and exact catalog version, compatible library
+versions, and existing signer/version to reject substitution and downgrade. It
+is not connected to Android, cannot verify APK signatures on its own, and does
+not confer safety or trust. Hosted run `45976534501` passed the pure Java
+synthetic identity/grouping checks and parsed the pinned Keiyoushi fixture;
+no emulator, extension installation or installed-app verification was used.
+The no-emulator opt-out on the regular verification workflow must never be
+mistaken for device acceptance; the existing release security gate stays in
+place while the feature is incomplete.
+
 ## Remaining acceptance gates
 
 - Review a compatible Mihon source API and host dependency/license strategy;
