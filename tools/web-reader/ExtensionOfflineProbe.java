@@ -22,8 +22,14 @@ public final class ExtensionOfflineProbe {
         check(grouped.installed.size()==2 && grouped.available.size()==1 && grouped.available.get(0).packageName.equals("org.example.y"),"sections");
         grouped=ExtensionLibrarySections.build(Collections.singletonList(new ExtensionLibrarySections.Installed("org.example.x","Installed")),Collections.singletonList(remote),"site one");
         check(grouped.installed.size()==1 && grouped.available.isEmpty(),"site search");
+        PinnedHttpsClient.Cancellation cancellation=new PinnedHttpsClient.Cancellation();
+        java.net.Socket socket=new java.net.Socket();cancellation.attach(socket);cancellation.cancel();
+        check(socket.isClosed(),"cancellation closes attached socket");
+        java.net.Socket late=new java.net.Socket();boolean rejected=false;
+        try{cancellation.attach(late);}catch(java.io.IOException expected){rejected=true;}
+        check(rejected&&late.isClosed(),"late socket rejected after cancellation");
         java.util.concurrent.CountDownLatch release=new java.util.concurrent.CountDownLatch(1);
-        ExtensionCatalogClient blocked=new ExtensionCatalogClient(() -> {
+        ExtensionCatalogClient blocked=new ExtensionCatalogClient(cancel -> {
             while(true){try{release.await();break;}catch(InterruptedException ignored){}}
             return new byte[]{0};
         });

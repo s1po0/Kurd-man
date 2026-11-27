@@ -30,12 +30,32 @@ final class PinnedHttpsClient {
     }
     private PinnedHttpsClient() { }
 
-    static Response get(String value,int maxBytes) throws IOException {
+    /** Closing an attached socket interrupts a blocked read/handshake. DNS or
+     * a connect in progress may outlive cancellation; callers must bound the
+     * number of such workers and must discard all late results. */
+    static final class Cancellation {
+        private boolean cancelled;
+        private Socket socket;
+        synchronized void attach(Socket value)throws IOException {
+            if(cancelled){try{value.close();}catch(IOException ignored){}throw new IOException("Fetch cancelled");}
+            socket=value;
+        }
+        synchronized void cancel(){
+            cancelled=true;
+            if(socket!=null)try{socket.close();}catch(IOException ignored){}
+        }
+        synchronized void check()throws IOException {if(cancelled)throw new IOException("Fetch cancelled");}
+    }
+    static Response get(String value,int maxBytes) throws IOException {return get(value,maxBytes,new Cancellation());}
+    static Response get(String value,int maxBytes,Cancellation cancellation) throws IOException {
+        if(cancellation==null)throw new IOException("Missing cancellation");
+        cancellation.check();
         URI uri=checkedUrl(value);
         if(maxBytes<1 || maxBytes>MAX_BODY)throw new IOException("Invalid response limit");
         String host=uri.getHost().toLowerCase(Locale.ROOT);
         Socket plain=PublicNetworkGuard.connectDirect(host,443,TIMEOUT_MS);
         try {
+            cancellation.attach(plain);
             SSLSocketFactory factory=(SSLSocketFactory)SSLSocketFactory.getDefault();
             try(SSLSocket tls=(SSLSocket)factory.createSocket(plain,host,443,true)) {
                 tls.setSoTimeout(TIMEOUT_MS);

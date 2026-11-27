@@ -19,10 +19,10 @@ final class ExtensionCatalogClient {
     private static final String KEIYOUSHI_INDEX="https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.pb";
     private static final long MAX_WAIT_MILLIS=60000;
     private static final ThreadPoolExecutor SHARED_WORKER=newWorker();
-    interface Fetch { byte[] get() throws IOException; }
+    interface Fetch { byte[] get(PinnedHttpsClient.Cancellation cancellation) throws IOException; }
     private final ThreadPoolExecutor worker;
     private final Fetch fetch;
-    ExtensionCatalogClient(){this(() -> PinnedHttpsClient.get(KEIYOUSHI_INDEX,ExtensionStoreIndex.MAX_COMPRESSED).body,SHARED_WORKER);}
+    ExtensionCatalogClient(){this(cancel -> PinnedHttpsClient.get(KEIYOUSHI_INDEX,ExtensionStoreIndex.MAX_COMPRESSED,cancel).body,SHARED_WORKER);}
     // Injection exists only to test cancellation/resource limits; production
     // uses the fixed HTTPS URL and the pinned-public-DNS transport above.
     ExtensionCatalogClient(Fetch fetch){this(fetch,newWorker());}
@@ -38,12 +38,13 @@ final class ExtensionCatalogClient {
     ExtensionStoreIndex load(long waitMillis)throws IOException {
         if(waitMillis<1||waitMillis>MAX_WAIT_MILLIS)throw new IOException("Invalid fetch timeout");
         Future<ExtensionStoreIndex> task;
+        PinnedHttpsClient.Cancellation cancel=new PinnedHttpsClient.Cancellation();
         try {
-            task=worker.submit((Callable<ExtensionStoreIndex>) () -> ExtensionStoreIndex.parse(fetch.get()));
+            task=worker.submit((Callable<ExtensionStoreIndex>) () -> ExtensionStoreIndex.parse(fetch.get(cancel)));
         }catch(RejectedExecutionException busy){throw new IOException("Store fetch already in progress",busy);}
         try{return task.get(waitMillis,TimeUnit.MILLISECONDS);}
-        catch(TimeoutException timeout){task.cancel(true);throw new IOException("Store fetch timed out",timeout);}
-        catch(InterruptedException interrupted){task.cancel(true);Thread.currentThread().interrupt();throw new IOException("Store fetch interrupted",interrupted);}
+        catch(TimeoutException timeout){cancel.cancel();task.cancel(true);throw new IOException("Store fetch timed out",timeout);}
+        catch(InterruptedException interrupted){cancel.cancel();task.cancel(true);Thread.currentThread().interrupt();throw new IOException("Store fetch interrupted",interrupted);}
         catch(ExecutionException failed){Throwable cause=failed.getCause();if(cause instanceof IOException)throw (IOException)cause;throw new IOException("Store metadata unavailable",cause);}
     }
 }

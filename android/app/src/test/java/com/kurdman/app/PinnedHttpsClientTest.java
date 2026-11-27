@@ -43,6 +43,15 @@ public class PinnedHttpsClientTest {
         rejected("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhe",5);
         rejected("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n",1);
     }
+    @Test public void cancellationClosesSocketAndPreventsLateAttach() throws Exception {
+        PinnedHttpsClient.Cancellation attached=new PinnedHttpsClient.Cancellation();
+        java.net.Socket socket=new java.net.Socket();attached.attach(socket);attached.cancel();assertTrue(socket.isClosed());
+        PinnedHttpsClient.Cancellation early=new PinnedHttpsClient.Cancellation();early.cancel();
+        java.net.Socket late=new java.net.Socket();
+        try{early.attach(late);fail("Cancelled fetch accepted socket");}catch(IOException expected){}
+        assertTrue(late.isClosed());
+        try{PinnedHttpsClient.get("https://example.org/",10,early);fail("Cancelled fetch started");}catch(IOException expected){}
+    }
     @Test public void rejectsMalformedHeaderNamesNewlinesAndNonAscii() throws Exception {
         rejected("HTTP/1.1 200 OK\nContent-Type: text/html\n\nx",10);
         rejected("HTTP/1.1 200 OK\r\nContent Type: text/html\r\n\r\nx",10);
