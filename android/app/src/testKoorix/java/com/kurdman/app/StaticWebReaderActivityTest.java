@@ -26,7 +26,7 @@ import org.robolectric.annotation.LooperMode;
 
 /** Synthetic native view flow; no device, network, website or translation-quality claim. */
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk=34,application=Application.class)
+@Config(sdk={26,34},application=Application.class)
 @LooperMode(LooperMode.Mode.PAUSED)
 public class StaticWebReaderActivityTest {
     public static class FakeReader extends StaticWebReaderActivity {

@@ -14,7 +14,7 @@ import org.robolectric.annotation.Config;
 
 /** Synthetic transport and validator; no Android TLS, actual bitmap or device claim. */
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk=26,application=Application.class)
+@Config(sdk={26,34},application=Application.class)
 public class StaticWebImportTest {
     private static final byte[] PNG={(byte)137,'P','N','G',13,10,26,10,1};
     private File cache(String name)throws Exception {File f=new File(RuntimeEnvironment.getApplication().getCacheDir(),name);assertTrue(f.mkdirs());return f;}
@@ -26,6 +26,12 @@ public class StaticWebImportTest {
         StaticWebImport.Result result=importer.capture(Arrays.asList("https://example.org/first","https://example.org/bad","https://example.org/last","https://example.org/first"),cache,new PinnedHttpsClient.Cancellation(),null);
         assertEquals(2,result.files.size());assertEquals(1,result.failed);assertEquals("0001.png",result.files.get(0).getName());assertEquals("0003.png",result.files.get(1).getName());
         result.discard(cache);assertFalse(result.session.exists());assertTrue(prior.isFile());
+    }
+    @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    public void validatesDecodedImageBoundsNotJustMagic()throws Exception {
+        byte[] png=java.util.Base64.getDecoder().decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
+        assertTrue(StaticWebImport.validImage(png,".png"));assertFalse(StaticWebImport.validImage(png,".jpg"));
+        assertFalse(StaticWebImport.validImage(PNG,".png"));
     }
     @Test public void cancellationAndInvalidImageLeaveNoNewSession()throws Exception {
         File cache=cache("static-test-two");PinnedHttpsClient.Cancellation cancel=new PinnedHttpsClient.Cancellation();

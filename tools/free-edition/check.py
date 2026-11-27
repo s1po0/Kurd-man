@@ -41,6 +41,13 @@ for name in ('freeEditionNote','pickButton','inputBrowseHint','projectLibraryBut
 main=(ANDROID/'src/main/java/com/kurdman/app/MainActivity.java').read_text()
 assert 'new ComicInputPicker.Sources()' in main and 'if(BuildConfig.PUBLIC_EDITION)openInputSources()' in main
 assert 'PickMultipleVisualMedia' not in main and 'ComicInputPicker.choose(' not in main
+# The candidate must not silently fall back to the old unisolated WebView.
+route=main.split('private void openWebReader()',1)[1].split('private void startWebTranslation',1)[0]
+assert 'StaticWebReaderActivity.class' in route and 'WebReaderActivity.class' not in route.replace('StaticWebReaderActivity.class','')
+activities={e.get(android_ns+'name') for e in E.parse(ANDROID/'src/main/AndroidManifest.xml').getroot().findall('./application/activity')}
+assert '.StaticWebReaderActivity' in activities and '.WebReaderActivity' not in activities
+static_reader=(ANDROID/'src/main/java/com/kurdman/app/StaticWebReaderActivity.java').read_text()
+assert not any(word in static_reader for word in ('android.webkit','new WebView(', 'evaluateJavascript(', 'addJavascriptInterface('))
 picker=(ANDROID/'src/main/java/com/kurdman/app/ComicInputPicker.java').read_text()
 assert 'new Intent(Intent.ACTION_GET_CONTENT)' in picker and '.setType("*/*")' in picker
 assert 'Intent.createChooser(content(),' in picker

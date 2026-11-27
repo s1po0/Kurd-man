@@ -133,6 +133,18 @@ This is not a functioning source runtime or device acceptance. The inspected
 `mihon-kit` snapshot has a conflict between its Apache-2.0 LICENSE file and GPL-3.0 README: no library was
 copied or integrated; clarify upstream terms before any reuse.
 
+The pinned Keiyoushi extension source at `bac637ac333a03da0f8c5e7894713d782670b2d7`
+confirms why simply loading the downloaded fixture is insufficient: its build
+plugin bundles the Keiyoushi core in each extension but uses `compileOnly` for
+shared libraries and `extensions-lib` 1.6. The AchyManga fixture subclasses
+`KeiSource`, which in turn subclasses Mihon `HttpSource`, depends on OkHttp,
+coroutines, serialization and injection, and insists that particular host
+network interceptors exist. Each source may customize its client. A safe runtime
+must supply compatible ABI/dependencies and mediate all privileged requests
+without trusting extension-created clients; an isolated process with no network
+permission is a candidate boundary, not a working compatibility layer. No source
+class has been loaded or executed, and the store screen must not claim otherwise.
+
 An Android `isolatedProcess=true` service is a potential execution boundary
 ([Android service documentation](https://developer.android.com/guide/topics/manifest/service-element)),
 not a completed solution: it has no permissions of its own, requires narrow

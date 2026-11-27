@@ -10,6 +10,12 @@ a full web browser or a proof of network isolation: login, scripts, many lazy
 pages, cookies and some CDNs/sites will fail; static image heuristics can pick
 ads or miss panels. The release gate and unresolved Android transport/security
 validation remain; no 1.8.4 distribution is permitted on this basis.
+Run `45988801515` (`021675a`) passed 366 JVM tests, a fixed public
+Pepper&Carrot static-page probe (links, image references and one image fetch),
+and regular signed-build checks without using an emulator. Run `45989623547`
+(`a745d40`) passed 366 JVM tests including optional image selection. Neither
+proves the correct comic panels were chosen, actual Android TLS/installer
+behavior, or reader translation quality. JavaScript sites remain unsupported.
 
 ## Address and DNS primitive
 
