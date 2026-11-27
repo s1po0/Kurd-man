@@ -9,9 +9,10 @@ if removed from the current store. Search should find the names of sites inside
 an extension without moving an installed extension into the available section.
 Installed means **present**, not automatically enabled, compatible or trusted.
 A native catalog, local shared-APK inventory, explicit signer confirmation and
-Android installer handoff are implemented as an unfinished candidate; executing
-sources, browsing chapters and translating them do not exist yet. No release or
-new APK may claim the requested mode works.
+Android installer handoff are implemented as an unfinished candidate. Source
+homepages can be opened in the limited static reader, but extension execution
+and Mihon-style source browsing do not exist yet. No release or new APK may
+claim the requested extension mode works.
 
 ## Upstream findings
 
@@ -51,8 +52,11 @@ never be interpreted as signature verification. `ExtensionCatalogActivity`
 now connects those pieces to a native screen with localized search,
 installed-first sections, content-warning labels and error states. The reader
 can explicitly approve a displayed store signer, prepare a matching APK and
-handoff to Android's installer; Koorix never installs silently, and cannot yet
-run the extension or open its sources. `ExtensionInstalledInventory`
+handoff to Android's installer; Koorix never installs silently. The reader may
+also explicitly open a catalog source's HTTPS homepage in the separate static
+reader and return its captured images to the translation flow. That visits a
+website; it does not execute the extension and cannot replace a genuine source
+runtime. `ExtensionInstalledInventory`
 uses the `tachiyomi.extension` feature flag to filter system-installed packages
 locally, without storing, logging or transmitting the installed-app list. Koorix
 requests broad `QUERY_ALL_PACKAGES` visibility solely for this user-requested

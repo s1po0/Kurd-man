@@ -16,6 +16,8 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
@@ -33,6 +35,7 @@ public class ExtensionCatalogActivity extends AppCompatActivity {
     private List<ExtensionLibrarySections.Installed> local=Collections.emptyList();
     private List<ExtensionStoreIndex.Entry> catalog=Collections.emptyList();
     private TextView status;
+    private ActivityResultLauncher<Intent> reader;
     private EditText search;
     private Button refresh;
     private BaseAdapter adapter;
@@ -45,6 +48,9 @@ public class ExtensionCatalogActivity extends AppCompatActivity {
     }
     @Override protected void onCreate(Bundle state){
         super.onCreate(state);
+        reader=registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),result->{
+            if(result.getResultCode()==RESULT_OK&&result.getData()!=null){setResult(RESULT_OK,result.getData());finish();}
+        });
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(getColor(R.color.page));
         root.setLayoutDirection("en".equals(getResources().getConfiguration().getLocales().get(0).getLanguage())?View.LAYOUT_DIRECTION_LTR:View.LAYOUT_DIRECTION_RTL);
         int pad=KoorixDesign.dp(this,16);root.setPadding(pad,pad,pad,pad);
@@ -131,7 +137,21 @@ public class ExtensionCatalogActivity extends AppCompatActivity {
             final String signer=storeSigner;final ExtensionStoreIndex.Entry entry=row.catalogEntry;
             dialog.setPositiveButton(R.string.ext_prepare,(d,w)->confirmSigner(entry,signer));
         }else dialog.setPositiveButton(android.R.string.ok,null);
+        if(row.catalogEntry!=null&&!row.catalogEntry.sources.isEmpty())
+            dialog.setNeutralButton(R.string.ext_open_site,(d,w)->chooseStaticSite(row.catalogEntry));
         dialog.show();
+    }
+    private void chooseStaticSite(ExtensionStoreIndex.Entry entry){
+        List<ExtensionStoreIndex.Source> supported=new ArrayList<>();List<String> labels=new ArrayList<>();
+        for(ExtensionStoreIndex.Source source:entry.sources){
+            try{PinnedHttpsClient.checkedUrl(source.homeUrl);}catch(java.io.IOException invalid){continue;}
+            supported.add(source);labels.add(ExtensionInstalledInventory.safeLabel(source.name,"?")+" ("+ExtensionInstalledInventory.safeLabel(source.language,"?")+")");
+        }
+        if(supported.isEmpty()){status.setText(R.string.ext_site_unavailable);return;}
+        new AlertDialog.Builder(this).setTitle(R.string.ext_choose_site).setItems(labels.toArray(new String[0]),(d,index)->{
+            if(loading||isFinishing()||isDestroyed())return;
+            reader.launch(new Intent(this,StaticWebReaderActivity.class).putExtra(StaticWebReaderActivity.EXTRA_START_URL,supported.get(index).homeUrl));
+        }).setNegativeButton(R.string.ext_cancel,null).show();
     }
     private void confirmSigner(ExtensionStoreIndex.Entry entry,String signer){
         if(loading||isFinishing()||isDestroyed())return;

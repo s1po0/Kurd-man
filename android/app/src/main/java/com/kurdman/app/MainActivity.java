@@ -232,6 +232,7 @@ public class MainActivity extends AppCompatActivity {
     private ActivityResultLauncher<String> notificationPermissionLauncher;
     private ActivityResultLauncher<Intent> editorLauncher;
     private ActivityResultLauncher<Intent> webReaderLauncher;
+    private ActivityResultLauncher<Intent> extensionCatalogLauncher;
     private final int[] readingScrollPositions = new int[5];
     private Bitmap originalBitmap;
     private Bitmap resultBitmap;
@@ -513,6 +514,8 @@ public class MainActivity extends AppCompatActivity {
                 result -> handleStudioOrLibraryResult(result.getResultCode(),result.getData()));
         webReaderLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
                 result -> {if(result.getResultCode()==RESULT_OK && result.getData()!=null)startWebTranslation(result.getData());});
+        extensionCatalogLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                result -> {if(result.getResultCode()==RESULT_OK && result.getData()!=null)startWebTranslation(result.getData());});
 
         // Keep existing font/editor callback keys; one public source chooser.
         inputSourcesLauncher = registerForActivityResult(new ComicInputPicker.Sources(),this::acceptPickedInput);
@@ -613,7 +616,7 @@ public class MainActivity extends AppCompatActivity {
         webReaderButton.setOnClickListener(v -> openWebReader());
         View extensionCatalogButton=findViewById(R.id.extensionCatalogButton);
         extensionCatalogButton.setVisibility(BuildConfig.PUBLIC_EDITION?View.VISIBLE:View.GONE);
-        extensionCatalogButton.setOnClickListener(v -> startActivity(new Intent(this,ExtensionCatalogActivity.class)));
+        extensionCatalogButton.setOnClickListener(v -> extensionCatalogLauncher.launch(new Intent(this,ExtensionCatalogActivity.class)));
         downloadOfflineButton.setOnClickListener(v -> downloadOfflineModel());
         deleteOfflineButton.setOnClickListener(v -> confirmDeleteOfflineModel());
         downloadPaddleOcrButton.setOnClickListener(v -> downloadPaddleOcrPack());

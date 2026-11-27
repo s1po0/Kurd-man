@@ -14,6 +14,9 @@
     <string name="ext_catalog_unknown">الكتالوج — حالة التثبيت غير معروفة</string>
     <string name="ext_details_notice">يمكنك طلب تثبيت ملف APK بواسطة Android. لا يستطيع Koorix استخدام الإضافة بعد.</string>
     <string name="ext_details_unavailable">لا يمكن تجهيز APK عند عدم توفر الكتالوج أو حالة التطبيقات المثبتة. لا يستطيع Koorix استخدام الإضافة بعد.</string>
+    <string name="ext_open_site">فتح الموقع</string>
+    <string name="ext_choose_site">فتح موقع في القارئ الثابت (لا يشغّل الإضافة)</string>
+    <string name="ext_site_unavailable">لا يتوفر عنوان HTTPS مدعوم لهذه الإضافة.</string>
     <string name="ext_prepare">تجهيز APK</string>
     <string name="ext_signer_title">تحقق من توقيع الإضافة</string>
     <string name="ext_signer_notice">يعرض Keiyoushi بصمة توقيع SHA-256 التالية:\n%1$s\n\nقارنها بمصدر موثوق قبل المتابعة. تطابق التوقيع لا يعني أن الإضافة آمنة. سيطلب Android موافقتك قبل التثبيت؛ ولا يستطيع Koorix استخدامها بعد.</string>

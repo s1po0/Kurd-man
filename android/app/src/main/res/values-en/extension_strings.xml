@@ -14,6 +14,9 @@
     <string name="ext_catalog_unknown">Catalog — installation status unknown</string>
     <string name="ext_details_notice">You can ask Android to install this APK. Koorix cannot use the extension yet.</string>
     <string name="ext_details_unavailable">This APK cannot be prepared while its catalog or installed-app status is unavailable. Koorix cannot use the extension yet.</string>
+    <string name="ext_open_site">Open website</string>
+    <string name="ext_choose_site">Open a site in the static reader (does not run the extension)</string>
+    <string name="ext_site_unavailable">No supported HTTPS website address is available for this extension.</string>
     <string name="ext_prepare">Prepare APK</string>
     <string name="ext_signer_title">Check extension signer</string>
     <string name="ext_signer_notice">Keiyoushi reports this SHA-256 signer fingerprint:\n%1$s\n\nCompare it with a trusted source before continuing. A matching signer does not make an extension safe. Android will ask before installing; Koorix cannot use it yet.</string>

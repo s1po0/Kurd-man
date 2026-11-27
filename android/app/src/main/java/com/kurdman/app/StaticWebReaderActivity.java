@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
  * Transport and lifecycle still require device/security review before release.
  */
 public class StaticWebReaderActivity extends AppCompatActivity {
+    static final String EXTRA_START_URL="koorix.static.start_url";
     private static final long PAGE_DEADLINE_MS=120000, IMPORT_DEADLINE_MS=30L*60*1000;
     private static final ThreadPoolExecutor WORKER=new ThreadPoolExecutor(1,1,0,TimeUnit.MILLISECONDS,
             new SynchronousQueue<>(),r->{Thread t=new Thread(r,"koorix-static-web");t.setDaemon(true);return t;},new ThreadPoolExecutor.AbortPolicy());
@@ -73,6 +74,8 @@ public class StaticWebReaderActivity extends AppCompatActivity {
         list.setAdapter(adapter);list.setOnItemClickListener((parent,view,index,id)->{if(!busy&&index<links.size())load(links.get(index).url);});root.addView(list,new LinearLayout.LayoutParams(-1,0,1));
         LinearLayout actions=new LinearLayout(this);translate=button(R.string.web_translate);translate.setId(R.id.webReaderTranslate);KoorixDesign.primary(translate,true);translate.setOnClickListener(v->capture());actions.addView(translate,new LinearLayout.LayoutParams(0,-2,1));
         stop=button(R.string.web_stop);stop.setId(R.id.webReaderStop);stop.setOnClickListener(v->cancel(R.string.web_hint));actions.addView(stop);root.addView(actions);setContentView(root);KoorixDesign.apply(this,root);updateButtons();
+        String start=getIntent()==null?null:getIntent().getStringExtra(EXTRA_START_URL);
+        if(start!=null){try{PinnedHttpsClient.checkedUrl(start);load(start);}catch(IOException bad){status.setText(R.string.web_invalid);}}
     }
     private Button button(int id){Button b=new Button(this,null,0);b.setText(id);b.setTypeface(KoorixDesign.font(this,true));KoorixDesign.primary(b,false);b.setMinHeight(KoorixDesign.dp(this,48));return b;}
     private void updateButtons(){boolean any=false;for(boolean value:selected)any|=value;

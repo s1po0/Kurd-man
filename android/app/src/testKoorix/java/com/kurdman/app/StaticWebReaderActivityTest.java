@@ -30,8 +30,9 @@ import org.robolectric.annotation.LooperMode;
 @LooperMode(LooperMode.Mode.PAUSED)
 public class StaticWebReaderActivityTest {
     public static class FakeReader extends StaticWebReaderActivity {
+        volatile int pageLoads;
         @Override StaticWebPage fetchPage(String url,PinnedHttpsClient.Cancellation cancel)throws IOException {
-            String html="<title>Example</title><a href='/next'>Next chapter</a><img src='/one.png'>";
+            pageLoads++;String html="<title>Example</title><a href='/next'>Next chapter</a><img src='/one.png'>";
             return StaticWebPage.parse(url,"text/html",html.getBytes(StandardCharsets.UTF_8));
         }
         @Override StaticWebImport.Result fetchImages(List<String> images,File cache,PinnedHttpsClient.Cancellation cancel,StaticWebImport.Progress progress)throws IOException {
@@ -77,6 +78,13 @@ public class StaticWebReaderActivityTest {
             assertTrue(activity.started.await(5,java.util.concurrent.TimeUnit.SECONDS));activity.findViewById(R.id.webReaderStop).performClick();activity.release.countDown();
             waitFor(()->activity.lateSession!=null&&!activity.lateSession.exists());assertFalse(activity.isFinishing());assertNull(Shadows.shadowOf(activity).getResultIntent());
         }finally{activity.release.countDown();controller.pause().stop().destroy();}
+    }
+    @Test public void startupUrlMustPassUrlGate()throws Exception {
+        android.content.Intent intent=new android.content.Intent().putExtra(StaticWebReaderActivity.EXTRA_START_URL,"https://127.0.0.1/");
+        org.robolectric.android.controller.ActivityController<FakeReader> controller=Robolectric.buildActivity(FakeReader.class,intent).setup();
+        try{FakeReader activity=controller.get();Shadows.shadowOf(Looper.getMainLooper()).idle();assertEquals(0,activity.pageLoads);
+            assertEquals(activity.getString(R.string.web_invalid),((android.widget.TextView)activity.findViewById(R.id.webReaderStatus)).getText().toString());
+        }finally{controller.pause().stop().destroy();}
     }
     @Test public void invalidUrlDoesNotInvokeFetcher()throws Exception {
         org.robolectric.android.controller.ActivityController<FakeReader> controller=Robolectric.buildActivity(FakeReader.class).setup();

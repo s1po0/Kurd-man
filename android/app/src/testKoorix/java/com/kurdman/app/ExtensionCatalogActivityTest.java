@@ -60,6 +60,24 @@ public class ExtensionCatalogActivityTest {
             assertEquals(activity.getString(R.string.ext_available),((TextView)a.getView(0,null,list)).getText().toString());
         }finally{controller.pause().stop().destroy();}
     }
+    @Test public void sourceWebsiteOpensOnlyStaticReaderWithoutRunningExtension()throws Exception {
+        org.robolectric.android.controller.ActivityController<FakeCatalog> controller=Robolectric.buildActivity(FakeCatalog.class).setup();
+        try{FakeCatalog activity=controller.get();ListView list=activity.findViewById(R.id.extensionCatalogList);awaitItems(list,4);
+            list.performItemClick(list.getAdapter().getView(1,null,list),1,1);
+            androidx.appcompat.app.AlertDialog details=(androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog();
+            assertEquals(activity.getString(R.string.ext_open_site),details.getButton(android.content.DialogInterface.BUTTON_NEUTRAL).getText().toString());
+            details.getButton(android.content.DialogInterface.BUTTON_NEUTRAL).performClick();Shadows.shadowOf(Looper.getMainLooper()).idle();
+            androidx.appcompat.app.AlertDialog sites=(androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog();
+            ListView choices=sites.getListView();assertEquals(2,choices.getCount());choices.performItemClick(choices.getAdapter().getView(0,null,choices),0,0);
+            org.robolectric.shadows.ShadowActivity.IntentForResult launch=Shadows.shadowOf(activity).getNextStartedActivityForResult();assertNotNull(launch);
+            android.content.Intent intent=launch.intent;
+            assertEquals(StaticWebReaderActivity.class.getName(),intent.getComponent().getClassName());
+            assertEquals("https://example.org",intent.getStringExtra(StaticWebReaderActivity.EXTRA_START_URL));
+            android.content.Intent output=new android.content.Intent().putStringArrayListExtra(WebReaderActivity.EXTRA_FILES,new java.util.ArrayList<>(Collections.singletonList("/synthetic")));
+            assertTrue(activity.getActivityResultRegistry().dispatchResult(launch.requestCode,android.app.Activity.RESULT_OK,output));
+            assertTrue(activity.isFinishing());assertEquals(output,Shadows.shadowOf(activity).getResultIntent());
+        }finally{controller.pause().stop().destroy();}
+    }
     @Test public void signerMustBeExplicitlyApprovedBeforeAnyInstallerHandoff()throws Exception {
         org.robolectric.android.controller.ActivityController<FakeCatalog> controller=Robolectric.buildActivity(FakeCatalog.class).setup();
         try{

@@ -14,6 +14,9 @@
     <string name="ext_catalog_unknown">کۆگا — دۆخی دامەزراندن نەزانراوە</string>
     <string name="ext_details_notice">دەتوانیت داوا لە Android بکەیت ئەم APKە دابمەزرێنێت. Koorix هێشتا ناتوانێت ئەکستەنشنەکە بەکاربهێنێت.</string>
     <string name="ext_details_unavailable">تا کۆگا یان دۆخی دامەزراوەکان نەزانراوە، ئەم APKە ئامادە ناکرێت. Koorix هێشتا ناتوانێت ئەکستەنشنەکە بەکاربهێنێت.</string>
+    <string name="ext_open_site">کردنەوەی ماڵپەڕ</string>
+    <string name="ext_choose_site">کردنەوەی ماڵپەڕ لە خوێنەری سادە (ئەکستەنشن کار ناکات)</string>
+    <string name="ext_site_unavailable">هیچ ناونیشانێکی HTTPSی پشتگیریکراو بۆ ئەم ئەکستەنشنە بەردەست نییە.</string>
     <string name="ext_prepare">ئامادەکردنی APK</string>
     <string name="ext_signer_title">پشکنینی واژۆی ئەکستەنشن</string>
     <string name="ext_signer_notice">Keiyoushi ئەم پەنجەمۆرەی واژۆی SHA-256 پیشان دەدات:\n%1$s\n\nپێش بەردەوامبوون لەگەڵ سەرچاوەیەکی متمانەپێکراو بەراوردی بکە. واژۆی یەکسان واتای سەلامەتی ئەکستەنشن نییە. Android پێش دامەزراندن پرسیارت لێدەکات؛ Koorix هێشتا ناتوانێت بەکاریبهێنێت.</string>
