@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ext_open">كتالوج الإضافات</string>
+    <string name="ext_title">الإضافات</string>
+    <string name="ext_refresh">تحديث</string>
+    <string name="ext_notice">هذه قائمة فقط: التثبيت والقراءة غير جاهزين بعد. يتم فحص الإضافات المثبتة على الجهاز محلياً؛ إضافات Mihon الخاصة غير مرئية.</string>
+    <string name="ext_search">البحث عن المواقع أو الإضافات</string>
+    <string name="ext_loading">جارٍ تحميل القائمة…</string>
+    <string name="ext_ready">تظهر الإضافات المثبتة أولاً. التثبيت لا يعني أنها موثوقة.</string>
+    <string name="ext_inventory_unavailable">تعذر فحص الإضافات المثبتة؛ حالة التثبيت غير معروفة.</string>
+    <string name="ext_store_unavailable">تعذر تحميل المتجر؛ تظهر الإضافات المثبتة المرئية فقط.</string>
+    <string name="ext_installed">المثبتة على هذا الجهاز</string>
+    <string name="ext_available">الكتالوج — غير موجودة بين التطبيقات المثبتة المرئية</string>
+    <string name="ext_catalog_unknown">الكتالوج — حالة التثبيت غير معروفة</string>
+    <string name="ext_details_notice">معلومات الكتالوج للعرض فقط. تثبيت الإضافات واستخدامها غير جاهز بعد.</string>
+    <string name="ext_no_store_info">لم يتم العثور على هذه الإضافة في الكتالوج الحالي.</string>
+    <string name="ext_mixed">محتوى مختلط</string>
+    <string name="ext_adult">للبالغين فقط</string>
+    <string name="ext_unknown_warning">المحتوى غير معروف</string>
+</resources>

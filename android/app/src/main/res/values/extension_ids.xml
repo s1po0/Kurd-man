@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="extensionCatalogSearch" type="id" />
+    <item name="extensionCatalogStatus" type="id" />
+    <item name="extensionCatalogList" type="id" />
+    <item name="extensionCatalogRefresh" type="id" />
+</resources>

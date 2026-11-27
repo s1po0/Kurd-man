@@ -611,6 +611,9 @@ public class MainActivity extends AppCompatActivity {
         View webReaderButton=findViewById(R.id.webReaderButton);
         webReaderButton.setVisibility(BuildConfig.PUBLIC_EDITION?View.VISIBLE:View.GONE);
         webReaderButton.setOnClickListener(v -> openWebReader());
+        View extensionCatalogButton=findViewById(R.id.extensionCatalogButton);
+        extensionCatalogButton.setVisibility(BuildConfig.PUBLIC_EDITION?View.VISIBLE:View.GONE);
+        extensionCatalogButton.setOnClickListener(v -> startActivity(new Intent(this,ExtensionCatalogActivity.class)));
         downloadOfflineButton.setOnClickListener(v -> downloadOfflineModel());
         deleteOfflineButton.setOnClickListener(v -> confirmDeleteOfflineModel());
         downloadPaddleOcrButton.setOnClickListener(v -> downloadPaddleOcrPack());

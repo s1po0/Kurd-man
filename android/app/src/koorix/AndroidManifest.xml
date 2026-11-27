@@ -1,2 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"><application /></manifest>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Needed to discover extension APKs already installed on the device.
+         Inventory is filtered locally; no package list is transmitted. -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <application />
+</manifest>
