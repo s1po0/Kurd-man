@@ -91,8 +91,10 @@ but failed later when Robolectric could not download Android artifacts; this is
 not a passed Android build or installed-app test. The release gate remains; no
 test or prototype proves the requested feature works.
 
-The owner requested **no Android emulator** for this work. Commit `7f7dd61`
-adds an explicitly offline `ExtensionIdentityPolicy`: it compares approved
+The owner initially requested **no Android emulator**, then explicitly allowed
+it again for continued work. Prior no-emulator results remain JVM-only evidence;
+future emulator results must be reported separately and are not physical-device
+or extension-execution proof. Commit `7f7dd61` adds an explicitly offline `ExtensionIdentityPolicy`: it compares approved
 SHA-256 signer identity, package and exact catalog version, compatible library
 versions, and existing signer/version to reject substitution and downgrade. It
 is not connected to Android, cannot verify APK signatures on its own, and does

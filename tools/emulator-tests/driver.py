@@ -145,7 +145,7 @@ class Device:
         self.emulator_pid = emulator_pid
         # Never collect screenshots or page text from the opt-in public-comic probe.
         self.public_comic_open = False
-        self.report = {"scope": "Installed regular signed APK on API34 Android emulator; authored synthetic translation fixture, generated HTTPS text and public MDN example image; optional public-comic probe records outcomes only; NOT physical-device/general semantic acceptance",
+        self.report = {"scope": "Installed regular signed APK on API34 Android emulator; native static reader, authored synthetic translation fixture, generated HTTPS text and public MDN example image; optional public-comic probe records outcomes only; NOT extension execution, security review, physical-device or general semantic acceptance",
                        "status": "running", "checks": [], "meaningReviewedByNativeHuman": False,
                        "readerDataUsed": False, "alternateAppOrDebugVariant": False}
 
@@ -325,8 +325,12 @@ class Device:
         self.public_comic_open = True
         self.shell("input", "text", "https://www.peppercarrot.com/en/webcomic/ep01_Potion-of-Flight.html")
         self.click("webReaderGo")
-        self.wait(lambda: self.control("webReaderStatus", timeout=5).get("text", "").startswith("Page loaded."),
-                  "Public comic page loaded", timeout=90)
+        self.wait(lambda: self.control("webReaderStatus", timeout=5).get("text", "").startswith("Choose a link or translate"),
+                  "Public comic static page loaded", timeout=90)
+        summary = self.control("staticWebSummary").get("text", "")
+        count = re.search(r"Images:\s*([0-9]+)", summary)
+        if count is None or int(count.group(1)) < 3:
+            raise AssertionError("Static public page did not discover at least three images; no claim about their identity")
         self.click("webReaderTranslate")
         self.control("workspaceLanguageButton", timeout=180)
         def readable():
@@ -404,23 +408,24 @@ class Device:
             raise AssertionError("Actual process relaunch lost the selected theme")
         self.check("native_theme_switch_and_process_relaunch_persistence")
         self.theme(False)
-        # Exercise the real WebView against MDN's public static example. Its
-        # photograph is not a translation-quality fixture; the goal here is to
-        # verify actual same-origin page discovery, bounded image capture and
-        # handoff to the real OCR job, not a claim about manga compatibility.
+        # Native static reader, not the removed WebView. MDN's fixed public
+        # example has one photograph and links; this does not prove general
+        # website support or private-network isolation.
         self.tap(self.reveal("webReaderButton"))
         self.control("webReaderAddress", enabled=True)
         self.click("webReaderAddress")
         self.shell("input", "text", "https://mdn.github.io/dom-examples/history-api/index.html")
         self.click("webReaderGo")
-        self.wait(lambda: any("Let's look at some creatures" in x.get("text", "")
-                              for x in self.ui().iter("node")), "MDN example page loaded", timeout=90)
-        web_translate = self.control("webReaderTranslate", enabled=True)
+        self.wait(lambda: self.control("webReaderStatus", timeout=5).get("text", "").startswith("Choose a link or translate"),
+                  "MDN static page loaded", timeout=90)
+        summary = self.control("staticWebSummary").get("text", "")
+        if not re.search(r"Images:\s*[1-9][0-9]*", summary) or not re.search(r"Links:\s*[1-9][0-9]*", summary):
+            raise AssertionError("MDN static page did not expose images and links")
         self.capture("web-browser.png")
-        self.tap(web_translate)
+        self.click("webReaderTranslate")
         self.control("workspaceLanguageButton", timeout=150)
         self.wait(lambda: "No clear text found" in self.control("statusText").get("text", ""),
-                  "Web image reached OCR and completed with no synthetic dialogue", timeout=180)
+                  "Static web image reached OCR and completed without dialogue", timeout=180)
         self.capture("web-no-text.png")
         self.click("navTranslateButton")
         self.reveal("pickButton", direction="up")
@@ -428,41 +433,41 @@ class Device:
                             "--projection", "_id:_display_name", "--where", "_display_name LIKE 'Koorix-web-chapter%'")
         if public != "No result found.":
             raise AssertionError("Web reader job published a public file without explicit export")
-        self.check("webview_same_origin_public_example_capture_to_real_ocr_no_automatic_public_export")
-        # Raw GitHub image documents use a restrictive sandbox. Do not bypass
-        # it: verify the unsupported-page explanation before trying another site.
+        self.check("static_public_example_capture_to_real_ocr_no_automatic_public_export")
+
+        # A literal loopback URL must be rejected before the reader fetches it.
+        # This single check is not proof of DNS-rebinding protection or sandboxing.
         self.tap(self.reveal("webReaderButton"))
         self.control("webReaderAddress", enabled=True)
         self.click("webReaderAddress")
-        url = "https://raw.githubusercontent.com/s1po0/Kurd-man/35bd8848f28d229704a3001b8bcf863d6b736c79/manhwa/sample/demo_en.png"
-        self.shell("input", "text", url)
+        self.shell("input", "text", "https://127.0.0.1/private")
         self.click("webReaderGo")
-        self.wait(lambda: self.control("webReaderStatus").get("text", "").startswith("Page loaded."),
-                  "Protected HTTPS image document loaded", timeout=90)
-        self.click("webReaderTranslate")
-        self.wait(lambda: self.control("webReaderStatus").get("text", "").startswith("This page cannot provide accessible images."),
-                  "Protected page explained without bypass", timeout=90)
-        self.check("protected_web_page_explained_without_bypass")
+        self.wait(lambda: self.control("webReaderStatus").get("text", "").startswith("Only secure HTTPS websites are supported."),
+                  "Loopback literal rejected by static reader", timeout=30)
+        self.check("static_reader_rejects_literal_loopback_url")
         self.shell("input", "keyevent", "4")
         self.control("workspaceLanguageButton")
-        # Generated text only; no reader image or private data. An independent
-        # public HTTPS image document must reach real OCR and translation.
+
+        # Generated text only; no reader image or private data. A public HTTPS
+        # image must traverse the native static reader and actual OCR pipeline.
         self.tap(self.reveal("webReaderButton"))
         self.control("webReaderAddress", enabled=True)
         self.click("webReaderAddress")
         self.shell("input", "text", "https://dummyimage.com/800x260/ffffff/000000.png&text=THE+MONSTERS+ARE+COMING")
         self.click("webReaderGo")
-        self.wait(lambda: self.control("webReaderStatus").get("text", "").startswith("Page loaded."),
-                  "Synthetic HTTPS text image loaded", timeout=90)
+        self.wait(lambda: self.control("webReaderStatus").get("text", "").startswith("Choose a link or translate"),
+                  "Synthetic HTTPS image loaded by static reader", timeout=90)
+        if not re.search(r"Images:\s*1\b", self.control("staticWebSummary").get("text", "")):
+            raise AssertionError("Direct synthetic image was not discovered exactly once")
         self.click("webReaderTranslate")
         self.control("workspaceLanguageButton", timeout=150)
         self.wait(lambda: self.control("statusText").get("text", "").startswith(("Complete;", "Processing finished,")),
-                  "Web synthetic image translated into private reader", timeout=300)
+                  "Static web synthetic image translated into private reader", timeout=300)
         text_item = self.reveal("resultText")
         synthetic_pairs = pairs(text_item.get("text", ""))
         combined = words(" ".join(a for a, _ in synthetic_pairs))
         if "monsters" not in combined or "coming" not in combined:
-            raise AssertionError("Web capture did not reach actual OCR with generated dialogue")
+            raise AssertionError("Static image import did not reach actual OCR with generated dialogue")
         public = self.shell("content", "query", "--uri", "content://media/external/file",
                             "--projection", "_id:_display_name", "--where", "_display_name LIKE 'Koorix-web-chapter%'")
         if public != "No result found.":
@@ -475,7 +480,7 @@ class Device:
         self.wait(lambda: self.control("webResultImage").get("content-desc") == "Show original",
                   "Original image decoded after toggle", timeout=30)
         self.capture("web-original.png")
-        self.check("web_https_generated_text_real_ocr_translation_private_reader_and_original_toggle")
+        self.check("static_https_generated_text_real_ocr_translation_private_reader_and_original_toggle")
         self.shell("input", "keyevent", "4")
         self.control("workspaceLanguageButton")
         self.click("navTranslateButton")
