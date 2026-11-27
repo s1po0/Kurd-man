@@ -1,0 +1,40 @@
+name: Extension foundations (no emulator)
+on:
+  push:
+    branches: ["arena/**"]
+    paths:
+      - 'android/app/src/main/java/com/kurdman/app/ExtensionStoreIndex.java'
+      - 'android/app/src/main/java/com/kurdman/app/ExtensionLibrarySections.java'
+      - 'android/app/src/main/java/com/kurdman/app/ExtensionIdentityPolicy.java'
+      - 'tools/web-reader/ExtensionOfflineProbe.java'
+      - 'tools/web-reader/ExtensionIndexProbe.java'
+      - '.github/workflows/koorix-extension-foundations.yml'
+permissions:
+  contents: read
+jobs:
+  offline-foundations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile and run offline security and grouping probes
+        run: |
+          mkdir -p "$RUNNER_TEMP/ext-foundations"
+          javac -d "$RUNNER_TEMP/ext-foundations" \
+            android/app/src/main/java/com/kurdman/app/ExtensionStoreIndex.java \
+            android/app/src/main/java/com/kurdman/app/ExtensionLibrarySections.java \
+            android/app/src/main/java/com/kurdman/app/ExtensionIdentityPolicy.java \
+            tools/web-reader/ExtensionOfflineProbe.java tools/web-reader/ExtensionIndexProbe.java
+          java -cp "$RUNNER_TEMP/ext-foundations" com.kurdman.app.ExtensionOfflineProbe
+          echo '::notice::Synthetic offline identity and grouping checks passed; no APK verification, extension execution, or Android acceptance'
+      - name: Parse pinned public Keiyoushi index without installing extensions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/keiyoushi/extensions/git/blobs/8cf02b6b70f10dd9733659780f7ca858377538c3 --jq .content | base64 -d > "$RUNNER_TEMP/ext-foundations/index.pb"
+          java -cp "$RUNNER_TEMP/ext-foundations" com.kurdman.app.ExtensionIndexProbe "$RUNNER_TEMP/ext-foundations/index.pb"
+          echo '::notice::Pinned public store index parsed and grouped; no Android emulator or extension installation used'

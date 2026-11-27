@@ -256,6 +256,9 @@ jobs:
 
       - name: Open the actual verified regular APK on Android and translate a synthetic panel
         id: emulator_check
+        # Owner-requested no-emulator development run; skipped evidence must
+        # never authorize publication or be described as Android acceptance.
+        if: ${{ !contains(github.event.head_commit.message, '[no-android-emulator]') }}
         timeout-minutes: 32
         env:
           # Deliberate one-run opt-in only; ordinary CI stays independent of a public site's availability.
