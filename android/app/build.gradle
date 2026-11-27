@@ -162,6 +162,8 @@ dependencies {
     testImplementation 'org.robolectric:robolectric:4.17'
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'androidx.core:core:1.13.1'
+    // Static, script-free HTML parsing only; jsoup's network APIs are not used.
+    implementation 'org.jsoup:jsoup:1.18.3'
     // Bundled on-device OCR models: Latin, Korean, Japanese and Chinese.
     implementation 'com.google.mlkit:text-recognition:16.0.1'
     implementation 'com.google.mlkit:text-recognition-korean:16.0.1'

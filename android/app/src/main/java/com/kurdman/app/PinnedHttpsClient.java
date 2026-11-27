@@ -27,11 +27,12 @@ final class PinnedHttpsClient {
     // per-line and aggregate bound while allowing its legitimate redirect.
     private static final int MAX_HEADER_BYTES=16384, MAX_LINE=8192, TIMEOUT_MS=15000;
     static final class Response {
-        final String contentType, location;
+        final String contentType, location, finalUrl;
         final byte[] body;
         final int status;
-        Response(String type,byte[] data){this(200,type,data,null);}
-        Response(int status,String type,byte[] data,String location){this.status=status;this.contentType=type;this.body=data;this.location=location;}
+        Response(String type,byte[] data){this(200,type,data,null,null);}
+        Response(int status,String type,byte[] data,String location){this(status,type,data,location,null);}
+        Response(int status,String type,byte[] data,String location,String finalUrl){this.status=status;this.contentType=type;this.body=data;this.location=location;this.finalUrl=finalUrl;}
     }
     private PinnedHttpsClient() { }
 
@@ -63,7 +64,7 @@ final class PinnedHttpsClient {
             URI base=checkedUrl(current);
             if(!visited.add(base.normalize().toASCIIString()))throw new IOException("Redirect loop");
             Response response=getOnce(current,maxBytes,cancellation,true);
-            if(response.status==200)return response;
+            if(response.status==200)return new Response(response.status,response.contentType,response.body,null,base.toASCIIString());
             if(redirects==4)throw new IOException("Too many redirects");
             current=redirectUrl(base,response.location);
         }
