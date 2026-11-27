@@ -38,6 +38,10 @@ final class StaticWebPage {
     private StaticWebPage(String url,String title,List<Link> links,List<String> images,boolean truncated){
         this.url=url;this.title=title;this.links=Collections.unmodifiableList(links);this.images=Collections.unmodifiableList(images);this.truncated=truncated;
     }
+    static StaticWebPage singleImage(String finalUrl)throws IOException {
+        String url=PinnedHttpsClient.checkedUrl(finalUrl).toASCIIString();
+        return new StaticWebPage(url,"",new ArrayList<>(),new ArrayList<>(Collections.singletonList(url)),false);
+    }
     static StaticWebPage parse(String finalUrl,String contentType,byte[] bytes)throws IOException {
         URI base=PinnedHttpsClient.checkedUrl(finalUrl);
         if(bytes==null||bytes.length==0||bytes.length>MAX_HTML||!utf8Html(contentType))throw new IOException("Unsupported HTML response");
