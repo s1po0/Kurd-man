@@ -120,7 +120,7 @@ final class StaticWebPage {
     private static void appendBounded(StringBuilder out,String s){
         if(out.length()>=256)return;out.append(' ');out.append(s,0,Math.min(s.length(),256-out.length()));
     }
-    private static String clean(String input,int limit){
+    static String clean(String input,int limit){
         StringBuilder out=new StringBuilder();boolean space=false;
         for(int i=0;i<input.length()&&out.length()<limit;){int cp=input.codePointAt(i);i+=Character.charCount(cp);
             if(Character.isISOControl(cp)||cp==0x061c||(cp>=0x200e&&cp<=0x200f)||(cp>=0x202a&&cp<=0x202e)||(cp>=0x2066&&cp<=0x2069))continue;

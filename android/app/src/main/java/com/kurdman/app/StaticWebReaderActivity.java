@@ -11,6 +11,7 @@ import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.widget.BaseAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -40,7 +41,7 @@ public class StaticWebReaderActivity extends AppCompatActivity {
     private final List<StaticWebPage.Link> links=new ArrayList<>();
     private EditText address;private TextView status,summary;private Button go,back,forward,translate,stop;private BaseAdapter adapter;
     private StaticWebPage page;private PinnedHttpsClient.Cancellation cancellation;private Runnable deadline;
-    private int generation,position=-1;private boolean busy;
+    private int generation,position=-1;private boolean busy;private boolean[] selected=new boolean[0];
     @Override protected void onCreate(Bundle state){
         super.onCreate(state);
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(getColor(R.color.page));
@@ -57,17 +58,25 @@ public class StaticWebReaderActivity extends AppCompatActivity {
         summary=new TextView(this);summary.setId(R.id.staticWebSummary);summary.setTextColor(getColor(R.color.text_primary));summary.setPadding(0,p,0,p);root.addView(summary);
         ListView list=new ListView(this);list.setId(R.id.staticWebLinks);list.setDividerHeight(KoorixDesign.dp(this,4));
         adapter=new BaseAdapter(){
-            public int getCount(){return links.size();}public Object getItem(int i){return links.get(i);}public long getItemId(int i){return i;}
-            public View getView(int i,View recycled,ViewGroup parent){TextView text=recycled instanceof TextView?(TextView)recycled:new TextView(StaticWebReaderActivity.this);
-                text.setText(links.get(i).label);text.setTextColor(getColor(R.color.text_primary));text.setTextSize(16);text.setTypeface(KoorixDesign.font(StaticWebReaderActivity.this,false));
+            public int getCount(){return links.size()+selected.length;}public Object getItem(int i){return i<links.size()?links.get(i):page.images.get(i-links.size());}public long getItemId(int i){return i;}
+            public int getViewTypeCount(){return 2;}public int getItemViewType(int i){return i<links.size()?0:1;}
+            public View getView(int i,View recycled,ViewGroup parent){
+                TextView text;
+                if(i<links.size()){text=recycled instanceof TextView&&!(recycled instanceof CheckBox)?(TextView)recycled:new TextView(StaticWebReaderActivity.this);text.setText(links.get(i).label);}
+                else {int n=i-links.size();CheckBox check=recycled instanceof CheckBox?(CheckBox)recycled:new CheckBox(StaticWebReaderActivity.this);check.setOnCheckedChangeListener(null);
+                    Uri uri=Uri.parse(page.images.get(n));String host=uri.getHost()==null?"":uri.getHost();String name=uri.getLastPathSegment();
+                    String label=StaticWebPage.clean(host+(name==null?"":" / "+name),100);check.setText(getString(R.string.static_web_image,n+1,label));check.setChecked(selected[n]);check.setEnabled(!busy);
+                    boolean[] snapshot=selected;check.setOnCheckedChangeListener((button,checked)->{if(selected==snapshot&&n<selected.length&&!busy){selected[n]=checked;updateButtons();}});text=check;}
+                text.setTextColor(getColor(R.color.text_primary));text.setTextSize(16);text.setTypeface(KoorixDesign.font(StaticWebReaderActivity.this,false));
                 int pad=KoorixDesign.dp(StaticWebReaderActivity.this,12);text.setPadding(pad,pad,pad,pad);text.setMinHeight(KoorixDesign.dp(StaticWebReaderActivity.this,48));text.setBackgroundResource(R.drawable.bg_card);return text;}
         };
-        list.setAdapter(adapter);list.setOnItemClickListener((parent,view,index,id)->{if(!busy)load(links.get(index).url);});root.addView(list,new LinearLayout.LayoutParams(-1,0,1));
+        list.setAdapter(adapter);list.setOnItemClickListener((parent,view,index,id)->{if(!busy&&index<links.size())load(links.get(index).url);});root.addView(list,new LinearLayout.LayoutParams(-1,0,1));
         LinearLayout actions=new LinearLayout(this);translate=button(R.string.web_translate);translate.setId(R.id.webReaderTranslate);KoorixDesign.primary(translate,true);translate.setOnClickListener(v->capture());actions.addView(translate,new LinearLayout.LayoutParams(0,-2,1));
         stop=button(R.string.web_stop);stop.setId(R.id.webReaderStop);stop.setOnClickListener(v->cancel(R.string.web_hint));actions.addView(stop);root.addView(actions);setContentView(root);KoorixDesign.apply(this,root);updateButtons();
     }
     private Button button(int id){Button b=new Button(this,null,0);b.setText(id);b.setTypeface(KoorixDesign.font(this,true));KoorixDesign.primary(b,false);b.setMinHeight(KoorixDesign.dp(this,48));return b;}
-    private void updateButtons(){go.setEnabled(!busy);back.setEnabled(!busy&&position>0);forward.setEnabled(!busy&&position>=0&&position<history.size()-1);translate.setEnabled(!busy&&page!=null&&!page.images.isEmpty());stop.setEnabled(busy);}
+    private void updateButtons(){boolean any=false;for(boolean value:selected)any|=value;
+        go.setEnabled(!busy);back.setEnabled(!busy&&position>0);forward.setEnabled(!busy&&position>=0&&position<history.size()-1);translate.setEnabled(!busy&&any);stop.setEnabled(busy);}
     private void open(){if(busy)return;String text=address.getText().toString().trim();if(text.isEmpty())return;
         String value=text.startsWith("https://")?text:text.contains("://")?"":!text.contains(" ")&&text.contains(".")?"https://"+text:"https://www.google.com/search?q="+Uri.encode(text);
         try{PinnedHttpsClient.checkedUrl(value);}catch(IOException bad){status.setText(R.string.web_invalid);return;}
@@ -76,11 +85,11 @@ public class StaticWebReaderActivity extends AppCompatActivity {
     StaticWebPage fetchPage(String url,PinnedHttpsClient.Cancellation cancel)throws IOException{return new StaticWebTransport().page(url,cancel);}
     StaticWebImport.Result fetchImages(List<String> images,File cache,PinnedHttpsClient.Cancellation cancel,StaticWebImport.Progress progress)throws IOException{return new StaticWebImport().capture(images,cache,cancel,progress);}
     private int begin(int message,long deadlineMillis){
-        busy=true;cancellation=new PinnedHttpsClient.Cancellation();int token=++generation;status.setText(message);updateButtons();
+        busy=true;cancellation=new PinnedHttpsClient.Cancellation();int token=++generation;status.setText(message);updateButtons();adapter.notifyDataSetChanged();
         deadline=()->{if(active(token))cancel(R.string.web_error);};handler.postDelayed(deadline,deadlineMillis);return token;
     }
     private boolean active(int token){return busy&&generation==token&&!isFinishing()&&!isDestroyed();}
-    private void end(){busy=false;if(deadline!=null)handler.removeCallbacks(deadline);deadline=null;cancellation=null;updateButtons();}
+    private void end(){busy=false;if(deadline!=null)handler.removeCallbacks(deadline);deadline=null;cancellation=null;updateButtons();adapter.notifyDataSetChanged();}
     private void cancel(int message){if(!busy)return;generation++;if(cancellation!=null)cancellation.cancel();end();status.setText(message);}
     private void load(String url){
         if(busy)return;int token=begin(R.string.web_loading,PAGE_DEADLINE_MS);PinnedHttpsClient.Cancellation signal=cancellation;
@@ -89,12 +98,13 @@ public class StaticWebReaderActivity extends AppCompatActivity {
                 while(history.size()>position+1)history.remove(history.size()-1);history.add(fetched);if(history.size()>50)history.remove(0);position=history.size()-1;showPage(fetched);
             });});}catch(RejectedExecutionException unavailable){end();status.setText(R.string.web_error);}
     }
-    private void showPage(StaticWebPage value){page=value;address.setText(value.url);links.clear();links.addAll(value.links);adapter.notifyDataSetChanged();
+    private void showPage(StaticWebPage value){page=value;address.setText(value.url);links.clear();links.addAll(value.links);selected=new boolean[value.images.size()];java.util.Arrays.fill(selected,true);adapter.notifyDataSetChanged();
         summary.setText(getString(R.string.static_web_summary,value.title.isEmpty()?value.url:value.title,value.images.size(),value.links.size()));
         status.setText(value.truncated?R.string.web_capped:value.images.isEmpty()?R.string.static_web_no_images:R.string.static_web_ready);updateButtons();}
     private void move(int delta){if(busy)return;int next=position+delta;if(next>=0&&next<history.size()){position=next;showPage(history.get(position));}}
     private void capture(){
-        if(busy||page==null||page.images.isEmpty())return;final List<String> images=new ArrayList<>(page.images);final File cache=getApplicationContext().getCacheDir();
+        if(busy||page==null)return;final List<String> images=new ArrayList<>();for(int i=0;i<selected.length;i++)if(selected[i])images.add(page.images.get(i));
+        if(images.isEmpty())return;final File cache=getApplicationContext().getCacheDir();
         int token=begin(R.string.web_discover,IMPORT_DEADLINE_MS);PinnedHttpsClient.Cancellation signal=cancellation;
         try{WORKER.execute(()->{StaticWebImport.Result result=null;try{result=fetchImages(images,cache,signal,(current,total)->handler.post(()->{if(active(token))status.setText(getString(R.string.web_capture,current,total));}));}catch(Exception ignored){}
             final StaticWebImport.Result captured=result;handler.post(()->{

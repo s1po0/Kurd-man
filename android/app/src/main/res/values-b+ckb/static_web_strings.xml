@@ -3,6 +3,7 @@
     <string name="static_web_notice">خوێنەری سادە: پەڕەکانی پێویستیان بە JavaScript، چوونەژوورەوە یان تایبەتمەندیی تایبەتی ماڵپەڕ هەیە لەوانەیە کار نەکەن. هیچ سکریپت یان سەرچاوەیەکی پەڕە بەخۆکار بار ناکرێت.</string>
     <string name="static_web_summary">%1$s\nوێنە: %2$d • بەستەر: %3$d</string>
     <string name="static_web_no_images">هیچ وێنەیەک لەم پەڕەیە نەدۆزرایەوە. بەستەرێک هەڵبژێرە بۆ کردنەوەی چەپتەر.</string>
-    <string name="static_web_ready">بەستەرێک هەڵبژێرە یان وێنە دۆزراوەکانی ئەم پەڕەیە وەربگێڕە.</string>
+    <string name="static_web_ready">بەستەرێک هەڵبژێرە یان وێنە دۆزراوەکان وەربگێڕە. هەموویان هەڵبژێردراون؛ دەتوانیت وێنە نەخوازراوەکان لاببەیت.</string>
+    <string name="static_web_image">وێنەی %1$d • %2$s</string>
     <string name="static_web_empty">هیچ وێنەیەکی بەردەست ئامادە نەکرا. پەڕەیەکی تر تاقی بکەرەوە.</string>
 </resources>

@@ -59,7 +59,9 @@ public class StaticWebReaderActivityTest {
         try{FakeReader activity=controller.get();assertFalse(hasWebView(activity.getWindow().getDecorView()));
             EditText address=activity.findViewById(R.id.webReaderAddress);address.setText("https://example.org/start");
             activity.findViewById(R.id.webReaderGo).performClick();ListView list=activity.findViewById(R.id.staticWebLinks);
-            waitFor(()->list.getAdapter().getCount()==1);assertEquals("Next chapter",((android.widget.TextView)list.getAdapter().getView(0,null,list)).getText().toString());
+            waitFor(()->list.getAdapter().getCount()==2);assertEquals("Next chapter",((android.widget.TextView)list.getAdapter().getView(0,null,list)).getText().toString());
+            android.widget.CheckBox image=(android.widget.CheckBox)list.getAdapter().getView(1,null,list);assertTrue(image.isChecked());image.setChecked(false);
+            assertFalse(activity.findViewById(R.id.webReaderTranslate).isEnabled());image.setChecked(true);assertTrue(activity.findViewById(R.id.webReaderTranslate).isEnabled());
             list.performItemClick(list.getAdapter().getView(0,null,list),0,0);waitFor(()->address.getText().toString().equals("https://example.org/next"));
             activity.onBackPressed();assertEquals("https://example.org/start",address.getText().toString());
             Button translate=activity.findViewById(R.id.webReaderTranslate);assertTrue(translate.isEnabled());translate.performClick();waitFor(activity::isFinishing);

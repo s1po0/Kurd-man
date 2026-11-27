@@ -3,6 +3,7 @@
     <string name="static_web_notice">قارئ الصفحات الثابتة: قد لا تعمل الصفحات التي تتطلب JavaScript أو تسجيل الدخول أو ميزات خاصة بالموقع. لا تُحمّل السكربتات أو موارد الصفحة تلقائياً.</string>
     <string name="static_web_summary">%1$s\nالصور: %2$d • الروابط: %3$d</string>
     <string name="static_web_no_images">لم تُوجد صور في هذه الصفحة. اختر رابطاً لفتح فصل.</string>
-    <string name="static_web_ready">اختر رابطاً أو ترجم الصور الموجودة في هذه الصفحة.</string>
+    <string name="static_web_ready">اختر رابطاً أو ترجم الصور الموجودة. كل الصور محددة؛ يمكنك استبعاد الصور غير المرغوبة.</string>
+    <string name="static_web_image">صورة %1$d • %2$s</string>
     <string name="static_web_empty">تعذر تجهيز أي صور متاحة. جرّب صفحة أخرى.</string>
 </resources>

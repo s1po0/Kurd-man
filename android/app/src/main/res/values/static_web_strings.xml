@@ -3,6 +3,7 @@
     <string name="static_web_notice">Static reader: pages requiring JavaScript, sign-in, or site-specific features may not work. No scripts or automatic page resources are loaded.</string>
     <string name="static_web_summary">%1$s\nImages: %2$d • Links: %3$d</string>
     <string name="static_web_no_images">No images found on this page. Choose a link to open a chapter.</string>
-    <string name="static_web_ready">Choose a link or translate the images found on this page.</string>
+    <string name="static_web_ready">Choose a link or translate the images found on this page. All are selected; you can exclude unwanted images.</string>
+    <string name="static_web_image">Image %1$d • %2$s</string>
     <string name="static_web_empty">No accessible images could be prepared. Try another page.</string>
 </resources>
