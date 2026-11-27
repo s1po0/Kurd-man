@@ -115,7 +115,7 @@ public class StaticWebReaderActivity extends AppCompatActivity {
         if(busy)return;int token=begin(R.string.web_image_loading,PAGE_DEADLINE_MS);PinnedHttpsClient.Cancellation signal=cancellation;
         try{WORKER.execute(()->{Bitmap result=null;try{result=fetchPreview(url,signal);}catch(Exception ignored){}final Bitmap bitmap=result;
             handler.post(()->{if(!active(token)){if(bitmap!=null&&!bitmap.isRecycled())bitmap.recycle();return;}end();
-                if(bitmap==null){status.setText(R.string.web_error);return;}status.setText(R.string.static_web_ready);
+                if(bitmap==null){status.setText(R.string.web_error);return;}status.setText(page!=null&&page.truncated?R.string.web_capped:R.string.static_web_ready);
                 ImageView image=new ImageView(this);image.setImageBitmap(bitmap);image.setScaleType(ImageView.ScaleType.FIT_CENTER);image.setContentDescription(getString(R.string.static_web_preview_title,number));
                 image.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,KoorixDesign.dp(this,480)));
                 AlertDialog dialog=new AlertDialog.Builder(this).setTitle(R.string.static_web_preview).setView(image).setPositiveButton(android.R.string.ok,null).create();

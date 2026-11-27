@@ -64,8 +64,9 @@ final class StaticWebImport {
         }finally{if(result==null)TranslationProjectStore.deleteRecursive(session);}
     }
     static boolean validImage(byte[] data,String extension){
+        if(data==null)return false;
         BitmapFactory.Options options=new BitmapFactory.Options();options.inJustDecodeBounds=true;
-        BitmapFactory.decodeByteArray(data,0,data.length,options);
+        try{BitmapFactory.decodeByteArray(data,0,data.length,options);}catch(RuntimeException|OutOfMemoryError invalid){return false;}
         if(options.outWidth<1||options.outHeight<1||(long)options.outWidth*options.outHeight>100_000_000L)return false;
         String mime=options.outMimeType;
         return ".jpg".equals(extension)&&"image/jpeg".equals(mime)||".png".equals(extension)&&"image/png".equals(mime)

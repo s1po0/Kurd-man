@@ -77,7 +77,9 @@ Only app-created installer-cache APKs older than seven days are eligible for
 bounded cleanup; reader files and projects are not touched. The displayed store fingerprint still needs the reader's independent approval;
 a valid signer does not imply safe code. API26 synthetic metadata tests are not
 proof of API28+ PackageManager behavior, APK installer behavior, or malware
-containment. No APK is executed by these components.
+containment. Run `45993236516` (`09c8107`) also passed synthetic SDK28/34
+SigningInfo tests for single, multiple and rotated signers, not device signature
+verification. No APK is executed by these components.
 
 Hosted run `45734684900` (`7598802`) parsed the pinned live store blob before
 failing later because Robolectric could not fetch its Android artifact; it is

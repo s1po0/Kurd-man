@@ -44,6 +44,14 @@ public class StaticWebReaderActivityTest {
             return new StaticWebImport.Result(session,Collections.singletonList(file),0);
         }
     }
+    public static class SlowPreview extends FakeReader {
+        final java.util.concurrent.CountDownLatch started=new java.util.concurrent.CountDownLatch(1), release=new java.util.concurrent.CountDownLatch(1);
+        volatile android.graphics.Bitmap lateBitmap;
+        @Override android.graphics.Bitmap fetchPreview(String url,PinnedHttpsClient.Cancellation cancel)throws IOException {
+            started.countDown();try{release.await();}catch(InterruptedException e){Thread.currentThread().interrupt();throw new IOException(e);}
+            lateBitmap=android.graphics.Bitmap.createBitmap(4,4,android.graphics.Bitmap.Config.ARGB_8888);return lateBitmap;
+        }
+    }
     public static class SlowReader extends FakeReader {
         final java.util.concurrent.CountDownLatch started=new java.util.concurrent.CountDownLatch(1), release=new java.util.concurrent.CountDownLatch(1);
         volatile File lateSession;
@@ -90,6 +98,15 @@ public class StaticWebReaderActivityTest {
             waitFor(()->activity.previewLoads==1&&org.robolectric.shadows.ShadowDialog.getLatestDialog()!=previous);
             assertTrue(org.robolectric.shadows.ShadowDialog.getLatestDialog().isShowing());org.robolectric.shadows.ShadowDialog.getLatestDialog().dismiss();
         }finally{controller.pause().stop().destroy();}
+    }
+    @Test public void stopDiscardsLatePreview()throws Exception {
+        org.robolectric.android.controller.ActivityController<SlowPreview> controller=Robolectric.buildActivity(SlowPreview.class).setup();SlowPreview activity=controller.get();
+        try{((EditText)activity.findViewById(R.id.webReaderAddress)).setText("https://example.org/start");activity.findViewById(R.id.webReaderGo).performClick();
+            ListView list=activity.findViewById(R.id.staticWebLinks);waitFor(()->list.getAdapter().getCount()==2);
+            android.app.Dialog previous=org.robolectric.shadows.ShadowDialog.getLatestDialog();list.getAdapter().getView(1,null,list).findViewById(R.id.staticWebImagePreview).performClick();
+            assertTrue(activity.started.await(5,java.util.concurrent.TimeUnit.SECONDS));activity.findViewById(R.id.webReaderStop).performClick();activity.release.countDown();
+            waitFor(()->activity.lateBitmap!=null&&activity.lateBitmap.isRecycled());assertSame(previous,org.robolectric.shadows.ShadowDialog.getLatestDialog());
+        }finally{activity.release.countDown();controller.pause().stop().destroy();}
     }
     @Test public void approvedStartupUrlLoadsWithoutJavaScript()throws Exception {
         android.content.Intent intent=new android.content.Intent().putExtra(StaticWebReaderActivity.EXTRA_START_URL,"https://example.org/source");

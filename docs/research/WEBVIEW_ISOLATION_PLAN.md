@@ -19,8 +19,10 @@ behavior, or reader translation quality. Run `45991988187` (`b4de259`) passed
 380 JVM tests and a stronger fixed public fixture: three known Pepper&Carrot
 story image URLs were discovered in order and one was fetched without an
 emulator. Other page images may still be unrelated, and this was hosted Java,
-not Android TLS, decoded-image capture, translation, or device proof. JavaScript
-sites remain unsupported.
+not Android TLS, decoded-image capture, translation, or device proof. Run
+`45993914033` (`628a710`) passed 389 JVM tests and signed-build checks with no
+emulator; these include simulated opt-in preview and native-graphics image
+sampling, not installed-device validation. JavaScript sites remain unsupported.
 
 ## Address and DNS primitive
 
