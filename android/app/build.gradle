@@ -122,6 +122,10 @@ android {
         unitTests.all {
             systemProperty 'koorix.bubbleFixtures', file("$buildDir/outputs/bubble-tests").absolutePath
             systemProperty 'koorix.uiFixtures', file("$buildDir/outputs/ui-tests").absolutePath
+            // Robolectric's default repo1 endpoint intermittently fails on
+            // hosted runners. Use the canonical Maven Central host for test
+            // SDK artifacts; this does not change the runtime APK.
+            systemProperty 'robolectric.dependency.repo.url', 'https://repo.maven.apache.org/maven2'
             jvmArgs '--add-opens=java.base/java.lang=ALL-UNNAMED',
                     '--add-opens=java.base/java.util=ALL-UNNAMED',
                     '--add-opens=java.base/java.lang.reflect=ALL-UNNAMED'
