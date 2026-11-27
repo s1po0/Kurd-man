@@ -72,6 +72,7 @@
         <activity android:name=".ExtensionCatalogActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".WebResultActivity" android:exported="false" />
         <activity android:name=".WebReaderActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".StaticWebReaderActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".EditorActivity"
