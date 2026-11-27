@@ -37,6 +37,10 @@ jobs:
     # compatibility from Robolectric compilation on a newer distro.
     runs-on: ubuntu-24.04
     timeout-minutes: 50
+    env:
+      # Maven Central is intermittently rate-limiting hosted runners; use
+      # Google's public mirror for dependencies and Robolectric SDKs.
+      KOORIX_CI_MAVEN_MIRROR: '1'
     permissions:
       contents: write
     steps:

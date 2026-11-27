@@ -1,6 +1,10 @@
 pluginManagement {
     repositories {
         google()
+        if (System.getenv('KOORIX_CI_MAVEN_MIRROR') == '1') {
+            // Google's public Maven Central mirror, only for opted-in CI.
+            maven { url = uri('https://maven-central.storage-download.googleapis.com/maven2') }
+        }
         mavenCentral()
         gradlePluginPortal()
     }
@@ -9,6 +13,9 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
+        if (System.getenv('KOORIX_CI_MAVEN_MIRROR') == '1') {
+            maven { url = uri('https://maven-central.storage-download.googleapis.com/maven2') }
+        }
         mavenCentral()
     }
 }

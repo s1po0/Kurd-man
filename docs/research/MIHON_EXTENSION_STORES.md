@@ -72,6 +72,29 @@ The no-emulator opt-out on the regular verification workflow must never be
 mistaken for device acceptance; the existing release security gate stays in
 place while the feature is incomplete.
 
+`ExtensionCatalogClient` now has a fixed Keiyoushi-only, pinned-public-DNS GET
+prototype, parses the bounded v2 catalog and limits fetch concurrency. A caller
+wait deadline cancels and closes an attached socket; OS DNS/connect can still
+outlive the deadline, so a single shared worker and zero waiting queue prevent
+unbounded work. It is not connected to any UI and isn't yet a complete network
+isolation solution. Hosted OpenJDK runs `45977591845` and `45977843317` passed
+synthetic bounded-worker checks, a pinned public fixture and a real current
+Keiyoushi public index fetch without an emulator; they do not prove Android
+TLS/network behavior, APK installation or extension runtime security. The
+regular build `45977338442` failed before the build on a Maven artifact fetch;
+no APK was produced.
+
+An Android `isolatedProcess=true` service is a potential execution boundary
+([Android service documentation](https://developer.android.com/guide/topics/manifest/service-element)),
+not a completed solution: it has no permissions of its own, requires narrow
+IPC and has compatibility limits for extension code needing network, files,
+preferences, JavaScript or WebView. It must not be replaced by merely loading
+untrusted extension code in the main process or an ordinary same-UID process.
+Mihon's own private extensions cannot automatically be enumerated/read by a
+separate app; system-installed shared APKs, package visibility and local
+Koorix-private installs need separate reconciliation paths. Never claim an
+empty inventory means the user has no previously installed extensions.
+
 ## Remaining acceptance gates
 
 - Review a compatible Mihon source API and host dependency/license strategy;
