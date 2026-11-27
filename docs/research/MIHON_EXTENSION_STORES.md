@@ -178,6 +178,17 @@ separate app; system-installed shared APKs, package visibility and local
 Koorix-private installs need separate reconciliation paths. Never claim an
 empty inventory means the user has no previously installed extensions.
 
+`ExtensionImportedInventory` is **unconnected groundwork**, not a user-facing
+import feature: it can retain bounded copies of explicitly selected APK streams
+in private storage and identify their declared package/extension feature. Its
+SHA-256 filename detects later modification, not authenticity; package metadata
+and a matching catalog package name are untrusted. It neither scans Downloads
+nor other applications' private data, verifies signatures, installs, approves,
+or executes the APK. A future UI must distinguish an imported archive from a
+system-installed package, preserve the existing unified file chooser, and check
+identity/signatures before any execution. Damaged copies are not automatically
+removed. No APK version containing this groundwork has been released.
+
 ## Remaining acceptance gates
 
 - Review a compatible Mihon source API and host dependency/license strategy;

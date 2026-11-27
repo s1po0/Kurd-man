@@ -11,27 +11,29 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Presentation-only grouping groundwork; not yet attached to a store UI.
- * Installed means locally present, NOT trusted, safe, compatible or enabled.
- * Callers must separately verify identity and signer before loading code.
+ * Presentation-only grouping for the catalog. Local entries can be Android
+ * installed packages or explicit private APK imports; neither implies trust,
+ * compatibility, permission to execute, or verified signer identity.
  */
 final class ExtensionLibrarySections {
     static final class Installed {
         final String packageName, displayName;
-        Installed(String packageName,String displayName){
-            if(packageName==null||packageName.isEmpty()||displayName==null||displayName.trim().isEmpty())
-                throw new IllegalArgumentException("Installed extension requires package and label");
-            this.packageName=packageName;this.displayName=displayName;
+        final boolean systemInstalled, imported;
+        Installed(String packageName,String displayName){this(packageName,displayName,true,false);}
+        Installed(String packageName,String displayName,boolean systemInstalled,boolean imported){
+            if(packageName==null||packageName.isEmpty()||displayName==null||displayName.trim().isEmpty()||(!systemInstalled&&!imported))
+                throw new IllegalArgumentException("Local extension requires package and label");
+            this.packageName=packageName;this.displayName=displayName;this.systemInstalled=systemInstalled;this.imported=imported;
         }
     }
     static final class Row {
         final String packageName, displayName;
-        final boolean installed;
+        final boolean installed,systemInstalled,imported;
         // An available catalog entry with the same package name does not prove
         // signer identity, update eligibility, or permission to run it.
         final ExtensionStoreIndex.Entry catalogEntry;
-        Row(String pkg,String name,boolean installed,ExtensionStoreIndex.Entry entry){
-            this.packageName=pkg;this.displayName=name;this.installed=installed;this.catalogEntry=entry;
+        Row(String pkg,String name,boolean installed,ExtensionStoreIndex.Entry entry,boolean systemInstalled,boolean imported){
+            this.packageName=pkg;this.displayName=name;this.installed=installed;this.catalogEntry=entry;this.systemInstalled=systemInstalled;this.imported=imported;
         }
     }
     final List<Row> installed, available;
@@ -49,16 +51,29 @@ final class ExtensionLibrarySections {
         for(Installed item:local){
             if(item==null||!installedPackages.add(item.packageName))throw new IllegalArgumentException("Ambiguous installed package");
             ExtensionStoreIndex.Entry entry=byPackage.get(item.packageName);
-            if(matches(item.displayName,item.packageName,entry,search))present.add(new Row(item.packageName,item.displayName,true,entry));
+            String display=item.imported&&!item.systemInstalled&&entry!=null?entry.name:item.displayName;
+            if(matches(display,item.packageName,entry,search))present.add(new Row(item.packageName,display,true,entry,item.systemInstalled,item.imported));
         }
         for(ExtensionStoreIndex.Entry entry:catalog){
             if(!installedPackages.contains(entry.packageName)&&matches(entry.name,entry.packageName,entry,search))
-                remote.add(new Row(entry.packageName,entry.name,false,entry));
+                remote.add(new Row(entry.packageName,entry.name,false,entry,false,false));
         }
         Comparator<Row> order=Comparator.comparing((Row r)->r.displayName.toLowerCase(Locale.ROOT))
                 .thenComparing(r->r.packageName);
         present.sort(order);remote.sort(order);
         return new ExtensionLibrarySections(present,remote);
+    }
+    static List<Installed> mergeLocal(List<Installed> system,List<Installed> imported){
+        if(system==null||imported==null)throw new IllegalArgumentException("Missing local inventory");
+        Map<String,Installed> merged=new java.util.LinkedHashMap<>();
+        for(Installed item:system){if(item==null||!item.systemInstalled||merged.put(item.packageName,item)!=null)throw new IllegalArgumentException("Ambiguous installed package");}
+        for(Installed item:imported){
+            if(item==null||!item.imported)throw new IllegalArgumentException("Invalid imported package");
+            Installed prior=merged.get(item.packageName);
+            if(prior==null)merged.put(item.packageName,item);
+            else if(prior.systemInstalled)merged.put(item.packageName,new Installed(prior.packageName,prior.displayName,true,true));
+        }
+        return new ArrayList<>(merged.values());
     }
     private static boolean matches(String label,String pkg,ExtensionStoreIndex.Entry entry,String query){
         if(query.isEmpty()||label.toLowerCase(Locale.ROOT).contains(query)||pkg.toLowerCase(Locale.ROOT).contains(query))return true;
