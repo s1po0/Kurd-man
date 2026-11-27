@@ -42,6 +42,23 @@ public class FreeMainActivityTest {
     }
     @Test public void separateGalleryAndFilesUiIsRemoved(){for(String id:new String[]{"pickGalleryButton","pickFilesButton","inputSourceButtons"})assertEquals(id,0,app.getResources().getIdentifier(id,"id",BuildConfig.APPLICATION_ID));assertEquals(View.VISIBLE,main.findViewById(R.id.pickButton).getVisibility());assertEquals(View.VISIBLE,main.findViewById(R.id.inputBrowseHint).getVisibility());}
     @Test public void cancelingTheUnifiedChooserKeepsTheExistingSelection(){ReflectionHelpers.setField(main,"selectedName","existing-book.cbz");main.findViewById(R.id.pickButton).performClick();ShadowActivity.IntentForResult request=Shadows.shadowOf(main).getNextStartedActivityForResult();assertTrue(main.getActivityResultRegistry().dispatchResult(request.requestCode,Activity.RESULT_CANCELED,null));assertEquals("existing-book.cbz",ReflectionHelpers.getField(main,"selectedName"));}
+    @Test public void selectedApkRequiresConsentAndDoesNotReplaceComicOrLaunchInstaller() throws Exception {
+        File apk=new File(app.getCacheDir(),"extension.apk");try(FileOutputStream out=new FileOutputStream(apk)){out.write(new byte[]{1,2,3});}
+        ReflectionHelpers.setField(main,"selectedName","existing-book.cbz");
+        main.findViewById(R.id.pickButton).performClick();ShadowActivity.IntentForResult request=Shadows.shadowOf(main).getNextStartedActivityForResult();
+        assertTrue(main.getActivityResultRegistry().dispatchResult(request.requestCode,Activity.RESULT_OK,new Intent().setData(Uri.fromFile(apk))));
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        androidx.appcompat.app.AlertDialog dialog=(androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog();
+        assertNotNull(dialog);assertTrue(dialog.isShowing());dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE).performClick();
+        assertEquals("existing-book.cbz",ReflectionHelpers.getField(main,"selectedName"));assertTrue(apk.isFile());assertNull(Shadows.shadowOf(main).getNextStartedActivity());
+    }
+    @Test public void apkMixedWithCbzIsRejectedWithoutReplacingSelection()throws Exception {
+        File apk=new File(app.getCacheDir(),"extension.apk");try(FileOutputStream out=new FileOutputStream(apk)){out.write(1);}
+        File previous=comic("previous-mixed.cbz",false);ReflectionHelpers.setField(main,"selectedCbzFile",previous);
+        choose(apk,comic("another.cbz",false));
+        assertEquals(previous,ReflectionHelpers.getField(main,"selectedCbzFile"));assertTrue(apk.isFile());
+        assertEquals(main.getString(R.string.ext_import_single),((TextView)main.findViewById(R.id.statusText)).getText().toString());
+    }
     private File comic(String name, boolean empty) throws Exception {
         File file=new File(app.getCacheDir(),name);
         try(ZipOutputStream zip=new ZipOutputStream(new FileOutputStream(file))) {

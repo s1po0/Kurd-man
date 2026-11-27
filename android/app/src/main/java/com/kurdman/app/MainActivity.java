@@ -2658,7 +2658,41 @@ public class MainActivity extends AppCompatActivity {
             // Gallery/GetContent can grant temporary access only. Sources are
             // copied immediately into private storage by the existing importer.
         }
+        // APKs use this same app-capable chooser; selection alone does not
+        // install, trust or execute code, or replace the current comic input.
+        int apkCount=0;
+        try {
+            for(Uri uri:uris)if(uri!=null&&ComicInputPicker.isApk(queryDisplayName(uri),getContentResolver().getType(uri)))apkCount++;
+        }catch(RuntimeException unavailable){setStatus(getString(R.string.ext_import_failed));return;}
+        if(apkCount>0){
+            if(uris.size()!=1){setStatus(getString(R.string.ext_import_single));return;}
+            confirmExtensionImport(uris.get(0));return;
+        }
         loadPickedFiles(uris);
+    }
+
+    private void confirmExtensionImport(Uri uri) {
+        new androidx.appcompat.app.AlertDialog.Builder(this).setTitle(R.string.ext_import_title)
+                .setMessage(R.string.ext_import_notice).setNegativeButton(android.R.string.cancel,null)
+                .setPositiveButton(R.string.ext_import_confirm,(dialog,which)->{
+                    if(currentBusy||JobRuntime.isRunning())return;
+                    setBusy(true);setStatus(getString(R.string.ext_import_working));
+                    executor.execute(()->{
+                        JobRuntime.markThreadStarted();
+                        try(java.io.InputStream in=getContentResolver().openInputStream(uri)) {
+                            if(in==null)throw new IOException("Missing selected archive");
+                            Runnable cancel=()->{try{in.close();}catch(IOException ignored){}};
+                            JobRuntime.registerCancellation(cancel);
+                            try{
+                                ExtensionImportedInventory.store(in,getFilesDir(),ExtensionImportedInventory.inspector(getPackageManager()),()->{
+                                    if(JobRuntime.isStopRequested())throw new IOException("Import stopped");
+                                });
+                            }finally{JobRuntime.unregisterCancellation(cancel);}
+                            setStatus(getString(R.string.ext_import_success));
+                        }catch(Exception failure){setStatus(getString(JobRuntime.isStopRequested()?R.string.ext_import_stopped:R.string.ext_import_failed));}
+                        finally{setBusy(false);}
+                    });
+                }).show();
     }
 
     private void openInputSources() {

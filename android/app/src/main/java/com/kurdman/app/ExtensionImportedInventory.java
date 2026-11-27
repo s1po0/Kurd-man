@@ -24,6 +24,7 @@ final class ExtensionImportedInventory {
     static final long MAX_STORE=300L*1024*1024;
     static final int MAX_FILES=100;
     interface Inspector { String packageName(File apk)throws IOException; }
+    interface Cancellation { void check() throws IOException; }
     private ExtensionImportedInventory() { }
     static Inspector inspector(PackageManager pm){return file->{
         PackageInfo info=pm.getPackageArchiveInfo(file.getAbsolutePath(),PackageManager.GET_CONFIGURATIONS);
@@ -35,8 +36,12 @@ final class ExtensionImportedInventory {
         if(filesDir==null)throw new IOException("Missing storage");File dir=new File(filesDir,"imported-extension-apks");
         if(Files.isSymbolicLink(dir.toPath())||(!dir.isDirectory()&&!dir.mkdirs()))throw new IOException("Unsafe extension storage");return dir;
     }
-    static synchronized String store(InputStream input,File filesDir,Inspector inspector)throws IOException {
-        if(input==null||inspector==null)throw new IOException("Missing archive");
+    static String store(InputStream input,File filesDir,Inspector inspector)throws IOException {
+        return store(input,filesDir,inspector,()->{});
+    }
+    static synchronized String store(InputStream input,File filesDir,Inspector inspector,Cancellation cancellation)throws IOException {
+        if(input==null||inspector==null||cancellation==null)throw new IOException("Missing archive");
+        cancellation.check();
         File dir=directory(filesDir);File[] existing=dir.listFiles();if(existing==null)throw new IOException("Cannot inspect extension storage");
         long used=0;int count=0;
         for(File f:existing){
@@ -52,14 +57,14 @@ final class ExtensionImportedInventory {
             try(FileOutputStream out=new FileOutputStream(temp)){
                 byte[] buffer=new byte[8192];int n;
                 while((n=input.read(buffer))!=-1){
-                    if(n==0)throw new IOException("Invalid archive stream");if(n>ExtensionApkStager.MAX_APK_BYTES-total||n>MAX_STORE-used-total)throw new IOException("Extension archive too large");
+                    cancellation.check();if(n==0)throw new IOException("Invalid archive stream");if(n>ExtensionApkStager.MAX_APK_BYTES-total||n>MAX_STORE-used-total)throw new IOException("Extension archive too large");
                     int copy=Math.min(n,4-firstCount);if(copy>0){System.arraycopy(buffer,0,first,firstCount,copy);firstCount+=copy;}
                     digest.update(buffer,0,n);out.write(buffer,0,n);total+=n;
                 }
                 if(firstCount<4||first[0]!='P'||first[1]!='K'||first[2]!=3||first[3]!=4)throw new IOException("Not an APK container");
                 out.getFD().sync();
             }
-            String pkg=inspector.packageName(temp);if(!validPackage(pkg))throw new IOException("Invalid extension identity");
+            cancellation.check();String pkg=inspector.packageName(temp);if(!validPackage(pkg))throw new IOException("Invalid extension identity");cancellation.check();
             StringBuilder hex=new StringBuilder();for(byte b:digest.digest())hex.append(String.format(Locale.ROOT,"%02x",b&255));
             File target=new File(dir,"ext-"+hex+".apk");
             if(Files.isSymbolicLink(target.toPath()))throw new IOException("Unsafe destination");

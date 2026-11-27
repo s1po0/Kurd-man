@@ -3,14 +3,14 @@
     <string name="ext_open">Extension catalog</string>
     <string name="ext_title">Extensions</string>
     <string name="ext_refresh">Refresh</string>
-    <string name="ext_notice">You can choose an APK for Android to install, but Koorix cannot use extensions yet. Installed APKs are checked locally; Mihon private extensions are not visible.</string>
+    <string name="ext_notice">You can choose an APK for Android to install, but Koorix cannot use extensions yet. Installed apps and explicitly imported APKs are shown; Mihon private extensions are not visible.</string>
     <string name="ext_search">Search sites or extensions</string>
     <string name="ext_loading">Loading catalog…</string>
-    <string name="ext_ready">Installed extensions appear first. Installed does not mean trusted.</string>
-    <string name="ext_inventory_unavailable">Installed extensions could not be checked; their status is unknown.</string>
-    <string name="ext_store_unavailable">The store could not load; visible installed extensions are still shown.</string>
-    <string name="ext_installed">Installed on this device</string>
-    <string name="ext_available">Catalog — not found among visible installed apps</string>
+    <string name="ext_ready">Installed apps and imported APKs appear first; neither means trusted.</string>
+    <string name="ext_inventory_unavailable">Some local extensions could not be checked; the list may be incomplete.</string>
+    <string name="ext_store_unavailable">The store could not load; visible local extensions are still shown.</string>
+    <string name="ext_installed">Installed and imported</string>
+    <string name="ext_available">Catalog — not found among visible local extensions</string>
     <string name="ext_catalog_unknown">Catalog — installation status unknown</string>
     <string name="ext_details_notice">You can ask Android to install this APK. Koorix cannot use the extension yet.</string>
     <string name="ext_details_unavailable">This APK cannot be prepared while its catalog or installed-app status is unavailable. Koorix cannot use the extension yet.</string>
@@ -33,4 +33,14 @@
     <string name="ext_mixed">Mixed content</string>
     <string name="ext_adult">Adults only</string>
     <string name="ext_unknown_warning">Content unknown</string>
+    <string name="ext_imported_label">Imported APK, not installed</string>
+    <string name="ext_imported_details">An APK copy was imported; matching package names do not establish signer identity or trust. Koorix cannot execute this file yet.</string>
+    <string name="ext_import_title">Import extension APK</string>
+    <string name="ext_import_notice">A private copy of this file will be kept. The original will not be deleted, nothing will be installed, and no code will run. Koorix cannot use extensions yet.</string>
+    <string name="ext_import_confirm">Import</string>
+    <string name="ext_import_working">Importing selected APK…</string>
+    <string name="ext_import_success">APK imported. It appears under Extensions; it cannot be used yet.</string>
+    <string name="ext_import_failed">Could not import the APK. Check that it is an extension APK and try again.</string>
+    <string name="ext_import_single">Select one extension APK by itself, without images or CBZ files.</string>
+    <string name="ext_import_stopped">APK import stopped; the original file was not deleted.</string>
 </resources>

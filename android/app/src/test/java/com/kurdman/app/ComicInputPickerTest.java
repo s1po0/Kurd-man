@@ -20,6 +20,13 @@ import java.util.*;
 public class ComicInputPickerTest {
     Application app;
     @Before public void setup(){app=RuntimeEnvironment.getApplication();}
+    @Test public void apkRecognitionDoesNotTreatCbzOrImagesAsApks(){
+        assertTrue(ComicInputPicker.isApk("source.APK","application/octet-stream"));
+        assertTrue(ComicInputPicker.isApk("download","application/vnd.android.package-archive"));
+        assertFalse(ComicInputPicker.isApk("chapter.cbz","application/octet-stream"));
+        assertFalse(ComicInputPicker.isApk("photo.jpg","image/jpeg"));
+        assertFalse(ComicInputPicker.isApk(null,null));
+    }
     @Test public void unifiedInputUsesAppCapableGetContentAndAllTypes(){Intent intent=ComicInputPicker.content();assertEquals(Intent.ACTION_GET_CONTENT,intent.getAction());assertEquals("*/*",intent.getType());assertFalse(intent.hasExtra(Intent.EXTRA_MIME_TYPES));assertTrue(intent.getBooleanExtra(Intent.EXTRA_ALLOW_MULTIPLE,false));}
     @Test public void inputIsNotPinnedToStorageOrOneApp(){Intent intent=ComicInputPicker.content();assertTrue(intent.hasCategory(Intent.CATEGORY_OPENABLE));assertFalse(intent.getBooleanExtra(Intent.EXTRA_LOCAL_ONLY,false));assertFalse(intent.hasExtra(DocumentsContract.EXTRA_INITIAL_URI));assertNull(intent.getComponent());assertNull(intent.getPackage());}
     @Test public void pickerRequestsSelectedUriReadAccessNotBroadOrWriteAccess(){int flags=ComicInputPicker.content().getFlags();assertTrue((flags&Intent.FLAG_GRANT_READ_URI_PERMISSION)!=0);assertEquals(0,flags&Intent.FLAG_GRANT_WRITE_URI_PERMISSION);assertEquals(0,flags&Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);}

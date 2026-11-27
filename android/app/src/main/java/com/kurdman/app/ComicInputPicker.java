@@ -36,6 +36,12 @@ final class ComicInputPicker {
         add(unique,data.getData());
         return new ArrayList<>(unique);
     }
+    /** Recognition only; selecting an APK never installs or trusts it. */
+    static boolean isApk(String displayName,String mimeType) {
+        String name=displayName==null?"":displayName.trim().toLowerCase(java.util.Locale.ROOT);
+        String type=mimeType==null?"":mimeType.trim().toLowerCase(java.util.Locale.ROOT);
+        return name.endsWith(".apk")||type.equals("application/vnd.android.package-archive");
+    }
     private static void add(LinkedHashSet<Uri> result,Uri uri) {
         if(uri!=null&&("content".equals(uri.getScheme())||"file".equals(uri.getScheme())))result.add(uri);
     }

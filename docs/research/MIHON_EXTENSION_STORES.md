@@ -178,16 +178,18 @@ separate app; system-installed shared APKs, package visibility and local
 Koorix-private installs need separate reconciliation paths. Never claim an
 empty inventory means the user has no previously installed extensions.
 
-`ExtensionImportedInventory` is **unconnected groundwork**, not a user-facing
-import feature: it can retain bounded copies of explicitly selected APK streams
-in private storage and identify their declared package/extension feature. Its
-SHA-256 filename detects later modification, not authenticity; package metadata
-and a matching catalog package name are untrusted. It neither scans Downloads
-nor other applications' private data, verifies signatures, installs, approves,
-or executes the APK. A future UI must distinguish an imported archive from a
-system-installed package, preserve the existing unified file chooser, and check
-identity/signatures before any execution. Damaged copies are not automatically
-removed. No APK version containing this groundwork has been released.
+The unreleased candidate can import one explicitly selected extension APK at a
+time through the existing unified file chooser after a confirmation. It copies
+up to 32 MB privately, recognises the declared extension feature, and displays
+it alongside installed packages with an explicit imported/not-installed label.
+It does not scan Downloads or other apps' private data. Mixed image/CBZ/APK
+selections are rejected without replacing the selected comic. Stop can interrupt
+copying; a provider that blocks opening a stream may delay cancellation.
+A SHA-256 filename detects later modification, not authenticity; package
+metadata and a matching catalog package name are untrusted. It does not verify
+signatures, install, approve, or execute the imported APK. Future execution must
+check identity/signatures independently. Damaged copies are not automatically
+removed. No APK containing this change has been released.
 
 ## Remaining acceptance gates
 

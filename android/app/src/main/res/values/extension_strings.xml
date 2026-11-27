@@ -3,14 +3,14 @@
     <string name="ext_open">کۆگای ئەکستەنشنەکان</string>
     <string name="ext_title">ئەکستەنشنەکان</string>
     <string name="ext_refresh">نوێکردنەوە</string>
-    <string name="ext_notice">دەتوانیت APK هەڵبژێریت بۆ دامەزراندن بە Android، بەڵام Koorix هێشتا ناتوانێت ئەکستەنشنەکان بەکاربهێنێت. دامەزراوەکان بە ناوخۆیی پشکنراون؛ تایبەتەکانی Mihon نادیارن.</string>
+    <string name="ext_notice">دەتوانیت APK هەڵبژێریت بۆ دامەزراندن بە Android، بەڵام Koorix هێشتا ناتوانێت ئەکستەنشنەکان بەکاربهێنێت. دامەزراوەکان و APKی بەدەستی زیادکراو دەبینرێن؛ تایبەتەکانی Mihon نادیارن.</string>
     <string name="ext_search">گەڕان بە ناوی سایت یان ئەکستەنشن</string>
     <string name="ext_loading">لیستەکە بار دەکرێت…</string>
-    <string name="ext_ready">دامەزراوەکان لە سەرەوەن؛ دامەزراوبوون بە مانای متمانەپێکراوبوون نییە.</string>
-    <string name="ext_inventory_unavailable">نەتوانرا دامەزراوەکان بپشکنرێن؛ دۆخیان نەزانراوە.</string>
-    <string name="ext_store_unavailable">کۆگاکە بار نەبوو؛ ئەکستەنشنە دامەزراوە بەردەستەکان پیشان دەدرێن.</string>
-    <string name="ext_installed">دامەزراوەکان لەم مۆبایلە</string>
-    <string name="ext_available">کۆگا — لە دامەزراوە دیارەکاندا نەدۆزرانەوە</string>
+    <string name="ext_ready">دامەزراوەکان و فایلە زیادکراوەکان لە سەرەوەن؛ ئەمە بە مانای متمانەپێکراوبوون نییە.</string>
+    <string name="ext_inventory_unavailable">پشکنینی هەندێک ئەکستەنشنی ناوخۆیی سەرکەوتوو نەبوو؛ لیستەکە ڕەنگە تەواو نەبێت.</string>
+    <string name="ext_store_unavailable">کۆگاکە بار نەبوو؛ ئەکستەنشنە ناوخۆییە دیارەکان هەر پیشان دەدرێن.</string>
+    <string name="ext_installed">دامەزراوەکان و فایلە زیادکراوەکان</string>
+    <string name="ext_available">کۆگا — لە ئەکستەنشنە ناوخۆییە دیارەکاندا نەدۆزرانەوە</string>
     <string name="ext_catalog_unknown">کۆگا — دۆخی دامەزراندن نەزانراوە</string>
     <string name="ext_details_notice">دەتوانیت داوا لە Android بکەیت ئەم APKە دابمەزرێنێت. Koorix هێشتا ناتوانێت ئەکستەنشنەکە بەکاربهێنێت.</string>
     <string name="ext_details_unavailable">تا کۆگا یان دۆخی دامەزراوەکان نەزانراوە، ئەم APKە ئامادە ناکرێت. Koorix هێشتا ناتوانێت ئەکستەنشنەکە بەکاربهێنێت.</string>
@@ -33,4 +33,14 @@
     <string name="ext_mixed">ناوەڕۆکی تێکەڵ</string>
     <string name="ext_adult">تەنها گەورەساڵان</string>
     <string name="ext_unknown_warning">ناوەڕۆک نەزانراوە</string>
+    <string name="ext_imported_label">APKی زیادکراو، نەک دامەزراو</string>
+    <string name="ext_imported_details">کۆپی APK زیاد کراوە؛ ناوی پەکێج بەڵگەی واژۆ یان متمانە نییە. Koorix هێشتا ناتوانێت ئەم فایلە کار پێبکات.</string>
+    <string name="ext_import_title">زیادکردنی APKی ئەکستەنشن</string>
+    <string name="ext_import_notice">کۆپییەک لەم فایلە بە تایبەتی هەڵدەگیرێت. فایلە ڕەسەنەکە ناسڕدرێتەوە، هیچ شتێک دانامەزرێت و کۆدەکە کار ناکات. Koorix هێشتا ناتوانێت ئەکستەنشنەکان بەکاربهێنێت.</string>
+    <string name="ext_import_confirm">زیادکردن</string>
+    <string name="ext_import_working">APKی هەڵبژێردراو زیاد دەکرێت…</string>
+    <string name="ext_import_success">APK زیاد کرا. لە بەشی ئەکستەنشنەکاندا دەردەکەوێت؛ هێشتا ناتوانرێت کار پێبکرێت.</string>
+    <string name="ext_import_failed">نەتوانرا APK زیاد بکرێت. دڵنیا ببە فایلەکە APKی ئەکستەنشنە و دووبارە هەوڵ بدە.</string>
+    <string name="ext_import_single">تکایە تەنها یەک APKی ئەکستەنشن هەڵبژێرە، بەبێ وێنە یان CBZ.</string>
+    <string name="ext_import_stopped">زیادکردنی APK وەستا؛ فایلە ڕەسەنەکە نەسڕایەوە.</string>
 </resources>

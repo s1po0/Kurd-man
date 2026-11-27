@@ -28,10 +28,16 @@ public class ExtensionCatalogActivityTest {
         @Override List<ExtensionLibrarySections.Installed> scanInstalled(PackageManager pm){
             return Collections.singletonList(new ExtensionLibrarySections.Installed("org.example.installed","Installed test"));
         }
+        @Override List<ExtensionLibrarySections.Installed> scanImported(){return Collections.emptyList();}
         @Override ExtensionStoreIndex fetchCatalog() throws java.io.IOException {
             return ExtensionStoreIndex.parse(ExtensionStoreIndexTest.index(ExtensionStoreIndexTest.join(
                     ExtensionStoreIndexTest.field(1,ExtensionStoreIndexTest.entry("org.example.installed")),
                     ExtensionStoreIndexTest.field(1,ExtensionStoreIndexTest.entry("org.example.available")))));
+        }
+    }
+    public static class ImportedArchive extends FakeCatalog {
+        @Override List<ExtensionLibrarySections.Installed> scanImported(){
+            return Collections.singletonList(new ExtensionLibrarySections.Installed("org.example.available","org.example.available",false,true));
         }
     }
     public static class StoreOffline extends FakeCatalog {
@@ -58,6 +64,16 @@ public class ExtensionCatalogActivityTest {
             assertEquals(4,a.getCount());assertEquals("Installed test",((TextView)a.getView(1,null,list)).getText().toString());
             search.setText("org.example.available");assertEquals(2,a.getCount());
             assertEquals(activity.getString(R.string.ext_available),((TextView)a.getView(0,null,list)).getText().toString());
+        }finally{controller.pause().stop().destroy();}
+    }
+    @Test public void importedArchiveIsMarkedAndAppearsWithLocalEntries()throws Exception {
+        org.robolectric.android.controller.ActivityController<ImportedArchive> controller=Robolectric.buildActivity(ImportedArchive.class).setup();
+        try{ImportedArchive activity=controller.get();ListView list=activity.findViewById(R.id.extensionCatalogList);awaitItems(list,3);
+            ListAdapter a=list.getAdapter();assertEquals(activity.getString(R.string.ext_installed),((TextView)a.getView(0,null,list)).getText().toString());
+            int importedPosition=-1;for(int i=1;i<a.getCount();i++)if(((TextView)a.getView(i,null,list)).getText().toString().contains(activity.getString(R.string.ext_imported_label)))importedPosition=i;
+            assertTrue(importedPosition>0);list.performItemClick(a.getView(importedPosition,null,list),importedPosition,importedPosition);
+            androidx.appcompat.app.AlertDialog dialog=(androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog();
+            assertTrue(((TextView)dialog.findViewById(android.R.id.message)).getText().toString().contains(activity.getString(R.string.ext_imported_details)));
         }finally{controller.pause().stop().destroy();}
     }
     @Test public void sourceWebsiteOpensOnlyStaticReaderWithoutRunningExtension()throws Exception {

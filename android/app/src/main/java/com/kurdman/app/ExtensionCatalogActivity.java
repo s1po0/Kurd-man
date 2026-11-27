@@ -81,7 +81,8 @@ public class ExtensionCatalogActivity extends AppCompatActivity {
                 androidx.core.view.ViewCompat.setAccessibilityHeading(text,item.row==null);
                 if(item.row==null)text.setText(item.heading);
                 else {ExtensionStoreIndex.Entry e=item.row.catalogEntry;String warning=e==null?"":warning(e.contentWarning);
-                    text.setText(ExtensionInstalledInventory.safeLabel(item.row.displayName,item.row.packageName)+(warning.isEmpty()?"":" • "+warning));}
+                    String origin=item.row.imported&&!item.row.systemInstalled?getString(R.string.ext_imported_label):"";
+                    text.setText(ExtensionInstalledInventory.safeLabel(item.row.displayName,item.row.packageName)+(origin.isEmpty()?"":" • "+origin)+(warning.isEmpty()?"":" • "+warning));}
                 return text;
             }
         };
@@ -98,10 +99,12 @@ public class ExtensionCatalogActivity extends AppCompatActivity {
         if(loading)return;loading=true;refresh.setEnabled(false);status.setText(R.string.ext_loading);final int token=++generation;
         PackageManager pm=getApplicationContext().getPackageManager();
         io.execute(()->{
-            List<ExtensionLibrarySections.Installed> found=Collections.emptyList();ExtensionStoreIndex index=null;boolean scanned=false;
-            try{found=scanInstalled(pm);scanned=true;}catch(RuntimeException ignored){}
+            List<ExtensionLibrarySections.Installed> installed=Collections.emptyList(),imported=Collections.emptyList();ExtensionStoreIndex index=null;boolean installedOk=false,importedOk=false;
+            try{installed=scanInstalled(pm);installedOk=true;}catch(RuntimeException ignored){}
+            try{imported=scanImported();importedOk=true;}catch(Exception ignored){}
+            List<ExtensionLibrarySections.Installed> found=ExtensionLibrarySections.mergeLocal(installed,imported);
             try{index=fetchCatalog();}catch(Exception ignored){}
-            final List<ExtensionLibrarySections.Installed> result=found;final ExtensionStoreIndex loaded=index;final boolean scanOk=scanned;
+            final List<ExtensionLibrarySections.Installed> result=found;final ExtensionStoreIndex loaded=index;final boolean scanOk=installedOk&&importedOk;
             runOnUiThread(()->{if(isFinishing()||isDestroyed()||generation!=token)return;
                 local=result;inventoryKnown=scanOk;storeKnown=loaded!=null;catalog=loaded==null?Collections.emptyList():loaded.entries;
                 storeSigner=loaded==null?null:loaded.signingKey;
@@ -114,6 +117,7 @@ public class ExtensionCatalogActivity extends AppCompatActivity {
         });
     }
     List<ExtensionLibrarySections.Installed> scanInstalled(PackageManager pm){return ExtensionInstalledInventory.scan(pm);}
+    List<ExtensionLibrarySections.Installed> scanImported() throws java.io.IOException{return ExtensionImportedInventory.scan(getApplicationContext());}
     ExtensionStoreIndex fetchCatalog() throws java.io.IOException {return new ExtensionCatalogClient().load(45000);}
     private void render(){
         if(adapter==null||search==null)return;
@@ -125,6 +129,7 @@ public class ExtensionCatalogActivity extends AppCompatActivity {
     private void showDetails(ExtensionLibrarySections.Row row){
         boolean canPrepare=inventoryKnown&&row.catalogEntry!=null&&storeSigner!=null;
         StringBuilder message=new StringBuilder(getString(canPrepare?R.string.ext_details_notice:R.string.ext_details_unavailable));
+        if(row.imported)message.append('\n').append(getString(R.string.ext_imported_details));
         if(row.catalogEntry!=null){
             for(ExtensionStoreIndex.Source source:row.catalogEntry.sources){
                 if(message.length()>8000){message.append('\n').append('…');break;}

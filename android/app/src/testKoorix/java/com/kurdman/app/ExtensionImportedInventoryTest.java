@@ -39,6 +39,14 @@ public class ExtensionImportedInventoryTest {
         try{ExtensionImportedInventory.store(new ByteArrayInputStream(APK),files,f->{throw new IOException("invalid");});fail();}catch(IOException expected){}
         assertEquals(0,ExtensionImportedInventory.directory(files).listFiles().length);
     }
+    @Test public void cancellationDiscardsPartialFileAndNeverDeletesOriginal()throws Exception {
+        File files=root.newFolder("files"),original=root.newFile("original.apk");Files.write(original.toPath(),APK);
+        java.util.concurrent.atomic.AtomicInteger checks=new java.util.concurrent.atomic.AtomicInteger();
+        try(java.io.InputStream in=Files.newInputStream(original.toPath())){
+            try{ExtensionImportedInventory.store(in,files,INSPECTOR,()->{if(checks.incrementAndGet()>=2)throw new IOException("stop");});fail();}catch(IOException expected){}
+        }
+        assertArrayEquals(APK,Files.readAllBytes(original.toPath()));assertEquals(0,ExtensionImportedInventory.directory(files).listFiles().length);
+    }
     @Test public void modifiedStoredFileFailsClosedWithoutDeletingIt()throws Exception {
         File files=root.newFolder("files");ExtensionImportedInventory.store(new ByteArrayInputStream(APK),files,INSPECTOR);
         File dir=ExtensionImportedInventory.directory(files),stored=dir.listFiles()[0];stored.setWritable(true);
