@@ -79,6 +79,14 @@ public class StaticWebReaderActivityTest {
             waitFor(()->activity.lateSession!=null&&!activity.lateSession.exists());assertFalse(activity.isFinishing());assertNull(Shadows.shadowOf(activity).getResultIntent());
         }finally{activity.release.countDown();controller.pause().stop().destroy();}
     }
+    @Test public void approvedStartupUrlLoadsWithoutJavaScript()throws Exception {
+        android.content.Intent intent=new android.content.Intent().putExtra(StaticWebReaderActivity.EXTRA_START_URL,"https://example.org/source");
+        org.robolectric.android.controller.ActivityController<FakeReader> controller=Robolectric.buildActivity(FakeReader.class,intent).setup();
+        try{FakeReader activity=controller.get();ListView list=activity.findViewById(R.id.staticWebLinks);
+            waitFor(()->list.getAdapter().getCount()==2);assertEquals(1,activity.pageLoads);
+            assertEquals("https://example.org/source",((EditText)activity.findViewById(R.id.webReaderAddress)).getText().toString());
+        }finally{controller.pause().stop().destroy();}
+    }
     @Test public void startupUrlMustPassUrlGate()throws Exception {
         android.content.Intent intent=new android.content.Intent().putExtra(StaticWebReaderActivity.EXTRA_START_URL,"https://127.0.0.1/");
         org.robolectric.android.controller.ActivityController<FakeReader> controller=Robolectric.buildActivity(FakeReader.class,intent).setup();

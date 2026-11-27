@@ -8,12 +8,11 @@ public final class StaticWebPublicProbe {
         StaticWebTransport transport=new StaticWebTransport();
         StaticWebPage page=transport.page("https://www.peppercarrot.com/en/webcomic/ep01_Potion-of-Flight.html",new PinnedHttpsClient.Cancellation());
         if(page.images.isEmpty()||page.links.isEmpty())throw new IllegalStateException("Static public page lacks discovered links or images");
-        boolean fetched=false;int attempted=0;
-        for(String url:page.images){if(attempted++>=15)break;
-            try{StaticWebTransport.Image image=transport.image(url,8*1024*1024,new PinnedHttpsClient.Cancellation());if(image.bytes.length>0){fetched=true;break;}}
-            catch(java.io.IOException unavailable){}
-        }
-        if(!fetched)throw new IllegalStateException("No supported public image fetched in first 15 candidates");
-        System.out.println("Static fixture: "+page.links.size()+" links, "+page.images.size()+" image references, one supported image fetched. No image uploaded, no Android/device/security acceptance.");
+        String prefix="https://www.peppercarrot.com/0_sources/ep01_Potion-of-Flight/low-res/en_Pepper-and-Carrot_by-David-Revoy_E01P";
+        int first=page.images.indexOf(prefix+"01.jpg"),second=page.images.indexOf(prefix+"02.jpg"),third=page.images.indexOf(prefix+"03.jpg");
+        if(first<0||second<=first||third<=second)throw new IllegalStateException("Three fixed public story pages missing or out of order");
+        StaticWebTransport.Image image=transport.image(prefix+"01.jpg",8*1024*1024,new PinnedHttpsClient.Cancellation());
+        if(image.bytes.length==0||!".jpg".equals(image.extension))throw new IllegalStateException("Public story image unavailable");
+        System.out.println("Static fixture: three known story page URLs found in order, one fetched; other images may be unrelated. No image uploaded, no Android/device/security or translation acceptance.");
     }
 }

@@ -56,7 +56,11 @@ handoff to Android's installer; Koorix never installs silently. The reader may
 also explicitly open a catalog source's HTTPS homepage in the separate static
 reader and return its captured images to the translation flow. That visits a
 website; it does not execute the extension and cannot replace a genuine source
-runtime. `ExtensionInstalledInventory`
+runtime. Run `45991332423` (`1827052`) passed 378 JVM tests and signed regular
+APK checks without emulator, including synthetic catalog-to-static-reader
+intent and result propagation; this does not demonstrate live Android source
+execution, website compatibility, or translation quality.
+`ExtensionInstalledInventory`
 uses the `tachiyomi.extension` feature flag to filter system-installed packages
 locally, without storing, logging or transmitting the installed-app list. Koorix
 requests broad `QUERY_ALL_PACKAGES` visibility solely for this user-requested
