@@ -1,6 +1,9 @@
 package com.kurdman.app;
 
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.provider.Settings;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -15,13 +18,15 @@ import android.widget.ListView;
 import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** Native, read-only catalog. No extension is installed, trusted or run here. */
+/** Native catalog and explicitly confirmed Android installer handoff. No extension code is run here. */
 public class ExtensionCatalogActivity extends AppCompatActivity {
     private final ExecutorService io=Executors.newSingleThreadExecutor();
     private final List<Item> items=new ArrayList<>();
@@ -31,7 +36,8 @@ public class ExtensionCatalogActivity extends AppCompatActivity {
     private EditText search;
     private Button refresh;
     private BaseAdapter adapter;
-    private boolean inventoryKnown=false, storeKnown=false, loading=false;
+    private boolean inventoryKnown=false, storeKnown=false, loading=false, installerLaunched=false;
+    private String storeSigner;
     private int generation;
     private static final class Item {
         final int heading;final ExtensionLibrarySections.Row row;
@@ -73,7 +79,7 @@ public class ExtensionCatalogActivity extends AppCompatActivity {
                 return text;
             }
         };
-        list.setAdapter(adapter);list.setOnItemClickListener((p,v,pos,id)->{Item item=items.get(pos);if(item.row!=null)showDetails(item.row);});
+        list.setAdapter(adapter);list.setOnItemClickListener((p,v,pos,id)->{Item item=items.get(pos);if(!loading&&item.row!=null)showDetails(item.row);});
         root.addView(list,new LinearLayout.LayoutParams(-1,0,1));setContentView(root);KoorixDesign.apply(this,root);load();
     }
     private String warning(int code){
@@ -92,6 +98,7 @@ public class ExtensionCatalogActivity extends AppCompatActivity {
             final List<ExtensionLibrarySections.Installed> result=found;final ExtensionStoreIndex loaded=index;final boolean scanOk=scanned;
             runOnUiThread(()->{if(isFinishing()||isDestroyed()||generation!=token)return;
                 local=result;inventoryKnown=scanOk;storeKnown=loaded!=null;catalog=loaded==null?Collections.emptyList():loaded.entries;
+                storeSigner=loaded==null?null:loaded.signingKey;
                 loading=false;refresh.setEnabled(true);
                 if(!inventoryKnown)status.setText(R.string.ext_inventory_unavailable);
                 else if(!storeKnown)status.setText(R.string.ext_store_unavailable);
@@ -110,14 +117,58 @@ public class ExtensionCatalogActivity extends AppCompatActivity {
         adapter.notifyDataSetChanged();
     }
     private void showDetails(ExtensionLibrarySections.Row row){
-        StringBuilder message=new StringBuilder(getString(R.string.ext_details_notice));
+        boolean canPrepare=inventoryKnown&&row.catalogEntry!=null&&storeSigner!=null;
+        StringBuilder message=new StringBuilder(getString(canPrepare?R.string.ext_details_notice:R.string.ext_details_unavailable));
         if(row.catalogEntry!=null){
             for(ExtensionStoreIndex.Source source:row.catalogEntry.sources){
                 if(message.length()>8000){message.append('\n').append('…');break;}
                 message.append('\n').append('•').append(' ').append(ExtensionInstalledInventory.safeLabel(source.name,source.language)).append(" (").append(ExtensionInstalledInventory.safeLabel(source.language,"?")).append(')');
             }
         }else message.append('\n').append(getString(R.string.ext_no_store_info));
-        new AlertDialog.Builder(this).setTitle(ExtensionInstalledInventory.safeLabel(row.displayName,row.packageName)).setMessage(message.toString()).setPositiveButton(android.R.string.ok,null).show();
+        AlertDialog.Builder dialog=new AlertDialog.Builder(this).setTitle(ExtensionInstalledInventory.safeLabel(row.displayName,row.packageName))
+                .setMessage(message.toString()).setNegativeButton(android.R.string.cancel,null);
+        if(canPrepare){
+            final String signer=storeSigner;final ExtensionStoreIndex.Entry entry=row.catalogEntry;
+            dialog.setPositiveButton(R.string.ext_prepare,(d,w)->confirmSigner(entry,signer));
+        }else dialog.setPositiveButton(android.R.string.ok,null);
+        dialog.show();
     }
+    private void confirmSigner(ExtensionStoreIndex.Entry entry,String signer){
+        if(loading||isFinishing()||isDestroyed())return;
+        new AlertDialog.Builder(this).setTitle(R.string.ext_signer_title)
+                .setMessage(getString(R.string.ext_signer_notice,"\u2066"+signer+"\u2069"))
+                .setNegativeButton(R.string.ext_cancel,null)
+                .setPositiveButton(R.string.ext_approve_signer,(d,w)->checkInstallPermission(entry,signer)).show();
+    }
+    private void checkInstallPermission(ExtensionStoreIndex.Entry entry,String signer){
+        if(loading||isFinishing()||isDestroyed())return;
+        if(!getPackageManager().canRequestPackageInstalls()){
+            new AlertDialog.Builder(this).setTitle(R.string.ext_allow_install_title).setMessage(R.string.ext_allow_install_message)
+                    .setNegativeButton(R.string.ext_cancel,null).setPositiveButton(R.string.ext_open_settings,(d,w)->{
+                        try{startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,Uri.parse("package:"+getPackageName())));}
+                        catch(RuntimeException unavailable){status.setText(R.string.ext_installer_missing);}
+                    }).show();return;
+        }
+        prepare(entry,signer);
+    }
+    private void prepare(ExtensionStoreIndex.Entry entry,String signer){
+        loading=true;refresh.setEnabled(false);status.setText(R.string.ext_preparing);final int token=++generation;
+        File cache=getApplicationContext().getCacheDir();PackageManager pm=getApplicationContext().getPackageManager();
+        io.execute(()->{
+            File prepared=null;try{prepared=ExtensionApkStager.prepare(entry,signer,cache,pm,120000);}catch(Exception ignored){}
+            final File result=prepared;
+            runOnUiThread(()->{if(isFinishing()||isDestroyed()||generation!=token)return;
+                loading=false;refresh.setEnabled(true);
+                if(result==null){status.setText(R.string.ext_prepare_failed);return;}
+                try{
+                    Uri uri=FileProvider.getUriForFile(this,getPackageName()+".fileprovider",result);
+                    Intent intent=new Intent(Intent.ACTION_VIEW).setDataAndType(uri,"application/vnd.android.package-archive")
+                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    startActivity(intent);installerLaunched=true;status.setText(R.string.ext_installer_opened);
+                }catch(RuntimeException unavailable){status.setText(R.string.ext_installer_missing);}
+            });
+        });
+    }
+    @Override protected void onResume(){super.onResume();if(installerLaunched){installerLaunched=false;load();}}
     @Override protected void onDestroy(){generation++;io.shutdownNow();super.onDestroy();}
 }

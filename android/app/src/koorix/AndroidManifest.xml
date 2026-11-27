@@ -3,5 +3,7 @@
     <!-- Needed to discover extension APKs already installed on the device.
          Inventory is filtered locally; no package list is transmitted. -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <!-- System installer always asks the reader; never silent installation. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <application />
 </manifest>

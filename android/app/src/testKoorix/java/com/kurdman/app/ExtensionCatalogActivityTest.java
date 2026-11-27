@@ -60,6 +60,21 @@ public class ExtensionCatalogActivityTest {
             assertEquals(activity.getString(R.string.ext_available),((TextView)a.getView(0,null,list)).getText().toString());
         }finally{controller.pause().stop().destroy();}
     }
+    @Test public void signerMustBeExplicitlyApprovedBeforeAnyInstallerHandoff()throws Exception {
+        org.robolectric.android.controller.ActivityController<FakeCatalog> controller=Robolectric.buildActivity(FakeCatalog.class).setup();
+        try{
+            FakeCatalog activity=controller.get();ListView list=activity.findViewById(R.id.extensionCatalogList);awaitItems(list,4);
+            list.performItemClick(list.getAdapter().getView(1,null,list),1,1);
+            androidx.appcompat.app.AlertDialog details=(androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog();
+            assertEquals(activity.getString(R.string.ext_prepare),details.getButton(android.content.DialogInterface.BUTTON_POSITIVE).getText().toString());
+            details.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick();
+            androidx.appcompat.app.AlertDialog trust=(androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog();
+            assertTrue(trust.isShowing());
+            assertEquals(activity.getString(R.string.ext_approve_signer),trust.getButton(android.content.DialogInterface.BUTTON_POSITIVE).getText().toString());
+            trust.getButton(android.content.DialogInterface.BUTTON_NEGATIVE).performClick();
+            assertNull(Shadows.shadowOf(activity).getNextStartedActivity());
+        }finally{controller.pause().stop().destroy();}
+    }
     @Test public void offlineStoreRetainsInstalledSection()throws Exception {
         org.robolectric.android.controller.ActivityController<StoreOffline> controller=Robolectric.buildActivity(StoreOffline.class).setup();
         try{
@@ -74,6 +89,9 @@ public class ExtensionCatalogActivityTest {
             InventoryUnavailable activity=controller.get();ListView list=activity.findViewById(R.id.extensionCatalogList);awaitItems(list,3);
             assertEquals(activity.getString(R.string.ext_inventory_unavailable),((TextView)activity.findViewById(R.id.extensionCatalogStatus)).getText().toString());
             assertEquals(activity.getString(R.string.ext_catalog_unknown),((TextView)list.getAdapter().getView(0,null,list)).getText().toString());
+            list.performItemClick(list.getAdapter().getView(1,null,list),1,1);
+            androidx.appcompat.app.AlertDialog details=(androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog();
+            assertEquals(activity.getString(android.R.string.ok),details.getButton(android.content.DialogInterface.BUTTON_POSITIVE).getText().toString());
         }finally{controller.pause().stop().destroy();}
     }
 }
