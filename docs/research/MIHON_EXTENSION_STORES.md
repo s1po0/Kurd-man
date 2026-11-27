@@ -8,8 +8,9 @@ installed appear below. Existing locally present extensions remain visible even
 if removed from the current store. Search should find the names of sites inside
 an extension without moving an installed extension into the available section.
 Installed means **present**, not automatically enabled, compatible or trusted.
-The actual UI, installation, installed-package discovery and source runtime do
-not exist yet. No release or new APK may claim this mode works.
+A read-only native catalog and local shared-APK inventory are now implemented;
+installing, executing sources, browsing chapters and translating them do not
+exist yet. No release or new APK may claim the requested mode works.
 
 ## Upstream findings
 
@@ -45,8 +46,17 @@ are deliberately rejected. URLs are merely data: they are not downloaded,
 validated or executed. `ExtensionLibrarySections` is an unconnected pure data
 model for installed-first grouping and source-name search; the caller must
 supply the actual local extension inventory, and a package-name match must
-never be interpreted as signature verification. Neither class offers UI,
-installer, runtime, network routing or usable sources.
+never be interpreted as signature verification. `ExtensionCatalogActivity`
+now connects those pieces to a native, explicitly read-only screen with localized
+search, installed-first sections, content-warning labels and error states. It
+does not install or run extensions or open sites. `ExtensionInstalledInventory`
+uses the `tachiyomi.extension` feature flag to filter system-installed packages
+locally, without storing, logging or transmitting the installed-app list. Koorix
+requests broad `QUERY_ALL_PACKAGES` visibility solely for this user-requested
+inventory; users should understand this permission permits the app to query all
+installed apps. It cannot read another app's private extensions or cross-profile
+apps, and an unreadable inventory is shown as unknown, not "not installed".
+No detected package is automatically trusted.
 
 Hosted run `45734684900` (`7598802`) parsed the pinned live store blob before
 failing later because Robolectric could not fetch its Android artifact; it is
@@ -85,8 +95,10 @@ regular build `45977338442` failed before the build on a Maven artifact fetch.
 After an opt-in CI switch to Google's Maven Central mirror, regular build
 `45978350116` (`96b5192`) passed 335 JVM tests, built and verified the same-v2
 signed regular APK, and skipped the Android emulator at the owner's request.
-It did not publish an APK or exercise the app on a device; importantly, the
-extension mode remains unimplemented and this is not a release candidate.
+Run `45979804908` (`354178b`) passed 340 JVM tests, including synthetic native
+catalog/inventory grouping, built and verified the same-v2 APK, and skipped the
+emulator. It did not publish an APK or exercise the app on a device; installing
+and using extensions remains unimplemented and this is not a release candidate.
 
 An Android `isolatedProcess=true` service is a potential execution boundary
 ([Android service documentation](https://developer.android.com/guide/topics/manifest/service-element)),
@@ -114,10 +126,11 @@ empty inventory means the user has no previously installed extensions.
   checks, safe upgrades, package-name conflicts, revocation, install consent,
   removal, and content warnings without assuming store metadata is safe.
   No installer or extension should be bundled/installed automatically.
-- Implement native Kurdish/English/Arabic UI with first installed then available
-  sections, search, language/content filtering and refresh; reconcile existing
-  system-installed extensions and local private extensions with Android package
-  visibility and explicit trust. Preserve user's existing installs and data.
+- Complete native Kurdish/English/Arabic UI with installation, source execution,
+  language/content filtering, and explicit trust. The preliminary read-only
+  sections/search/refresh and system-installed inventory exist; Koorix-private
+  installs, Android package-visibility behavior and explicit trust still need
+  implementation and verification. Preserve user's existing installs and data.
 - Respect 300-page/300-MB import and 1-GB cache limits, STOP, project recovery,
   and normal automatic Translate. No hidden paid service or per-image chat.
 - Test malformed and hostile stores/APKs, wrong/changed signers, unavailable

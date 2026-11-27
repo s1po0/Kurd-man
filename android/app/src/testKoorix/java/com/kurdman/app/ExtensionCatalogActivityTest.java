@@ -34,13 +34,23 @@ public class ExtensionCatalogActivityTest {
                     ExtensionStoreIndexTest.field(1,ExtensionStoreIndexTest.entry("org.example.available")))));
         }
     }
+    public static class StoreOffline extends FakeCatalog {
+        @Override ExtensionStoreIndex fetchCatalog() throws java.io.IOException {throw new java.io.IOException("offline");}
+    }
+    public static class InventoryUnavailable extends FakeCatalog {
+        @Override List<ExtensionLibrarySections.Installed> scanInstalled(PackageManager pm){throw new SecurityException("unavailable");}
+    }
+    private static void awaitItems(ListView list,int count)throws Exception {
+        long end=System.currentTimeMillis()+5000;
+        while(list.getAdapter().getCount()!=count && System.currentTimeMillis()<end){Shadows.shadowOf(Looper.getMainLooper()).idle();Thread.sleep(10);}
+        assertEquals(count,list.getAdapter().getCount());
+    }
     @Test public void installedSectionPrecedesAvailableAndSearchKeepsItFirst()throws Exception {
         org.robolectric.android.controller.ActivityController<FakeCatalog> controller=Robolectric.buildActivity(FakeCatalog.class).setup();
         try{
             FakeCatalog activity=controller.get();ListView list=activity.findViewById(R.id.extensionCatalogList);
-            long end=System.currentTimeMillis()+5000;
-            while(list.getAdapter().getCount()!=4 && System.currentTimeMillis()<end){Shadows.shadowOf(Looper.getMainLooper()).idle();Thread.sleep(10);}
-            ListAdapter a=list.getAdapter();assertEquals(4,a.getCount());
+            awaitItems(list,4);
+            ListAdapter a=list.getAdapter();
             assertEquals(activity.getString(R.string.ext_installed),((TextView)a.getView(0,null,list)).getText().toString());
             assertEquals("Installed test",((TextView)a.getView(1,null,list)).getText().toString());
             assertEquals(activity.getString(R.string.ext_available),((TextView)a.getView(2,null,list)).getText().toString());
@@ -48,6 +58,22 @@ public class ExtensionCatalogActivityTest {
             assertEquals(4,a.getCount());assertEquals("Installed test",((TextView)a.getView(1,null,list)).getText().toString());
             search.setText("org.example.available");assertEquals(2,a.getCount());
             assertEquals(activity.getString(R.string.ext_available),((TextView)a.getView(0,null,list)).getText().toString());
+        }finally{controller.pause().stop().destroy();}
+    }
+    @Test public void offlineStoreRetainsInstalledSection()throws Exception {
+        org.robolectric.android.controller.ActivityController<StoreOffline> controller=Robolectric.buildActivity(StoreOffline.class).setup();
+        try{
+            StoreOffline activity=controller.get();ListView list=activity.findViewById(R.id.extensionCatalogList);awaitItems(list,2);
+            assertEquals(activity.getString(R.string.ext_store_unavailable),((TextView)activity.findViewById(R.id.extensionCatalogStatus)).getText().toString());
+            assertEquals(activity.getString(R.string.ext_installed),((TextView)list.getAdapter().getView(0,null,list)).getText().toString());
+        }finally{controller.pause().stop().destroy();}
+    }
+    @Test public void unknownInventoryIsNotMislabelledAsNotInstalled()throws Exception {
+        org.robolectric.android.controller.ActivityController<InventoryUnavailable> controller=Robolectric.buildActivity(InventoryUnavailable.class).setup();
+        try{
+            InventoryUnavailable activity=controller.get();ListView list=activity.findViewById(R.id.extensionCatalogList);awaitItems(list,3);
+            assertEquals(activity.getString(R.string.ext_inventory_unavailable),((TextView)activity.findViewById(R.id.extensionCatalogStatus)).getText().toString());
+            assertEquals(activity.getString(R.string.ext_catalog_unknown),((TextView)list.getAdapter().getView(0,null,list)).getText().toString());
         }finally{controller.pause().stop().destroy();}
     }
 }

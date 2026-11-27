@@ -21,6 +21,13 @@ for key in ('FREE_DAILY_JOBS','FREE_DAILY_PAGES'):
 assert '"FREE_EDITION", "true"' in build and 'SUPABASE_' not in build
 manifest=E.parse(public/'AndroidManifest.xml').getroot()
 assert not manifest.findall('.//activity'),'Public billing/auth activity remains'
+# Broad package visibility is requested only for owner-requested local
+# extension APK inventory, never to send installed-app data to a server.
+android_ns='{http://schemas.android.com/apk/res/android}'
+assert any(p.get(android_ns+'name')=='android.permission.QUERY_ALL_PACKAGES' for p in manifest.findall('uses-permission'))
+inventory=(ANDROID/'src/main/java/com/kurdman/app/ExtensionInstalledInventory.java').read_text()
+assert 'tachiyomi.extension' in inventory and 'getInstalledPackages' in inventory
+assert not any(word in inventory for word in ('HttpURLConnection','OkHttp','java.net.','android.util.Log'))
 root=E.parse(ANDROID/'src/main/res/layout/activity_main.xml').getroot()
 ns='{http://schemas.android.com/apk/res/android}'
 ids={node.get(ns+'id','') for node in root.iter()}
