@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import org.junit.Test;
 
 /** Pure parser/URL contracts; these do not prove TLS or WebView isolation. */
@@ -22,6 +23,21 @@ public class PinnedHttpsClientTest {
                 "https://example.org./", "https://example.org/\r\nHost: evil", "https://☃.test/", "file:///tmp/x"}) {
             try{PinnedHttpsClient.checkedUrl(value);fail(value);}catch(IOException expected){}
         }
+    }
+    @Test public void onlyNarrowNonSensitiveHeadersCanBeEmitted()throws Exception {
+        java.util.Map<String,String> allowed=new java.util.LinkedHashMap<>();allowed.put("User-Agent","Koorix/1.0");allowed.put("Referer","https://example.org/reader");allowed.put("Accept","image/*");
+        String wire=PinnedHttpsClient.buildRequest(PinnedHttpsClient.checkedUrl("https://cdn.example.org/image?q=1"),allowed);
+        assertTrue(wire.startsWith("GET /image?q=1 HTTP/1.1\r\nHost: cdn.example.org\r\n"));
+        assertTrue(wire.contains("user-agent: Koorix/1.0\r\n"));assertTrue(wire.contains("referer: https://example.org/reader\r\n"));
+        assertTrue(wire.endsWith("Accept-Encoding: identity\r\nConnection: close\r\n\r\n"));
+        for(String[] pair:new String[][]{{"Host","evil.example"},{"Cookie","token=x"},{"Authorization","Bearer secret"},{"User-Agent","a\r\nHost: evil"},{"Referer","http://127.0.0.1/"},{"Accept"," image/png"}}){
+            try{PinnedHttpsClient.validatedHeaders(java.util.Collections.singletonMap(pair[0],pair[1]));fail(pair[0]);}catch(IOException expected){}
+        }
+        java.net.URI initial=PinnedHttpsClient.checkedUrl("https://example.org/a"),same=PinnedHttpsClient.checkedUrl("https://EXAMPLE.org/b"),other=PinnedHttpsClient.checkedUrl("https://other.example/b");
+        assertTrue(PinnedHttpsClient.redirectHeaders(initial,same,allowed).containsKey("referer"));
+        Map<String,String> stripped=PinnedHttpsClient.redirectHeaders(initial,other,allowed);assertFalse(stripped.containsKey("referer"));
+        assertFalse(PinnedHttpsClient.redirectHeaders(other,initial,stripped).containsKey("referer"));
+        allowed.put("accept","image/png");try{PinnedHttpsClient.validatedHeaders(allowed);fail();}catch(IOException expected){}
     }
     @Test public void boundedLengthAndChunkedBodiesWork() throws Exception {
         PinnedHttpsClient.Response a=parse("HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: 5\r\n\r\nhello",5);

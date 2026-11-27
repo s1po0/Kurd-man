@@ -155,7 +155,13 @@ network interceptors exist. The pinned `keiyoushi/extensions-lib` revision
 library: for example, its `HttpSource` constructor throws `Stub!`; packaging it
 as the host implementation would not run sources. Its README lists newer host
 Kotlin, coroutines, serialization, OkHttp and jsoup compatibility requirements.
-Each source may customize its client. A safe runtime
+Each source may customize its client. `ExtensionNetworkBroker` is an unconnected
+candidate mediator for anonymous, bounded public HTTPS GET, an allowlist of
+request headers and cancellation; it does not implement POST, cookies, login,
+JavaScript, a Binder boundary or source execution. It rejects attempts to set
+Host, authorization, cookies, framing or arbitrary headers; cross-host redirects
+strip Referer. Its worker limit is a safety bound, not a daily allowance, and
+blocking DNS may outlive cancellation. A safe runtime
 must supply compatible ABI/dependencies and mediate all privileged requests
 without trusting extension-created clients; an isolated process with no network
 permission is a candidate boundary, not a working compatibility layer. No source

@@ -11,6 +11,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -54,19 +57,25 @@ final class PinnedHttpsClient {
     }
     static Response get(String value,int maxBytes) throws IOException {return get(value,maxBytes,new Cancellation());}
     static Response get(String value,int maxBytes,Cancellation cancellation) throws IOException {
-        return getOnce(value,maxBytes,cancellation,false);
+        return getOnce(value,maxBytes,cancellation,false,Collections.emptyMap());
     }
     /** Opt-in only: each hop is HTTPS, freshly resolved, public and pinned. */
     static Response getFollowingRedirects(String value,int maxBytes,Cancellation cancellation) throws IOException {
+        return getFollowingRedirects(value,maxBytes,cancellation,Collections.emptyMap());
+    }
+    /** Optional, narrowly allowed headers; each redirect is still checked and pinned. */
+    static Response getFollowingRedirects(String value,int maxBytes,Cancellation cancellation,Map<String,String> headers) throws IOException {
         if(cancellation==null)throw new IOException("Missing cancellation");
+        Map<String,String> checkedHeaders=validatedHeaders(headers);
         java.util.Set<String> visited=new java.util.HashSet<>();String current=value;
         for(int redirects=0;redirects<=4;redirects++){
             URI base=checkedUrl(current);
             if(!visited.add(base.normalize().toASCIIString()))throw new IOException("Redirect loop");
-            Response response=getOnce(current,maxBytes,cancellation,true);
+            Response response=getOnce(current,maxBytes,cancellation,true,checkedHeaders);
             if(response.status==200)return new Response(response.status,response.contentType,response.body,null,base.toASCIIString());
             if(redirects==4)throw new IOException("Too many redirects");
             current=redirectUrl(base,response.location);
+            checkedHeaders=redirectHeaders(base,checkedUrl(current),checkedHeaders);
         }
         throw new IOException("Too many redirects");
     }
@@ -75,7 +84,7 @@ final class PinnedHttpsClient {
         try{return checkedUrl(base.resolve(new URI(location)).toASCIIString()).toString();}
         catch(URISyntaxException|IllegalArgumentException bad){throw new IOException("Invalid redirect",bad);}
     }
-    private static Response getOnce(String value,int maxBytes,Cancellation cancellation,boolean redirects) throws IOException {
+    private static Response getOnce(String value,int maxBytes,Cancellation cancellation,boolean redirects,Map<String,String> headers) throws IOException {
         if(cancellation==null)throw new IOException("Missing cancellation");
         cancellation.check();
         URI uri=checkedUrl(value);
@@ -94,17 +103,43 @@ final class PinnedHttpsClient {
                 // this handshake. HttpsURLConnection's default verifier is a
                 // fallback callback, not a standalone certificate validator.
                 tls.startHandshake();
-                String path=uri.getRawPath();if(path==null||path.isEmpty())path="/";
-                if(uri.getRawQuery()!=null)path+="?"+uri.getRawQuery();
-                String request="GET "+path+" HTTP/1.1\r\nHost: "+host+"\r\n"
-                        +"Accept: */*\r\n"
-                        +"Accept-Encoding: identity\r\nConnection: close\r\n\r\n";
+                String request=buildRequest(uri,headers);
                 OutputStream out=tls.getOutputStream();out.write(request.getBytes(StandardCharsets.US_ASCII));out.flush();
                 return readResponse(tls.getInputStream(),maxBytes,redirects);
             }
         } finally { try{plain.close();}catch(IOException ignored){} }
     }
 
+    static Map<String,String> redirectHeaders(URI previous,URI next,Map<String,String> headers)throws IOException {
+        if(previous==null||next==null)throw new IOException("Invalid redirect");
+        previous=checkedUrl(previous.toASCIIString());next=checkedUrl(next.toASCIIString());
+        Map<String,String> checked=validatedHeaders(headers);
+        if(previous.getHost().equalsIgnoreCase(next.getHost())||!checked.containsKey("referer"))return checked;
+        Map<String,String> reduced=new LinkedHashMap<>(checked);reduced.remove("referer");return Collections.unmodifiableMap(reduced);
+    }
+    static Map<String,String> validatedHeaders(Map<String,String> headers)throws IOException {
+        if(headers==null||headers.size()>4)throw new IOException("Invalid request headers");
+        Map<String,String> checked=new LinkedHashMap<>();
+        for(Map.Entry<String,String> header:headers.entrySet()){
+            String name=header.getKey(),value=header.getValue();if(name==null||value==null)throw new IOException("Invalid request header");
+            name=name.toLowerCase(Locale.ROOT);
+            if(!name.equals("accept")&&!name.equals("accept-language")&&!name.equals("user-agent")&&!name.equals("referer"))throw new IOException("Unsupported request header");
+            if(checked.containsKey(name)||value.isEmpty()||value.length()>512||!value.equals(value.trim()))throw new IOException("Invalid request header");
+            for(int i=0;i<value.length();i++){char ch=value.charAt(i);if(ch<32||ch>126)throw new IOException("Invalid request header");}
+            if(name.equals("referer"))checkedUrl(value);
+            checked.put(name,value);
+        }
+        return Collections.unmodifiableMap(checked);
+    }
+    static String buildRequest(URI uri,Map<String,String> headers)throws IOException {
+        if(uri==null)throw new IOException("Missing request URL");uri=checkedUrl(uri.toASCIIString());
+        Map<String,String> checked=validatedHeaders(headers);String path=uri.getRawPath();if(path==null||path.isEmpty())path="/";
+        if(uri.getRawQuery()!=null)path+="?"+uri.getRawQuery();
+        StringBuilder request=new StringBuilder("GET ").append(path).append(" HTTP/1.1\r\nHost: ").append(uri.getHost().toLowerCase(Locale.ROOT)).append("\r\n");
+        if(!checked.containsKey("accept"))request.append("Accept: */*\r\n");
+        for(Map.Entry<String,String> header:checked.entrySet())request.append(header.getKey()).append(": ").append(header.getValue()).append("\r\n");
+        return request.append("Accept-Encoding: identity\r\nConnection: close\r\n\r\n").toString();
+    }
     static URI checkedUrl(String value) throws IOException {
         if(value==null||value.length()>8192)throw new IOException("Invalid HTTPS URL");
         try {
