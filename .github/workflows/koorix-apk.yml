@@ -118,6 +118,24 @@ jobs:
         with:
           packages: "platform-tools platforms;android-35 build-tools;35.0.0"
 
+      - name: Verify one fixed public extension APK signature without installation
+        if: contains(github.event.head_commit.message, '[extension-apk-qa]')
+        env:
+          KOORIX_VERIFY_PUBLIC_FIXTURE: '1'
+        run: |
+          mkdir -p "$RUNNER_TEMP/koorix-extension-probe"
+          trap 'rm -f "$RUNNER_TEMP/koorix-public-extension-fixture.apk"' EXIT
+          javac -d "$RUNNER_TEMP/koorix-extension-probe" \
+            android/app/src/main/java/com/kurdman/app/PublicNetworkGuard.java \
+            android/app/src/main/java/com/kurdman/app/PinnedHttpsClient.java \
+            tools/web-reader/ExtensionApkDownloadProbe.java
+          java -cp "$RUNNER_TEMP/koorix-extension-probe" com.kurdman.app.ExtensionApkDownloadProbe
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs --min-sdk-version 26 "$RUNNER_TEMP/koorix-public-extension-fixture.apk" > "$RUNNER_TEMP/koorix-extension-signer.txt"
+          grep -qi 'Signer #1 certificate SHA-256 digest: 9add655a78e96c4ec7a53ef89dccb557cb5d767489fac5e785d671a5a75d4da2' "$RUNNER_TEMP/koorix-extension-signer.txt"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$RUNNER_TEMP/koorix-public-extension-fixture.apk" > "$RUNNER_TEMP/koorix-extension-badging.txt"
+          grep -q "package: name='eu.kanade.tachiyomi.extension.all.achymanga' versionCode='106001' versionName='1.6.1'" "$RUNNER_TEMP/koorix-extension-badging.txt"
+          echo '::notice::Public extension fixture matched pinned signer and metadata; not installed, run or declared safe'
+
       - name: Test native bubble glyph containment, free activity, unified chooser, projects and automatic translation
         id: android_tests
         run: |

@@ -9,6 +9,10 @@ public final class ExtensionApkDownloadProbe {
         byte[] data=PinnedHttpsClient.getFollowingRedirects(url,32*1024*1024,new PinnedHttpsClient.Cancellation()).body;
         if(data==null||data.length<4||data[0]!='P'||data[1]!='K'||data[2]!=3||data[3]!=4)
             throw new IllegalStateException("Fixed public response is not an APK container");
-        System.out.println("Fixed public APK container fetched ("+data.length+" bytes); not installed, executed, or signature verified.");
+        if("1".equals(System.getenv("KOORIX_VERIFY_PUBLIC_FIXTURE"))) {
+            String temp=System.getenv("RUNNER_TEMP");if(temp==null)throw new IllegalStateException("Missing disposable runner temp");
+            java.nio.file.Files.write(java.nio.file.Paths.get(temp,"koorix-public-extension-fixture.apk"),data);
+        }
+        System.out.println("Fixed public APK container fetched ("+data.length+" bytes); not installed or executed.");
     }
 }
