@@ -126,8 +126,11 @@ primitive. It deliberately neither verifies nor loads code, nor is it a sandbox.
 Its header check is not DEX validation; any future loader needs an independently
 verified immutable input, isolated execution and adversarial/device validation.
 The separate public fixture check exercises extraction only after SDK apksigner
-verification and never runs code. The inspected `mihon-kit` snapshot has a
-conflict between its Apache-2.0 LICENSE file and GPL-3.0 README: no library was
+verification and never runs code. Run `45984657996` (`c3985ca`) passed 353 JVM
+tests, verified the fixture signer and metadata, extracted its DEX bytes, and
+built/verified the signed regular APK; Android emulator execution was skipped.
+This is not a functioning source runtime or device acceptance. The inspected
+`mihon-kit` snapshot has a conflict between its Apache-2.0 LICENSE file and GPL-3.0 README: no library was
 copied or integrated; clarify upstream terms before any reuse.
 
 An Android `isolatedProcess=true` service is a potential execution boundary
