@@ -66,6 +66,8 @@ is not connected to Android, cannot verify APK signatures on its own, and does
 not confer safety or trust. Hosted run `45976534501` passed the pure Java
 synthetic identity/grouping checks and parsed the pinned Keiyoushi fixture;
 no emulator, extension installation or installed-app verification was used.
+Regular build run `45976534125` (`7f7dd61`) failed at the Robolectric artifact
+fetch step and did not produce or verify an APK. It did not launch an emulator.
 The no-emulator opt-out on the regular verification workflow must never be
 mistaken for device acceptance; the existing release security gate stays in
 place while the feature is incomplete.
