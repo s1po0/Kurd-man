@@ -49,6 +49,7 @@ final class ExtensionApkStager {
                       PinnedHttpsClient.Cancellation cancellation)throws IOException {
         if(bytes==null||bytes.length<4||bytes.length>MAX_APK_BYTES||bytes[0]!='P'||bytes[1]!='K'||bytes[2]!=3||bytes[3]!=4)
             throw new IOException("Downloaded content is not an APK archive");
+        cancellation.check();
         if(WebImportBudget.allowance(cacheDir)<bytes.length)throw new IOException("Cache is full");
         File dir=new File(cacheDir,"extension-install");
         if(Files.isSymbolicLink(dir.toPath())||(!dir.isDirectory()&&!dir.mkdirs()))throw new IOException("Cannot prepare private cache");

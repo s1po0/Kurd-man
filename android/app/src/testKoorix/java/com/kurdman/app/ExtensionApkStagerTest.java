@@ -28,6 +28,16 @@ public class ExtensionApkStagerTest {
             File dir=new File(cache,"extension-install");if(dir.exists())assertEquals(0,dir.listFiles().length);
         }
     }
+    @Test public void oversizeAndCancellationFailWithoutLeavingApks()throws Exception {
+        File cache=new File(RuntimeEnvironment.getApplication().getCacheDir(),"extension-stage-cancel");assertTrue(cache.mkdirs());
+        byte[] oversized=new byte[ExtensionApkStager.MAX_APK_BYTES+1];oversized[0]='P';oversized[1]='K';oversized[2]=3;oversized[3]=4;
+        try{ExtensionApkStager.stage(oversized,entry(),APPROVED,cache,RuntimeEnvironment.getApplication().getPackageManager(),new PinnedHttpsClient.Cancellation());fail();}
+        catch(java.io.IOException expected){}
+        PinnedHttpsClient.Cancellation cancel=new PinnedHttpsClient.Cancellation();cancel.cancel();
+        try{ExtensionApkStager.stage(new byte[]{'P','K',3,4,1,2},entry(),APPROVED,cache,RuntimeEnvironment.getApplication().getPackageManager(),cancel);fail();}
+        catch(java.io.IOException expected){}
+        File dir=new File(cache,"extension-install");if(dir.exists())assertEquals(0,dir.listFiles().length);
+    }
     @Test public void requiresExplicitValidFingerprintBeforeNetwork()throws Exception {
         try{ExtensionApkStager.prepare(entry(),"",RuntimeEnvironment.getApplication().getCacheDir(),RuntimeEnvironment.getApplication().getPackageManager(),1000);fail();}
         catch(java.io.IOException expected){}

@@ -13,7 +13,8 @@ import java.util.List;
 /**
  * Preliminary Android package metadata/signature identity check. A match does
  * NOT make extension code safe, install it, or establish sandboxing. The OS
- * installer must still independently verify the APK. Not wired to UI yet.
+ * installer must still independently verify the APK. This is used before the
+ * explicit installer handoff, not as permission to execute extension code.
  */
 final class ExtensionArchiveVerifier {
     private ExtensionArchiveVerifier() { }

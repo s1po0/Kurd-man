@@ -116,8 +116,19 @@ and staging failure checks, without an emulator. Run `45982363408` (`ee4f1ee`)
 used Android SDK `apksigner` and `aapt` to independently check one fixed public
 extension APK's signature and metadata without installing or executing it;
 this checks that fixture, not the in-app PackageManager implementation on a
-phone. The follow-up consent UI test at `264b43c` failed on test looper timing
-and is being corrected, so it is not a passing build.
+phone. The follow-up consent UI test at `264b43c` failed on test looper timing;
+run `45983904594` (`0071e58`) corrected this and passed 349 JVM tests and
+signed-build checks with no emulator. These remain synthetic UI tests, not
+actual Android installer or extension execution validation.
+
+`ExtensionDexExtractor` is an unconnected, bounded ZIP/DEX byte-extraction
+primitive. It deliberately neither verifies nor loads code, nor is it a sandbox.
+Its header check is not DEX validation; any future loader needs an independently
+verified immutable input, isolated execution and adversarial/device validation.
+The separate public fixture check exercises extraction only after SDK apksigner
+verification and never runs code. The inspected `mihon-kit` snapshot has a
+conflict between its Apache-2.0 LICENSE file and GPL-3.0 README: no library was
+copied or integrated; clarify upstream terms before any reuse.
 
 An Android `isolatedProcess=true` service is a potential execution boundary
 ([Android service documentation](https://developer.android.com/guide/topics/manifest/service-element)),
