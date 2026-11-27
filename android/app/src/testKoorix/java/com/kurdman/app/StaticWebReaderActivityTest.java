@@ -66,6 +66,13 @@ public class StaticWebReaderActivityTest {
         Shadows.shadowOf(Looper.getMainLooper()).idle();assertTrue("Timed out",condition.getAsBoolean());
     }
     private static boolean hasWebView(View view){if(view instanceof WebView)return true;if(view instanceof ViewGroup){ViewGroup g=(ViewGroup)view;for(int i=0;i<g.getChildCount();i++)if(hasWebView(g.getChildAt(i)))return true;}return false;}
+    @Test public void staticReaderActionsCenterTheirLabels(){
+        org.robolectric.android.controller.ActivityController<FakeReader> controller=Robolectric.buildActivity(FakeReader.class).setup();
+        try{FakeReader activity=controller.get();for(int id:new int[]{R.id.webReaderGo,R.id.webReaderTranslate,R.id.webReaderStop}){
+            Button button=activity.findViewById(id);assertEquals(android.view.Gravity.CENTER,button.getGravity());
+            assertTrue(button.getPaddingStart()>0);assertTrue(button.getPaddingEnd()>0);
+        }}finally{controller.pause().stop().destroy();}
+    }
     @Test public void opensStaticPageNavigatesAndReturnsPrivateImages()throws Exception {
         org.robolectric.android.controller.ActivityController<FakeReader> controller=Robolectric.buildActivity(FakeReader.class).setup();
         try{FakeReader activity=controller.get();assertFalse(hasWebView(activity.getWindow().getDecorView()));

@@ -136,6 +136,18 @@ class Contracts(unittest.TestCase):
         self.assertIs(item, driver.Device(Path("unused")).wait(lambda: item, "leaf", timeout=.1))
         self.assertIsNone(driver.node(root, identifier="unknown"))
 
+    def test_exit_static_reader_dismisses_keyboard_then_stops_on_main(self):
+        class Reader(driver.Device):
+            def __init__(self):
+                super().__init__(Path("unused"));self.presses=0
+            def ui(self):
+                return ET.fromstring('<hierarchy>' + ('<node resource-id="com.koorix.app:id/workspaceLanguageButton" />' if self.presses >= 2 else '') + '</hierarchy>')
+            def shell(self,*args,**kwargs):
+                self.assert_back(args);self.presses+=1
+            def assert_back(self,args):
+                if args != ("input","keyevent","4"): raise AssertionError("Unexpected shell action")
+        reader=Reader();reader.exit_static_reader();self.assertEqual(2,reader.presses)
+
     def test_hidden_or_disabled_controls_are_never_tapped(self):
         for bounds, enabled in (("[0,0][0,0]", "true"), ("[2,2][5,8]", "false"), ("bad", "true")):
             item = ET.Element("node", {"bounds": bounds, "enabled": enabled})

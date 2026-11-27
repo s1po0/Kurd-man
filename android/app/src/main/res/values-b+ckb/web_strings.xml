@@ -19,7 +19,7 @@
     <string name="web_partial">%1$d وێنە بار نەکرا. وێنە ماوەکان وەردەگێڕدرێن.</string>
     <string name="web_unsupported">وێنەکانی ئەم پەڕەیە دەستناکەون. لەوانەیە پارێزراو بێت یان پشتگیری نەکرێت؛ پەڕەیەکی تر تاقی بکەرەوە.</string>
     <string name="web_error">خوێندنەوەی پەڕەکە سەرکەوتوو نەبوو. دووبارە هەوڵ بدەرەوە.</string>
-    <string name="web_invalid">تەنها ماڵپەڕی پارێزراوی HTTPS پشتگیری دەکرێت.</string>
+    <string name="web_invalid">تەنها ماڵپەڕی گشتیی HTTPS کە ناوی دۆمەینی هەیە پشتگیری دەکرێت.</string>
     <string name="web_title">گەڕۆکی وێب</string>
     <string name="web_read">خوێندنەوەی پەڕە وەرگێڕدراوەکان</string>
     <string name="web_original">پیشاندانی ڕەسەن</string>

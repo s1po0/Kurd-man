@@ -19,7 +19,7 @@
     <string name="web_partial">Some images could not be loaded: %1$d. The remaining images will be translated.</string>
     <string name="web_unsupported">This page cannot provide accessible images. It may be protected or unsupported; try another page.</string>
     <string name="web_error">Could not read this page. Try again.</string>
-    <string name="web_invalid">Only secure HTTPS websites are supported.</string>
+    <string name="web_invalid">Only public HTTPS websites with a domain name are supported.</string>
     <string name="web_title">Web reader</string>
     <string name="web_read">Read translated pages</string>
     <string name="web_original">Show original</string>

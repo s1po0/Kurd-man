@@ -86,7 +86,7 @@ public class StaticWebReaderActivity extends AppCompatActivity {
         String start=getIntent()==null?null:getIntent().getStringExtra(EXTRA_START_URL);
         if(start!=null){try{PinnedHttpsClient.checkedUrl(start);load(start);}catch(IOException bad){status.setText(R.string.web_invalid);}}
     }
-    private Button button(int id){Button b=new Button(this,null,0);b.setText(id);b.setTypeface(KoorixDesign.font(this,true));KoorixDesign.primary(b,false);b.setMinHeight(KoorixDesign.dp(this,48));return b;}
+    private Button button(int id){Button b=new Button(this,null,0);b.setText(id);b.setTypeface(KoorixDesign.font(this,true));b.setGravity(Gravity.CENTER);int pad=KoorixDesign.dp(this,8);b.setPadding(pad,0,pad,0);KoorixDesign.primary(b,false);b.setMinHeight(KoorixDesign.dp(this,48));return b;}
     private void updateButtons(){boolean any=false;for(boolean value:selected)any|=value;
         go.setEnabled(!busy);back.setEnabled(!busy&&position>0);forward.setEnabled(!busy&&position>=0&&position<history.size()-1);translate.setEnabled(!busy&&any);stop.setEnabled(busy);}
     private void open(){if(busy)return;String text=address.getText().toString().trim();if(text.isEmpty())return;

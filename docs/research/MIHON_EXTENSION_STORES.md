@@ -94,7 +94,13 @@ test or prototype proves the requested feature works.
 The owner initially requested **no Android emulator**, then explicitly allowed
 it again for continued work. Prior no-emulator results remain JVM-only evidence;
 future emulator results must be reported separately and are not physical-device
-or extension-execution proof. Commit `7f7dd61` adds an explicitly offline `ExtensionIdentityPolicy`: it compares approved
+or extension-execution proof. Emulator run `46084388902` (`af2f7df`) verified the
+regular signed APK and exercised static MDN image import into OCR and loopback
+literal rejection; it failed later because the driver pressed Back only once,
+which dismissed the keyboard instead of closing the reader. It did not complete
+its synthetic translation checks and did not run an extension. The observed native
+frame also showed misaligned static-reader button labels; the subsequent candidate
+centers them. Commit `7f7dd61` adds an explicitly offline `ExtensionIdentityPolicy`: it compares approved
 SHA-256 signer identity, package and exact catalog version, compatible library
 versions, and existing signer/version to reject substitution and downgrade. It
 is not connected to Android, cannot verify APK signatures on its own, and does

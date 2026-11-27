@@ -261,6 +261,16 @@ class Device:
             self.shell("input", "swipe", "540", start, "540", end, "350")
         raise AssertionError("Control not reachable by ordinary scrolling: " + identifier)
 
+    def exit_static_reader(self):
+        # Back first dismisses the keyboard if it is open. Observe after every
+        # press; never blindly issue another once the main screen is visible.
+        for _ in range(3):
+            if node(self.ui(), identifier="workspaceLanguageButton") is not None:
+                return
+            self.shell("input", "keyevent", "4")
+            time.sleep(.5)
+        self.control("workspaceLanguageButton", timeout=10)
+
     def public_product(self, with_pdf=False):
         def query(collection):
             output = self.shell("content", "query", "--uri", "content://media/external/" + collection,
@@ -442,11 +452,10 @@ class Device:
         self.click("webReaderAddress")
         self.shell("input", "text", "https://127.0.0.1/private")
         self.click("webReaderGo")
-        self.wait(lambda: self.control("webReaderStatus").get("text", "").startswith("Only secure HTTPS websites are supported."),
+        self.wait(lambda: self.control("webReaderStatus").get("text", "").startswith("Only public HTTPS websites with a domain name are supported."),
                   "Loopback literal rejected by static reader", timeout=30)
         self.check("static_reader_rejects_literal_loopback_url")
-        self.shell("input", "keyevent", "4")
-        self.control("workspaceLanguageButton")
+        self.exit_static_reader()
 
         # Generated text only; no reader image or private data. A public HTTPS
         # image must traverse the native static reader and actual OCR pipeline.
