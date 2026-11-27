@@ -22,6 +22,11 @@ public final class ExtensionOfflineProbe {
         check(grouped.installed.size()==2 && grouped.available.size()==1 && grouped.available.get(0).packageName.equals("org.example.y"),"sections");
         grouped=ExtensionLibrarySections.build(Collections.singletonList(new ExtensionLibrarySections.Installed("org.example.x","Installed")),Collections.singletonList(remote),"site one");
         check(grouped.installed.size()==1 && grouped.available.isEmpty(),"site search");
+        java.net.URI base=PinnedHttpsClient.checkedUrl("https://example.org/chapter/a");
+        check("https://example.org/b".equals(PinnedHttpsClient.redirectUrl(base,"../b")),"relative HTTPS redirect");
+        boolean blockedRedirect=false;
+        try{PinnedHttpsClient.redirectUrl(base,"http://127.0.0.1/");}catch(java.io.IOException expected){blockedRedirect=true;}
+        check(blockedRedirect,"private or cleartext redirect rejected");
         PinnedHttpsClient.Cancellation cancellation=new PinnedHttpsClient.Cancellation();
         java.net.Socket socket=new java.net.Socket();cancellation.attach(socket);cancellation.cancel();
         check(socket.isClosed(),"cancellation closes attached socket");

@@ -7,6 +7,10 @@ public final class ExtensionCatalogLiveProbe {
             throw new IllegalStateException("Only disposable hosted runner allowed");
         ExtensionStoreIndex result=new ExtensionCatalogClient().load(30000);
         if(!"Keiyoushi".equals(result.name)||result.entries.isEmpty())throw new IllegalStateException("Unexpected index");
-        System.out.println("Live public index parsed: "+result.entries.size()+" extensions; no signer trust or Android acceptance implied.");
+        PinnedHttpsClient.Response redirected=PinnedHttpsClient.getFollowingRedirects(
+                "https://github.com/keiyoushi/extensions/raw/repo/index.pb",ExtensionStoreIndex.MAX_COMPRESSED,new PinnedHttpsClient.Cancellation());
+        ExtensionStoreIndex viaRedirect=ExtensionStoreIndex.parse(redirected.body);
+        if(!"Keiyoushi".equals(viaRedirect.name)||viaRedirect.entries.isEmpty())throw new IllegalStateException("Unexpected redirect response");
+        System.out.println("Live public index parsed: "+result.entries.size()+" extensions, including guarded redirect; no signer trust or Android acceptance implied.");
     }
 }

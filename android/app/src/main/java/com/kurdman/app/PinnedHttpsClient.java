@@ -18,15 +18,18 @@ import javax.net.ssl.SSLSocketFactory;
 /**
  * Strict isolated-fetch building block, NOT connected to WebView. Public-only
  * DNS + numeric socket pinning; standard certificate and host verification.
- * GET only, no cookies, proxies, redirects, compression or automatic fallback.
+ * GET only, no cookies, proxies, compression or automatic fallback. Ordinary
+ * GET rejects redirects; a separate bounded opt-in validates each redirect.
  */
 final class PinnedHttpsClient {
     static final int MAX_BODY = 32 * 1024 * 1024;
     private static final int MAX_HEADER_BYTES=16384, MAX_LINE=4096, TIMEOUT_MS=15000;
     static final class Response {
-        final String contentType;
+        final String contentType, location;
         final byte[] body;
-        Response(String type,byte[] data){contentType=type;body=data;}
+        final int status;
+        Response(String type,byte[] data){this(200,type,data,null);}
+        Response(int status,String type,byte[] data,String location){this.status=status;this.contentType=type;this.body=data;this.location=location;}
     }
     private PinnedHttpsClient() { }
 
@@ -48,6 +51,28 @@ final class PinnedHttpsClient {
     }
     static Response get(String value,int maxBytes) throws IOException {return get(value,maxBytes,new Cancellation());}
     static Response get(String value,int maxBytes,Cancellation cancellation) throws IOException {
+        return getOnce(value,maxBytes,cancellation,false);
+    }
+    /** Opt-in only: each hop is HTTPS, freshly resolved, public and pinned. */
+    static Response getFollowingRedirects(String value,int maxBytes,Cancellation cancellation) throws IOException {
+        if(cancellation==null)throw new IOException("Missing cancellation");
+        java.util.Set<String> visited=new java.util.HashSet<>();String current=value;
+        for(int redirects=0;redirects<=4;redirects++){
+            URI base=checkedUrl(current);
+            if(!visited.add(base.normalize().toASCIIString()))throw new IOException("Redirect loop");
+            Response response=getOnce(current,maxBytes,cancellation,true);
+            if(response.status==200)return response;
+            if(redirects==4)throw new IOException("Too many redirects");
+            current=redirectUrl(base,response.location);
+        }
+        throw new IOException("Too many redirects");
+    }
+    static String redirectUrl(URI base,String location)throws IOException {
+        if(base==null||location==null||location.length()>8192)throw new IOException("Invalid redirect");
+        try{return checkedUrl(base.resolve(new URI(location)).toASCIIString()).toString();}
+        catch(URISyntaxException|IllegalArgumentException bad){throw new IOException("Invalid redirect",bad);}
+    }
+    private static Response getOnce(String value,int maxBytes,Cancellation cancellation,boolean redirects) throws IOException {
         if(cancellation==null)throw new IOException("Missing cancellation");
         cancellation.check();
         URI uri=checkedUrl(value);
@@ -69,10 +94,10 @@ final class PinnedHttpsClient {
                 String path=uri.getRawPath();if(path==null||path.isEmpty())path="/";
                 if(uri.getRawQuery()!=null)path+="?"+uri.getRawQuery();
                 String request="GET "+path+" HTTP/1.1\r\nHost: "+host+"\r\n"
-                        +"Accept: text/html,image/png,image/jpeg,image/webp,image/bmp\r\n"
+                        +"Accept: */*\r\n"
                         +"Accept-Encoding: identity\r\nConnection: close\r\n\r\n";
                 OutputStream out=tls.getOutputStream();out.write(request.getBytes(StandardCharsets.US_ASCII));out.flush();
-                return readResponse(tls.getInputStream(),maxBytes);
+                return readResponse(tls.getInputStream(),maxBytes,redirects);
             }
         } finally { try{plain.close();}catch(IOException ignored){} }
     }
@@ -97,13 +122,16 @@ final class PinnedHttpsClient {
         }catch(URISyntaxException|IllegalArgumentException bad){throw new IOException("Invalid HTTPS URL",bad);}
     }
 
-    /** Strict HTTP/1.1 parsing; never follow redirects or use compressed data. */
-    static Response readResponse(InputStream input,int limit) throws IOException {
+    /** Strict HTTP/1.1 parsing; ordinary callers reject redirects. */
+    static Response readResponse(InputStream input,int limit) throws IOException {return readResponse(input,limit,false);}
+    static Response readResponse(InputStream input,int limit,boolean allowRedirect) throws IOException {
         if(input==null||limit<1||limit>MAX_BODY)throw new IOException("Invalid response limit");
         int[] budget={0};
-        String status=line(input,budget);
-        if(!status.matches("HTTP/1\\.[01] 200(?: .*)?"))throw new IOException("Unsupported HTTP status");
-        String contentType=null,transfer=null,encoding=null;
+        String statusLine=line(input,budget);
+        if(!statusLine.matches("HTTP/1\\.[01] (200|301|302|303|307|308)(?: .*)?"))throw new IOException("Unsupported HTTP status");
+        int status=Integer.parseInt(statusLine.substring(9,12));
+        if(status!=200&&!allowRedirect)throw new IOException("Redirect unsupported");
+        String contentType=null,transfer=null,encoding=null,location=null;
         long contentLength=-1;int count=0;
         while(true){
             String h=line(input,budget);if(h.isEmpty())break;
@@ -119,12 +147,17 @@ final class PinnedHttpsClient {
                 case "transfer-encoding":if(transfer!=null)throw new IOException("Duplicate transfer encoding");transfer=v.toLowerCase(Locale.ROOT);break;
                 case "content-encoding":if(encoding!=null)throw new IOException("Duplicate content encoding");encoding=v.toLowerCase(Locale.ROOT);break;
                 case "content-type":if(contentType!=null)throw new IOException("Duplicate content type");contentType=v;break;
+                case "location":if(location!=null||v.isEmpty()||v.length()>8192)throw new IOException("Invalid redirect location");location=v;break;
                 default: break;
             }
         }
-        if(contentType==null||contentType.length()>200)throw new IOException("Missing content type");
         if(encoding!=null&&!"identity".equals(encoding))throw new IOException("Compressed response unsupported");
         if(transfer!=null&&(!"chunked".equals(transfer)||contentLength!=-1))throw new IOException("Ambiguous HTTP framing");
+        if(status!=200){
+            if(location==null)throw new IOException("Missing redirect location");
+            return new Response(status,null,null,location); // connection closes; redirect body is never consumed
+        }
+        if(contentType==null||contentType.length()>200)throw new IOException("Missing content type");
         if(contentLength>limit)throw new IOException("Response exceeds limit");
         ByteArrayOutputStream body=new ByteArrayOutputStream();
         if(transfer!=null){

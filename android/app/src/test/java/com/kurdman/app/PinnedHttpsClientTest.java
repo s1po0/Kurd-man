@@ -36,6 +36,21 @@ public class PinnedHttpsClientTest {
         rejected("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 1\r\nTransfer-Encoding: chunked\r\n\r\nx",10);
         rejected("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nTransfer-Encoding: gzip, chunked\r\n\r\nx",10);
     }
+    @Test public void redirectsRequireOptInAndValidatedHttpsDestination() throws Exception {
+        String wire="HTTP/1.1 302 Found\r\nLocation: https://cdn.example.org/asset.apk\r\nContent-Length: 0\r\n\r\n";
+        rejected(wire,10);
+        PinnedHttpsClient.Response r=PinnedHttpsClient.readResponse(new ByteArrayInputStream(wire.getBytes(StandardCharsets.US_ASCII)),10,true);
+        assertEquals(302,r.status);assertEquals("https://cdn.example.org/asset.apk",r.location);assertNull(r.body);
+        java.net.URI base=PinnedHttpsClient.checkedUrl("https://example.org/a/b");
+        assertEquals("https://example.org/c",PinnedHttpsClient.redirectUrl(base,"../c"));
+        for(String bad:new String[]{"http://example.org/a","https://127.0.0.1/a","https://user@example.org/a","https://example.org/#secret","javascript:alert(1)","https://example.org:8080/"}){
+            try{PinnedHttpsClient.redirectUrl(base,bad);fail(bad);}catch(IOException expected){}
+        }
+        for(String bad:new String[]{"HTTP/1.1 302 Found\r\n\r\n","HTTP/1.1 302 Found\r\nLocation: https://a.test\r\nLocation: https://b.test\r\n\r\n",
+                "HTTP/1.1 302 Found\r\nLocation: /a\r\nTransfer-Encoding: chunked\r\nContent-Length: 0\r\n\r\n"}){
+            try{PinnedHttpsClient.readResponse(new ByteArrayInputStream(bad.getBytes(StandardCharsets.US_ASCII)),10,true);fail(bad);}catch(IOException expected){}
+        }
+    }
     @Test public void boundsAndTruncationCannotBecomeSuccessfulResponses() throws Exception {
         rejected("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 5\r\n\r\nhello",4);
         rejected("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 5\r\n\r\nhey",5);
