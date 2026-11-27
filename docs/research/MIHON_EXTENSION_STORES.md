@@ -81,8 +81,12 @@ isolation solution. Hosted OpenJDK runs `45977591845` and `45977843317` passed
 synthetic bounded-worker checks, a pinned public fixture and a real current
 Keiyoushi public index fetch without an emulator; they do not prove Android
 TLS/network behavior, APK installation or extension runtime security. The
-regular build `45977338442` failed before the build on a Maven artifact fetch;
-no APK was produced.
+regular build `45977338442` failed before the build on a Maven artifact fetch.
+After an opt-in CI switch to Google's Maven Central mirror, regular build
+`45978350116` (`96b5192`) passed 335 JVM tests, built and verified the same-v2
+signed regular APK, and skipped the Android emulator at the owner's request.
+It did not publish an APK or exercise the app on a device; importantly, the
+extension mode remains unimplemented and this is not a release candidate.
 
 An Android `isolatedProcess=true` service is a potential execution boundary
 ([Android service documentation](https://developer.android.com/guide/topics/manifest/service-element)),
