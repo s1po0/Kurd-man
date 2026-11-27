@@ -98,7 +98,7 @@ public class StaticWebReaderActivity extends AppCompatActivity {
         int token=begin(R.string.web_discover,IMPORT_DEADLINE_MS);PinnedHttpsClient.Cancellation signal=cancellation;
         try{WORKER.execute(()->{StaticWebImport.Result result=null;try{result=fetchImages(images,cache,signal,(current,total)->handler.post(()->{if(active(token))status.setText(getString(R.string.web_capture,current,total));}));}catch(Exception ignored){}
             final StaticWebImport.Result captured=result;handler.post(()->{
-                if(!active(token)){discard(captured,cache);return;}end();if(captured==null){status.setText(R.string.web_empty);return;}
+                if(!active(token)){discard(captured,cache);return;}end();if(captured==null){status.setText(R.string.static_web_empty);return;}
                 ArrayList<String> files=new ArrayList<>();for(File file:captured.files)files.add(file.getAbsolutePath());
                 if(captured.failed>0)Toast.makeText(this,getString(R.string.web_partial,captured.failed),Toast.LENGTH_LONG).show();
                 setResult(RESULT_OK,new Intent().putStringArrayListExtra(WebReaderActivity.EXTRA_FILES,files)

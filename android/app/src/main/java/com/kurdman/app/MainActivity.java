@@ -3163,7 +3163,7 @@ public class MainActivity extends AppCompatActivity {
                 problem==TranslationPreflight.Error.PACK_MISSING?R.string.ks_0737:R.string.ks_0539));return false;
     }
     private void openWebReader() {
-        if(webTranslationReady())webReaderLauncher.launch(new Intent(this,WebReaderActivity.class));
+        if(webTranslationReady())webReaderLauncher.launch(new Intent(this,StaticWebReaderActivity.class));
     }
     private void startWebTranslation(Intent result) {
         if(!webTranslationReady())return;

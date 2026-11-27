@@ -186,6 +186,21 @@ jobs:
           fi
           exit $code
 
+      - name: Check fixed public static-reader fixture without emulator
+        if: contains(github.event.head_commit.message, '[static-web-qa]')
+        run: |
+          mkdir -p "$RUNNER_TEMP/koorix-static-probe"
+          JSOUP=$(find "$HOME/.gradle/caches/modules-2/files-2.1/org.jsoup/jsoup/1.18.3" -name 'jsoup-1.18.3.jar' -print -quit)
+          test -f "$JSOUP"
+          javac -cp "$JSOUP" -d "$RUNNER_TEMP/koorix-static-probe" \
+            android/app/src/main/java/com/kurdman/app/PublicNetworkGuard.java \
+            android/app/src/main/java/com/kurdman/app/PinnedHttpsClient.java \
+            android/app/src/main/java/com/kurdman/app/StaticWebPage.java \
+            android/app/src/main/java/com/kurdman/app/StaticWebTransport.java \
+            tools/web-reader/StaticWebPublicProbe.java
+          java -cp "$JSOUP:$RUNNER_TEMP/koorix-static-probe" com.kurdman.app.StaticWebPublicProbe
+          echo '::notice::Static public fixture checked; no Android/device, private-network isolation or translation quality acceptance'
+
       - name: Save allowlisted synthetic native shape fixtures for inspection
         if: always() && steps.android_tests.outcome != 'skipped'
         env:

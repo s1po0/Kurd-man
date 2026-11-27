@@ -2,8 +2,13 @@
 
 This describes the unreleased 1.8.4 candidate; it is not a release receipt.
 
-The Android screen lets the reader enter an HTTPS URL or a search term, browse,
-scroll, and explicitly request translation of discoverable chapter images.
+The previous candidate used an unisolated JavaScript WebView; that activity is
+no longer registered in the unreleased candidate. A new script-free static
+native screen lets the reader enter an HTTPS URL or search term, choose among
+extracted links and explicitly request translation of discoverable images.
+It does not render the website visually and cannot support sites that require
+JavaScript, login, cookies or other dynamic interaction. This is an experimental,
+narrower approach; Android/device security and real-site acceptance remain open.
 The existing automatic Skill, chosen languages, online/offline route and saved
 job pipeline are used, not a new model or paid translator. Images are held in a
 private saved project and a native page reader allows navigation and an
@@ -13,7 +18,20 @@ Older projects keep their prior publication behavior and old files are not
 removed. The browser's temporary input is removed only after source pages have
 been safely copied into the new project.
 
-## Important limitations
+## Static candidate limitations
+
+Static pages are limited to 2 MB of UTF-8 HTML, 20,000 traversed nodes,
+200 links and 300 image references. The reader parses metadata without
+executing scripts or automatically loading page resources; image requests begin
+only after the user taps Translate. Image responses are independently checked,
+bounded and stored in a new private cache session before transfer to the
+existing saved-project flow. The page can still label or order misleading
+content, and native image decoders still handle untrusted bytes. The user
+cannot preview or deselect individual candidates yet. Socket DNS cancellation,
+Android TLS, unusual network routes, real sites and physical devices remain
+unverified. Earlier WebView tests below are historical, not static-reader proof.
+
+## Historical WebView limitations
 
 - Images must be discoverable as sufficiently large HTML `img` elements. Only
   HTTPS URLs on the **exact current page origin** are captured; cross-origin

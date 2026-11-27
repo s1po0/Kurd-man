@@ -1,9 +1,15 @@
 # WebView isolation work — not release acceptance
 
-The existing fail-closed release gate remains. `PublicNetworkGuard` is an
-unconnected transport primitive, not a WebView firewall. The browser still
-uses its old WebView and still has the security blockers in
-`docs/KOORIX_WEB_READER.md`; no 1.8.4 distribution is permitted on this basis.
+The existing fail-closed release gate remains. The unreleased candidate now
+routes the web button to `StaticWebReaderActivity`, a separate native static
+link/image reader; the old unisolated `WebReaderActivity` is not registered in
+the manifest, so there is no intentional WebView fallback. The static candidate
+runs no page JavaScript and uses the preliminary public-pinned HTTPS transport
+for explicitly requested pages and images. This is a narrower experience, not
+a full web browser or a proof of network isolation: login, scripts, many lazy
+pages, cookies and some CDNs/sites will fail; static image heuristics can pick
+ads or miss panels. The release gate and unresolved Android transport/security
+validation remain; no 1.8.4 distribution is permitted on this basis.
 
 ## Address and DNS primitive
 
@@ -32,12 +38,14 @@ explicit threat-model decisions and tests.
 
 ## Experimental HTTPS client (not integrated)
 
-`PinnedHttpsClient` is a preliminary, unused GET-only transport; it does not
-route WebView traffic or fix the current browser. It rejects non-HTTPS URLs,
-redirects, ambiguous HTTP framing and compression, pins validated DNS answers,
-and bounds response bytes. It still needs an overall deadline including DNS,
-robust concurrency limits, fuller framing/compatibility review, independent
-security review and an actual isolation architecture before any use.
+`PinnedHttpsClient` is a preliminary GET-only transport used by the static
+candidate and extension catalog/installer preparation, not a WebView firewall.
+It rejects non-HTTPS URLs, ambiguous HTTP framing and compression, pins
+validated DNS answers, and bounds response bytes. Redirects are opt-in and each
+hop is freshly checked and pinned. The static reader bounds active workers and
+ignores/discards late results, but blocking DNS may outlive cancellation. It
+still needs Android TLS validation, fuller framing/compatibility review and
+independent security review; it must not be represented as proven isolation.
 
 Hosted OpenJDK probe on `754b427` passed a real public GET and rejected a
 wrong TLS hostname, after an earlier attempt incorrectly used the default

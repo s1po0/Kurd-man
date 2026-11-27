@@ -4,4 +4,5 @@
     <string name="static_web_summary">%1$s\nImages: %2$d • Links: %3$d</string>
     <string name="static_web_no_images">No images found on this page. Choose a link to open a chapter.</string>
     <string name="static_web_ready">Choose a link or translate the images found on this page.</string>
+    <string name="static_web_empty">No accessible images could be prepared. Try another page.</string>
 </resources>

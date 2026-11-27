@@ -4,4 +4,5 @@
     <string name="static_web_summary">%1$s\nالصور: %2$d • الروابط: %3$d</string>
     <string name="static_web_no_images">لم تُوجد صور في هذه الصفحة. اختر رابطاً لفتح فصل.</string>
     <string name="static_web_ready">اختر رابطاً أو ترجم الصور الموجودة في هذه الصفحة.</string>
+    <string name="static_web_empty">تعذر تجهيز أي صور متاحة. جرّب صفحة أخرى.</string>
 </resources>

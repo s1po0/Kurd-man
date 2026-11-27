@@ -40,6 +40,14 @@ public class StaticWebReaderActivityTest {
             return new StaticWebImport.Result(session,Collections.singletonList(file),0);
         }
     }
+    public static class SlowReader extends FakeReader {
+        final java.util.concurrent.CountDownLatch started=new java.util.concurrent.CountDownLatch(1), release=new java.util.concurrent.CountDownLatch(1);
+        volatile File lateSession;
+        @Override StaticWebImport.Result fetchImages(List<String> images,File cache,PinnedHttpsClient.Cancellation cancel,StaticWebImport.Progress progress)throws IOException {
+            started.countDown();try{release.await();}catch(InterruptedException e){Thread.currentThread().interrupt();throw new IOException(e);}
+            StaticWebImport.Result result=super.fetchImages(images,cache,cancel,progress);lateSession=result.session;return result;
+        }
+    }
     private static void waitFor(java.util.function.BooleanSupplier condition)throws Exception {
         long until=System.currentTimeMillis()+5000;
         while(!condition.getAsBoolean()&&System.currentTimeMillis()<until){Shadows.shadowOf(Looper.getMainLooper()).idle();Thread.sleep(10);}
@@ -58,6 +66,15 @@ public class StaticWebReaderActivityTest {
             android.content.Intent result=Shadows.shadowOf(activity).getResultIntent();assertNotNull(result);
             assertEquals(1,result.getStringArrayListExtra(WebReaderActivity.EXTRA_FILES).size());
         }finally{controller.pause().stop().destroy();}
+    }
+    @Test public void stopDiscardsLateImportWithoutReturningIt()throws Exception {
+        org.robolectric.android.controller.ActivityController<SlowReader> controller=Robolectric.buildActivity(SlowReader.class).setup();
+        SlowReader activity=controller.get();
+        try{((EditText)activity.findViewById(R.id.webReaderAddress)).setText("https://example.org/start");activity.findViewById(R.id.webReaderGo).performClick();
+            waitFor(()->activity.findViewById(R.id.webReaderTranslate).isEnabled());activity.findViewById(R.id.webReaderTranslate).performClick();
+            assertTrue(activity.started.await(5,java.util.concurrent.TimeUnit.SECONDS));activity.findViewById(R.id.webReaderStop).performClick();activity.release.countDown();
+            waitFor(()->activity.lateSession!=null&&!activity.lateSession.exists());assertFalse(activity.isFinishing());assertNull(Shadows.shadowOf(activity).getResultIntent());
+        }finally{activity.release.countDown();controller.pause().stop().destroy();}
     }
     @Test public void invalidUrlDoesNotInvokeFetcher()throws Exception {
         org.robolectric.android.controller.ActivityController<FakeReader> controller=Robolectric.buildActivity(FakeReader.class).setup();
