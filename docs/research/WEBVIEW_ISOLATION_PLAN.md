@@ -22,7 +22,9 @@ emulator. Other page images may still be unrelated, and this was hosted Java,
 not Android TLS, decoded-image capture, translation, or device proof. Run
 `45993914033` (`628a710`) passed 389 JVM tests and signed-build checks with no
 emulator; these include simulated opt-in preview and native-graphics image
-sampling, not installed-device validation. JavaScript sites remain unsupported.
+sampling, not installed-device validation. Run `45995263587` (`07e6cd1`)
+passed 392 JVM tests and the same fixed public comic page-order probe after
+adding bounded `srcset` discovery. JavaScript sites remain unsupported.
 
 ## Address and DNS primitive
 
