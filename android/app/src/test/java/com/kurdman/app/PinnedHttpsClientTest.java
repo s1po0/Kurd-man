@@ -41,6 +41,9 @@ public class PinnedHttpsClientTest {
         rejected(wire,10);
         PinnedHttpsClient.Response r=PinnedHttpsClient.readResponse(new ByteArrayInputStream(wire.getBytes(StandardCharsets.US_ASCII)),10,true);
         assertEquals(302,r.status);assertEquals("https://cdn.example.org/asset.apk",r.location);assertNull(r.body);
+        String longCsp=new String(new char[4200]).replace('\0','a');
+        PinnedHttpsClient.Response large=PinnedHttpsClient.readResponse(new ByteArrayInputStream(("HTTP/1.1 302 Found\r\nContent-Security-Policy: "+longCsp+"\r\nLocation: /next\r\n\r\n").getBytes(StandardCharsets.US_ASCII)),10,true);
+        assertEquals("/next",large.location);
         java.net.URI base=PinnedHttpsClient.checkedUrl("https://example.org/a/b");
         assertEquals("https://example.org/c",PinnedHttpsClient.redirectUrl(base,"../c"));
         for(String bad:new String[]{"http://example.org/a","https://127.0.0.1/a","https://user@example.org/a","https://example.org/#secret","javascript:alert(1)","https://example.org:8080/"}){

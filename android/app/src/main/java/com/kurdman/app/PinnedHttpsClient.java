@@ -23,7 +23,9 @@ import javax.net.ssl.SSLSocketFactory;
  */
 final class PinnedHttpsClient {
     static final int MAX_BODY = 32 * 1024 * 1024;
-    private static final int MAX_HEADER_BYTES=16384, MAX_LINE=4096, TIMEOUT_MS=15000;
+    // GitHub's CSP response header can exceed 4 KiB; retain a strict
+    // per-line and aggregate bound while allowing its legitimate redirect.
+    private static final int MAX_HEADER_BYTES=16384, MAX_LINE=8192, TIMEOUT_MS=15000;
     static final class Response {
         final String contentType, location;
         final byte[] body;
