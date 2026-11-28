@@ -1,5 +1,13 @@
 # Working on Koorix
 
+## Anti-slop quality filter
+
+The owner asked the agent, not the Android app, to use anti-slop throughout
+Koorix work. Read `.claude/skills/koorix-anti-slop/SKILL.md` and apply its
+relevant checks while working and reporting. It supplements, not overrides,
+the owner's directions, repository safety rules, and existing project skills.
+Do not install or run the upstream CLI or add it to the APK.
+
 ## Domain skill
 
 For Koorix manga/manhwa translation, natural Sorani dialogue, names/glossaries,
