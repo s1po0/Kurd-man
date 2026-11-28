@@ -309,7 +309,7 @@ class Device:
         package = self.shell("pm", "list", "packages", "eu.kanade.tachiyomi.extension.all.achymanga", include_stderr=True)
         if "package:" in package:
             raise AssertionError("Import must not install an extension APK")
-        self.tap(self.reveal("extensionCatalogButton", direction="up"))
+        self.tap(self.reveal("extensionCatalogButton", direction="down"))
         search = self.control("extensionCatalogSearch", enabled=True, timeout=90)
         self.tap(search);self.shell("input", "text", "achymanga")
         def marked():
