@@ -100,7 +100,17 @@ literal rejection; it failed later because the driver pressed Back only once,
 which dismissed the keyboard instead of closing the reader. It did not complete
 its synthetic translation checks and did not run an extension. The observed native
 frame also showed misaligned static-reader button labels; the subsequent candidate
-centers them. Commit `7f7dd61` adds an explicitly offline `ExtensionIdentityPolicy`: it compares approved
+centers them. Follow-up run `46085388190` (`8405b4f`) passed 412 JVM tests,
+permanent-v2 signed-build checks and the full installed regular-APK API34
+emulator driver. On fixed fixtures it exercised the native static reader,
+image-to-OCR/translation/private reader, original toggle, unified chooser,
+public export/Studio/PDF and STOP; its report blob is
+`e06a463841c391100b94bac5a26cb921e35fb418`, APK SHA-256
+`3b3d31144fbfa52c3080aedf1cf0c4f1e0c69dfa34b6672acfae8b817e705ac3`.
+The observed MDN reader frame shows centered action labels. This is not
+extension execution, actual installation of an extension, broad web-security,
+physical-device, translation-meaning or real-page visual acceptance, and the
+candidate was not published. Commit `7f7dd61` adds an explicitly offline `ExtensionIdentityPolicy`: it compares approved
 SHA-256 signer identity, package and exact catalog version, compatible library
 versions, and existing signer/version to reject substitution and downgrade. It
 is not connected to Android, cannot verify APK signatures on its own, and does
