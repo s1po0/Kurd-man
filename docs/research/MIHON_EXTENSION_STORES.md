@@ -209,6 +209,18 @@ signatures, install, approve, or execute the imported APK. Future execution must
 check identity/signatures independently. Damaged copies are not automatically
 removed. No APK containing this change has been released.
 
+## Hosted import probe observations
+
+On API 34, run `46141224950` selected the SDK-verified AchyManga APK with the
+ordinary unified Android chooser and confirmed the import dialog. The success
+message appeared, the selected public file's digest remained unchanged, and
+the extension package was not system-installed. The driver then scrolled in
+the wrong direction and did not reach the catalog, so this run does not prove
+the imported item appears there. The driver direction was corrected in
+`d4400d4`; run `46142131263` could not retest it because its preliminary
+Android TLS probe failed DNS resolution before the app driver started. Neither
+run executed extension code or establishes source compatibility or safety.
+
 ## Remaining acceptance gates
 
 - Review a compatible Mihon source API and host dependency/license strategy;
