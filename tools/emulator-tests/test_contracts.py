@@ -19,6 +19,24 @@ collector = load("collect")
 
 
 class Contracts(unittest.TestCase):
+    def test_reveal_swipes_toward_controls_and_stops_at_visible_target(self):
+        class SyntheticDevice(driver.Device):
+            def __init__(self):
+                super().__init__(Path("unused"))
+                self.swipes = []
+            def ui(self):
+                if self.swipes:
+                    return ET.fromstring('<hierarchy><node resource-id="com.koorix.app:id/target" enabled="true" bounds="[10,300][110,400]" /></hierarchy>')
+                return ET.fromstring('<hierarchy/>')
+            def shell(self, *args, **kwargs):
+                self.swipes.append(args)
+
+        for direction, start, end in (("down", 1400, 650), ("up", 650, 1400)):
+            with self.subTest(direction=direction):
+                device = SyntheticDevice()
+                self.assertIsNotNone(device.reveal("target", direction=direction))
+                self.assertEqual([("input", "swipe", "540", start, "540", end, "350")], device.swipes)
+
     def test_public_comic_status_never_retains_dialogue_or_errors(self):
         self.assertEqual("ocr", driver.public_comic_status("OCR • page 1 / 4"))
         self.assertEqual("job-failed", driver.public_comic_status("The job did not finish. private detail"))
