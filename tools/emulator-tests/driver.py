@@ -294,7 +294,9 @@ class Device:
         selected = self.wait(lambda: node(self.ui(), text="koorix-qa-extension.apk"),
                              "Fixed public extension APK visible in Downloads", timeout=60)
         self.tap(selected)
-        self.tap(self.wait(lambda: node(self.ui(), text="Import"), "Explicit extension import consent", timeout=30))
+        self.tap(self.wait(lambda: next((item for item in self.ui().iter("node")
+                                       if item.get("text", "").casefold() == "import"), None),
+                           "Explicit extension import consent", timeout=30))
         expected = "APK imported. It appears under Extensions; it cannot be used yet."
         def imported():
             value = self.control("statusText", timeout=5).get("text", "")
