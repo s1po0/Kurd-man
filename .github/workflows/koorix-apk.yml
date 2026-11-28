@@ -119,12 +119,13 @@ jobs:
           packages: "platform-tools platforms;android-35 build-tools;35.0.0"
 
       - name: Verify one fixed public extension APK signature without installation
-        if: contains(github.event.head_commit.message, '[extension-apk-qa]')
+        if: contains(github.event.head_commit.message, '[extension-apk-qa]') || contains(github.event.head_commit.message, '[extension-import-qa]')
         env:
           KOORIX_VERIFY_PUBLIC_FIXTURE: '1'
+          KEEP_EXTENSION_FIXTURE: ${{ contains(github.event.head_commit.message, '[extension-import-qa]') && '1' || '0' }}
         run: |
           mkdir -p "$RUNNER_TEMP/koorix-extension-probe"
-          trap 'rm -f "$RUNNER_TEMP/koorix-public-extension-fixture.apk"' EXIT
+          if [ "$KEEP_EXTENSION_FIXTURE" != 1 ]; then trap 'rm -f "$RUNNER_TEMP/koorix-public-extension-fixture.apk"' EXIT; fi
           javac -d "$RUNNER_TEMP/koorix-extension-probe" \
             android/app/src/main/java/com/kurdman/app/PublicNetworkGuard.java \
             android/app/src/main/java/com/kurdman/app/PinnedHttpsClient.java \
@@ -302,7 +303,12 @@ jobs:
         env:
           # Deliberate one-run opt-in only; ordinary CI stays independent of a public site's availability.
           KOORIX_OPEN_COMIC_QA: ${{ contains(github.event.head_commit.message, '[open-comic-qa]') && '1' || '0' }}
+          KOORIX_EXTENSION_IMPORT_QA: ${{ contains(github.event.head_commit.message, '[extension-import-qa]') && '1' || '0' }}
         run: bash tools/emulator-tests/run.sh
+
+      - name: Remove fixed public extension fixture
+        if: always()
+        run: rm -f "$RUNNER_TEMP/koorix-public-extension-fixture.apk"
 
       - name: Save only allowlisted synthetic installed-APK captures and exports
         if: always() && steps.emulator_check.outcome != 'skipped'

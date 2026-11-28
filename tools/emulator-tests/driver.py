@@ -271,6 +271,51 @@ class Device:
             time.sleep(.5)
         self.control("workspaceLanguageButton", timeout=10)
 
+    def extension_import_probe(self):
+        """One verified public APK imported by the ordinary chooser, never installed or executed."""
+        fixture = Path(os.environ["RUNNER_TEMP"]) / "koorix-public-extension-fixture.apk"
+        if not fixture.is_file() or not 1000 < fixture.stat().st_size < 32 * 1024 * 1024:
+            raise AssertionError("Verified public extension fixture is missing or over budget")
+        digest = hashlib.sha256(fixture.read_bytes()).digest()
+        path = "/sdcard/Download/koorix-qa-extension.apk"
+        self.adb("push", str(fixture), path, timeout=90)
+        if hashlib.sha256(self.adb("exec-out", "cat", path)).digest() != digest:
+            raise AssertionError("Public extension fixture bytes changed during transfer")
+        self.click("navTranslateButton")
+        self.tap(self.reveal("pickButton", direction="up"))
+        self.wait(lambda: source_chooser_focused(self.shell("dumpsys", "window")), "System source chooser", timeout=30)
+        # The actual chooser's navigation drawer opens the public Downloads root.
+        def drawer():
+            root = self.ui()
+            return next((x for x in root.iter("node") if x.get("content-desc") in
+                         ("Show roots", "Open navigation drawer", "Show navigation drawer")), None)
+        self.tap(self.wait(drawer, "System chooser navigation drawer", timeout=30))
+        self.tap(self.wait(lambda: node(self.ui(), text="Downloads"), "Downloads root", timeout=30))
+        selected = self.wait(lambda: node(self.ui(), text="koorix-qa-extension.apk"),
+                             "Fixed public extension APK visible in Downloads", timeout=60)
+        self.tap(selected)
+        self.tap(self.wait(lambda: node(self.ui(), text="Import"), "Explicit extension import consent", timeout=30))
+        expected = "APK imported. It appears under Extensions; it cannot be used yet."
+        def imported():
+            value = self.control("statusText", timeout=5).get("text", "")
+            if value.startswith("Could not import the APK"):
+                raise AssertionError("Android failed to parse or import the verified extension APK")
+            return value == expected
+        self.wait(imported, "Extension APK imported into private inventory", timeout=90)
+        if hashlib.sha256(self.adb("exec-out", "cat", path)).digest() != digest:
+            raise AssertionError("Import modified the selected original")
+        package = self.shell("pm", "list", "packages", "eu.kanade.tachiyomi.extension.all.achymanga", include_stderr=True)
+        if "package:" in package:
+            raise AssertionError("Import must not install an extension APK")
+        self.tap(self.reveal("extensionCatalogButton", direction="up"))
+        search = self.control("extensionCatalogSearch", enabled=True, timeout=90)
+        self.tap(search);self.shell("input", "text", "achymanga")
+        def marked():
+            root = self.ui()
+            return next((x for x in root.iter("node") if "Imported APK, not installed" in x.get("text", "")), None)
+        self.wait(marked, "Imported extension shown in local section", timeout=90)
+        self.check("verified_public_extension_imported_via_unified_chooser_not_installed_or_executed")
+
     def public_product(self, with_pdf=False):
         def query(collection):
             output = self.shell("content", "query", "--uri", "content://media/external/" + collection,
@@ -607,6 +652,8 @@ class Device:
                   "Manual STOP did not actually stop the foreground service", timeout=30)
         self.capture("manual-stopped.png")
         self.check("explicit_manual_protection_retains_stop_and_stops_actual_service")
+        if os.environ.get("KOORIX_EXTENSION_IMPORT_QA") == "1":
+            self.extension_import_probe()
         crashes = self.adb("logcat", "-b", "crash", "-d").decode("utf-8", "replace")
         if PACKAGE in crashes:
             raise AssertionError("Regular APK crash observed on the emulator")
@@ -629,7 +676,8 @@ def main():
     def runtime_budget_exhausted(_number, _frame):
         raise TimeoutError("Actual-APK driver exceeded its total runtime budget")
     signal.signal(signal.SIGALRM, runtime_budget_exhausted)
-    signal.alarm((22 if os.environ.get("KOORIX_OPEN_COMIC_QA") == "1" else 15) * 60)
+    extended = os.environ.get("KOORIX_OPEN_COMIC_QA") == "1" or os.environ.get("KOORIX_EXTENSION_IMPORT_QA") == "1"
+    signal.alarm((22 if extended else 15) * 60)
     try:
         device.run(args.apk)
     except Exception as problem:
